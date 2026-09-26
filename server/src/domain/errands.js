@@ -229,6 +229,29 @@ function notifyCarriers(errand) {
   };
 }
 
+/**
+ * Stated fees on completed runs: route, cargo and fee exactly as the poster
+ * wrote them, newest first. Listed, never averaged — there is no index here
+ * because an index would need normalized corridors and the rows hold free
+ * text. A fee without its cargo line would mislead, so it is never shown
+ * without it.
+ */
+export function listStatedFees({ limit = 20 } = {}) {
+  return store
+    .filter('errands', (e) => e.status === 'delivered' && typeof e.offeredFeeKes === 'number')
+    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
+    .slice(0, Math.max(1, Math.min(limit, 50)))
+    .map((e) => ({
+      what: e.what,
+      pickup: e.pickup,
+      dropoff: e.dropoff,
+      sizeOrWeight: e.sizeOrWeight ?? null,
+      offeredFeeKes: e.offeredFeeKes,
+      currency: e.currency,
+      at: e.createdAt
+    }));
+}
+
 export function listErrands({ viewerId = null, status = null, kind = null, limit = 50 } = {}) {
   const want = kind == null || String(kind).trim() === '' || String(kind) === 'any'
     ? null

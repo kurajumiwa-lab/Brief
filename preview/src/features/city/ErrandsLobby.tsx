@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Bike, Check, HeartHandshake, Package, Plus, Shapes, Star, Truck, Users, UtensilsCrossed, Wrench } from 'lucide-react';
 import * as briefApi from '../../api/briefApi';
-import type { Errand, ErrandBoard, ErrandProviders } from '../../api/briefApi';
+import type { Errand, ErrandBoard, ErrandProviders, StatedFee } from '../../api/briefApi';
 import { WairoDispatchPanel } from './WairoDispatchPanel';
 import { ExternalPlaces } from './ExternalPlaces';
 import { soundEngine } from '../../utils/SoundEngine';
@@ -92,6 +92,7 @@ export function ErrandsLobby({ className = '', composerSignal }: { className?: s
   // The map finder fills one address field, then closes: a picked point is a
   // map listing (name + coordinates), never a registered shop.
   const [findingFor, setFindingFor] = useState<'pickup' | 'dropoff' | null>(null);
+  const [fees, setFees] = useState<StatedFee[] | null>(null);
 
   const load = useCallback(async () => {
     const res = await briefApi.getErrandBoard();
@@ -100,6 +101,7 @@ export function ErrandsLobby({ className = '', composerSignal }: { className?: s
       return;
     }
     setBoard(res.data);
+    void briefApi.listStatedFees().then((r) => { if (r.ok) setFees(r.data.fees); });
     setStatus('ready');
   }, []);
 
@@ -415,6 +417,33 @@ export function ErrandsLobby({ className = '', composerSignal }: { className?: s
           </ul>
         )}
       </section>
+
+      {/* ── What completed runs stated ───────────────────────────────────────
+          Poster-written fees on delivered runs, newest first. Listed, never
+          averaged: there is no index here, and the cargo line travels with
+          every fee so a number can never pose as a quote. */}
+      {fees !== null && fees.length > 0 && (
+        <section className="space-y-2">
+          <h3 className="text-xs font-black uppercase tracking-wider" style={{ color: '#241F1A' }}>
+            What completed runs stated
+          </h3>
+          <ul className="space-y-2">
+            {fees.map((f, i) => (
+              <li key={`${f.at}-${i}`}>
+                <p className="text-[14px] font-semibold" style={{ color: '#241F1A' }}>
+                  {f.pickup} <span aria-hidden="true">→</span> {f.dropoff}
+                </p>
+                <p className="text-[13px] font-mono" style={{ color: 'rgba(36,31,26,0.66)' }}>
+                  {money(f.offeredFeeKes, f.currency)} · {f.what}{f.sizeOrWeight ? ` · ${f.sizeOrWeight}` : ''} · {ago(f.at) ?? '—'}
+                </p>
+              </li>
+            ))}
+          </ul>
+          <p className="text-[11px]" style={{ color: 'rgba(36,31,26,0.55)' }}>
+            Stated fees, not quotes and not an average. Routes read as the poster wrote them.
+          </p>
+        </section>
+      )}
 
       {/* ── Your loops ───────────────────────────────────────────────────── */}
       {board.mine.length > 0 && (

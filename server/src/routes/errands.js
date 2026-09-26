@@ -72,6 +72,12 @@ export function register(app) {
     }));
   });
 
+  app.get('/api/errands/stated-fees', (req, res) => {
+    const me = requireAuth(req, res);
+    if (!me) return;
+    res.json({ fees: errands.listStatedFees({}) });
+  });
+
   app.get('/api/errands/:id', (req, res) => {
     const me = requireAuth(req, res);
     if (!me) return;

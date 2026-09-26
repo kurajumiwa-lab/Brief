@@ -5235,6 +5235,20 @@ export interface ErrandBoard {
   /** Served by the API so the grid and the store cannot hold two taxonomies. */
   kinds?: ErrandKind[];
 }
+/** A fee a poster stated on a run that actually completed. Listed as written. */
+export interface StatedFee {
+  what: string;
+  pickup: string;
+  dropoff: string;
+  sizeOrWeight: string | null;
+  offeredFeeKes: number;
+  currency: string;
+  at: string;
+}
+export function listStatedFees(): Promise<ApiResult<{ fees: StatedFee[] }>> {
+  return request('/api/errands/stated-fees', undefined, (r) =>
+    r && Array.isArray(r.fees) ? { fees: r.fees as StatedFee[] } : undefined);
+}
 export function getErrandBoard(): Promise<ApiResult<ErrandBoard>> {
   return request<ErrandBoard>('/api/errands', undefined, (r) =>
     r && Array.isArray(r.open) && Array.isArray(r.mine) && r.eligibility ? (r as ErrandBoard) : undefined);
