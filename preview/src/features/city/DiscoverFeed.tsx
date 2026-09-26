@@ -69,7 +69,7 @@ const BOARD_ICONS: Record<string, string> = { bulk: 'box', direct: 'bike', niche
     room's default rather than a guessed hue. */
 /** One accent per real flow — the same four the tiles on Home wear, so a
  *  bulk row is blue on both shelves. */
-export const FLOW_ACCENT: Record<string, string> = { bulk: '#2563EB', direct: '#0E7C86', niche: '#8A5A2B', group: '#059669' };
+export const FLOW_ACCENT: Record<string, string> = { bulk: '#40916C', direct: '#0E7C86', niche: '#8A5A2B', group: '#059669' };
 
 const ICONS: Record<string, React.ReactNode> = {
   box: <Package className="w-6 h-6" />,

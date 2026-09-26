@@ -26,7 +26,7 @@ const INTEGRATION_BADGES: IntegrationBadge[] = [
   { id: 'lori', name: 'Lori Systems', icon: <Truck className="w-3.5 h-3.5 text-amber-600" />, position: 'top-12 right-4 sm:right-12' },
   { id: 'kicd', name: 'KICD Approved', icon: <BookOpen className="w-3.5 h-3.5 text-emerald-600" />, position: 'top-28 left-2 sm:left-8' },
   { id: 'whatsapp', name: 'WhatsApp Bot', icon: <MessageSquare className="w-3.5 h-3.5 text-green-600" />, position: 'top-32 right-2 sm:right-8' },
-  { id: 'sendy', name: 'Sendy Freight', icon: <ShieldCheck className="w-3.5 h-3.5 text-indigo-600" />, position: 'top-48 left-6 sm:left-16' },
+  { id: 'sendy', name: 'Sendy Freight', icon: <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />, position: 'top-48 left-6 sm:left-16' },
   { id: 'sacco', name: 'Matatu SACCOs', icon: <Layers className="w-3.5 h-3.5 text-rose-600" />, position: 'top-48 right-6 sm:right-16' }
 ];
 

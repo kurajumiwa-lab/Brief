@@ -65,7 +65,7 @@ function TheBook({ items, onQueued }: { items: { name: string; priceKes: string 
   return (
     <section aria-label="The book" className="bg-[color:var(--color-paper)] border border-[var(--brief-line)] rounded-2xl p-4 space-y-3">
       <div className="flex items-center gap-2">
-        <BookOpen className="w-4 h-4 text-[#2563EB]" aria-hidden="true" />
+        <BookOpen className="w-4 h-4 text-[#40916C]" aria-hidden="true" />
         <h3 className="text-[14px] font-extrabold text-[var(--brief-ink)]">The book</h3>
         {book && <span className="text-[11px] text-[var(--ink-60)] ml-auto">derived, never stored</span>}
       </div>
@@ -104,14 +104,14 @@ function TheBook({ items, onQueued }: { items: { name: string; priceKes: string 
 
           <div className="flex items-center gap-1.5 pt-1 border-t border-[var(--brief-line)]">
             <input list="book-items" value={name} onChange={(e) => setName(e.target.value)} placeholder="What sold?" maxLength={60}
-              className="flex-1 min-w-0 rounded-lg border border-[var(--brief-line)] bg-[color:var(--color-paper)] px-2.5 py-1.5 text-[13px] font-bold text-[var(--brief-ink)] outline-none focus:border-[#2563EB]" />
+              className="flex-1 min-w-0 rounded-lg border border-[var(--brief-line)] bg-[color:var(--color-paper)] px-2.5 py-1.5 text-[13px] font-bold text-[var(--brief-ink)] outline-none focus:border-[#40916C]" />
             <datalist id="book-items">
               {items.map((i) => <option key={i.name} value={i.name} />)}
             </datalist>
             <input value={qty} onChange={(e) => setQty(e.target.value.replace(/[^\d]/g, ''))} placeholder="1" inputMode="numeric"
-              className="w-12 rounded-lg border border-[var(--brief-line)] bg-[color:var(--color-paper)] px-2 py-1.5 text-[13px] text-[var(--brief-ink)] outline-none focus:border-[#2563EB]" aria-label="quantity" />
+              className="w-12 rounded-lg border border-[var(--brief-line)] bg-[color:var(--color-paper)] px-2 py-1.5 text-[13px] text-[var(--brief-ink)] outline-none focus:border-[#40916C]" aria-label="quantity" />
             <button type="button" onClick={() => void log()} disabled={busy || !name.trim()}
-              className="rounded-lg bg-[#2563EB] px-3 py-1.5 text-[12px] font-extrabold text-[var(--accent-ink)] disabled:opacity-40 cursor-pointer">Log</button>
+              className="rounded-lg bg-[#40916C] px-3 py-1.5 text-[12px] font-extrabold text-[var(--accent-ink)] disabled:opacity-40 cursor-pointer">Log</button>
           </div>
           {note && <p role="status" className="text-[11px] font-bold text-[#059669]">{note}</p>}
           <p className="text-[11px] text-[var(--ink-60)] leading-snug">{book.note}</p>
@@ -153,15 +153,15 @@ function PoolACard({ items }: { items: { name: string; priceKes: string }[] }) {
       </p>
       <div className="grid grid-cols-2 gap-1.5">
         <input list="book-items" value={itemName} onChange={(e) => setItemName(e.target.value)} placeholder="Item (from your list)" maxLength={60}
-          className="col-span-2 rounded-lg border border-[var(--brief-line)] bg-[color:var(--color-paper)] px-2.5 py-1.5 text-[13px] font-bold text-[var(--brief-ink)] outline-none focus:border-[#2563EB]" />
+          className="col-span-2 rounded-lg border border-[var(--brief-line)] bg-[color:var(--color-paper)] px-2.5 py-1.5 text-[13px] font-bold text-[var(--brief-ink)] outline-none focus:border-[#40916C]" />
         <input value={unitCost} onChange={(e) => setUnitCost(e.target.value.replace(/[^\d]/g, ''))} placeholder="Bulk cost/unit (KES)" inputMode="numeric"
-          className="rounded-lg border border-[var(--brief-line)] bg-[color:var(--color-paper)] px-2.5 py-1.5 text-[13px] text-[var(--brief-ink)] outline-none focus:border-[#2563EB]" aria-label="bulk unit cost in shillings" />
+          className="rounded-lg border border-[var(--brief-line)] bg-[color:var(--color-paper)] px-2.5 py-1.5 text-[13px] text-[var(--brief-ink)] outline-none focus:border-[#40916C]" aria-label="bulk unit cost in shillings" />
         <input value={goal} onChange={(e) => setGoal(e.target.value.replace(/[^\d]/g, ''))} placeholder="Goal (units)" inputMode="numeric"
-          className="rounded-lg border border-[var(--brief-line)] bg-[color:var(--color-paper)] px-2.5 py-1.5 text-[13px] text-[var(--brief-ink)] outline-none focus:border-[#2563EB]" aria-label="goal units" />
+          className="rounded-lg border border-[var(--brief-line)] bg-[color:var(--color-paper)] px-2.5 py-1.5 text-[13px] text-[var(--brief-ink)] outline-none focus:border-[#40916C]" aria-label="goal units" />
         <input value={mine} onChange={(e) => setMine(e.target.value.replace(/[^\d]/g, ''))} placeholder="Your units" inputMode="numeric"
-          className="rounded-lg border border-[var(--brief-line)] bg-[color:var(--color-paper)] px-2.5 py-1.5 text-[13px] text-[var(--brief-ink)] outline-none focus:border-[#2563EB]" aria-label="your pledged units" />
+          className="rounded-lg border border-[var(--brief-line)] bg-[color:var(--color-paper)] px-2.5 py-1.5 text-[13px] text-[var(--brief-ink)] outline-none focus:border-[#40916C]" aria-label="your pledged units" />
         <button type="button" onClick={() => void pool()} disabled={busy || !itemName || !unitCost || !goal || !mine}
-          className="rounded-lg bg-[#2563EB] px-3 py-1.5 text-[12px] font-extrabold text-[var(--accent-ink)] disabled:opacity-40 cursor-pointer">Open the pool</button>
+          className="rounded-lg bg-[#40916C] px-3 py-1.5 text-[12px] font-extrabold text-[var(--accent-ink)] disabled:opacity-40 cursor-pointer">Open the pool</button>
       </div>
       {error && <p role="alert" className="text-[11px] font-bold text-[#DC2626]">{error}</p>}
       {out && (
@@ -169,7 +169,7 @@ function PoolACard({ items }: { items: { name: string; priceKes: string }[] }) {
           <p className="text-[11px] font-bold text-[var(--brief-ink)]">Pool open — KES {out.total.toLocaleString()} of {out.target.toLocaleString()} pledged.</p>
           <pre className="whitespace-pre-wrap font-sans text-[11px] leading-relaxed text-[var(--brief-ink)] select-all">{out.text}</pre>
           <a href={out.waMe} target="_blank" rel="noreferrer"
-            className="inline-flex items-center gap-1.5 rounded-lg bg-[#2563EB] px-3 py-1.5 text-[11px] font-extrabold text-[var(--accent-ink)] no-underline">
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[#40916C] px-3 py-1.5 text-[11px] font-extrabold text-[var(--accent-ink)] no-underline">
             <Send className="w-3 h-3" /> Call other shops on WhatsApp
           </a>
         </div>
@@ -268,10 +268,10 @@ export function WhatsAppShopBuilder({ onOpenFees }: { onOpenFees: () => void }) 
     <div className="max-w-3xl mx-auto px-4 py-6 space-y-4">
       <header className="space-y-1">
         <div className="flex items-center gap-2">
-          <Send className="w-4 h-4 text-[#2563EB]" aria-hidden="true" />
+          <Send className="w-4 h-4 text-[#40916C]" aria-hidden="true" />
           <h1 className="text-lg font-extrabold text-[var(--brief-ink)]">WhatsApp shop</h1>
           {published && (
-            <span className="px-2 py-0.5 rounded-full bg-[#2563EB] text-[11px] font-extrabold uppercase tracking-[0.12em] text-[var(--accent-ink)]">Live</span>
+            <span className="px-2 py-0.5 rounded-full bg-[#40916C] text-[11px] font-extrabold uppercase tracking-[0.12em] text-[var(--accent-ink)]">Live</span>
           )}
         </div>
         <p className="text-[12px] text-[var(--ink-60)] leading-snug">
@@ -286,17 +286,17 @@ export function WhatsAppShopBuilder({ onOpenFees }: { onOpenFees: () => void }) 
             <label className="block space-y-1">
               <span className="text-[11px] font-extrabold uppercase tracking-[0.12em] text-[var(--ink-70)]">Shop name</span>
               <input value={name} onChange={(e) => setName(e.target.value)} maxLength={40} placeholder="Mama Njeria Fresh"
-                className="w-full rounded-xl border border-[var(--brief-line)] bg-[color:var(--color-paper)] px-3 py-2 text-[14px] font-bold text-[var(--brief-ink)] outline-none focus:border-[#2563EB]" />
+                className="w-full rounded-xl border border-[var(--brief-line)] bg-[color:var(--color-paper)] px-3 py-2 text-[14px] font-bold text-[var(--brief-ink)] outline-none focus:border-[#40916C]" />
             </label>
             <label className="block space-y-1">
               <span className="text-[11px] font-extrabold uppercase tracking-[0.12em] text-[var(--ink-70)]">One line about it</span>
               <input value={tagline} onChange={(e) => setTagline(e.target.value)} maxLength={60} placeholder="Fresh groceries, Kilimani"
-                className="w-full rounded-xl border border-[var(--brief-line)] bg-[color:var(--color-paper)] px-3 py-2 text-[13px] text-[var(--brief-ink)] outline-none focus:border-[#2563EB]" />
+                className="w-full rounded-xl border border-[var(--brief-line)] bg-[color:var(--color-paper)] px-3 py-2 text-[13px] text-[var(--brief-ink)] outline-none focus:border-[#40916C]" />
             </label>
             <label className="block space-y-1">
               <span className="text-[11px] font-extrabold uppercase tracking-[0.12em] text-[var(--ink-70)]">WhatsApp number customers order on</span>
               <input value={orderNumber} onChange={(e) => setOrderNumber(e.target.value)} maxLength={20} placeholder="+254 712 345 678" inputMode="tel"
-                className="w-full rounded-xl border border-[var(--brief-line)] bg-[color:var(--color-paper)] px-3 py-2 text-[14px] text-[var(--brief-ink)] outline-none focus:border-[#2563EB]" />
+                className="w-full rounded-xl border border-[var(--brief-line)] bg-[color:var(--color-paper)] px-3 py-2 text-[14px] text-[var(--brief-ink)] outline-none focus:border-[#40916C]" />
             </label>
           </div>
 
@@ -308,11 +308,11 @@ export function WhatsAppShopBuilder({ onOpenFees }: { onOpenFees: () => void }) 
             {items.map((item, idx) => (
               <div key={idx} className="flex items-center gap-1.5">
                 <input value={item.name} onChange={(e) => setItems(items.map((it, i) => i === idx ? { ...it, name: e.target.value } : it))} placeholder="Sukuma Wiki" maxLength={60}
-                  className="flex-1 min-w-0 rounded-lg border border-[var(--brief-line)] bg-[color:var(--color-paper)] px-2.5 py-1.5 text-[13px] font-bold text-[var(--brief-ink)] outline-none focus:border-[#2563EB]" />
+                  className="flex-1 min-w-0 rounded-lg border border-[var(--brief-line)] bg-[color:var(--color-paper)] px-2.5 py-1.5 text-[13px] font-bold text-[var(--brief-ink)] outline-none focus:border-[#40916C]" />
                 <input value={item.priceKes} onChange={(e) => setItems(items.map((it, i) => i === idx ? { ...it, priceKes: e.target.value.replace(/[^\d]/g, '') } : it))} placeholder="50" inputMode="numeric"
-                  className="w-16 rounded-lg border border-[var(--brief-line)] bg-[color:var(--color-paper)] px-2 py-1.5 text-[13px] text-[var(--brief-ink)] outline-none focus:border-[#2563EB]" aria-label={`price of item ${idx + 1} in shillings`} />
+                  className="w-16 rounded-lg border border-[var(--brief-line)] bg-[color:var(--color-paper)] px-2 py-1.5 text-[13px] text-[var(--brief-ink)] outline-none focus:border-[#40916C]" aria-label={`price of item ${idx + 1} in shillings`} />
                 <input value={item.note} onChange={(e) => setItems(items.map((it, i) => i === idx ? { ...it, note: e.target.value } : it))} placeholder="note (optional)" maxLength={40}
-                  className="w-24 rounded-lg border border-[var(--brief-line)] bg-[color:var(--color-paper)] px-2 py-1.5 text-[12px] text-[var(--ink-70)] outline-none focus:border-[#2563EB]" aria-label={`note on item ${idx + 1}`} />
+                  className="w-24 rounded-lg border border-[var(--brief-line)] bg-[color:var(--color-paper)] px-2 py-1.5 text-[12px] text-[var(--ink-70)] outline-none focus:border-[#40916C]" aria-label={`note on item ${idx + 1}`} />
                 <button type="button" onClick={() => setItems(items.filter((_, i) => i !== idx))} disabled={items.length === 1}
                   className="h-7 w-7 shrink-0 flex items-center justify-center rounded-lg text-[var(--ink-60)] hover:text-[#DC2626] disabled:opacity-30 cursor-pointer" aria-label={`remove item ${idx + 1}`}>
                   <Trash2 className="w-3.5 h-3.5" />
@@ -320,20 +320,20 @@ export function WhatsAppShopBuilder({ onOpenFees }: { onOpenFees: () => void }) 
               </div>
             ))}
             <button type="button" onClick={() => setItems([...items, { name: '', priceKes: '', note: '' }])} disabled={items.length >= 40}
-              className="w-full rounded-xl border border-dashed border-[var(--brief-line)] py-1.5 text-[12px] font-extrabold text-[#2563EB] hover:border-[#2563EB] disabled:opacity-40 cursor-pointer flex items-center justify-center gap-1">
+              className="w-full rounded-xl border border-dashed border-[var(--brief-line)] py-1.5 text-[12px] font-extrabold text-[#40916C] hover:border-[#40916C] disabled:opacity-40 cursor-pointer flex items-center justify-center gap-1">
               <Plus className="w-3.5 h-3.5" /> Add an item
             </button>
           </div>
 
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={() => void save()} disabled={busy}
-              className="rounded-xl bg-[#2563EB] px-4 py-2 text-[13px] font-extrabold text-[var(--accent-ink)] disabled:opacity-40 cursor-pointer">Save</button>
+              className="rounded-xl bg-[#40916C] px-4 py-2 text-[13px] font-extrabold text-[var(--accent-ink)] disabled:opacity-40 cursor-pointer">Save</button>
             {published ? (
               <button type="button" onClick={() => void unpublish()} disabled={busy}
                 className="rounded-xl border border-[var(--brief-line)] bg-[color:var(--color-paper)] px-4 py-2 text-[13px] font-extrabold text-[var(--brief-ink)] disabled:opacity-40 cursor-pointer">Unpublish</button>
             ) : (
               <button type="button" onClick={() => void publish()} disabled={busy}
-                className="rounded-xl border border-[#2563EB] bg-[color:var(--color-paper)] px-4 py-2 text-[13px] font-extrabold text-[#2563EB] disabled:opacity-40 cursor-pointer">Publish</button>
+                className="rounded-xl border border-[#40916C] bg-[color:var(--color-paper)] px-4 py-2 text-[13px] font-extrabold text-[#40916C] disabled:opacity-40 cursor-pointer">Publish</button>
             )}
           </div>
 
@@ -345,7 +345,7 @@ export function WhatsAppShopBuilder({ onOpenFees }: { onOpenFees: () => void }) 
                 {!storeActive && /store service/i.test(error) && (
                   <>
                     {' '}
-                    <button type="button" onClick={onOpenFees} className="font-extrabold text-[#2563EB] underline cursor-pointer">
+                    <button type="button" onClick={onOpenFees} className="font-extrabold text-[#40916C] underline cursor-pointer">
                       Pay the store service (KES {view?.store.priceKes ?? 250}/month via Pochi) →
                     </button>
                   </>
@@ -359,7 +359,7 @@ export function WhatsAppShopBuilder({ onOpenFees }: { onOpenFees: () => void }) 
         {/* The output, exactly as WhatsApp will render the source */}
         <div className="space-y-2">
           <div className="flex items-center gap-2 px-1">
-            <Store className="w-3.5 h-3.5 text-[#2563EB]" aria-hidden="true" />
+            <Store className="w-3.5 h-3.5 text-[#40916C]" aria-hidden="true" />
             <p className="text-[11px] font-extrabold uppercase tracking-[0.12em] text-[var(--ink-70)]">What customers receive</p>
           </div>
           {view?.share ? (
@@ -372,7 +372,7 @@ export function WhatsAppShopBuilder({ onOpenFees }: { onOpenFees: () => void }) 
               </div>
               <div className="flex flex-wrap gap-2">
                 <button type="button" onClick={() => void copyText()}
-                  className="rounded-xl bg-[#2563EB] px-3.5 py-2 text-[12px] font-extrabold text-[var(--accent-ink)] cursor-pointer flex items-center gap-1.5">
+                  className="rounded-xl bg-[#40916C] px-3.5 py-2 text-[12px] font-extrabold text-[var(--accent-ink)] cursor-pointer flex items-center gap-1.5">
                   <Copy className="w-3.5 h-3.5" /> Copy message
                 </button>
                 <a href={view.share.waMe} target="_blank" rel="noreferrer"
@@ -401,7 +401,7 @@ export function WhatsAppShopBuilder({ onOpenFees }: { onOpenFees: () => void }) 
                 <p className="text-[12px] text-[var(--ink-70)] leading-snug">
                   Drafting is free. Publishing needs the store service — KES {view?.store.priceKes ?? 250}/month, paid via Pochi la Biashara and confirmed by an operator.
                 </p>
-                <button type="button" onClick={onOpenFees} className="text-[12px] font-extrabold text-[#2563EB] underline cursor-pointer">
+                <button type="button" onClick={onOpenFees} className="text-[12px] font-extrabold text-[#40916C] underline cursor-pointer">
                   Pay the store service →
                 </button>
               </>

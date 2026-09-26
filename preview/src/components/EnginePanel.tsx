@@ -163,10 +163,10 @@ export function EnginePanel({ onObjectsChanged }: EnginePanelProps) {
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full" style={{ background: run ? '#2563EB' : 'var(--brief-line)' }} />
+              <span className="h-2 w-2 rounded-full" style={{ background: run ? '#40916C' : 'var(--brief-line)' }} />
               <h2 className="text-sm font-extrabold text-[var(--brief-ink)]">Brief Engine</h2>
               {guardrail && (
-                <span className="rounded-md bg-[#2563EB] px-1.5 py-0.5 text-[11px] font-extrabold text-[var(--accent-ink)]">
+                <span className="rounded-md bg-[#40916C] px-1.5 py-0.5 text-[11px] font-extrabold text-[var(--accent-ink)]">
                   {guardrail.label}
                 </span>
               )}
@@ -185,7 +185,7 @@ export function EnginePanel({ onObjectsChanged }: EnginePanelProps) {
             onClick={() => void manualSync()}
             disabled={pending}
             className="shrink-0 rounded-lg px-3 py-1.5 text-[12px] font-extrabold cursor-pointer disabled:opacity-40"
-            style={{ border: '1px solid #2563EB', color: 'var(--brief-ink)', background: 'var(--color-paper)' }}
+            style={{ border: '1px solid #40916C', color: 'var(--brief-ink)', background: 'var(--color-paper)' }}
           >
             {pending ? 'Beating…' : 'Sync now'}
           </button>
@@ -318,7 +318,7 @@ export function EnginePanel({ onObjectsChanged }: EnginePanelProps) {
               onClick={() => void addRoute()}
               disabled={creating || !form.name.trim() || !form.url.trim()}
               className="shrink-0 rounded-lg px-3 py-1.5 text-[12px] font-extrabold cursor-pointer disabled:opacity-40"
-              style={{ background: '#2563EB', color: 'var(--brief-ink)' }}
+              style={{ background: '#40916C', color: 'var(--brief-ink)' }}
             >
               {creating ? '…' : 'Add'}
             </button>

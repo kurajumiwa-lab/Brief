@@ -103,7 +103,7 @@ export function OrderStatus({
             <button
               onClick={() => onSettle(order.id)}
               disabled={busy}
-              className="px-3 py-1 rounded-full bg-[#2563EB] text-[var(--accent-ink)] text-[11px] font-extrabold cursor-pointer disabled:opacity-50"
+              className="px-3 py-1 rounded-full bg-[#40916C] text-[var(--accent-ink)] text-[11px] font-extrabold cursor-pointer disabled:opacity-50"
             >
               Settle
             </button>
@@ -112,7 +112,7 @@ export function OrderStatus({
             <button
               onClick={() => onFulfil(order.id)}
               disabled={busy}
-              className="px-3 py-1 rounded-full bg-[#2563EB] text-[var(--accent-ink)] text-[11px] font-extrabold cursor-pointer disabled:opacity-50"
+              className="px-3 py-1 rounded-full bg-[#40916C] text-[var(--accent-ink)] text-[11px] font-extrabold cursor-pointer disabled:opacity-50"
             >
               Mark fulfilled
             </button>

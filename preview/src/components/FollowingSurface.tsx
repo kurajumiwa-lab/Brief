@@ -146,14 +146,14 @@ export function FollowingSurface({
             <button
               type="button"
               onClick={() => setTab('following')}
-              className={`rounded-full px-3 py-1 text-[12px] font-bold transition-colors ${tab === 'following' ? 'bg-[#2563EB] text-[var(--accent-ink)]' : 'text-[var(--ink-70)] hover:bg-[color:var(--color-well)]'}`}
+              className={`rounded-full px-3 py-1 text-[12px] font-bold transition-colors ${tab === 'following' ? 'bg-[#40916C] text-[var(--accent-ink)]' : 'text-[var(--ink-70)] hover:bg-[color:var(--color-well)]'}`}
             >
               Following
             </button>
             <button
               type="button"
               onClick={() => setTab('manage')}
-              className={`rounded-full px-3 py-1 text-[12px] font-bold transition-colors ${tab === 'manage' ? 'bg-[#2563EB] text-[var(--accent-ink)]' : 'text-[var(--ink-70)] hover:bg-[color:var(--color-well)]'}`}
+              className={`rounded-full px-3 py-1 text-[12px] font-bold transition-colors ${tab === 'manage' ? 'bg-[#40916C] text-[var(--accent-ink)]' : 'text-[var(--ink-70)] hover:bg-[color:var(--color-well)]'}`}
             >
               Manage{follows && follows.total > 0 ? ` (${follows.total})` : ''}
             </button>
@@ -173,14 +173,14 @@ export function FollowingSurface({
         <div className="flex-1 overflow-y-auto pb-safe">
           {!authed && (
             <div className="flex flex-col items-center gap-3 px-6 py-20 text-center">
-              <Users className="h-8 w-8 text-[#2563EB]" />
+              <Users className="h-8 w-8 text-[#40916C]" />
               <p className="max-w-xs text-[14px] font-semibold text-[var(--brief-ink)]">
                 Sign in to follow places, businesses, publishers, organizers and communities.
               </p>
               <button
                 type="button"
                 onClick={onRequireAuth}
-                className="rounded-full bg-[#2563EB] px-5 py-2.5 text-[14px] font-bold text-[var(--accent-ink)]"
+                className="rounded-full bg-[#40916C] px-5 py-2.5 text-[14px] font-bold text-[var(--accent-ink)]"
               >
                 Sign in
               </button>
@@ -213,10 +213,10 @@ export function FollowingSurface({
                     onClick={() => onOpenEntity(section.entityId)}
                     className="group mb-2 flex w-full items-center gap-2 text-left"
                   >
-                    <span className="text-[12px] font-extrabold uppercase tracking-[0.14em] text-[var(--brief-ink)] group-hover:text-[#2563EB]">
+                    <span className="text-[12px] font-extrabold uppercase tracking-[0.14em] text-[var(--brief-ink)] group-hover:text-[#40916C]">
                       {section.name}
                     </span>
-                    <span className="rounded-full bg-[color:var(--color-well)] px-2 py-0.5 text-[11px] font-bold text-[#2563EB]">
+                    <span className="rounded-full bg-[color:var(--color-well)] px-2 py-0.5 text-[11px] font-bold text-[#40916C]">
                       {KIND_SINGULAR[section.kind] ?? section.kind}
                     </span>
                     {section.location?.area && (
@@ -248,7 +248,7 @@ export function FollowingSurface({
                               <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-[#0891B2]">{o.type}</span>
                               {line && <span className="text-[11px] font-semibold text-[rgba(10, 14, 20,0.62)]">{line}</span>}
                             </div>
-                            <h4 className="mt-0.5 line-clamp-2 text-[13px] font-semibold leading-snug text-[var(--brief-ink)] group-hover:text-[#2563EB]">
+                            <h4 className="mt-0.5 line-clamp-2 text-[13px] font-semibold leading-snug text-[var(--brief-ink)] group-hover:text-[#40916C]">
                               {o.title}
                             </h4>
                           </div>
@@ -289,7 +289,7 @@ export function FollowingSurface({
                           {f.imageUrl ? (
                             <img src={f.imageUrl} alt="" aria-hidden="true" className="h-10 w-10 rounded-xl object-cover" />
                           ) : (
-                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#2563EB] to-[#EFF1F4] text-[var(--brief-ink)]">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#40916C] to-[#EFF1F4] text-[var(--brief-ink)]">
                               <Users className="h-4 w-4" />
                             </div>
                           )}
@@ -298,7 +298,7 @@ export function FollowingSurface({
                             onClick={() => onOpenEntity(f.id)}
                             className="min-w-0 flex-1 text-left"
                           >
-                            <p className="truncate text-[14px] font-bold text-[var(--brief-ink)] hover:text-[#2563EB]">{f.name}</p>
+                            <p className="truncate text-[14px] font-bold text-[var(--brief-ink)] hover:text-[#40916C]">{f.name}</p>
                             <p className="truncate text-[11px] font-semibold text-[rgba(10, 14, 20,0.62)]">
                               {f.objectCount} {f.objectCount === 1 ? 'item' : 'items'}
                               {f.location?.area ? ` · ${f.location.area}` : ''}

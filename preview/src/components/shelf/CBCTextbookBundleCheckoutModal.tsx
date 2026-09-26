@@ -670,7 +670,7 @@ export const CBCTextbookBundleCheckoutModal: React.FC<CBCTextbookBundleCheckoutM
                   ) : (
                     <>
                       <span>1-Click Authorize & Dispatch (KES {totalAmountKes.toLocaleString()})</span>
-                      <ArrowRight className="w-4 h-4 text-[#2563EB]" />
+                      <ArrowRight className="w-4 h-4 text-[#40916C]" />
                     </>
                   )}
                 </button>

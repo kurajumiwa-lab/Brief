@@ -184,7 +184,7 @@ export function CircleTasks({
                   else onReopen?.(task.id, reason);
                   setAsking(null); setWhy('');
                 }}
-                className="shrink-0 px-3 py-1.5 rounded-xl bg-[#2563EB] text-[var(--accent-ink)] font-extrabold text-[11px] cursor-pointer disabled:opacity-40"
+                className="shrink-0 px-3 py-1.5 rounded-xl bg-[#40916C] text-[var(--accent-ink)] font-extrabold text-[11px] cursor-pointer disabled:opacity-40"
               >
                 {asking.kind === 'cancel' ? 'Cancel task' : 'Reopen task'}
               </button>
@@ -200,7 +200,7 @@ export function CircleTasks({
               <button
                 disabled={!dueDraft || !why.trim()}
                 onClick={() => { onDue?.(task.id, dueDraft, why.trim()); setAsking(null); setWhy(''); }}
-                className="shrink-0 px-3 py-1.5 rounded-xl bg-[#2563EB] text-[var(--accent-ink)] font-extrabold text-[11px] cursor-pointer disabled:opacity-40"
+                className="shrink-0 px-3 py-1.5 rounded-xl bg-[#40916C] text-[var(--accent-ink)] font-extrabold text-[11px] cursor-pointer disabled:opacity-40"
               >
                 Move it
               </button>
@@ -210,7 +210,7 @@ export function CircleTasks({
             <button
               onClick={() => onAssign(task.id)}
               disabled={busy}
-              className="px-3 py-1.5 rounded-xl bg-[#2563EB] text-[var(--accent-ink)] font-extrabold text-[11px] cursor-pointer disabled:opacity-50"
+              className="px-3 py-1.5 rounded-xl bg-[#40916C] text-[var(--accent-ink)] font-extrabold text-[11px] cursor-pointer disabled:opacity-50"
             >
               {busy ? 'Working...' : 'Take this on'}
             </button>
@@ -221,7 +221,7 @@ export function CircleTasks({
               <button
                 onClick={() => onComplete(task.id)}
                 disabled={busy}
-                className="px-3 py-1.5 rounded-xl bg-[#2563EB] text-[var(--accent-ink)] font-extrabold text-[11px] cursor-pointer disabled:opacity-50"
+                className="px-3 py-1.5 rounded-xl bg-[#40916C] text-[var(--accent-ink)] font-extrabold text-[11px] cursor-pointer disabled:opacity-50"
               >
                 {busy ? 'Working...' : 'Mark complete'}
               </button>

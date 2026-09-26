@@ -148,7 +148,7 @@ export function WorkflowsScreen(props: WorkflowsScreenProps) {
                 }}
                 className={`shrink-0 px-3 py-1.5 rounded-full text-[12px] font-extrabold border cursor-pointer transition ${
                   workflowView === 'queue'
-                    ? 'bg-[#2563EB] text-[var(--accent-ink)] border-[#0891B2]'
+                    ? 'bg-[#40916C] text-[var(--accent-ink)] border-[#0891B2]'
                     : 'bg-[color:var(--color-paper)] text-[var(--ink-70)] border-[var(--brief-line)]'
                 }`}
               >
@@ -163,7 +163,7 @@ export function WorkflowsScreen(props: WorkflowsScreenProps) {
                   }}
                   className={`shrink-0 px-3 py-1.5 rounded-full text-[12px] font-extrabold border cursor-pointer transition ${
                     workflowView === 'screen' && activeWorkflowBundle.id === bundle.id
-                      ? 'bg-[#2563EB] text-[var(--accent-ink)] border-[#0891B2]'
+                      ? 'bg-[#40916C] text-[var(--accent-ink)] border-[#0891B2]'
                       : 'bg-[color:var(--color-paper)] text-[var(--ink-70)] border-[var(--brief-line)]'
                   }`}
                 >
@@ -180,7 +180,7 @@ export function WorkflowsScreen(props: WorkflowsScreenProps) {
                     onClick={() => setWorkflowSection(id as WorkflowSection)}
                     className={`shrink-0 px-2.5 py-1 rounded-lg text-[11px] font-extrabold transition cursor-pointer ${
                       workflowSection === id
-                        ? 'bg-[#2563EB] text-[var(--accent-ink)]'
+                        ? 'bg-[#40916C] text-[var(--accent-ink)]'
                         : 'text-[var(--ink-70)] hover:text-[var(--brief-ink)] bg-[color:var(--color-well)]'
                     }`}
                   >
@@ -274,7 +274,7 @@ export function WorkflowsScreen(props: WorkflowsScreenProps) {
 
                   <div className="h-1.5 bg-[color:var(--color-well)] rounded-full mt-5 overflow-hidden">
                     <div
-                      className="h-full bg-[#2563EB] rounded-full"
+                      className="h-full bg-[#40916C] rounded-full"
                       style={{ width: `${journey.progressPercent}%` }}
                     />
                   </div>

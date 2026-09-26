@@ -230,7 +230,7 @@ export function ErrandsLobby({ className = '', composerSignal }: { className?: s
         <h2 className="text-2xl font-black leading-tight" style={{ color: 'var(--wairo-slate)' }}>
           Errands people need carried
         </h2>
-        <p className="text-sm" style={{ color: 'rgba(36,31,26,0.66)' }}>
+        <p className="text-sm" style={{ color: 'rgba(13,27,42,0.66)' }}>
           {board.open.length} open on the board · {board.carriersAround} carrier{board.carriersAround === 1 ? '' : 's'} with a record here
         </p>
       </header>
@@ -241,7 +241,7 @@ export function ErrandsLobby({ className = '', composerSignal }: { className?: s
         data-urgency={eligibility.eligible ? undefined : 'quiet'}
       >
         <Users className="w-4 h-4" style={{ color: 'var(--color-primary)' }} />
-        <p className="text-sm font-bold flex-1 min-w-[180px]" style={{ color: '#241F1A' }}>
+        <p className="text-sm font-bold flex-1 min-w-[180px]" style={{ color: '#0D1B2A' }}>
           {eligibility.eligible ? 'You can take errands.' : 'You cannot take errands yet.'}
         </p>
         {eligibility.basis.length > 0 ? (
@@ -257,7 +257,7 @@ export function ErrandsLobby({ className = '', composerSignal }: { className?: s
             ))}
           </div>
         ) : (
-          <p className="text-[12px] max-w-md" style={{ color: 'rgba(36,31,26,0.6)' }}>{eligibility.howToJoin}</p>
+          <p className="text-[12px] max-w-md" style={{ color: 'rgba(13,27,42,0.6)' }}>{eligibility.howToJoin}</p>
         )}
       </section>
 
@@ -320,7 +320,7 @@ export function ErrandsLobby({ className = '', composerSignal }: { className?: s
             </button>
             <button type="button" className="brief-lobby-btn brief-lobby-btn--quiet" onClick={() => setPosting(false)}>Cancel</button>
           </div>
-          <p className="text-[11px]" style={{ color: 'rgba(36,31,26,0.6)' }}>
+          <p className="text-[11px]" style={{ color: 'rgba(13,27,42,0.6)' }}>
             Leave the fee blank if it is a favour. Whatever you write is a statement to a carrier, not a payment Brief makes or holds.
           </p>
         </form>
@@ -328,7 +328,7 @@ export function ErrandsLobby({ className = '', composerSignal }: { className?: s
 
       {/* ── The board ────────────────────────────────────────────────────── */}
       <section className="space-y-2">
-        <h3 className="text-xs font-black uppercase tracking-wider" style={{ color: '#241F1A' }}>
+        <h3 className="text-xs font-black uppercase tracking-wider" style={{ color: '#0D1B2A' }}>
           On the board
         </h3>
         {/* ── The kinds ──────────────────────────────────────────────────
@@ -390,8 +390,8 @@ export function ErrandsLobby({ className = '', composerSignal }: { className?: s
 
         {board.open.length === 0 ? (
           <div className="brief-lobby-card p-4" data-urgency="quiet">
-            <p className="text-sm font-bold" style={{ color: '#241F1A' }}>Nothing is posted right now.</p>
-            <p className="text-[13px] mt-1" style={{ color: 'rgba(36,31,26,0.66)' }}>
+            <p className="text-sm font-bold" style={{ color: '#0D1B2A' }}>Nothing is posted right now.</p>
+            <p className="text-[13px] mt-1" style={{ color: 'rgba(13,27,42,0.66)' }}>
               No errands have been put on this board yet. Post one, or push a bike below — and if nobody answers it, that is the truth of the board, not a hidden queue.
             </p>
           </div>
@@ -424,22 +424,22 @@ export function ErrandsLobby({ className = '', composerSignal }: { className?: s
           every fee so a number can never pose as a quote. */}
       {fees !== null && fees.length > 0 && (
         <section className="space-y-2">
-          <h3 className="text-xs font-black uppercase tracking-wider" style={{ color: '#241F1A' }}>
+          <h3 className="text-xs font-black uppercase tracking-wider" style={{ color: '#0D1B2A' }}>
             What completed runs stated
           </h3>
           <ul className="space-y-2">
             {fees.map((f, i) => (
               <li key={`${f.at}-${i}`}>
-                <p className="text-[14px] font-semibold" style={{ color: '#241F1A' }}>
+                <p className="text-[14px] font-semibold" style={{ color: '#0D1B2A' }}>
                   {f.pickup} <span aria-hidden="true">→</span> {f.dropoff}
                 </p>
-                <p className="text-[13px] font-mono" style={{ color: 'rgba(36,31,26,0.66)' }}>
+                <p className="text-[13px] font-mono" style={{ color: 'rgba(13,27,42,0.66)' }}>
                   {money(f.offeredFeeKes, f.currency)} · {f.what}{f.sizeOrWeight ? ` · ${f.sizeOrWeight}` : ''} · {ago(f.at) ?? '—'}
                 </p>
               </li>
             ))}
           </ul>
-          <p className="text-[11px]" style={{ color: 'rgba(36,31,26,0.55)' }}>
+          <p className="text-[11px]" style={{ color: 'rgba(13,27,42,0.55)' }}>
             Stated fees, not quotes and not an average. Routes read as the poster wrote them.
           </p>
         </section>
@@ -448,7 +448,7 @@ export function ErrandsLobby({ className = '', composerSignal }: { className?: s
       {/* ── Your loops ───────────────────────────────────────────────────── */}
       {board.mine.length > 0 && (
         <section className="space-y-2">
-          <h3 className="text-xs font-black uppercase tracking-wider" style={{ color: '#241F1A' }}>
+          <h3 className="text-xs font-black uppercase tracking-wider" style={{ color: '#0D1B2A' }}>
             Your errands
           </h3>
           <ul className="space-y-2.5">
@@ -474,10 +474,10 @@ export function ErrandsLobby({ className = '', composerSignal }: { className?: s
       {/* ── How to move it another way ──────────────────────────────────── */}
       {/* ── Push for a bike, from the same room ─────────────────────────── */}
       <section className="space-y-2">
-        <h3 className="text-xs font-black uppercase tracking-wider" style={{ color: '#241F1A' }}>
+        <h3 className="text-xs font-black uppercase tracking-wider" style={{ color: '#0D1B2A' }}>
           Dispatch a shop order
         </h3>
-        <p className="text-[12px] mb-1" style={{ color: 'rgba(36,31,26,0.66)' }}>Already sold something? Arrange collection from a shop here. For a new job, post an errand above.</p>
+        <p className="text-[12px] mb-1" style={{ color: 'rgba(13,27,42,0.66)' }}>Already sold something? Arrange collection from a shop here. For a new job, post an errand above.</p>
         <WairoDispatchPanel />
       </section>
     </div>
@@ -590,24 +590,24 @@ function ErrandCard({
   return (
     <article className="brief-lobby-card p-4 space-y-2.5" data-urgency={urgency}>
       <div className="flex items-start justify-between gap-3">
-        <h4 className="text-[15px] font-black leading-snug min-w-0" style={{ color: '#241F1A' }}>
+        <h4 className="text-[15px] font-black leading-snug min-w-0" style={{ color: '#0D1B2A' }}>
           {e.what}
         </h4>
-        <span className="shrink-0 text-[11px] font-black uppercase tracking-wider" style={{ color: 'rgba(36,31,26,0.55)' }}>
+        <span className="shrink-0 text-[11px] font-black uppercase tracking-wider" style={{ color: 'rgba(13,27,42,0.55)' }}>
           {e.status.replace('_', ' ')}
         </span>
       </div>
 
-      <p className="text-[14px] font-semibold" style={{ color: '#241F1A' }}>
+      <p className="text-[14px] font-semibold" style={{ color: '#0D1B2A' }}>
         {e.pickup} <span aria-hidden="true">→</span> {e.dropoff}
       </p>
-      <p className="text-[13px] font-mono" style={{ color: 'rgba(36,31,26,0.66)' }}>
+      <p className="text-[13px] font-mono" style={{ color: 'rgba(13,27,42,0.66)' }}>
         {money(e.offeredFeeKes, e.currency)}
         {e.sizeOrWeight ? ` · ${e.sizeOrWeight}` : ''}
         {e.whenNeeded ? ` · by ${day(e.whenNeeded)}` : ''}
         {` · posted ${ago(e.createdAt) ?? '—'}`}
       </p>
-      {e.note && <p className="text-[13px]" style={{ color: 'rgba(36,31,26,0.7)' }}>{e.note}</p>}
+      {e.note && <p className="text-[13px]" style={{ color: 'rgba(13,27,42,0.7)' }}>{e.note}</p>}
 
       {/* The loop. A stage without a timestamp is simply not there yet. */}
       <div className="flex flex-wrap gap-1.5 pt-0.5">
@@ -623,13 +623,13 @@ function ErrandCard({
       </div>
 
       {e.carrierName && (
-        <p className="text-[12px]" style={{ color: 'rgba(36,31,26,0.66)' }}>
+        <p className="text-[12px]" style={{ color: 'rgba(13,27,42,0.66)' }}>
           Carried by <strong>{e.carrierName}</strong>
           {e.carrierBasis.length > 0 ? ` (${e.carrierBasis.join(', ')})` : ''}
         </p>
       )}
       {e.carrierPosition && (e.iAmThePoster || e.iAmTheCarrier) && (
-        <p className="text-[12px]" style={{ color: 'rgba(36,31,26,0.66)' }}>
+        <p className="text-[12px]" style={{ color: 'rgba(13,27,42,0.66)' }}>
           Carrier last seen {ago(e.carrierPosition.at) ?? '—'}
           {typeof e.carrierPosition.accuracy === 'number' ? ` (±${Math.round(e.carrierPosition.accuracy)} m)` : ''}
           {' · '}
@@ -662,7 +662,7 @@ function ErrandCard({
               Take this errand
             </button>
           ) : (
-            <span className="text-[12px] font-bold" style={{ color: 'rgba(36,31,26,0.6)' }}>
+            <span className="text-[12px] font-bold" style={{ color: 'rgba(13,27,42,0.6)' }}>
               Only agents and partners on record can take an errand.
             </span>
           )
@@ -734,13 +734,13 @@ function ErrandCard({
       {e.status === 'delivered' && (pod ? (
         <div className="flex items-center gap-2.5 pt-1">
           <img src={briefApi.mediaFileUrl(pod.photo)} alt="Delivery proof" className="w-14 h-14 rounded-xl object-cover shrink-0" />
-          <p className="text-[12px]" style={{ color: 'rgba(36,31,26,0.66)' }}>
+          <p className="text-[12px]" style={{ color: 'rgba(13,27,42,0.66)' }}>
             Delivery photo · {pod.by} · {ago(pod.at) ?? '—'}
           </p>
         </div>
       ) : (
         <div className="pt-1">
-          <p className="text-[12px]" style={{ color: 'rgba(36,31,26,0.55)' }}>No delivery photo.</p>
+          <p className="text-[12px]" style={{ color: 'rgba(13,27,42,0.55)' }}>No delivery photo.</p>
           {(e.iAmTheCarrier || e.iAmThePoster) && (
             podOpen ? (
               <div className="space-y-2 pt-2">
@@ -777,7 +777,7 @@ function ErrandCard({
       {e.ratings.length > 0 && (
         <ul className="space-y-1 pt-1">
           {e.ratings.map((r) => (
-            <li key={r.id} className="text-[12px]" style={{ color: 'rgba(36,31,26,0.7)' }}>
+            <li key={r.id} className="text-[12px]" style={{ color: 'rgba(13,27,42,0.7)' }}>
               <Star className="w-3 h-3 inline" style={{ color: 'var(--color-primary)' }} />{' '}
               <strong>{r.stars}</strong>/5 on {r.about === 'carrier' ? 'the carrier' : 'the poster'} · {r.by}
               {r.note ? ` — “${r.note}”` : ''} · {ago(r.createdAt)}
@@ -787,7 +787,7 @@ function ErrandCard({
       )}
       {e.canRate && onRate && (
         <div className="flex items-center gap-1.5 flex-wrap pt-1">
-          <span className="text-[12px] font-bold" style={{ color: '#241F1A' }}>
+          <span className="text-[12px] font-bold" style={{ color: '#0D1B2A' }}>
             Rate this delivery:
           </span>
           {[1, 2, 3, 4, 5].map((n) => (
@@ -803,7 +803,7 @@ function ErrandCard({
               {n}
             </button>
           ))}
-          <span className="text-[11px]" style={{ color: 'rgba(36,31,26,0.6)' }}>{e.ratingsNote}</span>
+          <span className="text-[11px]" style={{ color: 'rgba(13,27,42,0.6)' }}>{e.ratingsNote}</span>
         </div>
       )}
     </article>

@@ -144,7 +144,7 @@ export function CircleMembers({
               <button
                 type="submit"
                 disabled={!inviteId.trim() || busyUserId === 'invite'}
-                className="shrink-0 px-3 py-1.5 rounded-xl bg-[#2563EB] text-[var(--accent-ink)] font-extrabold text-[11px] cursor-pointer disabled:opacity-50"
+                className="shrink-0 px-3 py-1.5 rounded-xl bg-[#40916C] text-[var(--accent-ink)] font-extrabold text-[11px] cursor-pointer disabled:opacity-50"
               >
                 Invite
               </button>
@@ -221,7 +221,7 @@ export function CircleMembers({
                               setRoleDraft((prev) => { const next = { ...prev }; delete next[member.userId]; return next; });
                             }}
                             disabled={busyUserId === member.userId || reasonless}
-                            className="px-2.5 py-1 rounded-xl bg-[#2563EB] text-[var(--accent-ink)] font-extrabold text-[11px] cursor-pointer disabled:opacity-40"
+                            className="px-2.5 py-1 rounded-xl bg-[#40916C] text-[var(--accent-ink)] font-extrabold text-[11px] cursor-pointer disabled:opacity-40"
                           >
                             Save role
                           </button>

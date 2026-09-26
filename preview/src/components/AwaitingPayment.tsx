@@ -73,7 +73,7 @@ export function AwaitingPayment({
           <button
             disabled={busy}
             onClick={() => onConfirmPayment(r.id)}
-            className="shrink-0 px-2.5 py-1.5 rounded-lg bg-[#2563EB] text-[var(--accent-ink)] font-extrabold text-[11px] cursor-pointer disabled:opacity-40"
+            className="shrink-0 px-2.5 py-1.5 rounded-lg bg-[#40916C] text-[var(--accent-ink)] font-extrabold text-[11px] cursor-pointer disabled:opacity-40"
           >
             Confirm {currency} {price.toLocaleString()}
           </button>

@@ -385,7 +385,7 @@ function DistributionPanel() {
           WhatsApp intent → standalone banner on the home shelf. */}
       <div className="rounded-2xl border p-4 space-y-3" style={{ borderColor: T.ink, background: T.surface }}>
         <div className="flex items-start gap-3">
-          <div className="h-9 w-9 shrink-0 overflow-hidden rounded-xl bg-[#2563EB]">
+          <div className="h-9 w-9 shrink-0 overflow-hidden rounded-xl bg-[#40916C]">
             <img src={whatsappBannerArt} alt="" aria-hidden="true" className="h-full w-full object-cover" />
           </div>
           <div className="min-w-0">

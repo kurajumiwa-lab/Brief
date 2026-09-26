@@ -229,7 +229,7 @@ export function PrivateCarrierAuctionDesk({
               <span className="text-[11px] font-mono font-black px-2.5 py-0.5 rounded-full bg-[#00BFEF] text-[var(--brief-ink)] uppercase tracking-wider">
                 MATHEMATICAL REVERSE AUCTION
               </span>
-              <span className="text-xs text-indigo-200 font-bold flex items-center space-x-1">
+              <span className="text-xs text-emerald-200 font-bold flex items-center space-x-1">
                 <Truck className="w-3.5 h-3.5 text-emerald-400" />
                 <span>Private Carrier Fleets & Silent Bidding</span>
               </span>
@@ -239,7 +239,7 @@ export function PrivateCarrierAuctionDesk({
               <span>Carrier Reverse-Auction Engine</span>
               <Sparkles className="w-5 h-5 text-amber-400" />
             </h2>
-            <p className="text-xs text-indigo-200/80 mt-0.5 max-w-xl">
+            <p className="text-xs text-emerald-200/80 mt-0.5 max-w-xl">
               Competitive bidding without public chat spam. Registered carriers compete algorithmically based on price, trust rating, speed, and verified vehicle logbook ownership.
             </p>
           </div>
@@ -328,7 +328,7 @@ export function PrivateCarrierAuctionDesk({
                 type="button"
                 onClick={handleRunAuction}
                 disabled={isSimulatingAuction}
-                className="w-full py-2 px-3 rounded-xl bg-[#2563EB] hover:bg-[#ff6f3b] text-white font-black text-xs flex items-center justify-center space-x-1.5 shadow-sm cursor-pointer disabled:opacity-50 transition-all"
+                className="w-full py-2 px-3 rounded-xl bg-[#40916C] hover:bg-[#ff6f3b] text-white font-black text-xs flex items-center justify-center space-x-1.5 shadow-sm cursor-pointer disabled:opacity-50 transition-all"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${isSimulatingAuction ? 'animate-spin' : ''}`} />
                 <span>{isSimulatingAuction ? 'Computing Bids…' : 'Run Silent Auction'}</span>
@@ -361,7 +361,7 @@ export function PrivateCarrierAuctionDesk({
                   key={carrier.id}
                   className={`p-4 rounded-2xl border transition-all flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shadow-xs ${
                     idx === 0
-                      ? 'bg-gradient-to-r from-blue-50/70 to-indigo-50/70 border-[#0891B2] ring-1 ring-[#0891B2]/20'
+                      ? 'bg-gradient-to-r from-blue-50/70 to-emerald-50/70 border-[#0891B2] ring-1 ring-[#0891B2]/20'
                       : 'bg-white border-[var(--brief-line)] hover:border-gray-300'
                   }`}
                 >

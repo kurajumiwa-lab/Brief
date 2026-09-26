@@ -60,7 +60,7 @@ export function RelatedContent({ edges, onOpenObject, onOpenLocation }: {
               <button
                 type="button"
                 onClick={() => onOpenLocation(edge.location?.name ?? '')}
-                className="flex items-center gap-1 rounded-full bg-[#2563EB] px-2.5 py-1 text-[11px] font-extrabold text-[var(--accent-ink)] transition-colors hover:bg-[#C2410C]"
+                className="flex items-center gap-1 rounded-full bg-[#40916C] px-2.5 py-1 text-[11px] font-extrabold text-[var(--accent-ink)] transition-colors hover:bg-[#C2410C]"
               >
                 View area <ArrowUpRight className="h-3 w-3" />
               </button>
@@ -85,7 +85,7 @@ export function RelatedContent({ edges, onOpenObject, onOpenLocation }: {
                     </div>
                   )}
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[12px] font-semibold text-[var(--brief-ink)] group-hover:text-[#2563EB]">{o.title}</span>
+                    <span className="block truncate text-[12px] font-semibold text-[var(--brief-ink)] group-hover:text-[#40916C]">{o.title}</span>
                     <span className="flex flex-wrap items-center gap-1 text-[11px] font-semibold text-[var(--ink-55)]">
                       {l && <span className="flex items-center gap-0.5"><Clock className="h-2.5 w-2.5" />{l}</span>}
                       {(o.area || o.county) && <span>{[o.area, o.county].filter(Boolean).join(', ')}</span>}

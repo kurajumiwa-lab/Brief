@@ -23,7 +23,7 @@
      ink-dim   #5A6472   secondary text  6.00:1 on card
      ink-faint #6B7684   meta / stamps   4.62:1 on card, 4.34:1 on ground
      quiet     #8A94A3   3.07:1 — legal ONLY at 20px+ numerals, never body copy
-     accent    #2563EB   the one action colour, 5.17:1 with white on it
+     accent    #40916C   the one action colour, ≈3.9:1 with white on it (bold/large)
      accent-2  #0891B2   supporting cyan, darker than #06B6D4 so it survives on
                          white (3.68:1); it also carries "in transit"
      success   #059669   3.77:1 — a dot, a bar, an icon; its text form is
@@ -47,9 +47,9 @@
    "tick up" as decoration. A count animates when the count changed, never to
    look alive.
 
-   `--brief-green` is a legacy name; it resolves to the blue accent. All
-   consumers were migrated by the palette remap, so the name is the only thing
-   that stays green.
+   `--brief-green` is a legacy name; it finally resolves to a green again
+   (house emerald). All consumers follow the token, so the name is the only
+   thing that never changed.
    ========================================================================== */
 
 :root {
@@ -60,8 +60,8 @@
   --brief-muted: #5A6472;
   --brief-faint: #6B7684;
   --brief-line: #DCE1E8;
-  --brief-green: #2563EB;   /* primary accent = the blue (legacy name kept) */
-  --brief-green-ink: #FFFFFF;  /* text on the indigo accent — white, for contrast */
+  --brief-green: #40916C;   /* primary accent = house emerald (legacy name kept; it finally tells the truth) */
+  --brief-green-ink: #FFFFFF;  /* text on the emerald accent — white, for contrast */
   --brief-warn: #B45309;
   --brief-danger: #DC2626;
   --brief-success: #059669;
@@ -88,19 +88,19 @@
   --signal-urgent: #DC2626;  /* countdown / closing soon — danger */
 
   /* --- Spec-named accent tokens (§3) --- */
-  --accent: #2563EB;
+  --accent: #40916C;
   --accent-2: #0891B2;
-  --accent-ink: #FFFFFF;  /* text on the accent — white, 5.17:1 */
+  --accent-ink: #FFFFFF;  /* text on the accent — white; bold/large surfaces (≈3.9:1), small text pairs with forest */
   --success: #059669;
-  /* Wairo brand card (added, does not replace the room): Electric Royal Blue
-     is already --accent; Chama Green is the second hue on the knot; Slate Dark
-     is wordmark ink; Crisp Light Gray is a sister of the ground, not a reskin. */
+  /* Wairo brand card (added, does not replace the room): frozen at the
+     original blue/green/slate for the logo mark. The room's own accent has
+     moved to house emerald; these three tokens no longer drive surfaces. */
   --wairo-blue: #2563EB;
   --wairo-green: #10B981;
   --wairo-slate: #1E293B;
   /* Editorial tokens: the calm marketplace palette. Navy carries heroes,
-     paper carries screens, blue is the primary action only, green is
-     commerce, dividers are hairlines — never card outlines. */
+     paper carries screens, emerald is the primary action, forest is
+     commerce ink, dividers are hairlines — never card outlines. */
   --navy: #0D1B2A;
   --mint: #D8F3DC;
   --sage: #95D5B2;
@@ -187,7 +187,7 @@
        quiet   a true zero, nothing pending — warm amber
        moving  in transit, in flight, being carried — cool blue
        stale   past its refresh window, expiring — warm brick
-     The brand accent stays indigo (#2563EB) and cyan (#0891B2): these are semantic
+     The brand accent stays emerald (#40916C) and cyan (#0891B2): these are semantic
      state hues layered on top, not a re-skin of the identity. */
   --state-live: #059669;
   --state-quiet: #D97706;
@@ -225,7 +225,7 @@
   --m3-surface: var(--brief-bg);
   --m3-surface-container: var(--brief-card);
   --m3-surface-container-low: var(--well);
-  --m3-primary: #2563EB;
+  --m3-primary: #40916C;
   --m3-on-primary: #FFFFFF;
   --m3-secondary-container: var(--well);
   --m3-on-surface: var(--brief-ink);
@@ -246,16 +246,16 @@
   --color-well: var(--well);
   --color-surface: var(--brief-card);
   --color-surface-elevated: var(--well);
-  --color-primary: var(--brief-green);      /* electric indigo */
-  --color-primary-strong: #4338CA;          /* darker indigo (hover/pressed) */
-  --color-primary-subtle: #EFE9F6;          /* indigo at room strength, not a
-                                               cold blue tint laid on plaster */
+  --color-primary: var(--brief-green);      /* house emerald */
+  --color-primary-strong: #2D6A4F;          /* deep emerald (hover/pressed) */
+  --color-primary-subtle: #D8F3DC;          /* mint at room strength, not a
+                                               cold tint laid on plaster */
   --color-accent: var(--accent-2);          /* cyan secondary */
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-danger: var(--danger);
   --color-text: var(--brief-ink);
-  --color-text-secondary: #55493A;         /* between ink and dim, for card bodies */
+  --color-text-secondary: #3F4753;         /* slate between ink and dim, for card bodies */
   --color-text-muted: var(--brief-muted);
   --color-text-faint: var(--brief-faint);
   --color-quiet: #8A94A3;                  /* a zero, a dash, an arrow: present,

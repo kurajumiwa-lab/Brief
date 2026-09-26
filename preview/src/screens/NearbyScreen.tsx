@@ -772,15 +772,15 @@ export function NearbyScreen(props: NearbyScreenProps) {
                     >
                       <div className="flex items-center justify-between">
                         <span className="text-xl">🚌</span>
-                        <span className="text-[11px] font-mono uppercase bg-indigo-400/30 text-indigo-300 px-1.5 py-0.5 rounded font-bold">
+                        <span className="text-[11px] font-mono uppercase bg-emerald-400/30 text-emerald-300 px-1.5 py-0.5 rounded font-bold">
                           Touring Ops
                         </span>
                       </div>
                       <div className="mt-3">
-                        <span className="font-black text-xs block text-white leading-tight group-hover:text-indigo-300 transition-colors">
+                        <span className="font-black text-xs block text-white leading-tight group-hover:text-emerald-300 transition-colors">
                           Group Touring
                         </span>
-                        <span className="text-[11px] text-indigo-200/70 block mt-0.5 font-medium">
+                        <span className="text-[11px] text-emerald-200/70 block mt-0.5 font-medium">
                           Choirs & Charters
                         </span>
                       </div>
@@ -1766,7 +1766,7 @@ export function NearbyScreen(props: NearbyScreenProps) {
                   <div>
                     <div className="flex items-center justify-between">
                       <span className="text-2xl">🚌</span>
-                      <span className="text-[11px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800">
+                      <span className="text-[11px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
                         Touring Ops
                       </span>
                     </div>
@@ -2247,7 +2247,7 @@ export function NearbyScreen(props: NearbyScreenProps) {
           <div className="w-full max-w-md my-auto bg-white rounded-3xl p-6 text-center text-[var(--brief-ink)]">
             <p className="text-sm font-black">Table banking lives in your You tab</p>
             <p className="text-xs text-gray-500 mt-1">Open the You tab to run contributions, rotation, loans, welfare and minutes — every number derived from real rows.</p>
-            <button onClick={() => setCircleOpen(false)} className="mt-4 px-4 py-2 rounded-xl bg-[#2563EB] text-white text-xs font-bold">Close</button>
+            <button onClick={() => setCircleOpen(false)} className="mt-4 px-4 py-2 rounded-xl bg-[#40916C] text-white text-xs font-bold">Close</button>
           </div>
         </div>
       )}

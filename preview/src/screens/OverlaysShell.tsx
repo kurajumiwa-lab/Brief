@@ -415,7 +415,7 @@ export function OverlaysShell(props: OverlaysShellProps) {
                         loadCampaigns();
                         showToast('Published');
                       }}
-                      className="w-full py-3 rounded-xl bg-[#2563EB] text-[var(--accent-ink)] font-extrabold text-xs cursor-pointer disabled:opacity-40 hover:bg-[#000000]"
+                      className="w-full py-3 rounded-xl bg-[#40916C] text-[var(--accent-ink)] font-extrabold text-xs cursor-pointer disabled:opacity-40 hover:bg-[#000000]"
                     >
                       {campaignBusy ? 'Publishing...' : 'Publish'}
                     </button>
@@ -670,7 +670,7 @@ export function OverlaysShell(props: OverlaysShellProps) {
                         )}
                         <div className="h-1.5 rounded-full bg-[color:var(--brief-line)] overflow-hidden">
                           <div
-                            className="h-full bg-[#2563EB]"
+                            className="h-full bg-[#40916C]"
                             style={{
                               width: `${Math.min(100, campaignCircle.data.circle.progressPct ?? 0)}%`
                             }}
@@ -708,7 +708,7 @@ export function OverlaysShell(props: OverlaysShellProps) {
                       type="button"
                       disabled={updateBusy || !updateTitle.trim() || !updateBody.trim()}
                       onClick={() => void postUpdate(campaignDetail.id)}
-                      className="px-4 py-2 rounded-xl bg-[#2563EB] text-[var(--accent-ink)] text-[12px] font-extrabold cursor-pointer disabled:opacity-40"
+                      className="px-4 py-2 rounded-xl bg-[#40916C] text-[var(--accent-ink)] text-[12px] font-extrabold cursor-pointer disabled:opacity-40"
                     >
                       {updateBusy ? 'Posting…' : 'Post update'}
                     </button>
@@ -770,7 +770,7 @@ export function OverlaysShell(props: OverlaysShellProps) {
                               <button
                                 disabled={campaignBusy}
                                 onClick={() => setRegStatus(campaignDetail.id, r.id, 'checked_in')}
-                                className="px-2.5 py-1.5 rounded-lg bg-[#2563EB] text-[var(--accent-ink)] font-extrabold text-[11px] cursor-pointer disabled:opacity-40"
+                                className="px-2.5 py-1.5 rounded-lg bg-[#40916C] text-[var(--accent-ink)] font-extrabold text-[11px] cursor-pointer disabled:opacity-40"
                               >
                                 Check in
                               </button>
@@ -821,7 +821,7 @@ export function OverlaysShell(props: OverlaysShellProps) {
                   <button
                     disabled={campaignBusy || editDraft.title.trim() === ''}
                     onClick={() => saveCampaignEdit(campaignDetail)}
-                    className="flex-[2] py-3 rounded-xl bg-[#2563EB] text-[var(--accent-ink)] font-extrabold text-xs cursor-pointer disabled:opacity-40 hover:bg-[#000000] transition-colors shadow-xs"
+                    className="flex-[2] py-3 rounded-xl bg-[#40916C] text-[var(--accent-ink)] font-extrabold text-xs cursor-pointer disabled:opacity-40 hover:bg-[#000000] transition-colors shadow-xs"
                   >
                     {campaignBusy ? 'Saving...' : 'Save'}
                   </button>
@@ -903,7 +903,7 @@ export function OverlaysShell(props: OverlaysShellProps) {
                           onClick={() => setDraft((d) => ({ ...d, type: t }))}
                           className={`px-3 py-1.5 rounded-full text-[12px] font-extrabold border cursor-pointer transition ${
                             draft.type === t
-                              ? 'bg-[#2563EB] text-[var(--accent-ink)] border-[#0891B2]'
+                              ? 'bg-[#40916C] text-[var(--accent-ink)] border-[#0891B2]'
                               : 'bg-[color:var(--color-paper)] text-[var(--ink-70)] border-[var(--brief-line)]'
                           }`}
                         >
@@ -1124,7 +1124,7 @@ export function OverlaysShell(props: OverlaysShellProps) {
                 <button
                   disabled={draft.title.trim() === ''}
                   onClick={() => { setCampaignActionError(null); setCreateStep('preview'); }}
-                  className="w-full py-3 rounded-xl bg-[#2563EB] text-[var(--accent-ink)] font-extrabold text-xs cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#000000] transition-colors"
+                  className="w-full py-3 rounded-xl bg-[#40916C] text-[var(--accent-ink)] font-extrabold text-xs cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#000000] transition-colors"
                 >
                   Preview
                 </button>
@@ -1143,7 +1143,7 @@ export function OverlaysShell(props: OverlaysShellProps) {
                 <button
                   disabled={campaignBusy}
                   onClick={publishDraft}
-                  className="flex-1 py-3 rounded-xl bg-[#2563EB] text-[var(--accent-ink)] font-extrabold text-xs cursor-pointer disabled:opacity-40 hover:bg-[#000000]"
+                  className="flex-1 py-3 rounded-xl bg-[#40916C] text-[var(--accent-ink)] font-extrabold text-xs cursor-pointer disabled:opacity-40 hover:bg-[#000000]"
                 >
                   {campaignBusy ? 'Publishing...' : 'Publish'}
                 </button>
@@ -1223,7 +1223,7 @@ export function OverlaysShell(props: OverlaysShellProps) {
                       className={`w-full py-3 rounded-xl font-extrabold text-xs transition ${
                         captureText.trim() === ''
                           ? 'bg-[color:var(--color-paper)] text-[var(--ink-60)] cursor-not-allowed border border-[var(--brief-line)]'
-                          : 'bg-[#2563EB] text-[var(--accent-ink)] cursor-pointer hover:bg-[#000000]'
+                          : 'bg-[#40916C] text-[var(--accent-ink)] cursor-pointer hover:bg-[#000000]'
                       }`}
                     >
                       Read it
@@ -1304,7 +1304,7 @@ export function OverlaysShell(props: OverlaysShellProps) {
                         {capturePreview.isObjectWorthy && (
                           <button
                             onClick={() => void handleCaptureConfirm()}
-                            className="flex-[2] py-2.5 rounded-xl bg-[#2563EB] text-[var(--accent-ink)] font-extrabold text-[12px] cursor-pointer hover:bg-[#000000]"
+                            className="flex-[2] py-2.5 rounded-xl bg-[#40916C] text-[var(--accent-ink)] font-extrabold text-[12px] cursor-pointer hover:bg-[#000000]"
                           >
                             Save to Brief
                           </button>
@@ -1337,7 +1337,7 @@ export function OverlaysShell(props: OverlaysShellProps) {
                           }}
                           className={`px-2.5 py-1 rounded-lg text-[12px] font-extrabold transition cursor-pointer border ${
                             directType === typeVal
-                              ? 'bg-[#2563EB] text-[var(--accent-ink)] border-[#0891B2]'
+                              ? 'bg-[#40916C] text-[var(--accent-ink)] border-[#0891B2]'
                               : 'bg-[color:var(--color-well)] text-[var(--ink-70)] border-[var(--brief-line)] hover:text-[var(--brief-ink)]'
                           }`}
                         >
@@ -1401,7 +1401,7 @@ export function OverlaysShell(props: OverlaysShellProps) {
                       className={`flex-[2] py-2.5 rounded-xl font-extrabold text-[12px] transition ${
                         !directTitle.trim() || !captureText.trim()
                           ? 'bg-[color:var(--brief-line)] text-[var(--ink-60)] cursor-not-allowed'
-                          : 'bg-[#2563EB] text-[var(--accent-ink)] cursor-pointer hover:bg-[#000000]'
+                          : 'bg-[#40916C] text-[var(--accent-ink)] cursor-pointer hover:bg-[#000000]'
                       }`}
                     >
                       Publish to Brief
@@ -1659,7 +1659,7 @@ export function OverlaysShell(props: OverlaysShellProps) {
                             href={readUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 rounded-full bg-[#2563EB] px-5 py-2.5 text-[13px] font-extrabold text-[var(--accent-ink)] transition-opacity hover:opacity-90"
+                            className="inline-flex items-center gap-2 rounded-full bg-[#40916C] px-5 py-2.5 text-[13px] font-extrabold text-[var(--accent-ink)] transition-opacity hover:opacity-90"
                           >
                             <ExternalLink className="w-3.5 h-3.5" />
                             Read original
@@ -1982,7 +1982,7 @@ export function OverlaysShell(props: OverlaysShellProps) {
                     {(() => {
                       const action = resolveAction(selectedObjectForDetail);
                       const primaryClass =
-                        'flex-[2] py-3 rounded-xl bg-[#2563EB] text-[var(--accent-ink)] font-extrabold text-xs flex items-center justify-center gap-2 cursor-pointer';
+                        'flex-[2] py-3 rounded-xl bg-[#40916C] text-[var(--accent-ink)] font-extrabold text-xs flex items-center justify-center gap-2 cursor-pointer';
 
                       // Stays in Brief: pivot the stream sideways.
                       if (action.kind === 'internal') {
@@ -2071,7 +2071,7 @@ export function OverlaysShell(props: OverlaysShellProps) {
 
                     <button
                       onClick={() => setCollectionPickerFor(selectedObjectForDetail.id)}
-                      className="flex-1 py-2.5 rounded-xl bg-[color:var(--color-paper)] border border-[#0891B2]/50 text-[#2563EB] font-bold text-[12px] flex items-center justify-center gap-1.5 cursor-pointer"
+                      className="flex-1 py-2.5 rounded-xl bg-[color:var(--color-paper)] border border-[#0891B2]/50 text-[#40916C] font-bold text-[12px] flex items-center justify-center gap-1.5 cursor-pointer"
                     >
                       <FolderPlus className="w-3.5 h-3.5" />
                       Add to collection
@@ -2103,7 +2103,7 @@ export function OverlaysShell(props: OverlaysShellProps) {
                     <button
                       onClick={() => void handleConfirmObject(selectedObjectForDetail)}
                       disabled={objectCheckBusy === selectedObjectForDetail.id}
-                      className="w-full py-2.5 rounded-xl bg-[#2563EB] text-[var(--accent-ink)] text-[13px] font-extrabold cursor-pointer disabled:opacity-50"
+                      className="w-full py-2.5 rounded-xl bg-[#40916C] text-[var(--accent-ink)] text-[13px] font-extrabold cursor-pointer disabled:opacity-50"
                     >
                       {objectCheckBusy === selectedObjectForDetail.id ? 'Recording…' : 'Yes, accurate'}
                     </button>
@@ -2180,7 +2180,7 @@ export function OverlaysShell(props: OverlaysShellProps) {
                               onClick={() => void tuneObject(b.kind, selectedObjectForDetail)}
                               className={`px-2.5 py-1.5 rounded-full border text-[11px] font-bold cursor-pointer transition ${
                                 b.active
-                                  ? 'bg-[#2563EB] text-[var(--accent-ink)] border-[#0891B2]'
+                                  ? 'bg-[#40916C] text-[var(--accent-ink)] border-[#0891B2]'
                                   : 'bg-[color:var(--color-paper)] text-[var(--ink-70)] border-[var(--brief-line)] hover:border-[#0891B2]'
                               }`}
                             >
@@ -2297,7 +2297,7 @@ export function OverlaysShell(props: OverlaysShellProps) {
                                           {vendor.title}
                                         </p>
                                         {vendor.isVerified && (
-                                          <span className="shrink-0 text-[11px] font-extrabold px-1.5 py-0.5 rounded-full bg-[#2563EB] text-[var(--accent-ink)]">
+                                          <span className="shrink-0 text-[11px] font-extrabold px-1.5 py-0.5 rounded-full bg-[#40916C] text-[var(--accent-ink)]">
                                             VERIFIED
                                           </span>
                                         )}
@@ -2374,7 +2374,7 @@ export function OverlaysShell(props: OverlaysShellProps) {
                                 >
                                   <div className="flex items-center gap-2">
                                     {(state === 'live' || state === 'today') && (
-                                      <span className="w-1.5 h-1.5 rounded-full bg-[#2563EB] shrink-0" />
+                                      <span className="w-1.5 h-1.5 rounded-full bg-[#40916C] shrink-0" />
                                     )}
                                     <span className="text-xs text-[var(--brief-ink)] truncate">
                                       {dest.title}

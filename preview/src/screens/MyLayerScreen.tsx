@@ -311,10 +311,10 @@ export function MyLayerScreen(props: MyLayerScreenProps) {
                 here is decorative or invented. */}
             {sessionUser && (
               <section aria-label="Your profile" className="mb-3 overflow-hidden rounded-2xl border border-[var(--brief-line)] bg-[color:var(--color-paper)]">
-                <div className="relative h-16 bg-gradient-to-r from-[#2563EB] via-[#2563EB]/70 to-[#0891B2]/50" aria-hidden="true" />
+                <div className="relative h-16 bg-gradient-to-r from-[#40916C] via-[#40916C]/70 to-[#0891B2]/50" aria-hidden="true" />
                 <div className="px-4 pb-3.5 -mt-6">
                   <div className="flex items-end gap-3">
-                    <div className="h-14 w-14 shrink-0 rounded-2xl border-2 border-[var(--color-paper)] bg-gradient-to-br from-[#2563EB] to-[#0891B2] flex items-center justify-center text-[32px] font-black text-[var(--brief-ink)] shadow-lg" aria-hidden="true">
+                    <div className="h-14 w-14 shrink-0 rounded-2xl border-2 border-[var(--color-paper)] bg-gradient-to-br from-[#40916C] to-[#0891B2] flex items-center justify-center text-[32px] font-black text-[var(--brief-ink)] shadow-lg" aria-hidden="true">
                       {(sessionUser.displayName || sessionUser.handle || '?').charAt(0).toUpperCase()}
                     </div>
                     <div className="min-w-0 flex-1 pb-0.5">
@@ -394,7 +394,7 @@ export function MyLayerScreen(props: MyLayerScreenProps) {
                   onClick={() => setMyLayerSection(bundle.sections[0] as MyLayerSection)}
                   className={`shrink-0 px-3 py-1.5 rounded-full text-[12px] font-extrabold border cursor-pointer transition ${
                     activeSavedBundle.id === bundle.id
-                      ? 'bg-[#2563EB] text-[var(--accent-ink)] border-[#0891B2]'
+                      ? 'bg-[#40916C] text-[var(--accent-ink)] border-[#0891B2]'
                       : 'bg-[color:var(--color-paper)] text-[var(--ink-70)] border-[var(--brief-line)]'
                   }`}
                 >
@@ -409,7 +409,7 @@ export function MyLayerScreen(props: MyLayerScreenProps) {
                   onClick={() => setMyLayerSection(id as MyLayerSection)}
                   className={`shrink-0 px-2.5 py-1 rounded-lg text-[11px] font-extrabold transition cursor-pointer ${
                     myLayerSection === id
-                      ? 'bg-[#2563EB] text-[var(--accent-ink)]'
+                      ? 'bg-[#40916C] text-[var(--accent-ink)]'
                       : 'text-[var(--ink-70)] hover:text-[var(--brief-ink)] bg-[color:var(--color-well)]'
                   }`}
                 >
@@ -514,7 +514,7 @@ export function MyLayerScreen(props: MyLayerScreenProps) {
                                   { silent: true }
                                 )
                               }
-                              className="flex-1 py-2 rounded-xl bg-[#2563EB] text-[var(--accent-ink)] font-extrabold text-[12px] flex items-center justify-center gap-1.5 cursor-pointer"
+                              className="flex-1 py-2 rounded-xl bg-[#40916C] text-[var(--accent-ink)] font-extrabold text-[12px] flex items-center justify-center gap-1.5 cursor-pointer"
                             >
                               {action.label}
                               <ArrowRight className="w-3 h-3" />
@@ -550,7 +550,7 @@ export function MyLayerScreen(props: MyLayerScreenProps) {
                                 onClick={() => handleSetSaveLabel(obj, label)}
                                 className={`text-[11px] font-bold px-2 py-0.5 rounded-full border cursor-pointer transition ${
                                   active
-                                    ? 'bg-[#2563EB] text-[var(--accent-ink)] border-[#0891B2]'
+                                    ? 'bg-[#40916C] text-[var(--accent-ink)] border-[#0891B2]'
                                     : 'bg-transparent text-[var(--ink-60)] border-[var(--brief-line)] hover:border-[var(--brief-line)]'
                                 }`}
                               >
@@ -724,7 +724,7 @@ export function MyLayerScreen(props: MyLayerScreenProps) {
                   });
                   setCreateStep('form');
                 }}
-                className="shrink-0 px-3 py-2 rounded-xl bg-[#2563EB] text-[var(--accent-ink)] font-extrabold text-[12px] cursor-pointer flex items-center gap-1"
+                className="shrink-0 px-3 py-2 rounded-xl bg-[#40916C] text-[var(--accent-ink)] font-extrabold text-[12px] cursor-pointer flex items-center gap-1"
               >
                 <Plus className="w-3.5 h-3.5" />
                 Create
@@ -756,7 +756,7 @@ export function MyLayerScreen(props: MyLayerScreenProps) {
                 </p>
                 <button
                   onClick={loadCampaigns}
-                  className="px-3 py-1.5 rounded-xl bg-[#2563EB] text-[var(--accent-ink)] font-extrabold text-[11px] cursor-pointer"
+                  className="px-3 py-1.5 rounded-xl bg-[#40916C] text-[var(--accent-ink)] font-extrabold text-[11px] cursor-pointer"
                 >
                   Retry
                 </button>
@@ -812,7 +812,7 @@ export function MyLayerScreen(props: MyLayerScreenProps) {
                     <div className="flex items-center gap-2 pt-1">
                       <button
                         onClick={() => openCampaign(c.id)}
-                        className="px-3 py-1.5 rounded-xl bg-[#2563EB] text-[var(--accent-ink)] font-extrabold text-[11px] cursor-pointer"
+                        className="px-3 py-1.5 rounded-xl bg-[#40916C] text-[var(--accent-ink)] font-extrabold text-[11px] cursor-pointer"
                       >
                         Open
                       </button>
@@ -875,7 +875,7 @@ export function MyLayerScreen(props: MyLayerScreenProps) {
                           loadCampaigns();
                           showToast('Published');
                         }}
-                        className="px-3 py-1.5 rounded-xl bg-[#2563EB] text-[var(--accent-ink)] font-extrabold text-[11px] cursor-pointer disabled:opacity-40"
+                        className="px-3 py-1.5 rounded-xl bg-[#40916C] text-[var(--accent-ink)] font-extrabold text-[11px] cursor-pointer disabled:opacity-40"
                       >
                         Publish
                       </button>

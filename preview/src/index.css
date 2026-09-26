@@ -28,13 +28,13 @@
   --signal-live:    #059669;  /* live/active state ONLY — success green */
   --signal-urgent:  #DC2626;  /* countdown / closing-soon / expiring ONLY — danger */
 
-  --tea:            #2563EB;  /* Tea category — electric indigo */
+  --tea:            #40916C;  /* Tea category — electric indigo */
   --today:          #0891B2;  /* Today category — cyan */
   --pursuits:       #059669;  /* Pursuits category — green */
   --quests:         #059669;  /* Quests (shares live — quests ARE the live layer) */
 
   /* --- Spec-named accent tokens (§3) --- */
-  --accent:      #2563EB;   /* electric indigo (primary) */
+  --accent:      #40916C;   /* electric indigo (primary) */
   --accent-2:    #0891B2;   /* terminal cyan (secondary) */
   --accent-ink:  #FFFFFF;   /* text on indigo — white, for contrast */
   --success:     #059669;
@@ -354,10 +354,10 @@ html, body {
   --m3-surface-container-highest: var(--brief-line);
   --m3-surface-variant:        var(--brief-line);
 
-  --m3-primary:                #2563EB;
-  --m3-primary-fixed:          #2563EB;
+  --m3-primary:                #40916C;
+  --m3-primary-fixed:          #40916C;
   --m3-primary-fixed-dim:      #0891B2;
-  --m3-primary-container:      #2563EB;
+  --m3-primary-container:      #40916C;
   --m3-on-primary:             #FFFFFF;
   --m3-on-primary-container:   #FFFFFF;
 
@@ -390,7 +390,7 @@ html, body {
 /*/* Status ring (the "new" story affordance) — indigo arc for new, hairline
    full ring once seen. */
 .m3-status-ring {
-  background: conic-gradient(from 180deg at 50% 50%, #2563EB 0deg, #2563EB 120deg, transparent 120deg, transparent 360deg);
+  background: conic-gradient(from 180deg at 50% 50%, #40916C 0deg, #40916C 120deg, transparent 120deg, transparent 360deg);
 }
 .m3-status-ring-seen {
   background: conic-gradient(from 180deg at 50% 50%, var(--brief-line) 0deg, var(--brief-line) 360deg);

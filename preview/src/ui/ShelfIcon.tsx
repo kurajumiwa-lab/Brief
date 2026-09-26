@@ -33,7 +33,7 @@ export type ShelfGlyph =
 const THEME_BG: Record<ShelfTheme, string> = {
   pulse: 'linear-gradient(145deg, #8B5CF6 0%, #C026D3 100%)',
   explore: 'linear-gradient(145deg, #F59E0B 0%, #EA580C 100%)',
-  work: 'linear-gradient(145deg, #2563EB 0%, #0891B2 100%)',
+  work: 'linear-gradient(145deg, #40916C 0%, #0891B2 100%)',
   money: 'linear-gradient(145deg, #059669 0%, #65A30D 100%)',
   system: 'linear-gradient(145deg, #475569 0%, #111827 100%)',
   danger: 'linear-gradient(145deg, #E11D48 0%, #9F1239 100%)'

@@ -81,7 +81,7 @@ export function LocationChip({ label, locating, locError, hasLocation, onLocate,
                 type="button"
                 onClick={() => setOpen(false)}
                 aria-label="Close location sheet"
-                className="h-9 w-9 flex items-center justify-center rounded-full bg-[color:var(--color-paper)] border border-[var(--brief-line)] text-[var(--brief-ink)] text-[32px] font-light hover:border-[#2563EB] cursor-pointer"
+                className="h-9 w-9 flex items-center justify-center rounded-full bg-[color:var(--color-paper)] border border-[var(--brief-line)] text-[var(--brief-ink)] text-[32px] font-light hover:border-[#40916C] cursor-pointer"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -91,7 +91,7 @@ export function LocationChip({ label, locating, locError, hasLocation, onLocate,
             <button
               type="button"
               onClick={() => { onLocate(); }}
-              className="flex w-full items-center gap-3 rounded-2xl bg-[#2563EB] px-4 py-3.5 text-left text-[14px] font-extrabold text-[var(--accent-ink)] cursor-pointer transition-opacity hover:opacity-90"
+              className="flex w-full items-center gap-3 rounded-2xl bg-[#40916C] px-4 py-3.5 text-left text-[14px] font-extrabold text-[var(--accent-ink)] cursor-pointer transition-opacity hover:opacity-90"
             >
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[rgba(10, 14, 20, 0.10)]">
                 <Compass className="h-5 w-5" />
@@ -117,7 +117,7 @@ export function LocationChip({ label, locating, locError, hasLocation, onLocate,
                     aria-pressed={selected}
                     className={`rounded-xl border px-2 py-2.5 text-[13px] font-semibold transition-colors cursor-pointer ${
                       selected
-                        ? 'bg-[#2563EB] text-[var(--accent-ink)] border-[#0891B2]'
+                        ? 'bg-[#40916C] text-[var(--accent-ink)] border-[#0891B2]'
                         : 'bg-[color:var(--color-paper)] text-[var(--ink-70)] border-[var(--brief-line)] hover:border-[#0891B2]'
                     }`}
                   >

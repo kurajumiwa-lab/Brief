@@ -124,7 +124,7 @@ export function VendorPanel({
           <button
             onClick={onCreateVendor}
             disabled={busyId === 'vendor'}
-            className="w-full py-2 rounded-full bg-[#2563EB] text-[var(--accent-ink)] text-xs font-extrabold cursor-pointer disabled:opacity-50"
+            className="w-full py-2 rounded-full bg-[#40916C] text-[var(--accent-ink)] text-xs font-extrabold cursor-pointer disabled:opacity-50"
           >
             Create seller profile
           </button>
@@ -373,7 +373,7 @@ export function VendorPanel({
         <button
           onClick={onCreateListing}
           disabled={busyId === 'listing'}
-          className="w-full py-2 rounded-full bg-[#2563EB] text-[var(--accent-ink)] text-xs font-extrabold cursor-pointer disabled:opacity-50"
+          className="w-full py-2 rounded-full bg-[#40916C] text-[var(--accent-ink)] text-xs font-extrabold cursor-pointer disabled:opacity-50"
         >
           Create listing
         </button>
@@ -418,7 +418,7 @@ export function VendorPanel({
                 <button
                   type="button"
                   onClick={() => setPromoteFor(l)}
-                  className="mr-1.5 cursor-pointer rounded-full border border-[#2563EB] px-3 py-1 text-[11px] font-extrabold text-[#2563EB] hover:bg-[var(--color-well)]"
+                  className="mr-1.5 cursor-pointer rounded-full border border-[#40916C] px-3 py-1 text-[11px] font-extrabold text-[#40916C] hover:bg-[var(--color-well)]"
                 >
                   Promote
                 </button>

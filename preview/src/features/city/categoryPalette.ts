@@ -21,7 +21,7 @@
 import { plateGlow, roomPlate } from './room';
 
 export const CATEGORY_PALETTE: Record<string, { accent: string; label: string }> = {
-  // No hue here may equal the action accent (#2563EB): a wing colour that is
+  // No hue here may equal the action accent (#40916C): a wing colour that is
   // also "the primary button" makes every CTA look like a category label. The
   // palette flip found exactly that — the sweep had quietly turned popup into the
   // accent. Measured apart: violet, teal, rose, deep indigo, brown.

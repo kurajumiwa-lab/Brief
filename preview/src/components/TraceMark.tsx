@@ -10,7 +10,7 @@ import React from 'react';
 // avatar of the user rather than a product mark.
 //
 // The colour comes from the room (currentColor / the accent token), never a
-// hard-coded hex inside a component — a literal #2563EB here would be a second
+// hard-coded hex inside a component — a literal #40916C here would be a second
 // source of truth for the brand and would survive a palette change looking
 // exactly like the old one.
 // ---------------------------------------------------------------------------

@@ -170,7 +170,7 @@ function LocalCard({ onSelect }: { onSelect: (target: MenuTarget) => void }) {
           aria-label="Open your profile"
           className="flex min-w-0 flex-1 items-center gap-3 text-left cursor-pointer"
         >
-          <span className="h-10 w-10 rounded-xl bg-[#2563EB] text-[var(--accent-ink)] flex items-center justify-center text-[14px] font-black shrink-0" aria-hidden="true">
+          <span className="h-10 w-10 rounded-xl bg-[#40916C] text-[var(--accent-ink)] flex items-center justify-center text-[14px] font-black shrink-0" aria-hidden="true">
             {initials(displayName)}
           </span>
           <span className="min-w-0 flex-1">
@@ -187,7 +187,7 @@ function LocalCard({ onSelect }: { onSelect: (target: MenuTarget) => void }) {
           type="button"
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
-          className="shrink-0 rounded-lg px-2 py-1 text-[12px] font-extrabold text-[#2563EB] hover:bg-[color:var(--color-well)] cursor-pointer"
+          className="shrink-0 rounded-lg px-2 py-1 text-[12px] font-extrabold text-[#40916C] hover:bg-[color:var(--color-well)] cursor-pointer"
         >
           {open ? 'Close' : 'View'} →
         </button>
@@ -207,7 +207,7 @@ function LocalCard({ onSelect }: { onSelect: (target: MenuTarget) => void }) {
             <button
               type="button"
               onClick={() => void shareCard()}
-              className="flex-1 h-9 rounded-xl bg-[#2563EB] text-[var(--accent-ink)] text-[11.5px] font-extrabold flex items-center justify-center gap-1.5 cursor-pointer"
+              className="flex-1 h-9 rounded-xl bg-[#40916C] text-[var(--accent-ink)] text-[11.5px] font-extrabold flex items-center justify-center gap-1.5 cursor-pointer"
             >
               <Share2 className="h-3.5 w-3.5" /> Share profile
             </button>
@@ -259,10 +259,10 @@ function ExploreGrid({ onSelect }: { onSelect: (target: MenuTarget) => void }) {
             key={label}
             type="button"
             onClick={() => onSelect(target)}
-            className="bg-[color:var(--color-paper)] border border-[var(--brief-line)] rounded-2xl p-3 text-left hover:border-[#2563EB] transition-colors cursor-pointer"
+            className="bg-[color:var(--color-paper)] border border-[var(--brief-line)] rounded-2xl p-3 text-left hover:border-[#40916C] transition-colors cursor-pointer"
           >
             <span className="h-8 w-8 rounded-xl bg-[color:var(--color-well)] flex items-center justify-center">
-              <Icon className="h-4 w-4 text-[#2563EB]" />
+              <Icon className="h-4 w-4 text-[#40916C]" />
             </span>
             <p className="mt-2 text-[14px] font-extrabold text-[var(--brief-ink)] leading-tight">{label}</p>
             <p className="mt-0.5 text-[11px] text-[var(--ink-55)] leading-snug">{detail}</p>
@@ -298,7 +298,7 @@ function QuickActions({ onSelect, unread }: { onSelect: (target: MenuTarget) => 
           }`}
         >
           <span className="h-7 w-7 rounded-lg bg-[color:var(--color-well)] flex items-center justify-center shrink-0">
-            <Icon className="h-3.5 w-3.5 text-[#2563EB]" />
+            <Icon className="h-3.5 w-3.5 text-[#40916C]" />
           </span>
           <span className="flex-1 min-w-0">
             <span className="block text-[12.5px] font-extrabold text-[var(--brief-ink)] leading-tight">{label}</span>
@@ -345,12 +345,12 @@ function RegionGallery({
               aria-pressed={selected}
               className={`rounded-xl border p-2.5 text-center transition-colors cursor-pointer ${
                 selected
-                  ? 'border-[#2563EB] bg-[color:var(--color-paper)] shadow-sm'
-                  : 'border-[var(--brief-line)] bg-[color:var(--color-paper)] hover:border-[#2563EB]'
+                  ? 'border-[#40916C] bg-[color:var(--color-paper)] shadow-sm'
+                  : 'border-[var(--brief-line)] bg-[color:var(--color-paper)] hover:border-[#40916C]'
               }`}
             >
               <span className="block text-[32px] leading-none" aria-hidden="true">{region.flag}</span>
-              <span className={`mt-1 block truncate text-[11px] font-extrabold ${selected ? 'text-[#2563EB]' : 'text-[var(--brief-ink)]'}`}>
+              <span className={`mt-1 block truncate text-[11px] font-extrabold ${selected ? 'text-[#40916C]' : 'text-[var(--brief-ink)]'}`}>
                 {region.label}
               </span>
             </button>
@@ -411,7 +411,7 @@ export function MenuSheet({ open, onClose, onSelect, onSelectCity, selectedLocat
         <div className="flex items-center gap-2.5">
           {/* §13 — the Brief mark: a small, ownable brand mark, not another
               product's logo. */}
-          <span className="h-8 w-8 shrink-0 rounded-lg bg-[#2563EB] text-[var(--accent-ink)] flex items-center justify-center text-[15px] font-black" aria-hidden="true">B</span>
+          <span className="h-8 w-8 shrink-0 rounded-lg bg-[#40916C] text-[var(--accent-ink)] flex items-center justify-center text-[15px] font-black" aria-hidden="true">B</span>
           <div>
             <p className="text-[11px] font-extrabold uppercase tracking-[0.2em] text-[var(--ink-60)]">Brief · Menu</p>
             <h1 className="mt-0.5 text-[30px] sm:text-[21px] font-black tracking-tight text-[var(--brief-ink)]">
@@ -424,7 +424,7 @@ export function MenuSheet({ open, onClose, onSelect, onSelectCity, selectedLocat
           type="button"
           onClick={onClose}
           aria-label="Close menu"
-          className="h-10 w-10 shrink-0 flex items-center justify-center rounded-full bg-[color:var(--color-paper)] border border-[var(--brief-line)] text-[var(--brief-ink)] text-[32px] font-light hover:border-[#2563EB] transition-colors cursor-pointer"
+          className="h-10 w-10 shrink-0 flex items-center justify-center rounded-full bg-[color:var(--color-paper)] border border-[var(--brief-line)] text-[var(--brief-ink)] text-[32px] font-light hover:border-[#40916C] transition-colors cursor-pointer"
         >
           ×
         </button>
@@ -452,10 +452,10 @@ export function MenuSheet({ open, onClose, onSelect, onSelectCity, selectedLocat
           <button
             type="button"
             onClick={() => onSelect({ tab: 'operate' })}
-            className="w-full bg-[color:var(--color-paper)] border border-[var(--brief-line)] rounded-2xl px-3.5 py-2.5 flex items-center gap-3 hover:border-[#2563EB] transition-colors cursor-pointer"
+            className="w-full bg-[color:var(--color-paper)] border border-[var(--brief-line)] rounded-2xl px-3.5 py-2.5 flex items-center gap-3 hover:border-[#40916C] transition-colors cursor-pointer"
           >
             <span className="h-7 w-7 rounded-lg bg-[color:var(--color-well)] flex items-center justify-center shrink-0">
-              <Settings className="h-3.5 w-3.5 text-[#2563EB]" />
+              <Settings className="h-3.5 w-3.5 text-[#40916C]" />
             </span>
             <span className="flex-1 min-w-0 text-left">
               <span className="block text-[12.5px] font-extrabold text-[var(--brief-ink)] leading-tight">Operate</span>

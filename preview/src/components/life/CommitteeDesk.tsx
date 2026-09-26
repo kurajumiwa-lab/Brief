@@ -222,7 +222,7 @@ export function CommitteeDesk({
             {/* Progress Bar */}
             <div className="h-3 w-full bg-gray-200 rounded-full overflow-hidden p-0.5">
               <div 
-                className="h-full bg-gradient-to-r from-[#2563EB] via-[#FF8A00] to-emerald-500 rounded-full transition-all duration-500"
+                className="h-full bg-gradient-to-r from-[#40916C] via-[#FF8A00] to-emerald-500 rounded-full transition-all duration-500"
                 style={{ width: `${percentFunded}%` }}
               />
             </div>
@@ -267,7 +267,7 @@ export function CommitteeDesk({
               onClick={() => setIsLogPayOpen(true)}
               className="py-3 px-5 rounded-2xl bg-[color:var(--brief-ink)] hover:bg-[#1E2633] text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center space-x-2 shadow-md cursor-pointer transition-all"
             >
-              <Plus className="w-4 h-4 text-[#2563EB]" />
+              <Plus className="w-4 h-4 text-[#40916C]" />
               <span>Log M-Pesa</span>
             </button>
           </div>
@@ -280,7 +280,7 @@ export function CommitteeDesk({
               </h3>
               <button
                 onClick={() => setActiveTab('tasks')}
-                className="text-[12px] font-bold text-[#2563EB] hover:underline cursor-pointer"
+                className="text-[12px] font-bold text-[#40916C] hover:underline cursor-pointer"
               >
                 View all ({tasks.length}) →
               </button>
@@ -291,7 +291,7 @@ export function CommitteeDesk({
                 <div 
                   key={t.id}
                   onClick={() => toggleTaskStatus(t.id)}
-                  className="p-3 bg-white border border-[var(--brief-line)] rounded-2xl flex items-center justify-between cursor-pointer hover:border-[#2563EB] transition-colors"
+                  className="p-3 bg-white border border-[var(--brief-line)] rounded-2xl flex items-center justify-between cursor-pointer hover:border-[#40916C] transition-colors"
                 >
                   <div className="flex items-center space-x-2.5">
                     <div className={`w-5 h-5 rounded-lg flex items-center justify-center border ${
@@ -344,7 +344,7 @@ export function CommitteeDesk({
             <button
               type="button"
               onClick={() => setIsAddTaskOpen(true)}
-              className="px-3.5 py-1.5 rounded-xl bg-[#2563EB] text-white text-xs font-bold flex items-center space-x-1.5 shadow-sm cursor-pointer"
+              className="px-3.5 py-1.5 rounded-xl bg-[#40916C] text-white text-xs font-bold flex items-center space-x-1.5 shadow-sm cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Add Task</span>
@@ -356,7 +356,7 @@ export function CommitteeDesk({
               <div 
                 key={t.id}
                 onClick={() => toggleTaskStatus(t.id)}
-                className="p-3.5 bg-white border border-[var(--brief-line)] rounded-2xl flex items-center justify-between cursor-pointer hover:border-[#2563EB] transition-all shadow-xs"
+                className="p-3.5 bg-white border border-[var(--brief-line)] rounded-2xl flex items-center justify-between cursor-pointer hover:border-[#40916C] transition-all shadow-xs"
               >
                 <div className="flex items-center space-x-3">
                   <div className={`w-5 h-5 rounded-lg flex items-center justify-center border ${
@@ -409,7 +409,7 @@ export function CommitteeDesk({
               onClick={() => setIsLogPayOpen(true)}
               className="px-3.5 py-1.5 rounded-xl bg-[color:var(--brief-ink)] text-white text-xs font-bold flex items-center space-x-1.5 shadow-sm cursor-pointer"
             >
-              <Plus className="w-3.5 h-3.5 text-[#2563EB]" />
+              <Plus className="w-3.5 h-3.5 text-[#40916C]" />
               <span>Log M-Pesa</span>
             </button>
           </div>
@@ -457,7 +457,7 @@ export function CommitteeDesk({
           {/* Venue Card */}
           <div className="p-4 rounded-2xl bg-[color:var(--brief-bg)] border border-[var(--brief-line)] space-y-3">
             <div className="flex items-center space-x-2">
-              <MapPin className="w-4 h-4 text-[#2563EB]" />
+              <MapPin className="w-4 h-4 text-[#40916C]" />
               <h4 className="text-xs font-black uppercase tracking-wider text-[var(--brief-ink)]">
                 Service & Burial Venue
               </h4>
@@ -500,7 +500,7 @@ export function CommitteeDesk({
               <button
                 type="button"
                 onClick={() => onOpenVendor('Nyaboke Catering')}
-                className="text-xs font-bold text-[#2563EB] hover:underline cursor-pointer"
+                className="text-xs font-bold text-[#40916C] hover:underline cursor-pointer"
               >
                 View Nyaboke Catering Profile →
               </button>
@@ -530,7 +530,7 @@ export function CommitteeDesk({
                   value={newTaskTitle}
                   onChange={e => setNewTaskTitle(e.target.value)}
                   placeholder="e.g. Order flowers & wreaths"
-                  className="w-full bg-[color:var(--brief-bg)] border border-gray-300 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#2563EB]"
+                  className="w-full bg-[color:var(--brief-bg)] border border-gray-300 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#40916C]"
                 />
               </div>
 
@@ -542,7 +542,7 @@ export function CommitteeDesk({
                     value={newTaskAssignee}
                     onChange={e => setNewTaskAssignee(e.target.value)}
                     placeholder="e.g. James N."
-                    className="w-full bg-[color:var(--brief-bg)] border border-gray-300 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#2563EB]"
+                    className="w-full bg-[color:var(--brief-bg)] border border-gray-300 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#40916C]"
                   />
                 </div>
 
@@ -553,14 +553,14 @@ export function CommitteeDesk({
                     value={newTaskDueDate}
                     onChange={e => setNewTaskDueDate(e.target.value)}
                     placeholder="e.g. May 23"
-                    className="w-full bg-[color:var(--brief-bg)] border border-gray-300 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#2563EB]"
+                    className="w-full bg-[color:var(--brief-bg)] border border-gray-300 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#40916C]"
                   />
                 </div>
               </div>
 
               <button
                 type="submit"
-                className="w-full py-2.5 rounded-xl bg-[#2563EB] hover:bg-[#ff4805] text-white text-xs font-bold uppercase tracking-wider cursor-pointer"
+                className="w-full py-2.5 rounded-xl bg-[#40916C] hover:bg-[#ff4805] text-white text-xs font-bold uppercase tracking-wider cursor-pointer"
               >
                 Save Task
               </button>
@@ -589,7 +589,7 @@ export function CommitteeDesk({
                   value={newPayName}
                   onChange={e => setNewPayName(e.target.value)}
                   placeholder="e.g. Nyaboke Moraa"
-                  className="w-full bg-[color:var(--brief-bg)] border border-gray-300 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#2563EB]"
+                  className="w-full bg-[color:var(--brief-bg)] border border-gray-300 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#40916C]"
                 />
               </div>
 
@@ -601,7 +601,7 @@ export function CommitteeDesk({
                     required
                     value={newPayAmount}
                     onChange={e => setNewPayAmount(e.target.value)}
-                    className="w-full bg-[color:var(--brief-bg)] border border-gray-300 rounded-xl px-3 py-2 text-xs font-mono font-bold focus:outline-none focus:border-[#2563EB]"
+                    className="w-full bg-[color:var(--brief-bg)] border border-gray-300 rounded-xl px-3 py-2 text-xs font-mono font-bold focus:outline-none focus:border-[#40916C]"
                   />
                 </div>
 
@@ -612,7 +612,7 @@ export function CommitteeDesk({
                     value={newPayRef}
                     onChange={e => setNewPayRef(e.target.value)}
                     placeholder="e.g. QKZ99120A"
-                    className="w-full bg-[color:var(--brief-bg)] border border-gray-300 rounded-xl px-3 py-2 text-xs font-mono focus:outline-none focus:border-[#2563EB]"
+                    className="w-full bg-[color:var(--brief-bg)] border border-gray-300 rounded-xl px-3 py-2 text-xs font-mono focus:outline-none focus:border-[#40916C]"
                   />
                 </div>
               </div>

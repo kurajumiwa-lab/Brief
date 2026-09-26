@@ -105,7 +105,7 @@ export function MediaLibrary({ onUse }: MediaLibraryProps) {
                   </div>
                   <button
                     onClick={() => onUse(m.url)}
-                    className="shrink-0 px-2 py-1 rounded-lg bg-[#2563EB] text-[var(--accent-ink)] font-extrabold text-[11px] cursor-pointer"
+                    className="shrink-0 px-2 py-1 rounded-lg bg-[#40916C] text-[var(--accent-ink)] font-extrabold text-[11px] cursor-pointer"
                   >
                     Use
                   </button>

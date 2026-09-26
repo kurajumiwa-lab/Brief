@@ -22,7 +22,7 @@ const DEFAULT_PARTNERS: PartnerPill[] = [
   { id: 'lori', name: 'Lori Systems', sub: '50% Backhaul', icon: <Truck className="w-3.5 h-3.5 text-amber-600" /> },
   { id: 'mpesa', name: 'Safaricom M-Pesa', sub: 'STK Rails', icon: <Smartphone className="w-3.5 h-3.5 text-emerald-600" /> },
   { id: 'pezesha', name: 'Pezesha Credit', sub: 'White-Label', icon: <Landmark className="w-3.5 h-3.5 text-purple-600" /> },
-  { id: 'sendy', name: 'Sendy Freight', sub: 'Direct Cargo', icon: <Award className="w-3.5 h-3.5 text-indigo-600" /> }
+  { id: 'sendy', name: 'Sendy Freight', sub: 'Direct Cargo', icon: <Award className="w-3.5 h-3.5 text-emerald-600" /> }
 ];
 
 export const TrustedPartnerRibbon: React.FC<TrustedPartnerRibbonProps> = ({

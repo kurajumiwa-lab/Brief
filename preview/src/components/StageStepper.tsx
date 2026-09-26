@@ -35,9 +35,9 @@ export function StageStepper({ stages, currentIndex, compact = false }: StageSte
               <div
                 className="flex h-8 w-8 items-center justify-center rounded-full border text-[12px] font-extrabold transition-all"
                 style={{
-                  background: done || active ? '#2563EB' : 'var(--color-paper)',
+                  background: done || active ? '#40916C' : 'var(--color-paper)',
                   color: done || active ? 'var(--brief-ink)' : 'rgba(17,17,17,0.4)',
-                  borderColor: done || active ? '#2563EB' : 'var(--brief-line)',
+                  borderColor: done || active ? '#40916C' : 'var(--brief-line)',
                   opacity: active ? 1 : done ? 0.9 : 1
                 }}
               >
@@ -57,7 +57,7 @@ export function StageStepper({ stages, currentIndex, compact = false }: StageSte
               <div className="flex items-center pt-[15px] px-0.5" aria-hidden="true">
                 <div
                   className="h-[2px] w-3 rounded-full sm:w-6"
-                  style={{ background: i < currentIndex ? '#2563EB' : 'var(--brief-line)' }}
+                  style={{ background: i < currentIndex ? '#40916C' : 'var(--brief-line)' }}
                 />
               </div>
             )}

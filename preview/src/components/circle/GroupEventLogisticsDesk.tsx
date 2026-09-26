@@ -76,7 +76,7 @@ export const GroupEventLogisticsDesk: React.FC<GroupEventLogisticsDeskProps> = (
               <span className="text-[11px] font-mono font-black uppercase px-2.5 py-0.5 rounded-full bg-[#E8985E] text-[#1E1B4B] tracking-wider">
                 COMMUNITY EVENT OPERATIONS
               </span>
-              <span className="text-xs text-indigo-200 font-bold flex items-center space-x-1">
+              <span className="text-xs text-emerald-200 font-bold flex items-center space-x-1">
                 <CalendarDays className="w-3.5 h-3.5 text-amber-300" />
                 <span>Choir, Retreat & Sports Ops</span>
               </span>
@@ -85,7 +85,7 @@ export const GroupEventLogisticsDesk: React.FC<GroupEventLogisticsDeskProps> = (
             <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center space-x-2">
               <span>Group Event & Touring Logistics Desk</span>
             </h2>
-            <p className="text-xs text-indigo-200/90 max-w-lg leading-relaxed">
+            <p className="text-xs text-emerald-200/90 max-w-lg leading-relaxed">
               Operational coordination for church choirs, sports clubs, and alumni associations. Rosters, transparent budget desks, and WAIRO gear transport.
             </p>
           </div>
@@ -113,7 +113,7 @@ export const GroupEventLogisticsDesk: React.FC<GroupEventLogisticsDeskProps> = (
         <div className="p-5 rounded-2xl bg-white shadow-sm space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
-              <span className="text-[11px] font-mono font-black uppercase text-indigo-600 tracking-wide">
+              <span className="text-[11px] font-mono font-black uppercase text-emerald-600 tracking-wide">
                 {activeEvent.groupName}
               </span>
               <h3 className="text-lg font-black text-[var(--brief-ink)] leading-snug">
@@ -122,7 +122,7 @@ export const GroupEventLogisticsDesk: React.FC<GroupEventLogisticsDeskProps> = (
             </div>
 
             <div className="flex items-center space-x-2">
-              <span className="px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-black">
+              <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-black">
                 {activeEvent.eventDate}
               </span>
             </div>
@@ -196,7 +196,7 @@ export const GroupEventLogisticsDesk: React.FC<GroupEventLogisticsDeskProps> = (
             <div className="space-y-1.5">
               {activeEvent.itinerary.map((step, idx) => (
                 <div key={idx} className="flex items-start space-x-2 text-xs text-[var(--brief-muted)]">
-                  <span className="w-4 h-4 rounded-full bg-indigo-100 text-indigo-700 text-[11px] font-bold flex items-center justify-center shrink-0 mt-0.5">
+                  <span className="w-4 h-4 rounded-full bg-emerald-100 text-emerald-700 text-[11px] font-bold flex items-center justify-center shrink-0 mt-0.5">
                     {idx + 1}
                   </span>
                   <span>{step}</span>
@@ -228,7 +228,7 @@ export const GroupEventLogisticsDesk: React.FC<GroupEventLogisticsDeskProps> = (
                   onClick={() => callSupplier(sup.phone, sup.name)}
                   className="w-full py-2 px-3 rounded-xl bg-gray-100 hover:bg-gray-200 text-xs font-bold text-[var(--brief-ink)] flex items-center justify-center space-x-1.5 transition-colors cursor-pointer"
                 >
-                  <Phone className="w-3.5 h-3.5 text-indigo-600" />
+                  <Phone className="w-3.5 h-3.5 text-emerald-600" />
                   <span>Call Operator</span>
                 </button>
               </div>

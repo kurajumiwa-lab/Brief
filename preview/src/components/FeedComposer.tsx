@@ -54,7 +54,7 @@ const T = {
   line: 'var(--brief-line)',
   ink: '#0D1117',
   muted: 'rgba(10, 14, 20,0.62)',
-  green: '#2563EB'  /* legacy name: the accent, used for the selected-collection border */
+  green: '#40916C'  /* legacy name: the accent, used for the selected-collection border */
 };
 
 // ---------------------------------------------------------------------------

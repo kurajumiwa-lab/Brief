@@ -266,12 +266,12 @@ export function SearchResults({ query, onOpenObject, onOpenEntity }: {
           aria-label="Filter results"
           aria-expanded={sheetOpen}
           className="flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[13px] font-semibold transition-colors hover:border-[#0891B2] cursor-pointer"
-          style={{ borderColor: activeFilterCount > 0 ? '#2563EB' : T.line, background: T.surface, color: T.ink }}
+          style={{ borderColor: activeFilterCount > 0 ? '#40916C' : T.line, background: T.surface, color: T.ink }}
         >
-          <SlidersHorizontal className="h-3.5 w-3.5" style={{ color: activeFilterCount > 0 ? '#2563EB' : T.muted }} />
+          <SlidersHorizontal className="h-3.5 w-3.5" style={{ color: activeFilterCount > 0 ? '#40916C' : T.muted }} />
           Filters
           {activeFilterCount > 0 && (
-            <span className="rounded-full bg-[#2563EB] px-1.5 py-0.5 text-[11px] font-extrabold text-[var(--accent-ink)]">{activeFilterCount}</span>
+            <span className="rounded-full bg-[#40916C] px-1.5 py-0.5 text-[11px] font-extrabold text-[var(--accent-ink)]">{activeFilterCount}</span>
           )}
         </button>
         {activeFilterCount > 0 && (
@@ -299,7 +299,7 @@ export function SearchResults({ query, onOpenObject, onOpenEntity }: {
           <div className="brief-sheet-up max-h-[78vh] overflow-y-auto bg-[#EFF1F4] border-t border-[var(--brief-line)] rounded-t-[28px] shadow-2xl px-4 pb-6 pt-5" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 24px)' }}>
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-[16px] font-black tracking-tight text-[var(--brief-ink)]">Filter results</h3>
-              <button type="button" onClick={() => setSheetOpen(false)} aria-label="Close filters" className="h-9 w-9 flex items-center justify-center rounded-full bg-[color:var(--color-paper)] border border-[var(--brief-line)] text-[var(--brief-ink)] text-[32px] font-light hover:border-[#2563EB] cursor-pointer">×</button>
+              <button type="button" onClick={() => setSheetOpen(false)} aria-label="Close filters" className="h-9 w-9 flex items-center justify-center rounded-full bg-[color:var(--color-paper)] border border-[var(--brief-line)] text-[var(--brief-ink)] text-[32px] font-light hover:border-[#40916C] cursor-pointer">×</button>
             </div>
 
             <div className="space-y-5">
@@ -315,7 +315,7 @@ export function SearchResults({ query, onOpenObject, onOpenEntity }: {
                         type="button"
                         onClick={() => setDraft((d) => ({ ...d, type: value || undefined }))}
                         aria-pressed={selected}
-                        className={`rounded-full border px-3 py-1.5 text-[13px] font-semibold transition-colors cursor-pointer ${selected ? 'bg-[#2563EB] text-[var(--accent-ink)] border-[#0891B2]' : 'bg-[color:var(--color-paper)] text-[var(--ink-70)] border-[var(--brief-line)] hover:border-[#0891B2]'}`}
+                        className={`rounded-full border px-3 py-1.5 text-[13px] font-semibold transition-colors cursor-pointer ${selected ? 'bg-[#40916C] text-[var(--accent-ink)] border-[#0891B2]' : 'bg-[color:var(--color-paper)] text-[var(--ink-70)] border-[var(--brief-line)] hover:border-[#0891B2]'}`}
                       >
                         {label}
                       </button>
@@ -372,7 +372,7 @@ export function SearchResults({ query, onOpenObject, onOpenEntity }: {
               <button
                 type="button"
                 onClick={applySheet}
-                className="h-11 flex-1 rounded-xl bg-[#2563EB] text-[14px] font-extrabold text-[var(--accent-ink)] cursor-pointer"
+                className="h-11 flex-1 rounded-xl bg-[#40916C] text-[14px] font-extrabold text-[var(--accent-ink)] cursor-pointer"
               >
                 Apply
               </button>
@@ -397,7 +397,7 @@ export function SearchResults({ query, onOpenObject, onOpenEntity }: {
               className="flex w-full items-center gap-3 rounded-2xl border border-[#0891B2]/30 bg-[rgba(238, 241, 245, 0.60)] p-2 text-left transition-colors hover:border-[#0891B2] cursor-pointer"
               aria-label={entity.name}
             >
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#2563EB] to-[#EFF1F4] text-[11px] font-extrabold uppercase text-white">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#40916C] to-[#EFF1F4] text-[11px] font-extrabold uppercase text-white">
                 {ENTITY_KIND_LABEL[entity.kind]?.slice(0, 2) ?? entity.kind?.slice(0, 2)}
               </span>
               <span className="min-w-0 flex-1">
@@ -409,7 +409,7 @@ export function SearchResults({ query, onOpenObject, onOpenEntity }: {
                   {typeof entity.followCount === 'number' ? ` · ${entity.followCount} follower${entity.followCount === 1 ? '' : 's'}` : ''}
                 </span>
               </span>
-              <span className="rounded-full bg-[#2563EB] px-2.5 py-1 text-[11px] font-extrabold text-[var(--accent-ink)]">Open</span>
+              <span className="rounded-full bg-[#40916C] px-2.5 py-1 text-[11px] font-extrabold text-[var(--accent-ink)]">Open</span>
             </button>
           ))}
         </div>

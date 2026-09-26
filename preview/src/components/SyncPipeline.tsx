@@ -82,7 +82,7 @@ export function SyncPipeline({ run, pending }: SyncPipelineProps) {
                       'var(--brief-ink)/40',
                     borderColor:
                       state === 'done' ? 'var(--brief-ink)' :
-                      state === 'active' ? '#2563EB' : 'var(--brief-line)'
+                      state === 'active' ? '#40916C' : 'var(--brief-line)'
                   }}
                 >
                   {state === 'done' ? '✓' : state === 'blocked' ? '⏸' : i + 1}
@@ -110,7 +110,7 @@ export function SyncPipeline({ run, pending }: SyncPipelineProps) {
                     style={{
                       background:
                         stageFor(run, NODES[i + 1].id) && !pending
-                          ? '#2563EB' : 'var(--brief-line)'
+                          ? '#40916C' : 'var(--brief-line)'
                     }}
                   />
                 </div>

@@ -47,7 +47,7 @@ export default function ServiceFees() {
     <div className="space-y-4">
       <section aria-label="Pay for Brief services" className="rounded-2xl border border-[var(--brief-line)] bg-[color:var(--color-paper)] p-4 space-y-3">
         <div className="flex items-center gap-2">
-          <Wallet className="w-4 h-4 text-[#2563EB]" aria-hidden="true" />
+          <Wallet className="w-4 h-4 text-[#40916C]" aria-hidden="true" />
           <h2 className="text-[14px] font-extrabold text-[var(--brief-ink)]">Pay for Brief services</h2>
         </div>
 
@@ -60,13 +60,13 @@ export default function ServiceFees() {
 
         <div className="space-y-2">
           {(data?.services ?? []).map((svcItem) => (
-            <label key={svcItem.key} className={`flex items-center justify-between gap-2 rounded-xl border px-3 py-2 cursor-pointer ${service === svcItem.key ? 'border-[#2563EB] bg-[color:var(--color-well)]' : 'border-[var(--brief-line)]'}`}>
+            <label key={svcItem.key} className={`flex items-center justify-between gap-2 rounded-xl border px-3 py-2 cursor-pointer ${service === svcItem.key ? 'border-[#40916C] bg-[color:var(--color-well)]' : 'border-[var(--brief-line)]'}`}>
               <span className="flex items-center gap-2">
                 <input type="radio" name="fee-service" checked={service === svcItem.key} onChange={() => setService(svcItem.key)} aria-label={svcItem.label} />
                 <span className="text-[12px] font-bold text-[var(--brief-ink)]">{svcItem.label}</span>
               </span>
               {/* The price comes from the server catalog — the client never sets it. */}
-              <span className="text-[12px] font-extrabold text-[#2563EB]">KES {svcItem.amountKes}</span>
+              <span className="text-[12px] font-extrabold text-[#40916C]">KES {svcItem.amountKes}</span>
             </label>
           ))}
           {data && data.services.length === 0 && (
@@ -83,7 +83,7 @@ export default function ServiceFees() {
             className="flex-1 rounded-lg border border-[var(--brief-line)] bg-[color:var(--color-well)] px-3 py-2 text-[13px] tracking-wide text-[var(--brief-ink)]"
           />
           <button type="button" onClick={() => void pay()} disabled={busy || !service || code.trim().length < 8}
-            className="rounded-lg bg-[#2563EB] px-3 py-2 text-[12px] font-extrabold text-[var(--accent-ink)] disabled:opacity-40">
+            className="rounded-lg bg-[#40916C] px-3 py-2 text-[12px] font-extrabold text-[var(--accent-ink)] disabled:opacity-40">
             Submit
           </button>
         </div>

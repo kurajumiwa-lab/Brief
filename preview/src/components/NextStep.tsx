@@ -62,7 +62,7 @@ export function NextStep({ ladder, onAct, onDismiss, compact = false }: NextStep
           <span
             key={rung.id}
             title={rung.reached ? `${rung.label} — ${rung.how ?? 'done'}` : rung.label}
-            className={`h-1.5 flex-1 rounded-full ${rung.reached ? 'bg-[#2563EB]' : 'bg-[color:var(--brief-line)]'}`}
+            className={`h-1.5 flex-1 rounded-full ${rung.reached ? 'bg-[#40916C]' : 'bg-[color:var(--brief-line)]'}`}
           />
         ))}
       </div>
@@ -71,7 +71,7 @@ export function NextStep({ ladder, onAct, onDismiss, compact = false }: NextStep
         <button
           type="button"
           onClick={() => onAct(next.id)}
-          className="inline-flex items-center gap-1.5 rounded-xl bg-[#2563EB] px-3.5 py-2 text-[12px] font-extrabold text-[var(--accent-ink)] cursor-pointer"
+          className="inline-flex items-center gap-1.5 rounded-xl bg-[#40916C] px-3.5 py-2 text-[12px] font-extrabold text-[var(--accent-ink)] cursor-pointer"
         >
           {next.cta} <ArrowRight className="h-3 w-3" />
         </button>

@@ -37,9 +37,9 @@ import { soundEngine } from '../../utils/SoundEngine';
 export const AppColors = {
   primary: '#0D1117',
   primaryHover: '#1E293B',
-  accent: '#2563EB',
+  accent: '#40916C',
   accentHover: '#E04D18',
-  secondary: '#2563EB',
+  secondary: '#40916C',
   teal: '#00BFEF',
   emerald: '#00D26A',
   surfaceLight: 'var(--color-paper)',
@@ -383,7 +383,7 @@ export function MultiImagePicker({
               onClick={() => setActiveViewerIdx(idx)}
               className={`relative aspect-square rounded-2xl overflow-hidden border cursor-pointer transition-all hover:shadow-md group ${
                 isCover
-                  ? 'border-2 border-[#2563EB] ring-2 ring-orange-100 dark:ring-orange-950/40'
+                  ? 'border-2 border-[#40916C] ring-2 ring-orange-100 dark:ring-orange-950/40'
                   : 'border-slate-200 dark:border-slate-700'
               }`}
             >
@@ -395,7 +395,7 @@ export function MultiImagePicker({
 
               {/* Cover Badge */}
               {isCover && (
-                <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md bg-[#2563EB] text-white text-[11px] font-black uppercase tracking-wider shadow-sm flex items-center space-x-0.5">
+                <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md bg-[#40916C] text-white text-[11px] font-black uppercase tracking-wider shadow-sm flex items-center space-x-0.5">
                   <Star className="w-2.5 h-2.5 fill-current" />
                   <span>Cover</span>
                 </div>
@@ -409,7 +409,7 @@ export function MultiImagePicker({
                       type="button"
                       onClick={(e) => handleSetAsCover(idx, e)}
                       title="Set as Cover Photo"
-                      className="px-1.5 py-1 rounded-lg bg-black/70 hover:bg-[#2563EB] text-white text-[11px] font-bold flex items-center space-x-0.5 transition-colors"
+                      className="px-1.5 py-1 rounded-lg bg-black/70 hover:bg-[#40916C] text-white text-[11px] font-bold flex items-center space-x-0.5 transition-colors"
                     >
                       <span>★ Cover</span>
                     </button>
@@ -953,7 +953,7 @@ export function UniversalCreatePostModal({
         <div className="bg-[color:var(--brief-ink)] text-white p-4 sm:p-5 flex items-center justify-between border-b border-white/10">
           <div className="space-y-0.5">
             <div className="flex items-center space-x-2">
-              <span className="text-[11px] font-mono uppercase tracking-wider text-[#2563EB] font-black">
+              <span className="text-[11px] font-mono uppercase tracking-wider text-[#40916C] font-black">
                 UNIVERSAL PUBLISHER
               </span>
               <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-white/10 text-slate-300">
@@ -998,7 +998,7 @@ export function UniversalCreatePostModal({
                 }}
                 className={`flex items-center space-x-1.5 text-xs font-bold transition-colors cursor-pointer ${
                   isActive
-                    ? 'text-[#2563EB] font-black'
+                    ? 'text-[#40916C] font-black'
                     : isCompleted
                     ? 'text-slate-700 dark:text-slate-300 hover:text-[var(--brief-ink)]'
                     : 'text-slate-400 dark:text-slate-600'
@@ -1007,7 +1007,7 @@ export function UniversalCreatePostModal({
                 <div
                   className={`w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-mono font-black ${
                     isActive
-                      ? 'bg-[#2563EB] text-white'
+                      ? 'bg-[#40916C] text-white'
                       : isCompleted
                       ? 'bg-emerald-600 text-white'
                       : 'bg-slate-200 dark:bg-slate-700 text-slate-500'
@@ -1450,7 +1450,7 @@ export function UniversalCreatePostModal({
               className="flex-1 max-w-[220px] py-3 rounded-2xl bg-[color:var(--brief-ink)] hover:bg-[#1E293B] text-white font-black text-xs uppercase tracking-wider flex items-center justify-center space-x-1.5 shadow-md cursor-pointer transition-all active:scale-95"
             >
               <span>Next: {currentStep === 1 ? 'Media & Details' : 'Preview'}</span>
-              <ArrowRight className="w-3.5 h-3.5 text-[#2563EB]" />
+              <ArrowRight className="w-3.5 h-3.5 text-[#40916C]" />
             </button>
           ) : (
             <button
@@ -1459,7 +1459,7 @@ export function UniversalCreatePostModal({
               disabled={isSubmitting}
               className="flex-1 max-w-[240px] py-3.5 rounded-2xl bg-[color:var(--brief-ink)] hover:bg-[#1E293B] text-white font-black text-xs uppercase tracking-wider shadow-lg flex items-center justify-center space-x-2 cursor-pointer disabled:opacity-50 transition-all active:scale-95"
             >
-              <Sparkles className="w-4 h-4 text-[#2563EB]" />
+              <Sparkles className="w-4 h-4 text-[#40916C]" />
               <span>{isSubmitting ? 'Publishing…' : `Publish ${postType.toUpperCase()}`}</span>
             </button>
           )}

@@ -317,7 +317,7 @@ export function Marketplace({ initialSection = 'browse', hideBrowse = false }: M
           }}
           className={`shrink-0 px-3 py-1.5 rounded-full text-[12px] font-extrabold border cursor-pointer transition ${
             section === s.id
-              ? 'bg-[#2563EB] text-[var(--accent-ink)] border-[#0891B2]'
+              ? 'bg-[#40916C] text-[var(--accent-ink)] border-[#0891B2]'
               : 'bg-[color:var(--color-paper)] text-[var(--ink-70)] border-[var(--brief-line)]'
           }`}
         >

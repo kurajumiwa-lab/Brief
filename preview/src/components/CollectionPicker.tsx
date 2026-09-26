@@ -92,7 +92,7 @@ export function CollectionPicker({ objectId, onChanged }: {
         </p>
         {!creating && (
           <button type="button" onClick={() => setCreating(true)}
-            className="flex items-center gap-1 text-[11px] font-bold text-[#2563EB] cursor-pointer hover:underline">
+            className="flex items-center gap-1 text-[11px] font-bold text-[#40916C] cursor-pointer hover:underline">
             <Plus className="h-3 w-3" /> New
           </button>
         )}
@@ -110,7 +110,7 @@ export function CollectionPicker({ objectId, onChanged }: {
             className="min-w-0 flex-1 rounded-xl border border-[var(--brief-line)] px-2.5 py-1.5 text-[13px] font-semibold text-[var(--brief-ink)] outline-none focus:border-[#0891B2]"
           />
           <button type="button" onClick={create} disabled={busy || !name.trim()}
-            className="rounded-full bg-[#2563EB] px-3 py-1.5 text-[11px] font-extrabold text-[var(--accent-ink)] cursor-pointer disabled:opacity-40">
+            className="rounded-full bg-[#40916C] px-3 py-1.5 text-[11px] font-extrabold text-[var(--accent-ink)] cursor-pointer disabled:opacity-40">
             Create
           </button>
           <button type="button" onClick={() => setCreating(false)} aria-label="Cancel"
@@ -134,7 +134,7 @@ export function CollectionPicker({ objectId, onChanged }: {
                   isMember ? 'border-[#0891B2] bg-[color:var(--color-well)]' : 'border-[var(--brief-line)] bg-[color:var(--color-paper)] hover:border-[#0891B2]/50'
                 }`}>
                 <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border ${
-                  isMember ? 'border-[#2563EB] bg-[#2563EB] text-[var(--accent-ink)]' : 'border-[var(--brief-line)] text-transparent'
+                  isMember ? 'border-[#40916C] bg-[#40916C] text-[var(--accent-ink)]' : 'border-[var(--brief-line)] text-transparent'
                 }`}>
                   <Check className="h-3 w-3" />
                 </span>

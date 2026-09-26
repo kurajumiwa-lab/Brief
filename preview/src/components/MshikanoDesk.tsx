@@ -44,7 +44,7 @@ function TrustChip({ trust }: { trust: CoopPost['trust'] }) {
     >
       <span
         aria-hidden="true"
-        className={`h-1.5 w-1.5 rounded-full ${trust.level === 'new' ? 'bg-[#7A8494]' : 'bg-[#2563EB]'}`}
+        className={`h-1.5 w-1.5 rounded-full ${trust.level === 'new' ? 'bg-[#7A8494]' : 'bg-[#40916C]'}`}
       />
       {trust.level === 'new' ? 'new member' : bits.join(' · ')}
     </span>
@@ -148,7 +148,7 @@ export function MshikanoDesk() {
     <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
       <header className="space-y-1">
         <div className="flex items-center gap-2">
-          <Heart className="w-5 h-5 text-[#2563EB]" aria-hidden="true" />
+          <Heart className="w-5 h-5 text-[#40916C]" aria-hidden="true" />
           <h1 className="font-display text-2xl font-semibold tracking-tight text-[var(--brief-ink)]">Mshikano</h1>
         </div>
         <p className="text-[12px] leading-snug text-[var(--ink-60)]">
@@ -191,7 +191,7 @@ export function MshikanoDesk() {
             type="button"
             onClick={() => void submit()}
             disabled={busy || title.trim().length < 4}
-            className="ml-auto rounded-lg bg-[#2563EB] px-4 py-2 text-[12px] font-extrabold text-[var(--accent-ink)] disabled:opacity-40"
+            className="ml-auto rounded-lg bg-[#40916C] px-4 py-2 text-[12px] font-extrabold text-[var(--accent-ink)] disabled:opacity-40"
           >
             Post it
           </button>
@@ -202,7 +202,7 @@ export function MshikanoDesk() {
       {/* Who can help? */}
       <section aria-label="Who can help" className="rounded-2xl border border-[var(--brief-line)] bg-[color:var(--color-paper)] p-4 space-y-2">
         <div className="flex items-center gap-2">
-          <Search className="w-4 h-4 text-[#2563EB]" aria-hidden="true" />
+          <Search className="w-4 h-4 text-[#40916C]" aria-hidden="true" />
           <h2 className="text-[14px] font-extrabold text-[var(--brief-ink)]">Who can help?</h2>
         </div>
         <div className="flex gap-2">
@@ -215,7 +215,7 @@ export function MshikanoDesk() {
             className="flex-1 rounded-lg border border-[var(--brief-line)] bg-[color:var(--color-well)] px-3 py-2 text-[13px] text-[var(--brief-ink)]"
           />
           <button type="button" onClick={() => void ask()} disabled={busy || question.trim().length < 3}
-            className="rounded-lg bg-[#2563EB] px-3 py-2 text-[12px] font-extrabold text-[var(--accent-ink)] disabled:opacity-40">
+            className="rounded-lg bg-[#40916C] px-3 py-2 text-[12px] font-extrabold text-[var(--accent-ink)] disabled:opacity-40">
             Ask
           </button>
         </div>
@@ -252,7 +252,7 @@ export function MshikanoDesk() {
               </p>
               <span className="flex gap-1.5 shrink-0">
                 <button type="button" onClick={() => void respond(c.id, true)} disabled={busy}
-                  className="rounded-lg bg-[#2563EB] px-3 py-1.5 text-[11px] font-extrabold text-[var(--accent-ink)]">Confirm</button>
+                  className="rounded-lg bg-[#40916C] px-3 py-1.5 text-[11px] font-extrabold text-[var(--accent-ink)]">Confirm</button>
                 <button type="button" onClick={() => void respond(c.id, false)} disabled={busy}
                   className="rounded-lg border border-[var(--brief-line)] px-3 py-1.5 text-[11px] font-extrabold text-[var(--ink-70)]">Decline</button>
               </span>
@@ -265,7 +265,7 @@ export function MshikanoDesk() {
       <section aria-label="Cooperation posts" className="space-y-3">
         <div className="flex flex-wrap items-center gap-1.5">
           <button type="button" onClick={() => setFilter(null)} aria-pressed={filter === null}
-            className={`rounded-full px-3 py-1 text-[11px] font-extrabold ${filter === null ? 'bg-[#2563EB] text-[var(--accent-ink)]' : 'border border-[var(--brief-line)] text-[var(--ink-70)]'}`}>
+            className={`rounded-full px-3 py-1 text-[11px] font-extrabold ${filter === null ? 'bg-[#40916C] text-[var(--accent-ink)]' : 'border border-[var(--brief-line)] text-[var(--ink-70)]'}`}>
             All
           </button>
           {INTENTS.map((it) => (
@@ -305,13 +305,13 @@ export function MshikanoDesk() {
             <div className="flex gap-1.5">
               {!p.mine && (
                 <button type="button" onClick={() => void markWorked(p)} disabled={busy}
-                  className="rounded-lg bg-[#2563EB] px-3 py-1.5 text-[11px] font-extrabold text-[var(--accent-ink)] disabled:opacity-40">
+                  className="rounded-lg bg-[#40916C] px-3 py-1.5 text-[11px] font-extrabold text-[var(--accent-ink)] disabled:opacity-40">
                   We worked together
                 </button>
               )}
               <button type="button" onClick={() => void openMatches(p)}
                 aria-expanded={matchesFor?.post.id === p.id}
-                className="rounded-lg border border-[#0891B2] px-3 py-1.5 text-[11px] font-extrabold text-[#2563EB]">
+                className="rounded-lg border border-[#0891B2] px-3 py-1.5 text-[11px] font-extrabold text-[#40916C]">
                 {matchesFor?.post.id === p.id ? 'Hide matches' : 'See matches'}
               </button>
             </div>
@@ -325,13 +325,13 @@ export function MshikanoDesk() {
                     <p className="text-[12px] font-bold text-[var(--brief-ink)]">{m.post.title}</p>
                     <p className="text-[11px] text-[var(--ink-55)]">{m.post.author.displayName}{m.post.county ? ` · ${m.post.county}` : ''}</p>
                     {m.reasons.length > 0 && (
-                      <p className="mt-0.5 text-[11px] text-[#2563EB] font-bold">Why: {m.reasons.join(' · ')}</p>
+                      <p className="mt-0.5 text-[11px] text-[#40916C] font-bold">Why: {m.reasons.join(' · ')}</p>
                     )}
                     {!m.post.mine && (
                       <button
                         type="button"
                         onClick={() => setIntroFor(m.post)}
-                        className="mt-1.5 cursor-pointer rounded-full border border-[#2563EB] px-2.5 py-0.5 text-[11px] font-extrabold text-[#2563EB] hover:bg-[color:var(--color-well)]"
+                        className="mt-1.5 cursor-pointer rounded-full border border-[#40916C] px-2.5 py-0.5 text-[11px] font-extrabold text-[#40916C] hover:bg-[color:var(--color-well)]"
                       >
                         Get introduced — priority
                       </button>

@@ -180,7 +180,7 @@ export function Inbox({
               </button>
               <button
                 onClick={() => handleAcceptCandidate(candidate)}
-                className="flex-[2] py-2 rounded-xl bg-[#2563EB] text-[var(--accent-ink)] font-extrabold text-[12px] cursor-pointer"
+                className="flex-[2] py-2 rounded-xl bg-[#40916C] text-[var(--accent-ink)] font-extrabold text-[12px] cursor-pointer"
               >
                 Publish to Brief
               </button>

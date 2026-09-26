@@ -234,7 +234,7 @@ const [goal, setGoal] = useState('')
                 <span>Continue to First Offer</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
-              <button type="button" disabled={submitting || !name.trim()} onClick={() => handleFinish(true)} className="w-full py-3 rounded-xl bg-[#2563EB] text-white text-sm font-bold disabled:opacity-40">{submitting ? 'Creating…' : 'Create shop — add offers later'}</button>
+              <button type="button" disabled={submitting || !name.trim()} onClick={() => handleFinish(true)} className="w-full py-3 rounded-xl bg-[#40916C] text-white text-sm font-bold disabled:opacity-40">{submitting ? 'Creating…' : 'Create shop — add offers later'}</button>
               <p className="text-xs text-[var(--color-text-muted)]">Your shop starts private. Add your cover and offers, then choose when to make it public.</p>
             </div>
           )}

@@ -21,7 +21,7 @@ import type { CollectionPage as CollectionPageData } from '../api/briefApi';
 const INK = '#0D1117';
 const MUTED = 'rgba(10, 14, 20,0.62)';
 const LINE = 'var(--brief-line)';
-const ACCENT = '#2563EB';
+const ACCENT = '#40916C';
 
 /** Honest status label: expired content is never presented as active. */
 export function collectionStatusLabel(o: any): string | null {
@@ -88,7 +88,7 @@ function notFoundBlock(onClose: () => void) {
         It may have been deleted, or it's private. Brief never reveals the
         existence of private collections.
       </p>
-      <button type="button" onClick={onClose} className="mt-2 rounded-full bg-[#2563EB] px-5 py-2 text-[12px] font-bold text-[var(--accent-ink)] cursor-pointer">
+      <button type="button" onClick={onClose} className="mt-2 rounded-full bg-[#40916C] px-5 py-2 text-[12px] font-bold text-[var(--accent-ink)] cursor-pointer">
         Back
       </button>
     </div>
@@ -221,7 +221,7 @@ export function CollectionPage({ collectionId, mode, onClose, onOpenObject, onCh
             )}
             {isPublic && (
               <button type="button" onClick={share}
-                className="flex items-center gap-1 rounded-full bg-[#2563EB] px-3 py-1.5 text-[11px] font-extrabold text-[var(--accent-ink)] cursor-pointer hover:bg-[#EFF1F4]">
+                className="flex items-center gap-1 rounded-full bg-[#40916C] px-3 py-1.5 text-[11px] font-extrabold text-[var(--accent-ink)] cursor-pointer hover:bg-[#EFF1F4]">
                 <Share2 className="h-3 w-3" /> Share
               </button>
             )}
@@ -241,10 +241,10 @@ export function CollectionPage({ collectionId, mode, onClose, onOpenObject, onCh
           </div>
           <div className="p-4 sm:p-5">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full bg-[color:var(--color-well)] px-2.5 py-0.5 text-[11px] font-extrabold uppercase tracking-[0.14em] text-[#2563EB]">
+              <span className="rounded-full bg-[color:var(--color-well)] px-2.5 py-0.5 text-[11px] font-extrabold uppercase tracking-[0.14em] text-[#40916C]">
                 Collection
               </span>
-              <span className="rounded-full bg-[color:var(--color-well)] px-2.5 py-0.5 text-[11px] font-extrabold uppercase tracking-[0.14em] text-[#2563EB]">
+              <span className="rounded-full bg-[color:var(--color-well)] px-2.5 py-0.5 text-[11px] font-extrabold uppercase tracking-[0.14em] text-[#40916C]">
                 {isPublic ? 'Public' : 'Private'}
               </span>
               <span className="text-[11px] font-semibold text-[rgba(10, 14, 20,0.62)]">
@@ -263,7 +263,7 @@ export function CollectionPage({ collectionId, mode, onClose, onOpenObject, onCh
                   aria-label="Collection name"
                 />
                 <button type="button" onClick={commitRename} disabled={busy || !draftName.trim()}
-                  className="rounded-full bg-[#2563EB] px-3 py-1.5 text-[11px] font-extrabold text-[var(--accent-ink)] cursor-pointer disabled:opacity-40">
+                  className="rounded-full bg-[#40916C] px-3 py-1.5 text-[11px] font-extrabold text-[var(--accent-ink)] cursor-pointer disabled:opacity-40">
                   Save
                 </button>
                 <button type="button" onClick={() => setRenaming(false)} aria-label="Cancel rename"
@@ -279,7 +279,7 @@ export function CollectionPage({ collectionId, mode, onClose, onOpenObject, onCh
 
             {mode === 'owner' && !renaming && (
               <button type="button" onClick={() => { setDraftName(page.name); setRenaming(true); }}
-                className="mt-1 flex items-center gap-1 text-[11px] font-bold text-[#2563EB] cursor-pointer hover:underline">
+                className="mt-1 flex items-center gap-1 text-[11px] font-bold text-[#40916C] cursor-pointer hover:underline">
                 <Pencil className="h-3 w-3" /> Rename
               </button>
             )}
@@ -291,9 +291,9 @@ export function CollectionPage({ collectionId, mode, onClose, onOpenObject, onCh
             {/* Location context from the items' own fields — never duplicated. */}
             {(page.locations.areas.length > 0 || page.locations.counties.length > 0) && (
               <div className="mt-3 flex flex-wrap items-center gap-1.5">
-                <MapPin className="h-3.5 w-3.5 text-[#2563EB]" />
+                <MapPin className="h-3.5 w-3.5 text-[#40916C]" />
                 {[...page.locations.areas, ...page.locations.counties].slice(0, 6).map((loc) => (
-                  <span key={loc} className="rounded-full bg-[color:var(--color-well)] px-2.5 py-0.5 text-[11px] font-bold text-[#2563EB]">
+                  <span key={loc} className="rounded-full bg-[color:var(--color-well)] px-2.5 py-0.5 text-[11px] font-bold text-[#40916C]">
                     {loc}
                   </span>
                 ))}
@@ -302,9 +302,9 @@ export function CollectionPage({ collectionId, mode, onClose, onOpenObject, onCh
 
             {sharedUrl && (
               <div className="mt-3 flex items-center gap-2 rounded-xl border border-[#0891B2]/40 bg-[rgba(238, 241, 245, 0.60)] px-3 py-2">
-                <p className="min-w-0 flex-1 truncate text-[11px] font-semibold text-[#2563EB]">{sharedUrl}</p>
+                <p className="min-w-0 flex-1 truncate text-[11px] font-semibold text-[#40916C]">{sharedUrl}</p>
                 <button type="button" onClick={openShareLink}
-                  className="shrink-0 rounded-full bg-[#2563EB] px-2.5 py-1 text-[11px] font-extrabold text-[var(--accent-ink)] cursor-pointer">
+                  className="shrink-0 rounded-full bg-[#40916C] px-2.5 py-1 text-[11px] font-extrabold text-[var(--accent-ink)] cursor-pointer">
                   Open
                 </button>
               </div>
@@ -379,7 +379,7 @@ export function CollectionPage({ collectionId, mode, onClose, onOpenObject, onCh
                         </span>
                       )}
                     </span>
-                    <span className="mt-0.5 line-clamp-2 block text-[13px] font-semibold leading-snug text-[var(--brief-ink)] group-hover:text-[#2563EB]">
+                    <span className="mt-0.5 line-clamp-2 block text-[13px] font-semibold leading-snug text-[var(--brief-ink)] group-hover:text-[#40916C]">
                       {o.title}
                     </span>
                   </span>
@@ -388,7 +388,7 @@ export function CollectionPage({ collectionId, mode, onClose, onOpenObject, onCh
                 {mode === 'owner' && (
                   <span className="flex shrink-0 flex-col items-center justify-center gap-1">
                     <button type="button" aria-label="Move up" onClick={() => moveItem(o.id, -1)}
-                      className="rounded-full p-1 text-[rgba(10, 14, 20,0.4)] cursor-pointer hover:bg-[color:var(--color-well)] hover:text-[#2563EB]">
+                      className="rounded-full p-1 text-[rgba(10, 14, 20,0.4)] cursor-pointer hover:bg-[color:var(--color-well)] hover:text-[#40916C]">
                       <ArrowUp className="h-3.5 w-3.5" />
                     </button>
                     <button type="button" aria-label="Remove" onClick={() => removeItem(o.id)}
@@ -396,7 +396,7 @@ export function CollectionPage({ collectionId, mode, onClose, onOpenObject, onCh
                       <X className="h-3.5 w-3.5" />
                     </button>
                     <button type="button" aria-label="Move down" onClick={() => moveItem(o.id, 1)}
-                      className="rounded-full p-1 text-[rgba(10, 14, 20,0.4)] cursor-pointer hover:bg-[color:var(--color-well)] hover:text-[#2563EB]">
+                      className="rounded-full p-1 text-[rgba(10, 14, 20,0.4)] cursor-pointer hover:bg-[color:var(--color-well)] hover:text-[#40916C]">
                       <ArrowDown className="h-3.5 w-3.5" />
                     </button>
                   </span>
@@ -407,7 +407,7 @@ export function CollectionPage({ collectionId, mode, onClose, onOpenObject, onCh
 
           {mode === 'owner' && (
             <div className="pt-2 text-center">
-              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#2563EB]">
+              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#40916C]">
                 <ChevronDown className="h-3 w-3 rotate-180" />
                 {isPublic ? 'Shareable: /collections/' + page.id : 'Make this collection public to share it'}
               </span>

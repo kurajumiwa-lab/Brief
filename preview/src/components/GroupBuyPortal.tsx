@@ -229,8 +229,8 @@ export function GroupBuyPortal({ onClose }: { onClose?: () => void } = {}) {
                   onClick={() => { setSelectedId(b.id); setLastReceipt(null); }}
                   className="rounded-lg border px-2.5 py-1 text-[11px] font-extrabold cursor-pointer"
                   style={{
-                    borderColor: b.id === selected?.id ? 'var(--wairo-blue)' : 'var(--brief-line)',
-                    background: b.id === selected?.id ? 'var(--wairo-blue)' : 'var(--color-paper)',
+                    borderColor: b.id === selected?.id ? 'var(--color-primary)' : 'var(--brief-line)',
+                    background: b.id === selected?.id ? 'var(--color-primary)' : 'var(--color-paper)',
                     color: b.id === selected?.id ? 'var(--accent-ink)' : 'var(--wairo-slate)'
                   }}
                 >
@@ -268,7 +268,7 @@ export function GroupBuyPortal({ onClose }: { onClose?: () => void } = {}) {
                 type="button"
                 onClick={() => void create()}
                 disabled={creating || !newTitle.trim() || !newTarget.trim()}
-                className="rounded-lg bg-[#2563EB] px-4 py-2 text-[12px] font-extrabold text-[var(--accent-ink)] cursor-pointer disabled:opacity-40"
+                className="rounded-lg bg-[#40916C] px-4 py-2 text-[12px] font-extrabold text-[var(--accent-ink)] cursor-pointer disabled:opacity-40"
               >
                 {creating ? '…' : 'Open'}
               </button>
@@ -286,7 +286,7 @@ export function GroupBuyPortal({ onClose }: { onClose?: () => void } = {}) {
                       {money(selected.total)} of {money(selected.targetAmount)} · {selected.progressPct}% · {selected.contributionCount} contribution{selected.contributionCount === 1 ? '' : 's'}
                     </p>
                   </div>
-                  <span className="rounded-md bg-[#2563EB] px-2 py-0.5 text-[11px] font-extrabold text-[var(--accent-ink)]">
+                  <span className="rounded-md bg-[#40916C] px-2 py-0.5 text-[11px] font-extrabold text-[var(--accent-ink)]">
                     {selected.stages[selected.stageIndex]?.label}
                   </span>
                 </div>
@@ -303,7 +303,7 @@ export function GroupBuyPortal({ onClose }: { onClose?: () => void } = {}) {
                   </a>
                 ) : null}
                 <div className="h-1.5 overflow-hidden rounded-full bg-[color:var(--brief-line)]">
-                  <div className="h-full rounded-full bg-[#2563EB] transition-all" style={{ width: `${selected.progressPct}%` }} />
+                  <div className="h-full rounded-full bg-[#40916C] transition-all" style={{ width: `${selected.progressPct}%` }} />
                 </div>
                 <div className="mt-4">
                   <StageStepper stages={selected.stages} currentIndex={selected.stageIndex} />
@@ -382,7 +382,7 @@ export function GroupBuyPortal({ onClose }: { onClose?: () => void } = {}) {
                         type="button"
                         onClick={() => void priceBargain()}
                         disabled={bargainBusy}
-                        className="rounded-lg bg-[#2563EB] px-4 py-2 text-[12px] font-extrabold text-[var(--accent-ink)] cursor-pointer disabled:opacity-40"
+                        className="rounded-lg bg-[#40916C] px-4 py-2 text-[12px] font-extrabold text-[var(--accent-ink)] cursor-pointer disabled:opacity-40"
                       >
                         {bargainBusy ? '…' : 'Price this bargain'}
                       </button>
@@ -440,7 +440,7 @@ export function GroupBuyPortal({ onClose }: { onClose?: () => void } = {}) {
                         type="button"
                         onClick={() => void joinOrLeave()}
                         disabled={bargainBusy || bargain.expired}
-                        className="rounded-lg bg-[#2563EB] px-4 py-2 text-[12px] font-extrabold text-[var(--accent-ink)] cursor-pointer disabled:opacity-40"
+                        className="rounded-lg bg-[#40916C] px-4 py-2 text-[12px] font-extrabold text-[var(--accent-ink)] cursor-pointer disabled:opacity-40"
                       >
                         {bargainBusy ? '…' : mySeat ? 'Leave the bargain' : 'Join at the current price'}
                       </button>
@@ -484,7 +484,7 @@ export function GroupBuyPortal({ onClose }: { onClose?: () => void } = {}) {
                   type="button"
                   onClick={() => void contribute()}
                   disabled={busy || !memberRef.trim() || !Number(amount)}
-                  className="w-full rounded-lg bg-[#2563EB] py-2.5 text-[13px] font-extrabold text-[var(--accent-ink)] cursor-pointer disabled:opacity-40"
+                  className="w-full rounded-lg bg-[#40916C] py-2.5 text-[13px] font-extrabold text-[var(--accent-ink)] cursor-pointer disabled:opacity-40"
                 >
                   {busy ? 'Recording…' : 'Record contribution'}
                 </button>

@@ -1080,7 +1080,7 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({
           <div className="w-full max-w-md my-auto bg-white rounded-3xl p-6 text-center text-[var(--brief-ink)]">
             <p className="text-sm font-black">Table banking lives in your You tab</p>
             <p className="text-xs text-gray-500 mt-1">Open the You tab to run contributions, rotation, loans, welfare and minutes — every number derived from real rows.</p>
-            <button onClick={() => setCircleOpen(false)} className="mt-4 px-4 py-2 rounded-xl bg-[#2563EB] text-white text-xs font-bold">Close</button>
+            <button onClick={() => setCircleOpen(false)} className="mt-4 px-4 py-2 rounded-xl bg-[#40916C] text-white text-xs font-bold">Close</button>
           </div>
         </div>
       )}

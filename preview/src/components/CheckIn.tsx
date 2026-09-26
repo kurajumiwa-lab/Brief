@@ -146,7 +146,7 @@ export function CheckIn() {
             <button
               onClick={checkIn}
               disabled={busy}
-              className="w-full py-2.5 rounded-lg bg-[#2563EB] text-[var(--accent-ink)] text-[12px] font-extrabold cursor-pointer disabled:opacity-40"
+              className="w-full py-2.5 rounded-lg bg-[#40916C] text-[var(--accent-ink)] text-[12px] font-extrabold cursor-pointer disabled:opacity-40"
             >
               {busy ? 'Checking in…' : 'Check in'}
             </button>

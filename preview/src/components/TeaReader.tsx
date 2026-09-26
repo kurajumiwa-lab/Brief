@@ -108,7 +108,7 @@ export function TeaReader({ slug, onClose }: { slug: string; onClose: () => void
                     disabled={likeState.busy}
                     className="flex h-10 items-center gap-2 rounded-xl border px-4 text-[13px] font-extrabold cursor-pointer disabled:opacity-40 transition-all"
                     style={{
-                      background: likeState.liked ? '#2563EB' : 'var(--color-paper)',
+                      background: likeState.liked ? '#40916C' : 'var(--color-paper)',
                       color: likeState.liked ? 'var(--brief-ink)' : 'var(--brief-ink)',
                       borderColor: 'var(--brief-ink)'
                     }}

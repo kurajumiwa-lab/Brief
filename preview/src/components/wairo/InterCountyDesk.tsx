@@ -475,7 +475,7 @@ export function InterCountyDesk({
               <span className="text-[11px] font-mono font-black px-2.5 py-0.5 rounded-full bg-[#00BFEF] text-[var(--brief-ink)] uppercase tracking-wider">
                 INTER-COUNTY CROSS-DOCKING
               </span>
-              <span className="text-xs text-indigo-200 font-bold flex items-center space-x-1">
+              <span className="text-xs text-emerald-200 font-bold flex items-center space-x-1">
                 <Truck className="w-3.5 h-3.5 text-amber-400" />
                 <span>Nairobi • Mombasa • Nakuru • Kisumu • Eldoret</span>
               </span>
@@ -483,9 +483,9 @@ export function InterCountyDesk({
 
             <h2 className="text-xl sm:text-2xl font-black mt-2 text-white tracking-tight flex items-center space-x-2">
               <span>Long-Distance Traveler & Cargo Matching</span>
-              <Sparkles className="w-5 h-5 text-[#2563EB]" />
+              <Sparkles className="w-5 h-5 text-[#40916C]" />
             </h2>
-            <p className="text-xs text-indigo-200/80 mt-0.5 max-w-xl">
+            <p className="text-xs text-emerald-200/80 mt-0.5 max-w-xl">
               WAIRO multi-tier freight ecosystem: Lori Systems 50% backhaul arbitrage, Fargo KES 50 pickup counters, Sendy Freight, and Bolt Rapid.
             </p>
           </div>
@@ -543,7 +543,7 @@ export function InterCountyDesk({
               <span>{tab.label}</span>
               {tab.count !== undefined && (
                 <span className={`text-[11px] px-1.5 py-0.2 rounded-full font-mono ${
-                  activeTab === tab.id ? 'bg-[#2563EB] text-white' : 'bg-white/20 text-white'
+                  activeTab === tab.id ? 'bg-[#40916C] text-white' : 'bg-white/20 text-white'
                 }`}>
                   {tab.count}
                 </span>
@@ -751,7 +751,7 @@ export function InterCountyDesk({
         <div className="p-5 sm:p-6 space-y-5">
           <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 flex items-start justify-between gap-3">
             <div className="space-y-1">
-              <span className="text-[11px] font-mono font-bold text-[#2563EB] uppercase tracking-wider">
+              <span className="text-[11px] font-mono font-bold text-[#40916C] uppercase tracking-wider">
                 COMMISSION TRANSPARENCY
               </span>
               <h4 className="text-sm font-black text-[var(--brief-ink)]">
@@ -761,7 +761,7 @@ export function InterCountyDesk({
                 Traveling to Mombasa, Kisumu, Nakuru, or Eldoret? Carry vetted boxes and parcels. Get paid directly to your M-Pesa upon recipient PIN verification.
               </p>
             </div>
-            <div className="p-3 rounded-2xl bg-[#2563EB] text-white font-mono font-black text-center shrink-0">
+            <div className="p-3 rounded-2xl bg-[#40916C] text-white font-mono font-black text-center shrink-0">
               <span className="text-lg block leading-none">90%</span>
               <span className="text-[11px] uppercase tracking-wider">PAYOUT</span>
             </div>
@@ -1015,12 +1015,12 @@ export function InterCountyDesk({
             </p>
           </div>
 
-          <div className="p-4 rounded-2xl bg-indigo-50 border border-indigo-200 text-indigo-950 space-y-2">
+          <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-950 space-y-2">
             <h4 className="font-black text-sm flex items-center space-x-1.5">
-              <ShieldCheck className="w-4 h-4 text-indigo-600" />
+              <ShieldCheck className="w-4 h-4 text-emerald-600" />
               <span>Why We Reward Vehicle Ownership in Kenya</span>
             </h4>
-            <p className="text-[12px] text-indigo-900 leading-relaxed">
+            <p className="text-[12px] text-emerald-900 leading-relaxed">
               In standard ride-hailing and gig delivery models, middleman vehicle leasing companies drain over 40% of courier earnings. Brief & Wairo prioritize independent drivers who own their motorbikes, cars, or vans.
             </p>
           </div>

@@ -138,7 +138,7 @@ export function CreatorCockpit() {
             <input value={actionBody} onChange={(e) => setActionBody(e.target.value)} placeholder="Notification body (optional)" className="w-full rounded-lg border border-[var(--brief-line)] bg-[color:var(--color-well)] px-3 py-2 text-[13px] text-[var(--brief-ink)] outline-none focus:border-[#0891B2]" />
           </>
         )}
-        <button onClick={() => void create()} disabled={busy || !name.trim()} className="flex items-center gap-1.5 rounded-full bg-[#2563EB] px-4 py-2 text-[13px] font-bold text-[var(--accent-ink)] disabled:opacity-40 cursor-pointer">
+        <button onClick={() => void create()} disabled={busy || !name.trim()} className="flex items-center gap-1.5 rounded-full bg-[#40916C] px-4 py-2 text-[13px] font-bold text-[var(--accent-ink)] disabled:opacity-40 cursor-pointer">
           <Plus className="h-3.5 w-3.5" /> Create automation
         </button>
       </div>
@@ -160,7 +160,7 @@ export function CreatorCockpit() {
             </div>
             <button
               onClick={() => void toggle(w)}
-              className={`shrink-0 rounded-full px-3 py-1 text-[11px] font-bold cursor-pointer ${w.enabled ? 'bg-[#2563EB] text-[var(--accent-ink)]' : 'bg-[color:var(--color-paper)] text-[var(--ink-70)] border border-[var(--brief-line)]'}`}
+              className={`shrink-0 rounded-full px-3 py-1 text-[11px] font-bold cursor-pointer ${w.enabled ? 'bg-[#40916C] text-[var(--accent-ink)]' : 'bg-[color:var(--color-paper)] text-[var(--ink-70)] border border-[var(--brief-line)]'}`}
             >
               {w.enabled ? 'On' : 'Off'}
             </button>

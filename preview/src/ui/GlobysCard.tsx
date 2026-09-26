@@ -92,7 +92,7 @@ export const GlobysCard: React.FC<GlobysCardProps> = ({
             {/* INLINE with the name, never a badge of its own: the check is
                 part of the sentence "Nairobi Boda ✓", not a sticker. */}
             {verified && (
-              <BadgeCheck className="w-3 h-3 shrink-0" style={{ color: '#2563EB' }} aria-label="verified" />
+              <BadgeCheck className="w-3 h-3 shrink-0" style={{ color: '#40916C' }} aria-label="verified" />
             )}
           </p>
         ) : null}

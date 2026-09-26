@@ -4102,7 +4102,7 @@ export function PublicCampaignPage({ slug }: { slug: string }) {
   const c = load.data;
 
   return (
-    <div className="min-h-screen bg-[color:var(--brief-bg)] text-[var(--accent-ink)] font-sans selection:bg-[#2563EB] selection:text-[var(--brief-ink)] flex flex-col">
+    <div className="min-h-screen bg-[color:var(--brief-bg)] text-[var(--accent-ink)] font-sans selection:bg-[#40916C] selection:text-[var(--brief-ink)] flex flex-col">
       {/* ── FULL-BLEED HERO — the Instagram event splash, edge to edge. ── */}
       {load.status === 'ready' && c && (
         <div className="relative">
@@ -4184,7 +4184,7 @@ export function PublicCampaignPage({ slug }: { slug: string }) {
             <p className="text-sm font-extrabold text-[var(--brief-ink)]">{load.error}</p>
             <button
               onClick={fetchCampaign}
-              className="px-3 py-1.5 rounded-xl bg-[#2563EB] text-[var(--accent-ink)] font-extrabold text-[11px] cursor-pointer"
+              className="px-3 py-1.5 rounded-xl bg-[#40916C] text-[var(--accent-ink)] font-extrabold text-[11px] cursor-pointer"
             >
               Try again
             </button>
@@ -4556,7 +4556,7 @@ export function PublicCampaignPage({ slug }: { slug: string }) {
                   <button
                     disabled={busy || (c.goalAmount != null && !Number(amount))}
                     onClick={submit}
-                    className="w-full py-4 rounded-xl bg-[#2563EB] text-[var(--accent-ink)] font-extrabold text-sm cursor-pointer disabled:opacity-40"
+                    className="w-full py-4 rounded-xl bg-[#40916C] text-[var(--accent-ink)] font-extrabold text-sm cursor-pointer disabled:opacity-40"
                   >
                     {busy
                       ? 'Registering...'
@@ -4602,7 +4602,7 @@ export function PublicCampaignPage({ slug }: { slug: string }) {
                   .getElementById(c.soldOut ? 'waitlist-form' : 'register-form')
                   ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
               }
-              className="px-5 py-3 rounded-xl bg-[#2563EB] text-[var(--accent-ink)] font-extrabold text-xs cursor-pointer"
+              className="px-5 py-3 rounded-xl bg-[#40916C] text-[var(--accent-ink)] font-extrabold text-xs cursor-pointer"
             >
               {c.soldOut ? 'Join wait list' : c.goalAmount != null ? 'Contribute' : 'Register'}
             </button>

@@ -18,7 +18,7 @@ import {
 import * as briefApi from '../api/briefApi';
 import type { BriefEntity, EntityKind } from '../api/briefApi';
 
-const T = { muted: 'rgba(10, 14, 20,0.62)', ink: '#0D1117', line: 'var(--brief-line)', surface: 'var(--color-paper)', primary: '#0891B2', deep: '#2563EB', dark: '#0D1117' };
+const T = { muted: 'rgba(10, 14, 20,0.62)', ink: '#0D1117', line: 'var(--brief-line)', surface: 'var(--color-paper)', primary: '#0891B2', deep: '#40916C', dark: '#0D1117' };
 
 export const ENTITY_KIND_META: Record<EntityKind, { label: string; icon: React.ReactNode; plural: string }> = {
   venue: { label: 'Place', icon: <MapPin className="h-4 w-4" />, plural: 'Places' },
@@ -130,7 +130,7 @@ function ContentCard({ o, onOpen }: { o: BriefEntity['objects'][number]; onOpen:
             </span>
           )}
         </div>
-        <h4 className="mt-0.5 line-clamp-2 text-[14px] font-semibold leading-snug text-[var(--brief-ink)] group-hover:text-[#2563EB]">
+        <h4 className="mt-0.5 line-clamp-2 text-[14px] font-semibold leading-snug text-[var(--brief-ink)] group-hover:text-[#40916C]">
           {o.title}
         </h4>
         <p className="mt-0.5 truncate text-[11px] text-[rgba(10, 14, 20,0.62)]">
@@ -150,7 +150,7 @@ function Section({ title, count, children }: { title: string; count: number; chi
         <h3 className="text-[12px] font-extrabold uppercase tracking-[0.14em] text-[var(--brief-ink)]">
           {title}
         </h3>
-        <span className="rounded-full bg-[color:var(--color-well)] px-2 py-0.5 text-[11px] font-bold text-[#2563EB]">
+        <span className="rounded-full bg-[color:var(--color-well)] px-2 py-0.5 text-[11px] font-bold text-[#40916C]">
           {count}
         </span>
       </div>
@@ -272,7 +272,7 @@ export function EntityPage({ entityId, authed, origin, onClose, onOpenObject, on
 
           {status === 'notfound' && (
             <div className="flex flex-col items-center justify-center gap-2 px-6 py-24 text-center">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[color:var(--color-well)] text-[#2563EB]">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[color:var(--color-well)] text-[#40916C]">
                 <Users className="h-7 w-7" />
               </div>
               <h3 className="text-[16px] font-bold text-[var(--brief-ink)]">This entity isn't on Brief</h3>
@@ -289,7 +289,7 @@ export function EntityPage({ entityId, authed, origin, onClose, onOpenObject, on
               <button
                 type="button"
                 onClick={load}
-                className="rounded-full bg-[#2563EB] px-4 py-2 text-[13px] font-bold text-[var(--accent-ink)]"
+                className="rounded-full bg-[#40916C] px-4 py-2 text-[13px] font-bold text-[var(--accent-ink)]"
               >
                 Try again
               </button>
@@ -306,7 +306,7 @@ export function EntityPage({ entityId, authed, origin, onClose, onOpenObject, on
                 </div>
               ) : (
                 <div className="relative h-32 bg-gradient-to-br from-[#EFF1F4] via-[var(--color-well)] to-[var(--brief-line)] sm:h-40">
-                  <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 20% 30%, #0891B2 0, transparent 45%), radial-gradient(circle at 80% 70%, #2563EB 0, transparent 40%)' }} />
+                  <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 20% 30%, #0891B2 0, transparent 45%), radial-gradient(circle at 80% 70%, #40916C 0, transparent 40%)' }} />
                 </div>
               )}
 
@@ -316,17 +316,17 @@ export function EntityPage({ entityId, authed, origin, onClose, onOpenObject, on
                   {entity.imageUrl ? (
                     <img src={entity.imageUrl} alt="" aria-hidden="true" className="h-16 w-16 rounded-2xl border-2 border-[var(--color-paper)] bg-[color:var(--color-paper)] object-cover shadow-lg" />
                   ) : (
-                    <div className="flex h-16 w-16 items-center justify-center rounded-2xl border-2 border-[var(--color-paper)] bg-gradient-to-br from-[#2563EB] to-[#EFF1F4] text-[var(--brief-ink)] shadow-lg">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-2xl border-2 border-[var(--color-paper)] bg-gradient-to-br from-[#40916C] to-[#EFF1F4] text-[var(--brief-ink)] shadow-lg">
                       {kindMeta.icon}
                     </div>
                   )}
                   <div className="flex-1 pb-1">
                     <div className="flex items-center gap-2">
-                      <span className="rounded-full bg-[color:var(--color-well)] px-2 py-0.5 text-[11px] font-extrabold uppercase tracking-[0.12em] text-[#2563EB]">
+                      <span className="rounded-full bg-[color:var(--color-well)] px-2 py-0.5 text-[11px] font-extrabold uppercase tracking-[0.12em] text-[#40916C]">
                         {kindMeta.label}
                       </span>
                       {entity.category && entity.category !== entity.kind && (
-                        <span className="rounded-full bg-[color:var(--color-well)] px-2 py-0.5 text-[11px] font-extrabold uppercase tracking-[0.12em] text-[#2563EB]">
+                        <span className="rounded-full bg-[color:var(--color-well)] px-2 py-0.5 text-[11px] font-extrabold uppercase tracking-[0.12em] text-[#40916C]">
                           {entity.category}
                         </span>
                       )}
@@ -341,8 +341,8 @@ export function EntityPage({ entityId, authed, origin, onClose, onOpenObject, on
                     disabled={busy}
                     className={`mb-1 flex items-center gap-1.5 rounded-full px-4 py-2.5 text-[14px] font-bold transition-colors ${
                       entity.isFollowed
-                        ? 'border border-[#0891B2]/40 bg-[color:var(--color-well)] text-[#2563EB] hover:bg-[#EFF1F4]'
-                        : 'bg-[#2563EB] text-[var(--accent-ink)] hover:bg-[#EFF1F4]'
+                        ? 'border border-[#0891B2]/40 bg-[color:var(--color-well)] text-[#40916C] hover:bg-[#EFF1F4]'
+                        : 'bg-[#40916C] text-[var(--accent-ink)] hover:bg-[#EFF1F4]'
                     }`}
                   >
                     {entity.isFollowed ? (<><Check className="h-4 w-4" /> Following</>) : 'Follow'}
@@ -355,7 +355,7 @@ export function EntityPage({ entityId, authed, origin, onClose, onOpenObject, on
                     <button
                       type="button"
                       onClick={() => onOpenLocation?.(entity.location?.area ?? entity.location?.county ?? '')}
-                      className="flex items-center gap-1 rounded-full bg-[color:var(--color-well)] px-2 py-0.5 text-[11px] font-bold text-[#2563EB] transition-colors hover:bg-[#2563EB] hover:text-[var(--accent-ink)]"
+                      className="flex items-center gap-1 rounded-full bg-[color:var(--color-well)] px-2 py-0.5 text-[11px] font-bold text-[#40916C] transition-colors hover:bg-[#40916C] hover:text-[var(--accent-ink)]"
                       title={`Explore ${entity.location.area ?? entity.location.county}`}
                     >
                       <MapPin className="h-3.5 w-3.5" />
@@ -383,7 +383,7 @@ export function EntityPage({ entityId, authed, origin, onClose, onOpenObject, on
                 )}
                 {!entity.trust.degraded && entity.trust.corroborated && (
                   <p className="mt-2 flex items-center gap-1.5 text-[12px] font-semibold text-[rgba(10, 14, 20,0.62)]">
-                    <Check className="h-3.5 w-3.5 text-[#2563EB]" />
+                    <Check className="h-3.5 w-3.5 text-[#40916C]" />
                     Its content has been reported across multiple sources.
                   </p>
                 )}

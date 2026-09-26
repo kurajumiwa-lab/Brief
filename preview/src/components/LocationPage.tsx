@@ -70,12 +70,12 @@ function GraphCard({ object, onOpenObject }: { object: GraphObject; onOpenObject
           <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-[#0891B2]">{object.type}</span>
           {line && <span className="text-[11px] font-semibold text-[var(--ink-60)]">{line}</span>}
           {typeof object.distanceKm === 'number' && (
-            <span className="rounded-full bg-[color:var(--color-well)] px-1.5 py-0.5 text-[11px] font-bold text-[#2563EB]">
+            <span className="rounded-full bg-[color:var(--color-well)] px-1.5 py-0.5 text-[11px] font-bold text-[#40916C]">
               {object.distanceKm < 1 ? '<1 km' : `${object.distanceKm} km`}
             </span>
           )}
         </div>
-        <h4 className="mt-0.5 line-clamp-2 text-[13px] font-semibold leading-snug text-[var(--brief-ink)] group-hover:text-[#2563EB]">
+        <h4 className="mt-0.5 line-clamp-2 text-[13px] font-semibold leading-snug text-[var(--brief-ink)] group-hover:text-[#40916C]">
           {object.title}
         </h4>
         {(object.area || object.county || object.locationName) && (
@@ -158,7 +158,7 @@ export function LocationPage({ name, authed, followedLocations, onClose, onOpenO
         <div className="flex-1 overflow-y-auto pb-safe">
           {missing && (
             <div className="flex flex-col items-center gap-3 px-6 py-24 text-center">
-              <Globe2 className="h-8 w-8 text-[#2563EB]" />
+              <Globe2 className="h-8 w-8 text-[#40916C]" />
               <p className="max-w-xs text-[14px] font-semibold text-[var(--brief-ink)]">
                 We don't have that location on Brief.
               </p>
@@ -178,7 +178,7 @@ export function LocationPage({ name, authed, followedLocations, onClose, onOpenO
           {page && (
             <div className="px-4 pb-10 pt-5 sm:px-5">
               {/* Header: name, kind, hierarchy, follow. */}
-              <div className="mb-1 flex flex-wrap items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-[#2563EB]">
+              <div className="mb-1 flex flex-wrap items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-[#40916C]">
                 <span className="rounded-full bg-[color:var(--color-well)] px-2 py-0.5">{KIND_LABEL[page.location.kind] ?? page.location.kind}</span>
                 {page.location.county && page.location.kind !== 'county' && (
                   <button
@@ -202,7 +202,7 @@ export function LocationPage({ name, authed, followedLocations, onClose, onOpenO
                   <button
                     type="button"
                     onClick={() => onFollowLocation(page.location.name)}
-                    className={`flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-extrabold transition-colors ${followed ? 'bg-[#2563EB] text-[var(--accent-ink)]' : 'bg-[#2563EB] text-[var(--accent-ink)] hover:bg-[#C2410C]'}`}
+                    className={`flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-extrabold transition-colors ${followed ? 'bg-[#40916C] text-[var(--accent-ink)]' : 'bg-[#40916C] text-[var(--accent-ink)] hover:bg-[#C2410C]'}`}
                   >
                     {followed ? <><Check className="h-3.5 w-3.5" /> Following area</> : <><Plus className="h-3.5 w-3.5" /> Follow this area</>}
                   </button>
@@ -210,7 +210,7 @@ export function LocationPage({ name, authed, followedLocations, onClose, onOpenO
                   <button
                     type="button"
                     onClick={onRequireAuth}
-                    className="flex shrink-0 items-center gap-1.5 rounded-full bg-[#2563EB] px-4 py-2 text-[13px] font-extrabold text-[var(--accent-ink)] transition-colors hover:bg-[#C2410C]"
+                    className="flex shrink-0 items-center gap-1.5 rounded-full bg-[#40916C] px-4 py-2 text-[13px] font-extrabold text-[var(--accent-ink)] transition-colors hover:bg-[#C2410C]"
                   >
                     <Plus className="h-3.5 w-3.5" /> Follow this area
                   </button>

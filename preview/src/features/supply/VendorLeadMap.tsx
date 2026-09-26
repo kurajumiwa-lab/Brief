@@ -25,7 +25,7 @@ const STYLE = "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json";
 const LEAD_COLORS = {
   captured: "#F59E0B",
   validated: "#2F8F68",
-  claimed: "#2563EB",
+  claimed: "#40916C",
 };
 const PLACE_COLOR = "#0D1B2A";
 const COURIER_COLOR = "#111827";

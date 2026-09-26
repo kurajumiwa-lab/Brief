@@ -71,13 +71,13 @@ export default function RewardsDesk({ settledPoints, rank, accepted, pending }: 
         <>
           <section aria-label="Your referral code" className="rounded-2xl border border-[var(--brief-line)] bg-[color:var(--color-paper)] p-4 space-y-2">
             <div className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-[#2563EB]" aria-hidden="true" />
+              <Users className="w-4 h-4 text-[#40916C]" aria-hidden="true" />
               <h3 className="text-[14px] font-extrabold text-[var(--brief-ink)]">Your code</h3>
             </div>
-            <p className="text-lg font-extrabold tracking-widest text-[#2563EB]">{data.code}</p>
+            <p className="text-lg font-extrabold tracking-widest text-[#40916C]">{data.code}</p>
             <p className="text-[11px] text-[var(--ink-60)] break-all">{data.link}</p>
             <button type="button" onClick={() => { soundEngine.play('tap'); void copyShare(); }}
-              className="rounded-lg bg-[#2563EB] px-3 py-2 text-[12px] font-extrabold text-[var(--accent-ink)]">
+              className="rounded-lg bg-[#40916C] px-3 py-2 text-[12px] font-extrabold text-[var(--accent-ink)]">
               Copy WhatsApp share message
             </button>
             {shareMsg && (
@@ -99,7 +99,7 @@ export default function RewardsDesk({ settledPoints, rank, accepted, pending }: 
                 aria-label="Points to convert"
                 className="flex-1 rounded-lg border border-[var(--brief-line)] bg-[color:var(--color-well)] px-3 py-2 text-[13px] text-[var(--brief-ink)]" />
               <button type="button" onClick={() => { soundEngine.play('heavyTap'); void convert(); }} disabled={busy || !points}
-                className="rounded-lg bg-[#2563EB] px-3 py-2 text-[12px] font-extrabold text-[var(--accent-ink)] disabled:opacity-40">
+                className="rounded-lg bg-[#40916C] px-3 py-2 text-[12px] font-extrabold text-[var(--accent-ink)] disabled:opacity-40">
                 Convert
               </button>
             </div>

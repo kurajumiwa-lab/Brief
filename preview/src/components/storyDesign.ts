@@ -44,7 +44,7 @@ export const STORY_THEMES: StoryTheme[] = [
     surface: 'var(--color-paper)',
     ink: '#0D1117',
     inkDim: 'rgba(10, 14, 20, 0.62)',
-    defaultAccent: '#2563EB',
+    defaultAccent: '#40916C',
     titleClass: 'font-display text-3xl font-bold leading-tight',
     line: 'var(--brief-line)'
   },
@@ -55,7 +55,7 @@ export const STORY_THEMES: StoryTheme[] = [
     surface: '#0D1117',
     ink: 'var(--color-paper)',
     inkDim: 'rgba(255, 255, 255, 0.65)',
-    defaultAccent: '#2563EB',
+    defaultAccent: '#40916C',
     titleClass: 'font-display text-3xl font-bold leading-tight',
     line: 'rgba(255, 255, 255, 0.22)'
   },
@@ -66,7 +66,7 @@ export const STORY_THEMES: StoryTheme[] = [
     surface: 'var(--color-paper)',
     ink: '#0D1117',
     inkDim: 'rgba(10, 14, 20, 0.55)',
-    defaultAccent: '#2563EB',
+    defaultAccent: '#40916C',
     titleClass: 'text-4xl font-extrabold leading-[1.05] tracking-tight',
     line: '#0D1117'
   },
@@ -77,7 +77,7 @@ export const STORY_THEMES: StoryTheme[] = [
     surface: '#FFF8F0',
     ink: '#0D1117',
     inkDim: 'rgba(10, 14, 20, 0.62)',
-    defaultAccent: '#2563EB',
+    defaultAccent: '#40916C',
     titleClass: 'font-display text-2xl font-bold leading-snug',
     line: '#7A8494'
   }

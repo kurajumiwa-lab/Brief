@@ -79,7 +79,7 @@ export function AdminDesk({ open, onClose, me }: { open: boolean; onClose: () =>
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#2563EB]/30 backdrop-blur-sm overflow-y-auto">
+    <div className="fixed inset-0 z-50 bg-[#40916C]/30 backdrop-blur-sm overflow-y-auto">
       <div className="max-w-3xl mx-auto min-h-full bg-[color:var(--color-well)]">
         <div className="sticky top-0 z-10 bg-[rgba(238, 241, 245, 0.95)] border-b border-[var(--brief-line)] px-4 pt-5 pb-3">
           <div className="flex items-start justify-between gap-3">
@@ -100,7 +100,7 @@ export function AdminDesk({ open, onClose, me }: { open: boolean; onClose: () =>
             {TABS.map((t) => (
               <button key={t.id} onClick={() => setTab(t.id)}
                 className={`shrink-0 rounded-full px-3 py-1.5 text-[11px] font-extrabold cursor-pointer ${
-                  tab === t.id ? 'bg-[#2563EB] text-[var(--accent-ink)]' : 'bg-[color:var(--color-paper)] text-[var(--ink-70)] border border-[var(--brief-line)]'
+                  tab === t.id ? 'bg-[#40916C] text-[var(--accent-ink)]' : 'bg-[color:var(--color-paper)] text-[var(--ink-70)] border border-[var(--brief-line)]'
                 }`}>
                 {t.label}
               </button>
@@ -219,13 +219,13 @@ function MembersTab({ tick, can, refresh }: { tick: number; can: (c: string) => 
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="search members…"
-              className="w-full rounded-lg border border-[var(--brief-line)] bg-[color:var(--color-paper)] px-2.5 py-1.5 text-[12px] outline-none focus:border-[#2563EB]"
+              className="w-full rounded-lg border border-[var(--brief-line)] bg-[color:var(--color-paper)] px-2.5 py-1.5 text-[12px] outline-none focus:border-[#40916C]"
             />
             {page === null ? <Empty>loading…</Empty>
               : page.rows.length === 0 ? <Empty>No members match “{query}”.</Empty>
               : page.rows.map((m) => (
                 <button key={m.id} type="button" onClick={() => { setSelected(m); setNote(null); setReason(''); }}
-                  className={`w-full rounded-xl border px-2.5 py-2 text-left cursor-pointer ${selected?.id === m.id ? 'border-[#2563EB] bg-[color:var(--color-paper)]' : 'border-[var(--brief-line)] bg-[color:var(--color-paper)]'}`}>
+                  className={`w-full rounded-xl border px-2.5 py-2 text-left cursor-pointer ${selected?.id === m.id ? 'border-[#40916C] bg-[color:var(--color-paper)]' : 'border-[var(--brief-line)] bg-[color:var(--color-paper)]'}`}>
                   <Row>
                     <span className="min-w-0 truncate font-extrabold">{m.displayName}</span>
                     <span className="shrink-0 text-[11px] text-[var(--ink-60)]">{String(m.createdAt ?? '').slice(0, 10)}</span>
@@ -235,7 +235,7 @@ function MembersTab({ tick, can, refresh }: { tick: number; can: (c: string) => 
                     <span className="flex gap-1">
                       {m.status !== 'active' && <span className="rounded-full bg-[#DC2626]/10 px-1.5 py-0.5 text-[11px] font-extrabold text-[#DC2626]">{m.status}</span>}
                       {m.verification === 'approved' && <span className="rounded-full bg-[#059669]/10 px-1.5 py-0.5 text-[11px] font-extrabold text-[#059669]">verified</span>}
-                      {m.platformRoles.map((r) => <span key={r} className="rounded-full bg-[#2563EB]/10 px-1.5 py-0.5 text-[11px] font-extrabold text-[#2563EB]">{r}</span>)}
+                      {m.platformRoles.map((r) => <span key={r} className="rounded-full bg-[#40916C]/10 px-1.5 py-0.5 text-[11px] font-extrabold text-[#40916C]">{r}</span>)}
                     </span>
                   </Row>
                   <p className="mt-0.5 text-[11px] text-[var(--ink-70)] truncate">
@@ -260,7 +260,7 @@ function MembersTab({ tick, can, refresh }: { tick: number; can: (c: string) => 
                     <button key={role} type="button" onClick={() => toggleRole(selected, role)}
                       className={`rounded-full px-2 py-0.5 text-[11px] font-extrabold cursor-pointer border ${
                         selected.platformRoles.includes(role)
-                          ? 'bg-[#2563EB] text-[var(--accent-ink)] border-[#2563EB]'
+                          ? 'bg-[#40916C] text-[var(--accent-ink)] border-[#40916C]'
                           : 'bg-[color:var(--color-paper)] text-[var(--ink-70)] border-[var(--brief-line)]'
                       }`}>
                       {role}
@@ -272,7 +272,7 @@ function MembersTab({ tick, can, refresh }: { tick: number; can: (c: string) => 
                 <div className="space-y-1.5 pt-2">
                   <input value={reason} onChange={(e) => setReason(e.target.value)}
                     placeholder="why suspend? (audited)"
-                    className="w-full rounded-lg border border-[var(--brief-line)] bg-[color:var(--color-paper)] px-2.5 py-1.5 text-[11px] outline-none focus:border-[#2563EB]" />
+                    className="w-full rounded-lg border border-[var(--brief-line)] bg-[color:var(--color-paper)] px-2.5 py-1.5 text-[11px] outline-none focus:border-[#40916C]" />
                   <button type="button" onClick={() => suspend(selected)} disabled={busy || reason.trim().length < 4}
                     className="rounded-lg border border-[#DC2626]/30 bg-[#DC2626]/5 px-3 py-1.5 text-[11px] font-extrabold text-[#DC2626] cursor-pointer disabled:opacity-40">
                     Suspend — locks them out now
@@ -342,7 +342,7 @@ function HealthTab({ tick, can, refresh }: { tick: number; can: (c: string) => b
       </Card>
       {can('ops.run') ? (
         <button onClick={() => void backup()}
-          className="w-full rounded-xl bg-[#2563EB] px-3 py-2.5 text-[12px] font-extrabold text-[var(--accent-ink)] cursor-pointer">
+          className="w-full rounded-xl bg-[#40916C] px-3 py-2.5 text-[12px] font-extrabold text-[var(--accent-ink)] cursor-pointer">
           Take a backup now (audited)
         </button>
       ) : (
@@ -408,7 +408,7 @@ function AttentionTab({ tick, can, refresh }: { tick: number; can: (c: string) =
                   <button onClick={() => void act(() => briefApi.resolveOpsReport(r.id, 'dismiss', 'reviewed at the desk'), 'dismissed')}
                     className="rounded-lg border border-[var(--brief-line)] px-2 py-1 text-[11px] font-extrabold cursor-pointer">Dismiss</button>
                   <button onClick={() => void act(() => briefApi.resolveOpsReport(r.id, 'remove', 'removed from discovery at the desk'), 'removed from discovery')}
-                    className="rounded-lg bg-[#2563EB] px-2 py-1 text-[11px] font-extrabold text-[var(--accent-ink)] cursor-pointer">Remove from discovery</button>
+                    className="rounded-lg bg-[#40916C] px-2 py-1 text-[11px] font-extrabold text-[var(--accent-ink)] cursor-pointer">Remove from discovery</button>
                 </div>
               ) : <Empty>Deciding needs the moderate capability.</Empty>}
             </div>
@@ -478,7 +478,7 @@ function AttentionTab({ tick, can, refresh }: { tick: number; can: (c: string) =
                   );
                   setCorrValue(''); setCorrReason('');
                 }}
-                className="rounded-lg bg-[#2563EB] px-2.5 py-1 text-[11px] font-extrabold text-[var(--accent-ink)] cursor-pointer"
+                className="rounded-lg bg-[#40916C] px-2.5 py-1 text-[11px] font-extrabold text-[var(--accent-ink)] cursor-pointer"
               >
                 Apply
               </button>
@@ -505,7 +505,7 @@ function AttentionTab({ tick, can, refresh }: { tick: number; can: (c: string) =
                   {(['trusted', 'normal', 'degraded', 'disabled'] as const).map((st) => (
                     <button key={st} onClick={() => void act(() => briefApi.opsSetSourceTrust(s.id, st, `set to ${st} at the desk`), `source ${st}`)}
                       className={`rounded-lg border px-2 py-1 text-[11px] font-extrabold cursor-pointer ${
-                        s.trustStatus === st ? 'bg-[#2563EB] border-[#2563EB] text-[var(--accent-ink)]' : 'border-[var(--brief-line)] text-[var(--ink-70)]'
+                        s.trustStatus === st ? 'bg-[#40916C] border-[#40916C] text-[var(--accent-ink)]' : 'border-[var(--brief-line)] text-[var(--ink-70)]'
                       }`}>
                       {st}
                     </button>
@@ -581,7 +581,7 @@ function DecideRow({ onDecide }: { onDecide: (decision: 'approved' | 'rejected',
         className="w-full rounded-lg border border-[var(--brief-line)] px-2 py-1.5 text-[11px]" />
       <div className="flex gap-1.5">
         <button onClick={() => onDecide('approved', reason || 'approved at the desk')}
-          className="rounded-lg bg-[#2563EB] px-2 py-1 text-[11px] font-extrabold text-[var(--accent-ink)] cursor-pointer">Approve</button>
+          className="rounded-lg bg-[#40916C] px-2 py-1 text-[11px] font-extrabold text-[var(--accent-ink)] cursor-pointer">Approve</button>
         <button onClick={() => onDecide('rejected', reason)}
           disabled={!reason.trim()}
           className="rounded-lg border border-[var(--brief-line)] px-2 py-1 text-[11px] font-extrabold cursor-pointer disabled:opacity-40">Reject</button>
@@ -611,7 +611,7 @@ function IngestionTab({ tick }: { tick: number }) {
       </Card>
       <Card title="Ingest status" note="What the sources layer reports about itself right now.">
         {ingest === null ? <Empty>loading…</Empty> : (
-          <pre className="overflow-x-auto rounded-xl bg-[#2563EB] px-3 py-2 text-[11px] leading-relaxed text-[var(--accent-ink)]">
+          <pre className="overflow-x-auto rounded-xl bg-[#40916C] px-3 py-2 text-[11px] leading-relaxed text-[var(--accent-ink)]">
             {JSON.stringify(ingest, null, 2).slice(0, 1200)}
           </pre>
         )}
@@ -663,7 +663,7 @@ function ContentTab({ tick, can, refresh }: { tick: number; can: (c: string) => 
             <button onClick={async () => { const r = await briefApi.seedDemo(); setNote(r.ok ? 'demo content seeded' : r.error); refresh(); }}
               className="rounded-lg border border-[var(--brief-line)] px-2 py-1 text-[11px] font-extrabold cursor-pointer">Seed demo</button>
             <button onClick={async () => { const r = await briefApi.clearDemo(); setNote(r.ok ? 'demo content cleared' : r.error); refresh(); }}
-              className="rounded-lg bg-[#2563EB] px-2 py-1 text-[11px] font-extrabold text-[var(--accent-ink)] cursor-pointer">Clear demo</button>
+              className="rounded-lg bg-[#40916C] px-2 py-1 text-[11px] font-extrabold text-[var(--accent-ink)] cursor-pointer">Clear demo</button>
           </div>
         )}
       </Card>
@@ -711,7 +711,7 @@ function MediaTab({ tick, can, refresh }: { tick: number; can: (c: string) => bo
                 placeholder={f} className="w-full rounded-lg border border-[var(--brief-line)] px-2 py-1.5 text-[11px]" />
             ))}
             <button onClick={() => void record()}
-              className="rounded-lg bg-[#2563EB] px-2 py-1.5 text-[11px] font-extrabold text-[var(--accent-ink)] cursor-pointer">Record</button>
+              className="rounded-lg bg-[#40916C] px-2 py-1.5 text-[11px] font-extrabold text-[var(--accent-ink)] cursor-pointer">Record</button>
           </div>
         </Card>
       ) : <Empty>Recording media needs the ops.run capability.</Empty>}
@@ -802,7 +802,7 @@ function SecurityTab({ tick, can, refresh }: { tick: number; can: (c: string) =>
             <input value={roles.reason} onChange={(e) => setRoles({ ...roles, reason: e.target.value })}
               placeholder="reason (written to the audit log)" className="w-full rounded-lg border border-[var(--brief-line)] px-2 py-1.5 text-[11px]" />
             <button onClick={() => void submit()} disabled={!roles.userId.trim() || !roles.reason.trim()}
-              className="rounded-lg bg-[#2563EB] px-2 py-1.5 text-[11px] font-extrabold text-[var(--accent-ink)] cursor-pointer disabled:opacity-40">
+              className="rounded-lg bg-[#40916C] px-2 py-1.5 text-[11px] font-extrabold text-[var(--accent-ink)] cursor-pointer disabled:opacity-40">
               Write roles
             </button>
           </div>

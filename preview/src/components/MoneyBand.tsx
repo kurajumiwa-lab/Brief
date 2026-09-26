@@ -151,7 +151,7 @@ export function MoneyBand({ objects, areaHint, onOpenSection, onOpenItem, minTot
       <div className="rounded-2xl border border-[var(--brief-line)] bg-[color:var(--color-paper)] p-4">
         <div className="mb-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <TrendingUp className="h-4 w-4 text-[#2563EB]" aria-hidden="true" />
+            <TrendingUp className="h-4 w-4 text-[#40916C]" aria-hidden="true" />
             <h2 className="text-[12px] font-extrabold uppercase tracking-[0.18em] text-[var(--brief-ink)]">
               Money opportunities
             </h2>
@@ -168,13 +168,13 @@ export function MoneyBand({ objects, areaHint, onOpenSection, onOpenItem, minTot
               <div key={row.key} className="rounded-xl border border-[var(--surface-3)] bg-[color:var(--color-paper)] p-3">
                 <div className="flex items-center justify-between gap-2">
                   <p className="flex items-center gap-1.5 text-[13px] font-extrabold text-[var(--brief-ink)]">
-                    <Icon className="h-3.5 w-3.5 text-[#2563EB]" aria-hidden="true" />
+                    <Icon className="h-3.5 w-3.5 text-[#40916C]" aria-hidden="true" />
                     {row.count} {row.label}
                   </p>
                   <button
                     type="button"
                     onClick={() => onOpenSection(row.section)}
-                    className="cursor-pointer rounded-full border border-[var(--brief-line)] px-2.5 py-1 text-[11px] font-extrabold text-[#2563EB] hover:bg-[var(--color-well)]"
+                    className="cursor-pointer rounded-full border border-[var(--brief-line)] px-2.5 py-1 text-[11px] font-extrabold text-[#40916C] hover:bg-[var(--color-well)]"
                   >
                     Open
                   </button>

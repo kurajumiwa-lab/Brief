@@ -13,7 +13,7 @@
   border-color: transparent !important;
 }
 .storefront-room :where(button, a, input, textarea, select):focus-visible {
-  outline: 3px solid #2563eb !important; outline-offset: 3px;
+  outline: 3px solid #40916C !important; outline-offset: 3px;
 }
 .storefront-room :where(input:not([type=checkbox]):not([type=radio]), select, textarea) {
   background-color: #edf0f4; color: #101820; min-height: 42px;

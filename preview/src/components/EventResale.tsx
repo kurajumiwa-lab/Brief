@@ -139,7 +139,7 @@ export function EventResale({ slug }: { slug: string }) {
             <button
               disabled={busy || Boolean(order)}
               onClick={() => void buy(l.id)}
-              className="shrink-0 text-xs font-bold px-3 py-2 rounded-xl bg-[#2563EB] text-[var(--accent-ink)] cursor-pointer disabled:opacity-40"
+              className="shrink-0 text-xs font-bold px-3 py-2 rounded-xl bg-[#40916C] text-[var(--accent-ink)] cursor-pointer disabled:opacity-40"
             >
               Buy
             </button>

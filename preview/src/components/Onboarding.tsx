@@ -110,7 +110,7 @@ function StepDots({ step }: { step: number }) {
         <span
           key={n}
           className={`h-1.5 rounded-full transition-all ${
-            n === step ? 'w-6 bg-[#2563EB]' : n < step ? 'w-3 bg-[#2563EB]/45' : 'w-3 bg-[color:var(--brief-line)]'
+            n === step ? 'w-6 bg-[#40916C]' : n < step ? 'w-3 bg-[#40916C]/45' : 'w-3 bg-[color:var(--brief-line)]'
           }`}
         />
       ))}
@@ -264,7 +264,7 @@ export function Onboarding({
 
   return (
     <div
-      className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-[#2563EB]/45 backdrop-blur-[2px] px-3 pb-3 sm:p-6"
+      className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-[#40916C]/45 backdrop-blur-[2px] px-3 pb-3 sm:p-6"
       role="dialog"
       aria-modal="true"
       aria-label="Welcome to Brief"
@@ -321,7 +321,7 @@ export function Onboarding({
               <button
                 type="button"
                 onClick={() => setShowPasswordForm(true)}
-                className="w-full rounded-xl border border-[#0891B2] bg-[#2563EB] px-4 py-3 text-[13px] font-extrabold text-[var(--accent-ink)] cursor-pointer"
+                className="w-full rounded-xl border border-[#0891B2] bg-[#40916C] px-4 py-3 text-[13px] font-extrabold text-[var(--accent-ink)] cursor-pointer"
               >
                 Create an account with a handle
               </button>
@@ -351,7 +351,7 @@ export function Onboarding({
                     type="button"
                     disabled={busy !== null}
                     onClick={() => void submitPassword('register')}
-                    className="flex-1 rounded-xl bg-[#2563EB] px-4 py-2.5 text-[13px] font-extrabold text-[var(--accent-ink)] disabled:opacity-50 cursor-pointer"
+                    className="flex-1 rounded-xl bg-[#40916C] px-4 py-2.5 text-[13px] font-extrabold text-[var(--accent-ink)] disabled:opacity-50 cursor-pointer"
                   >
                     {busy === 'register' ? 'Creating…' : 'Create account'}
                   </button>
@@ -414,7 +414,7 @@ export function Onboarding({
                   onClick={() => void chooseGoal(g.id)}
                   data-goal={g.id}
                   className={`flex items-center justify-between rounded-xl border px-3.5 py-3 text-left transition cursor-pointer ${
-                    goal === g.id ? 'border-[#0891B2] bg-[#2563EB] text-[var(--accent-ink)]' : 'border-[var(--brief-line)] hover:border-[#0891B2]'
+                    goal === g.id ? 'border-[#0891B2] bg-[#40916C] text-[var(--accent-ink)]' : 'border-[var(--brief-line)] hover:border-[#0891B2]'
                   }`}
                 >
                   <span className="text-[12.5px] font-extrabold">{g.label}</span>
@@ -453,7 +453,7 @@ export function Onboarding({
               onClick={() => {
                 onUseLocation();
               }}
-              className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#0891B2] bg-[#2563EB] px-4 py-3 text-[13px] font-extrabold text-[var(--accent-ink)] cursor-pointer"
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#0891B2] bg-[#40916C] px-4 py-3 text-[13px] font-extrabold text-[var(--accent-ink)] cursor-pointer"
             >
               <MapPin className="h-3.5 w-3.5" /> Use my location
             </button>
@@ -471,7 +471,7 @@ export function Onboarding({
                   }}
                   className={`rounded-full border px-3 py-1.5 text-[12px] font-extrabold transition cursor-pointer ${
                     placeLabel === city.label
-                      ? 'border-[#0891B2] bg-[#2563EB] text-[var(--accent-ink)]'
+                      ? 'border-[#0891B2] bg-[#40916C] text-[var(--accent-ink)]'
                       : 'border-[var(--brief-line)] text-[var(--ink-70)] hover:border-[#0891B2]'
                   }`}
                 >
@@ -483,7 +483,7 @@ export function Onboarding({
               type="button"
               disabled={busy !== null}
               onClick={() => void finish(false)}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#2563EB] px-4 py-3 text-[13px] font-extrabold text-[var(--accent-ink)] disabled:opacity-50 cursor-pointer"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#40916C] px-4 py-3 text-[13px] font-extrabold text-[var(--accent-ink)] disabled:opacity-50 cursor-pointer"
               data-testid="onboarding-finish"
             >
               <Sparkles className="h-3.5 w-3.5" /> Show me what is around

@@ -143,7 +143,7 @@ export function OfflineSyncQueueDesk({
               <span className="text-[11px] font-mono font-black px-2.5 py-0.5 rounded-full bg-[#10B981] text-[var(--brief-ink)] uppercase tracking-wider">
                 PWA SERVICE WORKER • INDEXEDDB ENGINE
               </span>
-              <span className="text-xs text-indigo-200 font-bold flex items-center space-x-1">
+              <span className="text-xs text-emerald-200 font-bold flex items-center space-x-1">
                 <Database className="w-3.5 h-3.5 text-cyan-400" />
                 <span>Zero-Data Offline Queue & Sync</span>
               </span>
@@ -153,7 +153,7 @@ export function OfflineSyncQueueDesk({
               <span>Offline Local Storage & Sync Queue</span>
               <Zap className="w-5 h-5 text-amber-400" />
             </h2>
-            <p className="text-xs text-indigo-200/80 mt-0.5 max-w-xl">
+            <p className="text-xs text-emerald-200/80 mt-0.5 max-w-xl">
               Never lose a delivery, Duka sale, or Circle payment during network blackouts. Actions record instantly to local storage and sync idempotently on reconnect.
             </p>
           </div>
@@ -190,7 +190,7 @@ export function OfflineSyncQueueDesk({
               >
                 <span>{tab.label}</span>
                 {tab.count !== undefined && tab.count > 0 && (
-                  <span className="text-[11px] px-1.5 py-0.2 rounded-full font-mono bg-[#2563EB] text-white">
+                  <span className="text-[11px] px-1.5 py-0.2 rounded-full font-mono bg-[#40916C] text-white">
                     {tab.count}
                   </span>
                 )}
@@ -325,7 +325,7 @@ export function OfflineSyncQueueDesk({
         <form onSubmit={handleCreateOfflineAction} className="p-5 sm:p-6 space-y-4 max-w-lg mx-auto text-xs">
           <div className="p-3.5 rounded-2xl bg-gray-50 border border-gray-200 text-gray-700 space-y-1">
             <h4 className="font-bold text-[var(--brief-ink)] flex items-center space-x-1.5">
-              <Plus className="w-4 h-4 text-[#2563EB]" />
+              <Plus className="w-4 h-4 text-[#40916C]" />
               <span>Simulate Local Mutation While Disconnected</span>
             </h4>
             <p className="text-[12px] leading-relaxed">
@@ -417,12 +417,12 @@ export function OfflineSyncQueueDesk({
       {/* ================= TAB 4: SW ARCHITECTURE ================= */}
       {activeTab === 'sw_architecture' && (
         <div className="p-5 sm:p-6 space-y-4 text-xs">
-          <div className="p-4 rounded-2xl bg-indigo-50 border border-indigo-200 text-indigo-950 space-y-2">
+          <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-950 space-y-2">
             <h4 className="font-bold flex items-center space-x-1.5">
-              <ShieldCheck className="w-4 h-4 text-indigo-600" />
+              <ShieldCheck className="w-4 h-4 text-emerald-600" />
               <span>Idempotent Two-Phase Synchronization</span>
             </h4>
-            <p className="text-[12px] text-indigo-900 leading-relaxed font-sans">
+            <p className="text-[12px] text-emerald-900 leading-relaxed font-sans">
               Every offline write generates a unique 128-bit key. When internet connectivity resumes, the ServiceWorker BackgroundSync API replays the mutation. The Brief server checks if the key has already settled—preventing double M-Pesa debits even if the connection drops mid-request.
             </p>
           </div>

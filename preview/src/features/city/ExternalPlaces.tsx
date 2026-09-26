@@ -101,7 +101,7 @@ function ClaimForm({
         {busy ? 'Saving…' : 'Attach receipt + price'}
       </button>
       {msg && <p role={msg.startsWith('Claim saved') ? 'status' : 'alert'} className="text-[12px] font-bold" style={{ color: msg.startsWith('Claim saved') ? 'var(--color-success)' : 'var(--color-danger)' }}>{msg}</p>}
-      <p className="text-[11px]" style={{ color: 'rgba(36,31,26,0.6)' }}>
+      <p className="text-[11px]" style={{ color: 'rgba(13,27,42,0.6)' }}>
         Saved claims stay unverified and show the photo, so the next carrier judges the evidence, not the number.
       </p>
     </div>
@@ -137,9 +137,9 @@ function PlaceCard({
   };
 
   const field = (label: string, value: string) => (
-    <p className="text-[12px]" style={{ color: 'rgba(36,31,26,0.72)' }}>
+    <p className="text-[12px]" style={{ color: 'rgba(13,27,42,0.72)' }}>
       <span className="font-bold">{label}: </span>
-      {value.trim() !== '' ? value : <span style={{ color: 'rgba(36,31,26,0.45)' }}>Not listed</span>}
+      {value.trim() !== '' ? value : <span style={{ color: 'rgba(13,27,42,0.45)' }}>Not listed</span>}
     </p>
   );
 
@@ -180,7 +180,7 @@ function PlaceCard({
           {loadingClaims && <p className="text-[12px]">Reading claims…</p>}
           {claimsError && <p role="alert" className="text-[12px] font-bold" style={{ color: 'var(--color-danger)' }}>{claimsError}</p>}
           {claims !== null && claims.length === 0 && (
-            <p className="text-[12px]" style={{ color: 'rgba(36,31,26,0.6)' }}>
+            <p className="text-[12px]" style={{ color: 'rgba(13,27,42,0.6)' }}>
               No claimed prices yet. The first one needs a receipt photo.
             </p>
           )}
@@ -250,7 +250,7 @@ export function ExternalPlaces({
           {searching ? 'Searching the map…' : 'Search the map'}
         </button>
         {error && <p role="alert" className="text-[12px] font-bold" style={{ color: 'var(--color-danger)' }}>{error}</p>}
-        <p className="text-[11px]" style={{ color: 'rgba(36,31,26,0.6)' }}>
+        <p className="text-[11px]" style={{ color: 'rgba(13,27,42,0.6)' }}>
           Map listings, not registered shops. Brief did not verify them — that is why prices only arrive as receipt photos.
         </p>
       </div>
@@ -269,7 +269,7 @@ export function ExternalPlaces({
           {snapshot.businesses.length === 0 && (
             <div className="brief-lobby-card p-4">
               <p className="text-[13px] font-bold">Nothing on the map for that search.</p>
-              <p className="text-[12px]" style={{ color: 'rgba(36,31,26,0.6)' }}>Try a bigger town nearby, or another category.</p>
+              <p className="text-[12px]" style={{ color: 'rgba(13,27,42,0.6)' }}>Try a bigger town nearby, or another category.</p>
             </div>
           )}
           {snapshot.businesses.map((p, i) => (

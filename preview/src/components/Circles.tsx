@@ -502,7 +502,7 @@ export function Circles({ currentUserId = null }: CirclesProps = {}) {
           </div>
           <button
             onClick={() => setShowCreate((v) => !v)}
-            className="shrink-0 px-3 py-2 rounded-xl bg-[#2563EB] text-[var(--accent-ink)] font-extrabold text-[11px] cursor-pointer"
+            className="shrink-0 px-3 py-2 rounded-xl bg-[#40916C] text-[var(--accent-ink)] font-extrabold text-[11px] cursor-pointer"
           >
             {showCreate ? 'Cancel' : 'Start a group'}
           </button>
@@ -552,7 +552,7 @@ export function Circles({ currentUserId = null }: CirclesProps = {}) {
             <button
               type="submit"
               disabled={creating || !newName.trim() || !hostSpaceId || !eligibility?.eligible || purposes.length === 0}
-              className="px-3 py-2 rounded-xl bg-[#2563EB] text-[var(--accent-ink)] font-extrabold text-[11px] cursor-pointer disabled:opacity-50"
+              className="px-3 py-2 rounded-xl bg-[#40916C] text-[var(--accent-ink)] font-extrabold text-[11px] cursor-pointer disabled:opacity-50"
             >
               {creating ? 'Starting…' : 'Start group'}
             </button>
@@ -808,7 +808,7 @@ export function Circles({ currentUserId = null }: CirclesProps = {}) {
                 <button
                   onClick={() => void handleJoin(open.id)}
                   disabled={busyId === open.id}
-                  className="px-3 py-1.5 rounded-xl bg-[#2563EB] text-[var(--accent-ink)] font-extrabold text-[11px] cursor-pointer disabled:opacity-50"
+                  className="px-3 py-1.5 rounded-xl bg-[#40916C] text-[var(--accent-ink)] font-extrabold text-[11px] cursor-pointer disabled:opacity-50"
                 >
                   {busyId === open.id ? 'Joining…' : 'Join room'}
                 </button>
@@ -873,7 +873,7 @@ export function Circles({ currentUserId = null }: CirclesProps = {}) {
                 onClick={() => setSection(s.id)}
                 className={`px-3 py-1.5 rounded-xl text-[11px] font-extrabold cursor-pointer ${
                   section === s.id
-                    ? 'bg-[#2563EB] text-[var(--accent-ink)]'
+                    ? 'bg-[#40916C] text-[var(--accent-ink)]'
                     : 'bg-[color:var(--color-paper)] border border-[var(--brief-line)] text-[var(--ink-70)]'
                 }`}
               >

@@ -107,10 +107,10 @@ export const WairoFloatingWidget: React.FC<WairoFloatingWidgetProps> = ({
             style={{
               boxShadow: '0px 8px 24px rgba(0, 0, 0, 0.06), 0px 2px 6px rgba(0, 0, 0, 0.04)'
             }}
-            className="group flex items-center bg-white/95 hover:bg-white text-[var(--brief-ink)] pl-3.5 pr-2.5 py-3 rounded-l-2xl border-l border-y border-r-0 border-[var(--brief-line)] backdrop-blur-md transition-all duration-300 ease-out hover:scale-[1.02] active:scale-[0.98] hover:border-[#2563EB]/40 cursor-pointer"
+            className="group flex items-center bg-white/95 hover:bg-white text-[var(--brief-ink)] pl-3.5 pr-2.5 py-3 rounded-l-2xl border-l border-y border-r-0 border-[var(--brief-line)] backdrop-blur-md transition-all duration-300 ease-out hover:scale-[1.02] active:scale-[0.98] hover:border-[#40916C]/40 cursor-pointer"
           >
             <div className="w-8 h-8 rounded-xl bg-[var(--color-well)] group-hover:bg-[#FFF3EC] flex items-center justify-center mr-2.5 shrink-0 transition-colors">
-              <Bike className="w-4 h-4 text-[#2563EB]" />
+              <Bike className="w-4 h-4 text-[#40916C]" />
             </div>
 
             <div className="flex flex-col items-start text-left pr-1">
@@ -135,7 +135,7 @@ export const WairoFloatingWidget: React.FC<WairoFloatingWidgetProps> = ({
               </div>
             </div>
 
-            <div className="ml-1.5 text-[var(--ink-40)] group-hover:text-[#2563EB] group-hover:-translate-x-0.5 transition-all">
+            <div className="ml-1.5 text-[var(--ink-40)] group-hover:text-[#40916C] group-hover:-translate-x-0.5 transition-all">
               <ChevronLeft className="w-4 h-4" />
             </div>
           </button>
