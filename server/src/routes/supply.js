@@ -96,6 +96,23 @@ export function register(app) {
       lead: vendorLeads.dropLead(me, r.params.id, r.body ?? {}),
     })),
   );
+  app.post(
+    "/api/supply/vendor-leads/:id/code",
+    handle((me, r) => ({ lead: vendorLeads.mintLeadCode(me, r.params.id) })),
+  );
+  app.get("/api/supply/lead-codes/:code", (req, res) => {
+    res.setHeader("Cache-Control", "no-store");
+    const me = requireAuth(req, res);
+    if (!me || !req.auth?.userId) return;
+    try {
+      return res.status(200).json({ place: vendorLeads.resolveLeadCode(me, req.params.code) });
+    } catch (e) {
+      if (e instanceof supply.SupplyError)
+        return res.status(e.status).json({ error: e.message, code: e.code });
+      console.error("Supply operation failed", e);
+      return res.status(503).json({ error: "Could not save or load this record. Please retry.", code: "storage_unavailable" });
+    }
+  });
   app.get(
     "/api/enterprises/:id",
     handle((me, r) => ({ enterprise: supply.getEnterprise(me, r.params.id) })),

@@ -53,6 +53,7 @@ function LeadCard({
   const [termsNote, setTermsNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
+  const [codeCopied, setCodeCopied] = useState(false);
 
   const run = async (fn: () => Promise<{ ok: boolean; data?: VendorLead; error?: string }>) => {
     setBusy(true);
@@ -65,6 +66,25 @@ function LeadCard({
       setShowTerms(false);
     } else {
       setMsg(r.error ?? "That did not go through.");
+    }
+  };
+
+  const mint = async () => {
+    setMsg("");
+    const r = await api.mintLeadCode(lead.id);
+    if (!r.ok) {
+      setMsg(r.error ?? "That did not go through.");
+      return;
+    }
+    onChanged(r.data.lead);
+  };
+
+  const copyCode = async (code: string) => {
+    try {
+      await navigator.clipboard?.writeText(code);
+      setCodeCopied(true);
+    } catch {
+      setCodeCopied(false);
     }
   };
 
@@ -98,6 +118,31 @@ function LeadCard({
             <p className="request-hint" style={{ margin: "2px 0 0" }}>
               Pinned at {lead.lat.toFixed(4)}, {lead.lon.toFixed(4)}
             </p>
+          )}
+          {typeof lead.lat === "number" && typeof lead.lon === "number" && lead.status !== "dropped" && (
+            lead.code ? (
+              <p style={{ margin: "6px 0 0", fontSize: 13 }}>
+                <span className="font-mono font-black" style={{ fontSize: 16, letterSpacing: "0.08em" }}>
+                  {lead.code}
+                </span>
+                {" · "}
+                <button
+                  type="button"
+                  onClick={() => void copyCode(lead.code as string)}
+                  style={{ fontSize: 12, fontWeight: 700, padding: 0 }}
+                >
+                  {codeCopied ? "Copied" : "Copy"}
+                </button>
+              </p>
+            ) : (
+              <button
+                type="button"
+                onClick={() => void mint()}
+                style={{ fontSize: 12, fontWeight: 700, padding: 0, marginTop: 4 }}
+              >
+                Get a pickup code
+              </button>
+            )
           )}
           <p style={{ margin: "4px 0 0", fontSize: 12, fontWeight: 800 }}>
             {STATUS_WORD[lead.status]}

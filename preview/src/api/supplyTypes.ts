@@ -272,6 +272,19 @@ export interface VendorLead {
   /** Scout GPS at capture. Absent on leads captured without a pin. */
   lat?: number | null;
   lon?: number | null;
+  /** Server-minted pickup code. Absent until the scout mints one on a pin. */
+  code?: string | null;
   createdAt: string;
   updatedAt: string;
+}
+// The minimum a courier needs from a pickup code: name, pin, photo. No
+// contact, no note, no terms — the vendor never consented to a listing.
+export interface LeadCodeView {
+  code: string;
+  name: string;
+  category: string;
+  photo: string | null;
+  lat: number;
+  lon: number;
+  status: string;
 }

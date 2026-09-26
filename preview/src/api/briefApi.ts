@@ -4333,7 +4333,7 @@ export function changeRequestStatus(id: string, status: RequestStatus, revision:
 }
 
 // Supply uses the same API transport, session and error contract as Requests.
-import type { Enterprise, EnterpriseInput, Capability, CapabilityInput, SourcingInput, CapabilitySearch, SupplyVerification, VerificationKind as SupplyVerificationKind, SupplyEvidence, PotentialParticipant, VendorLead, VendorLeadInput } from './supplyTypes';
+import type { Enterprise, EnterpriseInput, Capability, CapabilityInput, SourcingInput, CapabilitySearch, SupplyVerification, VerificationKind as SupplyVerificationKind, SupplyEvidence, PotentialParticipant, VendorLead, VendorLeadInput, LeadCodeView } from './supplyTypes';
 const enterpriseOf = (r: any): Enterprise | undefined => typeof r?.id === 'string' && Array.isArray(r?.capabilities) && r.verification ? r : undefined;
 const capabilityOf = (r: any): Capability | undefined => typeof r?.id === 'string' && typeof r?.participantId === 'string' && Number.isSafeInteger(r?.revision) ? r : undefined;
 export function getMyEnterprise(): Promise<ApiResult<{enterprise: Enterprise | null}>> { return request('/api/me/enterprise',undefined,r=>r?.enterprise===null?{enterprise:null}:enterpriseOf(r?.enterprise)?{enterprise:r.enterprise}:undefined); }
@@ -4356,6 +4356,8 @@ export function getVendorLead(id:string): Promise<ApiResult<VendorLead>> {return
 export function validateVendorLead(id:string,body:{causeType:string;causeId:string}): Promise<ApiResult<VendorLead>> {return request(`/api/supply/vendor-leads/${encodeURIComponent(id)}/validate`,{method:'POST',body:JSON.stringify(body)},r=>r?.lead?.id?r.lead:undefined);}
 export function setVendorLeadExposureTerms(id:string,body:{amountKes:number;period:string;note?:string}): Promise<ApiResult<VendorLead>> {return request(`/api/supply/vendor-leads/${encodeURIComponent(id)}/exposure-terms`,{method:'POST',body:JSON.stringify(body)},r=>r?.lead?.id?r.lead:undefined);}
 export function dropVendorLead(id:string,body?:{reason?:string}): Promise<ApiResult<VendorLead>> {return request(`/api/supply/vendor-leads/${encodeURIComponent(id)}/drop`,{method:'POST',body:JSON.stringify(body??{})},r=>r?.lead?.id?r.lead:undefined);}
+export function mintLeadCode(id:string): Promise<ApiResult<{lead: VendorLead}>> {return request(`/api/supply/vendor-leads/${encodeURIComponent(id)}/code`,{method:'POST',body:'{}'},r=>r?.lead?.id?{lead:r.lead}:undefined);}
+export function resolveLeadCode(code:string): Promise<ApiResult<{place: LeadCodeView}>> {return request(`/api/supply/lead-codes/${encodeURIComponent(code)}`,undefined,r=>r?.place?.code?{place:r.place}:undefined);}
 export function searchExternalPlaces(location:string,category:string,limit=10): Promise<ApiResult<{snapshot: PlaceSnapshot}>> {const q=new URLSearchParams({location,category,limit:String(limit)});return request(`/api/places/search?${q}`,undefined,r=>r?.snapshot?.key?{snapshot:r.snapshot}:undefined);}
 export function listPlacePriceClaims(placeKey:string): Promise<ApiResult<{claims: PlacePriceClaim[]}>> {const q=new URLSearchParams({placeKey});return request(`/api/places/price-claims?${q}`,undefined,r=>Array.isArray(r?.claims)?{claims:r.claims}:undefined);}
 export function claimPlacePrice(body:PlacePriceClaimInput): Promise<ApiResult<{claim: PlacePriceClaim; replayed: boolean}>> {return request('/api/places/price-claims',{method:'POST',body:JSON.stringify(body)},r=>r?.claim?.id?{claim:r.claim,replayed:r.replayed===true}:undefined);}

@@ -49,6 +49,8 @@ export function VendorLeadMap() {
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [counts, setCounts] = useState({ leads: 0, places: 0, couriers: 0 });
   const [refreshing, setRefreshing] = useState(false);
+  const [codeInput, setCodeInput] = useState("");
+  const [lookupMsg, setLookupMsg] = useState("");
 
   const paintCouriers = (map: maplibregl.Map, pins: CourierPin[]) => {
     const data = {
@@ -255,6 +257,56 @@ export function VendorLeadMap() {
     setRefreshing(false);
   };
 
+  const lookup = async () => {
+    const map = mapRef.current;
+    if (!map) return;
+    setLookupMsg("");
+    const r = await api.resolveLeadCode(codeInput.trim());
+    if (!r.ok) {
+      setLookupMsg(r.error ?? "No shop answers to that code.");
+      return;
+    }
+    const p = r.data.place;
+    const data = {
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          geometry: { type: "Point", coordinates: [p.lon, p.lat] },
+          properties: { name: p.name, detail: `${p.category} · code ${p.code} · ${p.status}` },
+        },
+      ],
+    };
+    const existing = map.getSource("lookup") as maplibregl.GeoJSONSource | undefined;
+    if (existing) existing.setData(data as any);
+    else {
+      map.addSource("lookup", { type: "geojson", data } as any);
+      map.addLayer({
+        id: "lookup-pin",
+        type: "circle",
+        source: "lookup",
+        paint: {
+          "circle-radius": 10,
+          "circle-color": "#F59E0B",
+          "circle-stroke-width": 3,
+          "circle-stroke-color": "#ffffff",
+        },
+      });
+      map.on("click", "lookup-pin", (e: any) => {
+        const f = e.features?.[0];
+        if (!f) return;
+        const coords = (f.geometry as any).coordinates as [number, number];
+        new maplibregl.Popup({ closeButton: false })
+          .setLngLat(coords)
+          .setHTML(
+            `<strong>${esc(String(f.properties?.name ?? ""))}</strong><br/>${esc(String(f.properties?.detail ?? ""))}`,
+          )
+          .addTo(map);
+      });
+    }
+    map.flyTo({ center: [p.lon, p.lat], zoom: 15 });
+  };
+
   if (status === "error") {
     return (
       <section className="request-panel">
@@ -265,6 +317,24 @@ export function VendorLeadMap() {
   }
   return (
     <div style={{ display: "grid", gap: 8 }}>
+      <div style={{ display: "flex", gap: 8 }}>
+        <input
+          value={codeInput}
+          onChange={(e) => setCodeInput(e.target.value)}
+          placeholder="Pickup code, e.g. K7Q2P"
+          aria-label="Pickup code"
+          maxLength={12}
+          style={{ flex: 1, padding: 10, borderRadius: 10 }}
+        />
+        <button type="button" onClick={() => void lookup()}>
+          Find it
+        </button>
+      </div>
+      {lookupMsg && (
+        <p role="alert" className="request-hint" style={{ margin: 0 }}>
+          {lookupMsg}
+        </p>
+      )}
       <div
         ref={hostRef}
         style={{ width: "100%", height: 420, borderRadius: 16, overflow: "hidden", background: "var(--color-well)" }}

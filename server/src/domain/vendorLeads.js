@@ -223,6 +223,62 @@ export function setExposureTerms(actorId, id, input = {}) {
   );
 }
 
+const CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+function mintCode() {
+  let s = "";
+  for (let i = 0; i < 5; i++) s += CODE_ALPHABET[Math.floor(Math.random() * CODE_ALPHABET.length)];
+  return s;
+}
+
+/**
+ * A pickup code: five unambiguous characters a poster can read over the
+ * phone so a courier can find the shop's pin and storefront photo. Minted
+ * only on pinned leads, only by the scout who captured them. Idempotent:
+ * asking twice returns the same code.
+ */
+export function mintLeadCode(actorId, id) {
+  const lead = getLead(actorId, id);
+  if (typeof lead.lat !== "number" || typeof lead.lon !== "number")
+    v.fail("A pickup code needs a pin — drop one on the lead first.", 422, "code_needs_pin");
+  if (lead.code) return lead;
+  return store.transaction(() => {
+    for (let i = 0; i < 25; i++) {
+      const code = mintCode();
+      if (!store.find("vendorLeads", (l) => l.code === code)) {
+        return store.update("vendorLeads", id, {
+          code,
+          history: [...lead.history, v.event(actorId, "lead_code_minted", ["code"])],
+        });
+      }
+    }
+    v.fail("No code available right now — try again.", 503, "code_exhausted");
+  });
+}
+
+/**
+ * Resolves a code to the minimum a courier needs: name, pin and photo.
+ * Contact, note, terms and scout stay private — the vendor never consented
+ * to a listing, so the code opens a door, not a dossier. Dropped leads
+ * resolve to nothing.
+ */
+export function resolveLeadCode(actorId, code) {
+  v.actor(actorId);
+  const key = String(code ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if (!key) v.fail("Type the code the poster gave you.", 422, "bad_code");
+  const lead = store.find("vendorLeads", (l) => l.code === key);
+  if (!lead || lead.status === "dropped" || typeof lead.lat !== "number" || typeof lead.lon !== "number")
+    v.fail("No shop answers to that code.", 404, "code_not_found");
+  return {
+    code: lead.code,
+    name: lead.name,
+    category: lead.category,
+    photo: lead.photo ?? null,
+    lat: lead.lat,
+    lon: lead.lon,
+    status: lead.status,
+  };
+}
+
 export function dropLead(actorId, id, input = {}) {
   const lead = getLead(actorId, id);
   if (lead.status === "claimed")
