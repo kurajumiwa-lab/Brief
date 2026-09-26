@@ -109,6 +109,26 @@ export function ErrandsLobby({ className = '', composerSignal }: { className?: s
     void load();
   }, [load]);
 
+  // A "Get there" tap on an event card arrives as a one-shot prefill: the
+  // drop-off is the event's stated location, the note names the event. Read
+  // once, then deleted — a stale prefill must never haunt a later errand.
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem('brief.errand.prefill');
+      if (!raw) return;
+      sessionStorage.removeItem('brief.errand.prefill');
+      const p = JSON.parse(raw) as { dropoff?: string; note?: string };
+      setDraft((d) => ({
+        ...d,
+        dropoff: typeof p.dropoff === 'string' && p.dropoff ? p.dropoff : d.dropoff,
+        note: typeof p.note === 'string' && p.note ? p.note : d.note
+      }));
+      setPosting(true);
+    } catch {
+      /* a corrupt prefill is ignored, not an error state */
+    }
+  }, []);
+
   // A "Start a run" from Home (or the bar's [+]) arrives as a nonce: open the
   // composer with the kind the caller chose, once per nonce.
   const [seenSignal, setSeenSignal] = useState<number>(0);

@@ -257,6 +257,45 @@ export function FeedSheet({ item, onClose, onOpenFull }: {
             {item.why} — by a stated rule, not a ranking.
           </p>
 
+          {/* Coordination, the honest subset: a ride there via the errand
+              composer (drop-off prefilled from the stated location), and a
+              share link to the event's real public URL. No counts, no ranks. */}
+          {item.kind === 'event' && (
+            <div className="flex items-center gap-4">
+              {item.location && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundEngine.play('tap');
+                    try {
+                      sessionStorage.setItem('brief.errand.prefill', JSON.stringify({ dropoff: item.location ?? '', note: `Ride to ${item.title}` }));
+                    } catch {
+                      /* private mode: the composer still opens, just empty */
+                    }
+                    onClose();
+                    window.location.hash = 'city/errands';
+                  }}
+                  className="text-[13px] font-bold cursor-pointer"
+                  style={{ color: 'var(--color-primary)' }}
+                >
+                  Get there
+                </button>
+              )}
+              {typeof window !== 'undefined' && window.location.origin && window.location.origin !== 'null' && (
+                <a
+                  href={`https://wa.me/?text=${encodeURIComponent(`${item.title} — Wairo Blue Avenue ${window.location.origin}/c/${item.id}`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  data-testid="event-whatsapp"
+                  className="text-[13px] font-bold"
+                  style={{ color: 'var(--color-primary)' }}
+                >
+                  Share
+                </a>
+              )}
+            </div>
+          )}
+
           {whatsapp ? (
             <div className="space-y-1.5">
               <p className="text-[11px] font-black uppercase tracking-wider" style={{ color: 'var(--brief-ink)' }}>
