@@ -2957,6 +2957,9 @@ export interface EventListing {
   // NO `featured`: Decision 6 — no featured slot anywhere.
   /** The campaign row's own createdAt — when this was actually published. */
   publishedAt?: string | null;
+  /** The organiser's account name, allowed explicitly by the operator.
+      Attribution, not social proof: a name with no counts behind it. */
+  hostName: string | null;
   // NO `popularity` and NO `tableBankingOverlap`: Decision 6 forbids social
   // proof on events — no "X going", no attendee names, no view count. The
   // server's listing projection carries neither, so a card cannot render them.

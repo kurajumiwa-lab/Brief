@@ -40,10 +40,22 @@ export const CATEGORY_LABELS = {
 /**
  * NATURAL EXPIRY — a dated event that has passed ends itself on the calendar,
  * not on someone remembering to close it. Derived from endsAt, never a stored
- * "expired" flag that could drift. An event with no endsAt never expires.
+ * "expired" flag that could drift:
+ *   - endsAt passed → ended (the owner stated the end);
+ *   - no endsAt, startsAt more than a day old → ended (the day is over);
+ *   - neither date, published over a week ago → ended (unstaged listings
+ *     do not sit on "what's on" forever; the host re-posts a fresh row).
+ * Windows are stated here and in the product — never silent.
  */
 export function hasEnded(campaign) {
-  return Boolean(campaign.endsAt && Date.parse(campaign.endsAt) <= Date.now());
+  const now = Date.now();
+  if (campaign.endsAt && Date.parse(campaign.endsAt) <= now) return true;
+  const started = campaign.startsAt ? Date.parse(campaign.startsAt) : NaN;
+  if (Number.isFinite(started) && started <= now - 24 * 3600 * 1000) return true;
+  const born = campaign.createdAt ? Date.parse(campaign.createdAt) : NaN;
+  if (!campaign.startsAt && !campaign.endsAt && Number.isFinite(born) && born <= now - 7 * 24 * 3600 * 1000)
+    return true;
+  return false;
 }
 
 // ---------------------------------------------------------------------------
@@ -86,7 +98,15 @@ export function listingView(campaign) {
     goalAmount: campaign.goalAmount ?? null,
     // The row's own timestamp, so a surface can honestly say "published 2d ago"
     // instead of implying realtime it does not have.
-    publishedAt: campaign.createdAt ?? null
+    publishedAt: campaign.createdAt ?? null,
+    // The organiser, by the name on their own account — allowed explicitly by
+    // the operator. Attribution, not social proof: no counts, no ranks, and a
+    // missing owner row yields null (the line hides) rather than a stand-in.
+    hostName: campaign.ownerId
+      ? (store.find('users', (x) => x.id === campaign.ownerId)?.displayName ??
+        store.find('users', (x) => x.id === campaign.ownerId)?.handle ??
+        null)
+      : null
     // No `popularity`, no `featured`, no `tableBankingOverlap` -- Decision 6.
   };
 }

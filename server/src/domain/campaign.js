@@ -565,9 +565,10 @@ export function publicView(campaign, viewerId = null) {
     host,
     // NO `tableBankingOverlap` (Decision 6) -- see events.js, which no longer
     // exports the helper that computed it.
-    // Natural expiry — a dated event that has passed ends itself on the
-    // calendar. Derived from endsAt; the public page can say "ended" instead
-    // of showing a registration form that the server would refuse.
+    // Natural expiry — an event whose time has passed ends itself on the
+    // calendar (see hasEnded: stated end, day-old start, or week-old
+    // unstaged row). The public page says "ended" instead of showing a
+    // registration form that the server would refuse.
     hasEnded: hasEnded(campaign)
   };
 }

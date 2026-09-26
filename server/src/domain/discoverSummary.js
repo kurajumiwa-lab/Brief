@@ -136,7 +136,7 @@ export function discoverSummary({ viewerId = null, now = Date.now() } = {}) {
       location: e.location ?? null,
       mediaUrl: e.coverImageUrl ?? null,
       listedAt: e.publishedAt ?? e.startsAt ?? null,
-      seller: null,
+      seller: e.hostName ?? null,
       stock: null,
       orderable: null,
       contact: null,

@@ -229,6 +229,11 @@ export function FeedSheet({ item, onClose, onOpenFull }: {
           </div>
 
           <h2 className="text-[21px] font-extrabold leading-tight" style={{ color: 'var(--brief-ink)' }}>{item.title}</h2>
+          {item.kind === 'event' && item.seller && (
+            <p className="text-[13px]" style={{ color: 'var(--brief-muted)' }}>
+              Hosted by <strong style={{ color: 'var(--brief-ink)' }}>{item.seller}</strong>
+            </p>
+          )}
           {item.description && <p className="text-[14px] leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>{item.description}</p>}
 
           <dl className="grid grid-cols-2 gap-2 text-[13px]">
