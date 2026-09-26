@@ -101,7 +101,12 @@
   /* Editorial tokens: the calm marketplace palette. Navy carries heroes,
      paper carries screens, blue is the primary action only, green is
      commerce, dividers are hairlines — never card outlines. */
-  --navy: #0E1B2A;
+  --navy: #0D1B2A;
+  --mint: #D8F3DC;
+  --sage: #95D5B2;
+  --emerald: #40916C;
+  --forest: #1B4332;
+  --mint-shadow: #C7E9C0;
   --paper: #F6F7F4;
   --commerce: #2F8F68;
   --muted-ink: #667085;

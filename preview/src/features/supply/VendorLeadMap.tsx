@@ -27,7 +27,7 @@ const LEAD_COLORS = {
   validated: "#2F8F68",
   claimed: "#2563EB",
 };
-const PLACE_COLOR = "#0E1B2A";
+const PLACE_COLOR = "#0D1B2A";
 const COURIER_COLOR = "#111827";
 const COURIER_RING = "#EAB308";
 

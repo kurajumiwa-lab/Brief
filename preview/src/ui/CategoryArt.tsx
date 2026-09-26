@@ -3,15 +3,15 @@ import React from 'react';
 /** Original, filled category illustrations. Navigation art, never product photos. */
 export function CategoryArt({ kind, className = '' }: { kind: string; className?: string }) {
   const key = ({ circles: 'groups', group: 'groups', community: 'groups', business: 'shops', side_hustle: 'shops', creator: 'services', bulk: 'groupBuys', direct: 'shops', niche: 'services', delivery: 'runs', pickup: 'groupBuys', food: 'food', skilled: 'services', care: 'groups', other: 'services', all: 'shops' } as Record<string, string>)[kind] ?? kind;
-  const palettes: Record<string, string> = { shops: '#D4F5DF', events: '#E8DDFF', groups: '#FFE4C9', errands: '#D8ECFF', runs: '#FFE0DD', groupBuys: '#FFF0B6', services: '#D9F2EF', food: '#FFE3C7' };
+  const palettes: Record<string, string> = { shops: '#D8F3DC', events: '#E8DDFF', groups: '#FFE4C9', errands: '#D8ECFF', runs: '#FFE0DD', groupBuys: '#FFF0B6', services: '#D9F2EF', food: '#FFE3C7' };
   return <svg viewBox="0 0 88 80" className={`category-art ${className}`} aria-hidden="true" focusable="false" data-category-art={key}>
     <rect x="3" y="3" width="82" height="74" rx="25" fill={palettes[key] ?? '#D4F5DF'} />
     <ellipse cx="45" cy="66" rx="27" ry="5" fill="#101820" opacity=".1" />
     {key === 'shops' ? <>
-      <rect x="19" y="31" width="51" height="32" rx="5" fill="#FDFCF6" />
-      <path d="M18 21h51l6 19H13z" fill="#164E36" /><path d="M25 21h9l-2 19H21zm19 0h9l2 19H43zm19 0h6l6 19H64z" fill="#54C88C" />
-      <path d="M13 39h12v3a6 6 0 0 1-12 0zm24 0h13v3a6.5 6.5 0 0 1-13 0zm26 0h12v3a6 6 0 0 1-12 0z" fill="#164E36" />
-      <rect x="27" y="49" width="15" height="14" rx="2" fill="#18352B" /><rect x="48" y="48" width="15" height="10" rx="2" fill="#A5DFC5" />
+      <rect x="19" y="31" width="51" height="32" rx="5" fill="#FFFFFF" />
+      <path d="M18 21h51l6 19H13z" fill="#1B4332" /><path d="M25 21h9l-2 19H21zm19 0h9l2 19H43zm19 0h6l6 19H64z" fill="#40916C" />
+      <path d="M13 39h12v3a6 6 0 0 1-12 0zm24 0h13v3a6.5 6.5 0 0 1-13 0zm26 0h12v3a6 6 0 0 1-12 0z" fill="#1B4332" />
+      <rect x="27" y="49" width="15" height="14" rx="2" fill="#1B4332" /><rect x="48" y="48" width="15" height="10" rx="2" fill="#95D5B2" />
     </> : key === 'events' ? <>
       <rect x="19" y="20" width="51" height="44" rx="8" fill="#fff" transform="rotate(-7 44 42)" />
       <path d="M17 26q-1-7 7-8l35-4q8-1 9 7l1 9-51 6z" fill="#6845B9" />

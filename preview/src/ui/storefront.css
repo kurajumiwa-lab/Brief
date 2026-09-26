@@ -22,7 +22,7 @@
 .category-door { background: #fff; padding: 10px 6px 14px; border-radius: 24px; display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; transition: transform .15s; }
 .category-door:hover { transform: translateY(-2px); }
 .category-door span { font-size: 13px; font-weight: 800; color: #101820; }
-.shop-endplate { background: #111d2b; color: #fff; padding: 24px; border-radius: 24px; }
+.shop-endplate { background: radial-gradient(140% 130% at 88% 8%, rgba(64,145,108,0.38), rgba(64,145,108,0) 55%), #0D1B2A; color: #fff; padding: 24px; border-radius: 24px; }
 .shop-endplate h1, .shop-endplate h2 { color: #fff; font-size: 28px; line-height: 1.12; font-weight: 850; letter-spacing: -.035em; }
 .shop-endplate p { color: #d4deeb; font-size: 14px; line-height: 1.6; }
 .shop-endplate .category-art { width: 92px; height: 88px; }
