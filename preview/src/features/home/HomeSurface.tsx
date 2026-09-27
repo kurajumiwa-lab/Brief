@@ -30,6 +30,7 @@ import { categoryAccent } from '../city/categoryPalette';
 import { listedAgo, PHOTO_FILTER } from '../city/room';
 import { GlobysCard } from '../../ui/GlobysCard';
 import { BannerButton } from '../../ui/BannerButton';
+import { PromoBanners } from './PromoBanners';
 import { CardSkeleton } from '../../components/ui/Skeleton';
 import { soundEngine } from '../../utils/SoundEngine';
 import { buildLoopSections, type LoopContext, type LoopSection } from './loopEngine';
@@ -263,6 +264,9 @@ export const HomeSurface: React.FC<HomeSurfaceProps> = ({
           ))}
         </div>
       </section>
+
+      {/* ── 1b. EXPLORE BANNERS — the street's own promoted rails ──────── */}
+      <PromoBanners />
 
       {/* ── 2. THE HERO BANNER (What's moving today) ───────────────────── */}
       <section aria-label="What's moving today">
