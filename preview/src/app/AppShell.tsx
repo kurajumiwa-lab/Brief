@@ -20,6 +20,7 @@ import type { DiscoverRoom } from '../features/city/taxonomy';
 
 const PublicSpacePage = React.lazy(() => import('../features/spaces/PublicSpacePage').then(m => ({ default: m.PublicSpacePage })));
 const MarketStorefront = React.lazy(() => import('../features/market/MarketStorefront').then(m => ({ default: m.MarketStorefront })));
+const TokyoGuide = React.lazy(() => import('../features/wanderly/TokyoGuide').then(m => ({ default: m.TokyoGuide })));
 const ElevateHub = React.lazy(() => import('../features/wairo/ElevateHub').then(m => ({ default: m.ElevateHub })));
 const WairoElevateMarket = React.lazy(() => import('../features/wairo/ElevateMarket').then(m => ({ default: m.WairoElevateMarket })));
 const WairoElevateLedger = React.lazy(() => import('../features/wairo/ElevateLedger').then(m => ({ default: m.WairoElevateLedger })));
@@ -61,6 +62,10 @@ export const AppShell: React.FC<AppShellProps> = ({
   const [requestRoute, setRequestRoute] = useState('');
   const [offerLinkId, setOfferLinkId] = useState('');
   const [elevatePage, setElevatePage] = useState<string | null>(null);
+  const [wanderlyOpen, setWanderlyOpen] = useState(() => {
+    const h = (typeof window !== 'undefined' ? window.location.hash.slice(1) : '');
+    return h==='tokyo' || h==='wanderly' || h.startsWith('wanderly/') || h==='destinations/tokyo' || h.startsWith('destinations/');
+  });
   // A join link pasted in a WhatsApp group opens a room's landing page for a
   // person with no account and no session. It is NOT a tab: the nav is hidden
   // while it is open, because a stranger deciding whether to join a room should
@@ -125,6 +130,7 @@ export const AppShell: React.FC<AppShellProps> = ({
   const goSheetTarget = (target: SheetTarget) => {
     if (target.kind === 'storefront') { window.location.hash = 'home'; setActiveTab('home'); setStorefrontOpen(false); return; }
     if (target.kind === 'elevate') { const page = target.page; window.location.hash = `elevate/${page}`; setElevatePage(page); return; }
+    if (target.kind === 'wanderly') { window.location.hash = 'destinations/tokyo'; setWanderlyOpen(true); return; }
     if (target.kind === 'moderation') { window.location.hash = 'moderation'; setModerationOpen(true); return; }
     if (target.kind === 'signout') {
       void (async () => {
@@ -333,6 +339,11 @@ export const AppShell: React.FC<AppShellProps> = ({
 
     const navigate = () => {
       const hash = window.location.hash.slice(1);
+      // Wanderly Tokyo guide — standalone editorial + planning surface.
+      // Hashes: #tokyo, #wanderly, #wanderly/tokyo, #destinations/tokyo, #destinations/asia/tokyo, #asia/tokyo
+      const isWanderly = hash==='tokyo' || hash==='wanderly' || hash.startsWith('wanderly/') || hash.startsWith('destinations/') || hash==='asia/tokyo';
+      if (isWanderly) { setWanderlyOpen(true); return; }
+      setWanderlyOpen(false);
       setModerationOpen(hash === 'moderation');
       if (hash === 'moderation') return;
       // An overlay's own hash: exactly the named one is open. This is the branch
@@ -583,6 +594,16 @@ export const AppShell: React.FC<AppShellProps> = ({
           />
         </div>
       </div>
+    );
+  }
+
+  // Wanderly Tokyo guide — editorial magazine + planning tools.
+  // Standalone full-page, not a Brief tab: it has its own nav, hero, sidebar, and footer.
+  if (wanderlyOpen) {
+    return (
+      <React.Suspense fallback={<p role="status" className="p-6">Opening Tokyo…</p>}>
+        <TokyoGuide />
+      </React.Suspense>
     );
   }
 

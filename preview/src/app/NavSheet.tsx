@@ -39,6 +39,7 @@ export type SheetTarget =
   | { kind: 'storefront' }
   | { kind: 'moderation' }
   | { kind: 'elevate'; page: 'market' | 'ledger' | 'onboard' | 'hub' }
+  | { kind: 'wanderly'; dest: 'tokyo' }
   | { kind: 'signout' };
 
 export interface SheetItem {
@@ -92,6 +93,13 @@ export const SHEET_GROUPS: Array<{ id: string; label: string; items: SheetItem[]
       { id: 'elevate-hub', label: 'Elevate', sub: 'Market · Ledger · Onboard — integrated', target: { kind: 'elevate', page: 'hub' } },
       { id: 'elevate-market', label: 'Elevate Market', sub: 'Wholesale without guessing', target: { kind: 'elevate', page: 'market' } },
       { id: 'elevate-ledger', label: 'Elevate Ledger', sub: 'Money stated once, derived', target: { kind: 'elevate', page: 'ledger' } },
+    ]
+  },
+  {
+    id: 'wanderly',
+    label: 'Wanderly Destinations',
+    items: [
+      { id: 'tokyo', label: 'Tokyo, Japan', sub: 'Where ancient temples meet neon-lit streets — editorial guide', target: { kind: 'wanderly', dest: 'tokyo' } },
     ]
   },
   {
