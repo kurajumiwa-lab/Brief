@@ -75,8 +75,9 @@ export function parseScrapeNote(raw: string): ScrapePick {
   }
   // Site link: only a real http(s) URL. A bare handle stays in the note.
   const urls = text.match(URL) ?? [];
-  if (urls.length > 0) {
-    pick.siteUrl = urls[0].slice(0, 300);
+  const firstUrl = urls[0];
+  if (firstUrl) {
+    pick.siteUrl = firstUrl.slice(0, 300);
     found.push(`site link: ${pick.siteUrl}`);
   } else {
     missing.push("site link");

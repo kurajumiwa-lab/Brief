@@ -703,6 +703,13 @@ export interface Campaign {
   metrics: CampaignMetrics;
 }
 
+export interface EventRecurrence {
+  frequency: 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'custom' | string;
+  interval?: number;
+  until?: string | null;
+  ruleText?: string | null;
+}
+
 export interface CampaignCreate {
   title: string;
   type: CampaignType;
@@ -720,6 +727,8 @@ export interface CampaignCreate {
   price?: number;
   currency?: string;
   circleId?: string | null;
+  metadata?: Record<string, any>;
+  recurrence?: EventRecurrence | null;
 }
 
 /** Writable fields only. No metrics, no ownerId, no status, no slug. */

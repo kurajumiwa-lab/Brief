@@ -49,6 +49,11 @@ export const CATEGORY_LABELS = {
  */
 export function hasEnded(campaign) {
   const now = Date.now();
+  const rec = campaign.metadata?.recurrence ?? campaign.recurrence;
+  if (rec && rec.frequency && rec.frequency !== 'none') {
+    if (rec.until && Date.parse(rec.until) <= now) return true;
+    return false;
+  }
   if (campaign.endsAt && Date.parse(campaign.endsAt) <= now) return true;
   const started = campaign.startsAt ? Date.parse(campaign.startsAt) : NaN;
   if (Number.isFinite(started) && started <= now - 24 * 3600 * 1000) return true;
@@ -106,7 +111,8 @@ export function listingView(campaign) {
       ? (store.find('users', (x) => x.id === campaign.ownerId)?.displayName ??
         store.find('users', (x) => x.id === campaign.ownerId)?.handle ??
         null)
-      : null
+      : null,
+    recurrence: campaign.metadata?.recurrence ?? (campaign.recurrence ?? null)
     // No `popularity`, no `featured`, no `tableBankingOverlap` -- Decision 6.
   };
 }

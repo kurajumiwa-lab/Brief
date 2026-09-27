@@ -1,214 +1,165 @@
-import { CategoryArt } from '../../ui/CategoryArt';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Plus,
   ArrowRight,
   MessageCircle,
-  ShoppingBag,
   Package,
-  Archive,
-  RotateCcw,
-  CheckCircle2,
-  ChevronDown,
   Store,
   CalendarDays,
   Users,
   Bike,
   Truck,
-  Sun
+  Sun,
+  Repeat,
+  Sparkles,
+  ChevronRight
 } from 'lucide-react';
-import type { Space, Circle } from '../../api/types';
+import type { Space, Circle, PublicSpace } from '../../api/types';
 import * as briefApi from '../../api/briefApi';
-import type { MyPosition, DiscoverFeedItem, EventListing } from '../../api/briefApi';
+import type {
+  DiscoverFeedItem,
+  DiscoverGap,
+  DiscoverRoute,
+  DiscoverSummary,
+  EventListing
+} from '../../api/briefApi';
 import { CreateFlowModal } from '../spaces/CreateFlowModal';
 import { FLOW_ACCENT, FeedSheet } from '../city/DiscoverFeed';
 import { NoPhotoPlate } from '../city/NoPhotoPlate';
 import { categoryAccent } from '../city/categoryPalette';
-import { listedAgo } from '../city/room';
+import { listedAgo, PHOTO_FILTER } from '../city/room';
 import { GlobysCard } from '../../ui/GlobysCard';
-import { ListingRow } from '../../ui/ListingRow';
 import { BannerButton } from '../../ui/BannerButton';
 import { CardSkeleton } from '../../components/ui/Skeleton';
 import { soundEngine } from '../../utils/SoundEngine';
-import { attentionQueue, needsAttention, splitSpaces } from './spaceSignals';
-import { PlannedWeather } from './PlannedWeather';
-import { EarnStrip } from './EarnStrip';
-import { NextMoveCard } from './NextMoveCard';
-import { CirclesStrip } from './CirclesStrip';
+import { buildLoopSections, type LoopContext, type LoopSection } from './loopEngine';
 
 // ---------------------------------------------------------------------------
-// HOME — the landing, in the pattern the mock it was copied from uses.
+// HOME SURFACE — The YouTube-style discovery "Window Shop" for Blue Avenue.
 //
-//   1. (removed) WHO YOU ARE — the greeting, stakes line and standing reprint
-//      lived here and the operator asked them off this door. The same reads
-//      still sit on You → your position. Home is the board, not a second ledger.
-//   2. THE MODE TILES — six visual tiles, not chips: Shops, Events, Circles,
-//      Errands, Runs, Group Buys. A tile is a picture with a word under it,
-//      the way that storefront does it — a chip row is for filters, and a
-//      filter row up here would be a second navigation for what the board
-//      already picks.
-//   3. THE BANNER — the one dark-gradient "What's moving today →". The only
-//      loud thing on the screen; a second gradient would be a second shout,
-//      and the card refactor's rule is that nothing else is special.
-//   4. THREE SHELVES of the ONE product card (GlobysCard), each a two-column
-//      grid with a title and an "All →":
-//        Open now         — the supply board's top rows
-//        From your groups — the circles you are actually in
-//        Happening today  — the events starting today
-//      Every card is the same shape: 1:1 photo or waiting plate, title
-//      (two lines), bold price, seller, the real where/when in mono, and
-//      exactly one full-width action. A shelf is the top of a real list;
-//      "All →" is the one place that list is, and an empty shelf is not
-//      rendered, because an empty shelf with a title is the broken-screen
-//      tell this app deleted everywhere.
-//   5. THE FOLD — what you should do next, your income rails, the weather
-//      (on a planned day only), and "Run your spaces" collapsed: it is work,
-//      not the thing you came to see.
-//
-// What is NOT here: a "What's out there" section (the shelf already is the
-// browse), a 0-SETTLED-ORDERS hero (a zero is not a number, it is the
-// absence of rows), a featured card nobody picked, or any count that is not a
-// row the server answered with.
+// 1. TOP BAR / EXPLORE — The top category scroll: Shops, Events, Groups,
+//    Errands, Runs, Group Buys.
+// 2. THE LOOP ENGINE — Algorithm-driven recommendation feed. Vertically
+//    scrolling collection of horizontally snapping carousels.
+// 3. SECTIONS:
+//    * Popular in your area (Marketplace listings & verified merchandise)
+//    * Special Promoted / Traffic Banners (Trip packages, group buy pools)
+//    * Economic Gaps near you (Unmet demand & courier availability gaps)
+//    * Supplier & Shop Connect (B2B links, wholesale, workshops)
+//    * Events & Trips this week (Photo-free clean cards with recurrence badges)
+//    * Groups & Chamas (Shorts-style circular rail)
+//    * Wholesale corridors & freight routes
+// 4. NO TASK CLUTTER: Task-oriented onboarding prompts and ledger tasks
+//    belong on the user's dashboard (Mine/You), leaving Home as a true
+//    discovery window into the economic street.
 // ---------------------------------------------------------------------------
 
 export interface HomeSurfaceProps {
-  /** Jump to You → Earn. The rails are surfaced on Home; the acting is done on
-      Earn, which is where the conversion control and its refusals live. */
   onOpenEarn?: () => void;
   userName?: string;
   onOpenSpace: (spaceId: string) => void;
-  onExploreDiscover?: (subTab?: 'bulk' | 'direct' | 'niche' | 'group' | 'events' | 'circles' | 'errands' | 'all', startRun?: boolean) => void;
+  onExploreDiscover?: (subTab?: 'bulk' | 'direct' | 'niche' | 'group' | 'events' | 'circles' | 'errands' | 'all' | 'shops', startRun?: boolean) => void;
   onGetPaid?: () => void;
   onOpenSpaces?: () => void;
-  /** Group buys — the shell's one overlay for the portal. */
   onOpenGroupBuys?: () => void;
-  /** Pulse — the ledger's own numbers — lives in the drawer's check-in. */
   onOpenPulse?: () => void;
-  /** Open the one screen that holds the explanations (You → How Brief works). */
   onOpenHow?: () => void;
   className?: string;
 }
 
 const money = (n: number, currency: string) => `${currency} ${Number(n).toLocaleString('en-KE')}`;
-const timeOf = (iso: string | null) => {
-  if (!iso) return null;
+const shortDate = (iso: string | null) => {
+  if (!iso) return '';
   const ms = Date.parse(iso);
-  if (!Number.isFinite(ms)) return null;
+  if (!Number.isFinite(ms)) return '';
   try {
-    return new Date(ms).toLocaleTimeString('en-KE', { hour: '2-digit', minute: '2-digit' });
+    const d = new Date(ms);
+    const day = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getUTCDay()];
+    const month = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.getUTCMonth()];
+    return `${day} ${d.getUTCDate()} ${month}`;
   } catch {
-    return null;
+    return '';
   }
 };
 
 export const HomeSurface: React.FC<HomeSurfaceProps> = ({
   onOpenSpace,
   onExploreDiscover,
-  onGetPaid,
   onOpenSpaces,
   onOpenGroupBuys,
   onOpenPulse,
-  onOpenEarn,
   className = ''
 }) => {
-  const [spaces, setSpaces] = useState<Space[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [createSpaceOpen, setCreateSpaceOpen] = useState<boolean>(false);
-  const [archivedOpen, setArchivedOpen] = useState<boolean>(false);
-  const [manageOpen, setManageOpen] = useState<boolean>(false);
-  const [toastMsg, setToastMsg] = useState<string | null>(null);
-  const [busyId, setBusyId] = useState<string | null>(null);
-
-  // The three derived reads, fetched ONCE here and handed to the cards that
-  // render them — one read per screen, so no two surfaces can disagree.
-  const [position, setPosition] = useState<MyPosition | null>(null);
-  const [circles, setCircles] = useState<Circle[]>([]);
-  // A visitor with no session has no ledger to read. That is not an error, so
-  // the card stays silent instead of shouting "could not be read".
-  const [positionDenied, setPositionDenied] = useState<boolean | undefined>(undefined);
-
-  // The three shelves. Each is the top of a REAL list; each is hidden when
-  // empty; each "All →" points at the one place the list is.
+  const [summary, setSummary] = useState<DiscoverSummary | null>(null);
   const [feed, setFeed] = useState<DiscoverFeedItem[]>([]);
-  const [feedLoaded, setFeedLoaded] = useState(false);
-  // Rows are the primary view; the picture grid is one tap away and sticks.
-  const [openView, setOpenView] = useState<'rows' | 'grid'>(() => {
-    try { return localStorage.getItem('brief.home.openView') === 'grid' ? 'grid' : 'rows'; } catch { return 'rows'; }
-  });
-  const [todayEvents, setTodayEvents] = useState<EventListing[]>([]);
-  // The one detail sheet this screen shares with the board: a card's body tap
-  // opens it, and the card's single action takes its own real target.
+  const [events, setEvents] = useState<EventListing[]>([]);
+  const [spaces, setSpaces] = useState<PublicSpace[]>([]);
+  const [circles, setCircles] = useState<Circle[]>([]);
+  const [loading, setLoading] = useState(true);
   const [openItem, setOpenItem] = useState<DiscoverFeedItem | null>(null);
+  const [createSpaceOpen, setCreateSpaceOpen] = useState(false);
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
+
+  // Read stated place from local storage
+  const [area] = useState<string>(() => {
+    try {
+      return localStorage.getItem('brief.world.place') ?? 'Nairobi';
+    } catch {
+      return 'Nairobi';
+    }
+  });
+
+  // Loop persona switcher for interactive demonstration
+  const [persona, setPersona] = useState<'all' | 'customer' | 'vendor' | 'trader'>('all');
 
   const showToast = (msg: string) => {
     setToastMsg(msg);
     setTimeout(() => setToastMsg(null), 3000);
   };
 
-  const loadSpaces = async () => {
-    setIsLoading(true);
+  const loadData = useCallback(async () => {
+    setLoading(true);
     try {
-      const res = await briefApi.listMySpaces();
-      if (res.ok && res.data?.spaces) {
-        setSpaces(res.data.spaces);
+      const [sumRes, evRes, spRes, cirRes] = await Promise.all([
+        briefApi.getDiscoverSummary(),
+        briefApi.browseEvents({ limit: 50 }),
+        briefApi.discoverPublicSpaces(12),
+        briefApi.getCircles()
+      ]);
+      if (sumRes.ok && sumRes.data) {
+        setSummary(sumRes.data);
+        setFeed(sumRes.data.feed);
+      }
+      if (evRes.ok && evRes.data?.events) {
+        setEvents(evRes.data.events);
+      }
+      if (spRes.ok && spRes.data) {
+        setSpaces(spRes.data);
+      }
+      if (cirRes.ok && cirRes.data) {
+        setCircles(cirRes.data);
       }
     } catch {
-      // fallback
+      /* network fallback */
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    loadSpaces();
   }, []);
 
   useEffect(() => {
-    let live = true;
-    void Promise.all([
-      briefApi.getMyPosition(),
-      briefApi.getCircles()
-    ]).then(([pos, cir]) => {
-      if (!live) return;
-      setPosition(pos.ok ? pos.data : null);
-      setPositionDenied(!pos.ok && (pos as { status?: number }).status === 401);
-      // "From your groups" counts only rows the session is actually a member of
-      // — the list is public, so membership is read from the server's viewerRole.
-      setCircles(cir.ok ? cir.data : []);
-    });
-    return () => { live = false; };
-  }, []);
+    void loadData();
+  }, [loadData]);
 
-  // The shelves, read once. "Open now" is the supply board's top; "Happening
-  // today" is the events row from start-of-day to now (an event is in the past
-  // the moment its window passes, so the shelf never shows a "tonight" that is
-  // already yesterday).
-  useEffect(() => {
-    let live = true;
-    void briefApi.getDiscoverSummary().then((res) => {
-      if (!live) return;
-      if (res.ok) setFeed(res.data.feed.slice(0, 8));
-      setFeedLoaded(true);
-    });
-    const now = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
-    void briefApi.browseEvents({ from: start.toISOString(), to: now.toISOString(), limit: 12 }).then((res) => {
-      if (live && res.ok) setTodayEvents(res.data.events.slice(0, 8));
-    });
-    return () => { live = false; };
-  }, []);
+  // Mode tiles navigation
+  const MODES: Array<{ id: string; label: string; act: () => void }> = [
+    { id: 'shops', label: 'Shops', act: () => onOpenSpaces?.() },
+    { id: 'events', label: 'Events', act: () => onExploreDiscover?.('events') },
+    { id: 'circles', label: 'Groups', act: () => onExploreDiscover?.('circles') },
+    { id: 'errands', label: 'Errands', act: () => onExploreDiscover?.('errands') },
+    { id: 'runs', label: 'Runs', act: () => onExploreDiscover?.('errands', true) },
+    { id: 'groupBuys', label: 'Group Buys', act: () => onOpenGroupBuys?.() }
+  ];
 
-  const handleSpaceCreated = (newSpace: Space) => {
-    showToast(`Space "${newSpace.name}" created!`);
-    loadSpaces();
-    onOpenSpace(newSpace.id);
-  };
-
-  // ── The card helpers. Every shelf below renders the SAME GlobysCard; these
-  //    are the row-to-shape mappings, and each one maps a real row field or
-  //    renders nothing. Nothing here guesses. ─────────────────────────────
-  // The plate mark: the flow the SELLER declared, a calendar on an event. An
-  // untagged row gets the room mark, never a guessed icon.
   const plateIcon = (flow: string | null | undefined, kind: string): React.ReactNode => {
     if (kind === 'event') return <CalendarDays className="w-4 h-4" />;
     switch (flow) {
@@ -219,589 +170,479 @@ export const HomeSurface: React.FC<HomeSurfaceProps> = ({
       default: return <Package className="w-4 h-4" />;
     }
   };
-  // The wa.me target, only from a contact the SELLER put on their own row.
-  // Never defaulted: no digits, no link.
+
   const waHref = (item: DiscoverFeedItem): string | null => {
     const digits = (item.contact ?? '').replace(/\D/g, '');
     if (digits.length < 9) return null;
-    return `https://wa.me/${digits}?text=${encodeURIComponent(`Hi — I saw "${item.title}" on Brief and I would like to ask about it.`)}`;
+    return `https://wa.me/${digits}?text=${encodeURIComponent(`Hi — I saw "${item.title}" on Wairo and I would like to ask about it.`)}`;
   };
+
   const openFull = (item: DiscoverFeedItem) => {
     if (item.kind === 'event') window.open(`/c/${item.id}`, '_self');
     else window.location.hash = `offer/${encodeURIComponent(item.id)}`;
   };
-  // Join from the card: the server decides, and a refusal is its own words.
+
   const joinCircle = async (c: Circle) => {
     const res = await briefApi.joinCircle(c.id);
-    if (!res.ok) { showToast(res.error ?? 'Could not join this circle.'); return; }
+    if (!res.ok) { showToast(res.error ?? 'Could not join this group.'); return; }
     showToast(`Joined ${c.name}.`);
     onExploreDiscover?.('circles');
   };
-  const CIRCLE_TYPE_LABEL: Record<string, string> = {
-    gathering: 'Gathering', build: 'Build', study: 'Study',
-    treasury: 'Treasury', match: 'Match', target: 'Target'
-  };
 
-  const setStatus = async (space: Space, status: 'active' | 'archived') => {
-    setBusyId(space.id);
-    const res = await briefApi.updateSpace(space.id, { status });
-    setBusyId(null);
-    if (res.ok) {
-      showToast(status === 'archived' ? `Archived "${space.name}".` : `Restored "${space.name}".`);
-      loadSpaces();
-    } else {
-      showToast(res.error ?? 'Could not update that space.');
-    }
-  };
+  const myCircles = circles.filter((c) => Boolean(c.viewerRole));
+  const openCircles = circles.filter((c) => !c.viewerRole && c.canJoin);
 
-  const { active, archived } = splitSpaces(spaces);
-  const queue = attentionQueue(active);
-  // Upkeep is DERIVED by the server from each space's own rows (a field past
-  // its cadence, a never-answered question, a reply owed, a draft offer). Home
-  // only adds those counts up — it invents no urgency and no reward for it.
-  const upkeepBySpace = new Map(active.map((sp) => [sp.id, sp.editorialOpen ?? 0]));
-  const upkeepItems = [...upkeepBySpace.values()].reduce((n, x) => n + x, 0);
-  const spacesWithUpkeep = [...upkeepBySpace.values()].filter((n) => n > 0).length;
-  const myCircles = circles.filter((c) => Boolean(c.viewerRole)).slice(0, 8);
-
-  const ATTENTION_ICON: Record<string, React.ReactNode> = {
-    conversation: <MessageCircle className="w-3 h-3" />,
-    offer: <ShoppingBag className="w-3 h-3" />,
-    order: <Package className="w-3 h-3" />
-  };
-
-  // ── THE MODE TILES — six doors, pictures with words. The test id is the
-  // contract: `doorways.jsx` asserts exactly these six, in this order, and
-  // that no chip row competes with them.
-  const MODES: Array<{ id: string; label: string; icon: React.ReactNode; act: () => void }> = [
-    { id: 'shops', label: 'Shops', icon: <Store className="w-5 h-5" />, act: () => onOpenSpaces?.() },
-    { id: 'events', label: 'Events', icon: <CalendarDays className="w-5 h-5" />, act: () => onExploreDiscover?.('events') },
-    { id: 'circles', label: 'Groups', icon: <Users className="w-5 h-5" />, act: () => onExploreDiscover?.('circles') },
-    { id: 'errands', label: 'Errands', icon: <Bike className="w-5 h-5" />, act: () => onExploreDiscover?.('errands') },
-    { id: 'runs', label: 'Runs', icon: <Truck className="w-5 h-5" />, act: () => onExploreDiscover?.('errands', true) },
-    { id: 'groupBuys', label: 'Group Buys', icon: <Package className="w-5 h-5" />, act: () => onOpenGroupBuys?.() }
-  ];
-
-  const ShelfHead: React.FC<{ title: string; onAll: () => void; aside?: React.ReactNode }> = ({ title, onAll, aside }) => (
-    <div className="flex items-center justify-between pb-2.5">
-      <h2 className="text-[15px] font-extrabold tracking-tight" style={{ color: 'var(--color-text)' }}>{title}</h2>
-      <span className="inline-flex items-center gap-3">
-        {aside ?? null}
-        <button
-          type="button"
-          onClick={() => { soundEngine.play('tap'); onAll(); }}
-          className="text-[12px] font-bold cursor-pointer"
-          style={{ color: 'var(--color-primary)' }}
-        >
-          All
-        </button>
-      </span>
-    </div>
-  );
+  // The Loop Section generator
+  const loopSections: LoopSection[] = useMemo(() => {
+    const context: LoopContext = { area, persona };
+    return buildLoopSections(
+      context,
+      {
+        feed,
+        events,
+        gaps: summary?.unmapped ?? [],
+        spaces,
+        routes: summary?.routes ?? [],
+        circles
+      },
+      {
+        onOpenGroupBuys,
+        onOpenPulse,
+        onExploreDiscover
+      }
+    );
+  }, [area, persona, feed, events, summary, spaces, circles, onOpenGroupBuys, onOpenPulse, onExploreDiscover]);
 
   return (
-    <div className={`space-y-5 max-w-2xl mx-auto ${className}`}>
+    <div className={`space-y-6 max-w-2xl mx-auto pb-12 ${className}`}>
       {toastMsg && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-2xl bg-[color:var(--color-text)] white text-xs font-bold shadow-2xl animate-fadeIn border border-white/10">
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-2xl bg-[color:var(--color-text)] text-white text-xs font-bold shadow-2xl animate-fadeIn border border-white/10">
           {toastMsg}
         </div>
       )}
 
-      {/* ── EXPLORE — the six doors as a top category scroll: one horizontal
-             row of pills. Same six buttons, same order, same test id. ── */}
-      <section aria-label="Explore">
+      {/* ── 1. TOP CATEGORY SCROLL (YouTube-style Explore Pills) ────────── */}
+      <section aria-label="Explore" className="space-y-2">
         <div data-testid="mode-tiles" aria-label="Ways in" className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
           {MODES.map((m) => (
             <button
               key={m.id}
               type="button"
               onClick={() => { soundEngine.play('tap'); m.act(); }}
-              className="shrink-0 px-4 py-2 rounded-full text-[13px] font-bold cursor-pointer"
+              className="shrink-0 px-4 py-2 rounded-full text-[13px] font-bold cursor-pointer transition-all hover:opacity-90 active:scale-95"
               style={{ background: 'var(--color-well)', color: 'var(--brief-ink)' }}
             >
               {m.label}
             </button>
           ))}
         </div>
-      </section>
 
-      {/* ── THE BANNER — the one loud thing on the screen: dark gradient,
-             white bold, arrow on the right. Never two. The pulse ledger is
-             where the facts stand; this is the door to it. ── */}
-      <section aria-label="What's moving today" className="space-y-2">
-        <p className="text-[11px] font-black uppercase tracking-[0.14em]" style={{ color: 'var(--muted-ink)' }}>
-          What&apos;s moving
-        </p>
-        <button
-          type="button"
-          onClick={() => { soundEngine.play('tap'); onOpenPulse?.(); }}
-          className="text-[17px] font-bold inline-flex items-center gap-1.5 cursor-pointer"
-          style={{ color: 'var(--brief-ink)' }}
-        >
-          See what&apos;s happening nearby
-        </button>
-        {feed.length > 0 && (() => {
-          const f = feed[0];
-          const wa = waHref(f);
-          return (
-            <GlobysCard
-              key={f.id}
-              testId={`featured-${f.id}`}
-              image={f.mediaUrl ? briefApi.mediaFileUrl(f.mediaUrl) : null}
-              imageAlt={f.title}
-              plate={
-                <NoPhotoPlate
-                  seller={f.seller}
-                  mark={f.flow ?? f.kind}
-                  icon={plateIcon(f.flow, f.kind)}
-                  stamp={f.kind === 'listing' ? listedAgo(f.listedAt) : null}
-                  accent={(f.flow && FLOW_ACCENT[f.flow]) || null}
-                />
-              }
-              title={f.title}
-              price={f.priceLabel}
-              seller={f.seller}
-              mono={
-                f.origin && f.destination
-                  ? `${f.origin} → ${f.destination}`
-                  : (f.location ?? (f.kind === 'event' ? f.dateLabel ?? null : null))
-              }
-              actionLabel={
-                f.kind === 'event' ? 'View event →'
-                  : wa ? 'Chat on WhatsApp →'
-                    : f.orderable ? 'Order →'
-                      : 'Enquire →'
-              }
-              actionHref={f.kind === 'event' ? null : wa}
-              onAction={() => {
-                soundEngine.play('tap');
-                if (f.kind === 'event') openFull(f);
-                else if (f.orderable && !wa) openFull(f);
-                else setOpenItem(f);
-              }}
-              onOpen={() => { soundEngine.play('tap'); setOpenItem(f); }}
-            />
-          );
-        })()}
-      </section>
-
-      {/* ── OPEN NOW — the board's top, as a two-column grid of the one card
-             shape. Hidden when empty. Each card: 1:1 photo or plate, title,
-             bold price, the seller's name, the real where in mono, and the
-             one action the row really supports. ── */}
-      {!feedLoaded ? (
-        <section aria-label="Open now" className="space-y-2.5">
-          <ShelfHead title="Open now" onAll={() => onExploreDiscover?.('all')} />
-          <div className="grid grid-cols-2 gap-2.5" data-testid="open-now-grid">
-            <CardSkeleton />
-            <CardSkeleton />
-          </div>
-        </section>
-      ) : feed.slice(1, 4).length > 0 && (
-        <section aria-label="Open now" className="space-y-2.5">
-          <ShelfHead
-            title="Open now"
-            onAll={() => onExploreDiscover?.('all')}
-            aside={
-              <span className="inline-flex items-center gap-2 text-[12px] font-bold" role="group" aria-label="Listing style">
-                <button type="button" onClick={() => { try { localStorage.setItem('brief.home.openView', 'rows'); } catch {} setOpenView('rows'); }} className="cursor-pointer" style={{ color: openView === 'rows' ? 'var(--brief-ink)' : 'var(--muted-ink)' }}>Rows</button>
-                <button type="button" onClick={() => { try { localStorage.setItem('brief.home.openView', 'grid'); } catch {} setOpenView('grid'); }} className="cursor-pointer" style={{ color: openView === 'grid' ? 'var(--brief-ink)' : 'var(--muted-ink)' }}>Grid</button>
-              </span>
-            }
-          />
-          {openView === 'grid' ? (
-            <div className="grid grid-cols-2 gap-2.5" data-testid="open-now-grid">
-              {feed.slice(1, 4).map((f) => {
-                const wa = waHref(f);
-                return (
-                  <GlobysCard
-                    key={f.id}
-                    testId={`open-${f.id}`}
-                    image={f.mediaUrl ? briefApi.mediaFileUrl(f.mediaUrl) : null}
-                    imageAlt={f.title}
-                    plate={
-                      <NoPhotoPlate
-                        seller={f.seller}
-                        mark={f.flow ?? f.kind}
-                        icon={plateIcon(f.flow, f.kind)}
-                        stamp={f.kind === 'listing' ? listedAgo(f.listedAt) : null}
-                        accent={(f.flow && FLOW_ACCENT[f.flow]) || null}
-                      />
-                    }
-                    title={f.title}
-                    price={f.priceLabel}
-                    seller={f.seller}
-                    mono={
-                      f.origin && f.destination
-                        ? `${f.origin} → ${f.destination}`
-                        : (f.location ?? (f.kind === 'event' ? f.dateLabel ?? null : null))
-                    }
-                    actionLabel={
-                      f.kind === 'event' ? 'View event →'
-                        : wa ? 'Chat on WhatsApp →'
-                          : f.orderable ? 'Order →'
-                            : 'Enquire →'
-                    }
-                    actionHref={f.kind === 'event' ? null : wa}
-                    onAction={() => {
-                      soundEngine.play('tap');
-                      if (f.kind === 'event') openFull(f);
-                      else if (f.orderable && !wa) openFull(f);
-                      else setOpenItem(f);
-                    }}
-                    onOpen={() => { soundEngine.play('tap'); setOpenItem(f); }}
-                  />
-                );
-              })}
-            </div>
-          ) : (
-          <div data-testid="open-now-grid">
-            {feed.slice(1, 4).map((f) => (
-              <ListingRow
-                key={f.id}
-                testId={`open-${f.id}`}
-                image={f.mediaUrl ? briefApi.mediaFileUrl(f.mediaUrl) : null}
-                imageAlt={f.title}
-                title={f.title}
-                meta={f.priceLabel ?? null}
-                sub={[f.seller, f.origin && f.destination ? `${f.origin} → ${f.destination}` : (f.location ?? (f.kind === 'event' ? f.dateLabel ?? null : null))].filter(Boolean).join(' · ')}
-                onOpen={() => {
-                  soundEngine.play('tap');
-                  if (f.kind === 'event') openFull(f);
-                  else if (f.orderable && !waHref(f)) openFull(f);
-                  else setOpenItem(f);
-                }}
-              />
-            ))}
-          </div>
-          )}
-        </section>
-      )}
-
-      {/* ── FROM YOUR GROUPS — the circles you are actually in, as the same
-             card shape: the member count is the row's real key figure, the
-             mono line is the type, and the one action is what your
-             membership really allows (the server says). ── */}
-      {(myCircles.length > 0 || circles.some((c) => !c.viewerRole && c.canJoin)) && (
-        <section aria-label="From your groups" className="space-y-2.5">
-          <ShelfHead title="From your groups" onAll={() => onExploreDiscover?.('circles')} />
-          <div data-testid="groups-grid" className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
-            {myCircles.slice(0, 8).map((c) => (
-              <button
-                key={c.id}
-                type="button"
-                data-testid={`globys-card-group-${c.id}`}
-                onClick={() => { soundEngine.play('tap'); onExploreDiscover?.('circles'); }}
-                className="shrink-0 w-16 flex flex-col items-center gap-1 cursor-pointer"
-              >
-                <span
-                  className="w-14 h-14 rounded-full grid place-items-center text-[18px] font-black"
-                  style={{ background: 'var(--navy)', color: '#FFFFFF' }}
-                  aria-hidden="true"
-                >
-                  {(c.name || '?').trim().charAt(0).toUpperCase()}
-                </span>
-                <span className="text-[11px] font-bold truncate w-16 text-center" style={{ color: 'var(--brief-ink)' }}>
-                  {c.name}
-                </span>
-              </button>
-            ))}
-            {circles.filter((c) => !c.viewerRole && c.canJoin).slice(0, 8).map((c) => (
-              <button
-                key={c.id}
-                type="button"
-                data-testid={`globys-card-group-${c.id}`}
-                onClick={() => { soundEngine.play('tap'); void joinCircle(c); }}
-                className="shrink-0 w-16 flex flex-col items-center gap-1 cursor-pointer"
-                aria-label={`Join ${c.name}`}
-              >
-                <span
-                  className="w-14 h-14 rounded-full grid place-items-center text-[18px] font-black"
-                  style={{ background: 'var(--color-well)', color: 'var(--brief-ink)', border: '1px dashed var(--muted-ink)' }}
-                  aria-hidden="true"
-                >
-                  {(c.name || '?').trim().charAt(0).toUpperCase()}
-                </span>
-                <span className="text-[11px] font-bold truncate w-16 text-center" style={{ color: 'var(--muted-ink)' }}>
-                  {c.name}
-                </span>
-              </button>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* ── HAPPENING TODAY — events whose window is today, on the clock, as
-             the same card shape: the real price (or Free), the real where
-             and when in mono, the one action. ── */}
-      {todayEvents.length > 0 && (
-        <section aria-label="Happening today" className="space-y-2.5">
-          <ShelfHead title="Happening today" onAll={() => onExploreDiscover?.('events')} />
-          <div data-testid="today-grid">
-            {todayEvents.slice(0, 4).map((e) => (
-              <ListingRow
-                key={e.slug}
-                testId={`event-${e.slug}`}
-                image={e.coverImageUrl ?? null}
-                imageAlt={e.title}
-                title={e.title}
-                meta={e.goalAmount != null ? 'Contribution pot' : (e.price === 0 ? 'Free' : money(e.price, e.currency ?? 'KES'))}
-                sub={[timeOf(e.startsAt), e.location].filter(Boolean).join(' · ')}
-                onOpen={() => { soundEngine.play('tap'); window.open(`/c/${e.slug}`, '_self'); }}
-              />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* ── THE FOLD ──────────────────────────────────────────────────── */}
-
-      {/* Weather, and only where it is useful: a week of forecast for a member
-          with nothing planned is what every other app prints, so it is what
-          nobody reads. This renders one line where a dated forecast fact lands on
-          a day the member already committed to, and renders nothing otherwise. */}
-      <PlannedWeather />
-
-      {/* The income rails used to exist only behind You → Earn, which most
-          members never open. Same three reads, same endpoints, no second copy of
-          the arithmetic. */}
-      <EarnStrip onOpenEarn={() => onOpenEarn?.()} />
-
-      {/* WHAT YOU SHOULD DO NEXT — one derived decision, nothing else. */}
-      <NextMoveCard position={position} denied={positionDenied} />
-
-      {/* PERSONAL CONTEXT — you are part of things, not only a browser */}
-      <CirclesStrip
-        spaces={active.length}
-        circles={myCircles.length}
-        needsYou={queue.length}
-        onView={() => {
-          soundEngine.play('tap');
-          if (queue.length > 0) onOpenSpace(queue[0].space.id);
-          else onOpenSpaces?.();
-        }}
-      />
-
-      {/* ── RUN YOUR SPACES — management, collapsed by default: it is work,
-             not the thing you came to see. ── */}
-      <section className="rounded-2xl brief-card bg-[color:var(--color-paper)]" aria-label="Run your spaces">
-        <button
-          type="button"
-          onClick={() => { soundEngine.play('tap'); setManageOpen((v) => !v); }}
-          aria-expanded={manageOpen}
-          className="w-full flex items-center justify-between px-4 py-3 cursor-pointer"
-        >
-          <span className="text-xs font-black uppercase tracking-wider text-[color:var(--color-text)]">
-            Run your spaces{active.length > 0 ? ` (${active.length})` : ''}
-            {queue.length > 0 && (
-              <span className="ml-2 font-bold normal-case" style={{ color: 'var(--color-primary)' }}>
-                {queue.length} need{queue.length === 1 ? 's' : ''} you
-              </span>
-            )}
+        {/* The Loop Recommendation persona filter */}
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-1 text-[11px]">
+          <span className="shrink-0 font-bold uppercase tracking-wider text-[var(--muted-ink)] inline-flex items-center gap-1">
+            <Sparkles className="w-3 h-3 text-[var(--color-primary)]" /> Loop Feed:
           </span>
-          <ChevronDown className={`w-4 h-4 transition-transform ${manageOpen ? 'rotate-180' : ''}`} style={{ color: 'var(--color-text-muted)' }} />
-        </button>
+          {[
+            ['all', `All in ${area || 'Nairobi'}`],
+            ['customer', 'Customer picks'],
+            ['vendor', 'Vendor & B2B'],
+            ['trader', 'Wholesale & gaps']
+          ].map(([p, label]) => (
+            <button
+              key={p}
+              type="button"
+              onClick={() => { soundEngine.play('tap'); setPersona(p as any); }}
+              className={`shrink-0 px-2.5 py-1 rounded-full font-bold transition-all cursor-pointer ${
+                persona === p
+                  ? 'bg-[color:var(--color-primary)] text-white'
+                  : 'bg-[color:var(--color-paper)] text-[color:var(--muted-ink)] border border-[var(--brief-line)]'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </section>
 
-        {manageOpen && (
-          <div className="px-4 pb-4 space-y-5">
-            {isLoading ? (
-              <p className="text-xs text-[color:var(--color-text-muted)]">Reading your spaces…</p>
-            ) : spaces.length === 0 ? (
-              <div className="p-6 rounded-3xl bg-[color:var(--color-paper)] border border-dashed text-center space-y-3" style={{ boxShadow: 'var(--room-light), var(--lift-1)' }}>
-                <p className="text-sm font-bold text-[color:var(--color-text)]">
-                  You don&rsquo;t have a space yet.
-                </p>
+      {/* ── 2. THE HERO BANNER (What's moving today) ───────────────────── */}
+      <section aria-label="What's moving today">
+        <BannerButton
+          label="What’s moving today"
+          onClick={() => { soundEngine.play('tap'); onOpenPulse?.(); }}
+        />
+      </section>
+
+      {/* ── 3. YOUTUBE-STYLE HORIZONTALLY SCROLLABLE CAROUSELS ─────────── */}
+      {loading && feed.length === 0 ? (
+        <section className="space-y-4">
+          <div className="space-y-2">
+            <div className="h-4 w-40 bg-[color:var(--color-well)] rounded animate-pulse" />
+            <div className="flex gap-3 overflow-hidden">
+              <CardSkeleton className="w-44 shrink-0" />
+              <CardSkeleton className="w-44 shrink-0" />
+              <CardSkeleton className="w-44 shrink-0" />
+            </div>
+          </div>
+        </section>
+      ) : (
+        loopSections.map((section) => {
+          // PROMOTED / SPONSORED BANNER
+          if (section.kind === 'promoted_banner' && section.banner) {
+            const b = section.banner;
+            return (
+              <section key={section.id} aria-label={b.title}>
+                <div
+                  className="p-4 rounded-2xl space-y-2 relative overflow-hidden transition-all hover:opacity-95 cursor-pointer"
+                  style={{
+                    background: 'radial-gradient(140% 120% at 90% 10%, rgba(64,145,108,0.22), rgba(13,27,42,0) 60%), #0D1B2A',
+                    color: '#FFFFFF'
+                  }}
+                  onClick={b.onAction}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-900">
+                      {b.tag}
+                    </span>
+                    <span className="text-[12px] font-bold text-[var(--sage)] inline-flex items-center gap-1">
+                      {b.actionLabel}
+                    </span>
+                  </div>
+                  <h4 className="text-[16px] font-bold leading-tight text-white">{b.title}</h4>
+                  <p className="text-[13px] leading-snug text-slate-300">{b.description}</p>
+                </div>
+              </section>
+            );
+          }
+
+          // Section header with title and "See all"
+          const SectionHeader = (
+            <div className="flex items-center justify-between pb-1">
+              <div>
+                <h3 className="text-[16px] font-extrabold tracking-tight" style={{ color: 'var(--color-text)' }}>
+                  {section.title}
+                </h3>
+                {section.subtitle && (
+                  <p className="text-[11px]" style={{ color: 'var(--color-text-muted)' }}>
+                    {section.subtitle}
+                  </p>
+                )}
+              </div>
+              {section.seeAllRoom && (
                 <button
                   type="button"
-                  onClick={() => { soundEngine.play('heavyTap'); setCreateSpaceOpen(true); }}
-                  className="px-5 py-2.5 rounded-full bg-[color:var(--color-primary)] text-[color:var(--accent-ink)] font-bold text-xs inline-flex items-center space-x-2 transition-all cursor-pointer"
+                  onClick={() => {
+                    soundEngine.play('tap');
+                    onExploreDiscover?.(section.seeAllRoom as any);
+                  }}
+                  className="text-[12px] font-bold inline-flex items-center gap-0.5 cursor-pointer"
+                  style={{ color: 'var(--color-primary)' }}
                 >
-                  <Plus className="w-4 h-4" />
-                  <span>Create your first space</span>
+                  See all <ChevronRight className="w-3.5 h-3.5" />
                 </button>
-              </div>
-            ) : (
-              <>
-                {/* ── NEEDS YOUR ATTENTION — the real check-in queue, never mock ── */}
-                <div className="space-y-2" aria-label="Needs your attention">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-[11px] font-black uppercase tracking-wider text-[color:var(--color-text-muted)]">
-                      Needs your attention
-                    </h3>
-                    <button
-                      type="button"
-                      onClick={() => { soundEngine.play('tap'); setCreateSpaceOpen(true); }}
-                      className="text-xs font-bold text-[color:var(--color-primary)] hover:underline cursor-pointer inline-flex items-center gap-1"
-                    >
-                      <Plus className="w-3.5 h-3.5" /> New space
-                    </button>
-                  </div>
+              )}
+            </div>
+          );
 
-                  {queue.length === 0 ? (
-                    <div className="p-3 rounded-2xl bg-[color:var(--color-paper)] brief-lift-1 flex items-center gap-2.5">
-                      <CheckCircle2 className="w-4 h-4 text-[color:var(--color-success)]" />
-                      <span className="text-xs font-bold text-[color:var(--color-text)]">All caught up.</span>
-                      <span className="text-[11px] text-[color:var(--color-text-muted)]">No open conversations, draft offers or orders to fulfil.</span>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {queue.map(({ space, items }) => (
-                        <button
-                          key={space.id}
-                          type="button"
-                          onClick={() => { soundEngine.play('tap'); onOpenSpace(space.id); }}
-                          className="w-full text-left p-3.5 rounded-2xl bg-[color:var(--color-paper)] brief-lift-1 transition-all cursor-pointer space-y-2"
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-bold text-[color:var(--color-text)]">{space.name}</span>
-                            <ArrowRight className="w-4 h-4 text-gray-400" />
-                          </div>
-                          <div className="flex flex-wrap gap-1.5">
-                            {items.map((it) => (
-                              <span key={it.kind} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[color:var(--color-primary-subtle)] text-[color:var(--color-text)] text-[11px] font-bold">
-                                {ATTENTION_ICON[it.kind]} {it.label}
-                              </span>
-                            ))}
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* ── MY SPACES ── */}
-                <div className="space-y-2" aria-label="My spaces">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-[11px] font-black uppercase tracking-wider text-[color:var(--color-text-muted)]">
-                      Active spaces
-                      {upkeepItems > 0 && (
-                        <span className="ml-1.5 normal-case font-bold" style={{ color: 'var(--color-primary)' }}>
-                          · {upkeepItems} open item{upkeepItems === 1 ? '' : 's'} across {spacesWithUpkeep} space{spacesWithUpkeep === 1 ? '' : 's'}
-                        </span>
-                      )}
-                    </h3>
-                    {onGetPaid && (
-                      <button
-                        type="button"
-                        onClick={() => { soundEngine.play('tap'); onGetPaid(); }}
-                        className="text-[12px] font-bold text-[color:var(--color-primary)] hover:underline cursor-pointer"
+          // 1 & 2. POPULAR / MERCH LISTINGS
+          if (section.kind === 'popular' || section.kind === 'merch') {
+            if (section.items.length === 0) return null;
+            return (
+              <section key={section.id} aria-label={section.title} className="space-y-2.5">
+                {SectionHeader}
+                <div
+                  data-testid={section.kind === 'popular' ? 'open-now-grid' : undefined}
+                  className="flex gap-3 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-2"
+                >
+                  {section.items.map((item: DiscoverFeedItem) => {
+                    const wa = waHref(item);
+                    return (
+                      <div
+                        key={`${section.id}-${item.id}`}
+                        data-testid={`globys-card-open-${item.id}`}
+                        className="w-[180px] sm:w-[210px] shrink-0 snap-start"
                       >
-                        Money →
-                      </button>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    {active.map((s) => {
-                      const attention = needsAttention(s);
-                      return (
-                        <div
-                          key={s.id}
-                          className="p-3 rounded-2xl bg-[color:var(--color-paper)] brief-lift-1 transition-all flex items-center justify-between gap-2"
-                        >
-                          <button
-                            type="button"
-                            onClick={() => { soundEngine.play('tap'); onOpenSpace(s.id); }}
-                            className="flex-1 text-left flex items-center space-x-2.5 cursor-pointer"
-                          >
-                            <span className="text-lg">🌱</span>
-                            <div className="min-w-0">
-                              <span className="text-xs font-bold text-[color:var(--color-text)] block truncate">
-                                {s.name}
-                              </span>
-                              <span className="text-[11px] text-[color:var(--color-text-muted)] block">
-                                {attention.length === 0
-                                  ? 'All caught up'
-                                  : attention.map((a) => a.label).join(' · ')}
-                                {(upkeepBySpace.get(s.id) ?? 0) > 0 &&
-                                  ` · ${upkeepBySpace.get(s.id)} question${upkeepBySpace.get(s.id) === 1 ? '' : 's'} in the space file`}
-                              </span>
-                              {s.maintenance?.state && s.maintenance.state !== 'unstarted' && (
-                                <span
-                                  className="text-[11px] font-black uppercase tracking-wider"
-                                  style={{
-                                    color:
-                                      s.maintenance.state === 'fresh' ? 'var(--color-success)'
-                                        : s.maintenance.state === 'active' ? 'var(--color-primary)'
-                                          : s.maintenance.state === 'stale' ? 'var(--color-warning)'
-                                            : 'var(--color-danger)'
-                                  }}
-                                >
-                                  {s.maintenance.state}
-                                  {s.maintenance.ageHours != null
-                                    ? ` · ${s.maintenance.ageHours < 24 ? `${s.maintenance.ageHours}h` : `${Math.round(s.maintenance.ageHours / 24)}d`} since any change`
-                                    : ''}
-                                </span>
-                              )}
-                            </div>
-                          </button>
-                          <button
-                            type="button"
-                            disabled={busyId === s.id}
-                            onClick={() => setStatus(s, 'archived')}
-                            aria-label={`Archive ${s.name}`}
-                            title="Archive"
-                            className="shrink-0 p-2 rounded-full text-[color:var(--color-text-muted)] hover:text-[color:var(--color-text)] hover:bg-gray-100 transition-all cursor-pointer"
-                          >
-                            <Archive className="w-4 h-4" />
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* ── ARCHIVED — collapsed, restorable ── */}
-                {archived.length > 0 && (
-                  <div className="space-y-2" aria-label="Archived spaces">
-                    <button
-                      type="button"
-                      onClick={() => setArchivedOpen((v) => !v)}
-                      className="w-full flex items-center justify-between text-xs font-bold text-[color:var(--color-text-muted)] hover:text-[color:var(--color-text)] cursor-pointer"
-                    >
-                      <span>Archived ({archived.length})</span>
-                      <ChevronDown className={`w-4 h-4 transition-transform ${archivedOpen ? 'rotate-180' : ''}`} />
-                    </button>
-                    {archivedOpen && (
-                      <div className="space-y-2">
-                        {archived.map((s) => (
-                          <div key={s.id} className="p-3 rounded-2xl bg-[color:var(--color-well)] border border-dashed flex items-center justify-between gap-2 opacity-70">
-                            <div className="flex items-center space-x-2.5 min-w-0">
-                              <span className="text-lg">🗄️</span>
-                              <span className="text-xs font-bold text-[color:var(--color-text)] truncate">{s.name}</span>
-                            </div>
-                            <button
-                              type="button"
-                              disabled={busyId === s.id}
-                              onClick={() => setStatus(s, 'active')}
-                              aria-label={`Restore ${s.name}`}
-                              className="shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold text-[color:var(--color-primary)] hover:bg-[color:var(--color-primary-subtle)] transition-all cursor-pointer"
-                            >
-                              <RotateCcw className="w-3 h-3" /> Restore
-                            </button>
-                          </div>
-                        ))}
+                        <GlobysCard
+                          testId={`open-${item.id}`}
+                          image={item.mediaUrl ? briefApi.mediaFileUrl(item.mediaUrl) : null}
+                          imageAlt={item.title}
+                          plate={
+                            <NoPhotoPlate
+                              seller={item.seller}
+                              mark={item.flow ?? item.kind}
+                              icon={plateIcon(item.flow, item.kind)}
+                              stamp={item.kind === 'listing' ? listedAgo(item.listedAt) : null}
+                              accent={(item.flow && FLOW_ACCENT[item.flow]) || null}
+                            />
+                          }
+                          title={item.title}
+                          price={item.priceLabel}
+                          seller={item.seller}
+                          mono={
+                            item.origin && item.destination
+                              ? `${item.origin} → ${item.destination}`
+                              : (item.location ?? null)
+                          }
+                          actionLabel={wa ? 'Chat on WhatsApp →' : 'View offer →'}
+                          actionHref={wa}
+                          onAction={() => {
+                            soundEngine.play('tap');
+                            if (!wa) openFull(item);
+                          }}
+                          onOpen={() => { soundEngine.play('tap'); setOpenItem(item); }}
+                        />
                       </div>
-                    )}
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        )}
-      </section>
+                    );
+                  })}
+                </div>
+              </section>
+            );
+          }
 
-      {/* The card's detail — the same sheet the board opens, so a row reads
-          the same way no matter which shelf you met it on. */}
+          // 3. ECONOMIC GAPS
+          if (section.kind === 'gaps') {
+            if (section.items.length === 0) return null;
+            return (
+              <section key={section.id} aria-label={section.title} className="space-y-2.5">
+                {SectionHeader}
+                <div className="flex gap-3 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-2">
+                  {section.items.map((gap: DiscoverGap) => (
+                    <div
+                      key={gap.requestId}
+                      onClick={() => {
+                        soundEngine.play('tap');
+                        window.location.hash = `requests/${encodeURIComponent(gap.requestId)}`;
+                      }}
+                      className="w-[230px] shrink-0 snap-start p-3.5 rounded-xl bg-[color:var(--color-paper)] space-y-2 border border-dashed border-[var(--brief-line)] cursor-pointer hover:border-[var(--color-primary)] transition-all brief-lift-1"
+                    >
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-900">
+                          Demand gap
+                        </span>
+                        {gap.category && (
+                          <span className="text-[11px] font-bold text-[var(--color-primary)] truncate">
+                            {gap.category}
+                          </span>
+                        )}
+                      </div>
+                      <h4 className="text-[13px] font-bold leading-snug line-clamp-2 text-[var(--brief-ink)]">
+                        {gap.title}
+                      </h4>
+                      <p className="text-[12px] font-mono text-[var(--muted-ink)] truncate">
+                        {gap.quantity ? `${gap.quantity} ${gap.unit ?? 'units'}` : 'Volume needed'}
+                        {gap.location ? ` · ${gap.location}` : ''}
+                      </p>
+                      {gap.requiredBy && (
+                        <p className="text-[11px] font-mono text-[var(--color-primary)]">
+                          Needed by {shortDate(gap.requiredBy)}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </section>
+            );
+          }
+
+          // 4. SUPPLIER & SHOP CONNECT
+          if (section.kind === 'suppliers') {
+            if (section.items.length === 0) return null;
+            return (
+              <section key={section.id} aria-label={section.title} className="space-y-2.5">
+                {SectionHeader}
+                <div className="flex gap-3 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-2">
+                  {section.items.map((s: PublicSpace) => (
+                    <div
+                      key={s.id}
+                      onClick={() => {
+                        soundEngine.play('tap');
+                        onOpenSpace(s.id);
+                      }}
+                      className="w-[190px] shrink-0 snap-start rounded-xl overflow-hidden bg-[color:var(--color-paper)] p-3 space-y-2 cursor-pointer brief-lift-1 border border-[var(--brief-line)] hover:border-[var(--color-primary)] transition-all"
+                    >
+                      <div className="h-20 w-full rounded-lg overflow-hidden bg-[var(--color-well)] relative">
+                        {s.image ? (
+                          <img
+                            src={briefApi.mediaFileUrl(s.image)}
+                            alt=""
+                            className="w-full h-full object-cover"
+                            style={{ filter: PHOTO_FILTER }}
+                          />
+                        ) : (
+                          <div className="w-full h-full grid place-items-center bg-[var(--color-well)] text-[var(--color-primary)]">
+                            <Store className="w-6 h-6" />
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <h4 className="text-[13px] font-bold truncate text-[var(--brief-ink)]">{s.name}</h4>
+                        <p className="text-[11px] font-extrabold uppercase tracking-wider text-[var(--color-primary)]">
+                          {(s.type || 'Shop').replace('_', ' ')}
+                        </p>
+                        <p className="text-[11px] text-[var(--muted-ink)] truncate mt-0.5">
+                          {s.where ?? 'Local shopfront'}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            );
+          }
+
+          // 5. EVENTS & TRIPS (Photo-free clean cards + recurrence badge)
+          if (section.kind === 'events') {
+            if (section.items.length === 0) return null;
+            return (
+              <section key={section.id} aria-label={section.title} className="space-y-2.5">
+                {SectionHeader}
+                <div
+                  data-testid="today-grid"
+                  className="flex gap-3 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-2"
+                >
+                  {section.items.map((e: EventListing) => (
+                    <div
+                      key={e.slug}
+                      data-testid={`globys-card-event-${e.slug}`}
+                      onClick={() => {
+                        soundEngine.play('tap');
+                        window.open(`/c/${e.slug}`, '_self');
+                      }}
+                      className="w-[220px] shrink-0 snap-start rounded-xl overflow-hidden bg-[color:var(--color-paper)] p-3 space-y-2 cursor-pointer brief-lift-1 border border-[var(--brief-line)] hover:border-[var(--color-primary)] transition-all"
+                    >
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-[color:var(--color-primary-subtle)] text-[color:var(--color-primary)]">
+                          {e.categoryLabel}
+                        </span>
+                        {e.recurrence && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[var(--muted-ink)]">
+                            <Repeat className="w-3 h-3 text-[var(--color-primary)]" />
+                            {e.recurrence.ruleText || 'Repeats'}
+                          </span>
+                        )}
+                      </div>
+
+                      <h4 className="text-[13px] font-bold leading-snug line-clamp-2 text-[var(--brief-ink)]">
+                        {e.title}
+                      </h4>
+
+                      <p className="text-[12px] font-extrabold text-[var(--brief-ink)]">
+                        {e.goalAmount != null ? 'Contribution pot' : (e.price === 0 ? 'Free' : money(e.price, e.currency ?? 'KES'))}
+                      </p>
+
+                      <div className="text-[11px] text-[var(--muted-ink)] space-y-0.5 truncate">
+                        <p className="truncate">{e.startsAt ? shortDate(e.startsAt) : 'Upcoming'}{e.location ? ` · ${e.location}` : ''}</p>
+                        {e.hostName && <p className="truncate">Hosted by <strong className="text-[var(--brief-ink)]">{e.hostName}</strong></p>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            );
+          }
+
+          // 6. GROUPS & CHAMAS
+          if (section.kind === 'groups') {
+            if (circles.length === 0) return null;
+            return (
+              <section key={section.id} aria-label={section.title} className="space-y-2.5">
+                {SectionHeader}
+                <div data-testid="groups-grid" className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
+                  {myCircles.slice(0, 8).map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      data-testid={`globys-card-group-${c.id}`}
+                      onClick={() => { soundEngine.play('tap'); onExploreDiscover?.('circles'); }}
+                      className="shrink-0 w-16 flex flex-col items-center gap-1 cursor-pointer"
+                    >
+                      <span
+                        className="w-14 h-14 rounded-full grid place-items-center text-[18px] font-black"
+                        style={{ background: 'var(--navy)', color: '#FFFFFF' }}
+                        aria-hidden="true"
+                      >
+                        {(c.name || '?').trim().charAt(0).toUpperCase()}
+                      </span>
+                      <span className="text-[11px] font-bold truncate w-16 text-center" style={{ color: 'var(--brief-ink)' }}>
+                        {c.name}
+                      </span>
+                    </button>
+                  ))}
+                  {openCircles.slice(0, 8).map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      data-testid={`globys-card-group-${c.id}`}
+                      onClick={() => { soundEngine.play('tap'); void joinCircle(c); }}
+                      className="shrink-0 w-16 flex flex-col items-center gap-1 cursor-pointer"
+                      aria-label={`Join ${c.name}`}
+                    >
+                      <span
+                        className="w-14 h-14 rounded-full grid place-items-center text-[18px] font-black"
+                        style={{ background: 'var(--color-well)', color: 'var(--brief-ink)', border: '1px dashed var(--muted-ink)' }}
+                        aria-hidden="true"
+                      >
+                        {(c.name || '?').trim().charAt(0).toUpperCase()}
+                      </span>
+                      <span className="text-[11px] font-bold truncate w-16 text-center" style={{ color: 'var(--muted-ink)' }}>
+                        {c.name}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            );
+          }
+
+          // 7. WHOLESALE & FREIGHT ROUTES
+          if (section.kind === 'wholesale') {
+            if (section.items.length === 0) return null;
+            return (
+              <section key={section.id} aria-label={section.title} className="space-y-2.5">
+                {SectionHeader}
+                <div className="flex gap-3 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-2">
+                  {section.items.map((r: DiscoverRoute) => (
+                    <div
+                      key={`${r.origin}-${r.destination}`}
+                      onClick={() => {
+                        soundEngine.play('tap');
+                        onExploreDiscover?.('bulk');
+                      }}
+                      className="w-[210px] shrink-0 snap-start p-3.5 rounded-xl bg-[color:var(--color-paper)] space-y-1.5 border border-[var(--brief-line)] cursor-pointer brief-lift-1"
+                    >
+                      <p className="text-[11px] font-black uppercase tracking-wider text-[var(--color-primary)]">
+                        {r.flow ?? 'Wholesale route'}
+                      </p>
+                      <h4 className="text-[13px] font-bold leading-snug text-[var(--brief-ink)]">
+                        {r.origin} <span aria-hidden="true">→</span> {r.destination}
+                      </h4>
+                      <p className="text-[11px] font-mono text-[var(--muted-ink)]">
+                        {r.listings} active {r.listings === 1 ? 'offer' : 'offers'}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            );
+          }
+
+          return null;
+        })
+      )}
+
+      {/* Detail Sheet modal when an item is tapped */}
       {openItem && (
         <FeedSheet item={openItem} onClose={() => setOpenItem(null)} onOpenFull={openFull} />
       )}
 
-      {/* Create Space Modal */}
+      {/* Create Flow Modal */}
       {createSpaceOpen && (
         <CreateFlowModal
           isOpen={createSpaceOpen}
           onClose={() => setCreateSpaceOpen(false)}
-          onCompleted={handleSpaceCreated}
+          onCompleted={(newSpace) => {
+            showToast(`Space "${newSpace.name}" created!`);
+            onOpenSpace(newSpace.id);
+          }}
         />
       )}
     </div>

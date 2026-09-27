@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Bike, CalendarDays, Check, ChevronRight, MessageCircle, Package, RefreshCw, Search, Sun,
-  Sparkles, Users, X
+  Sparkles, Users, X, Repeat
 } from 'lucide-react';
 import * as briefApi from '../../api/briefApi';
 import type { DiscoverFeedItem, DiscoverFlow, DiscoverRoute, DiscoverSummary } from '../../api/briefApi';
@@ -229,10 +229,19 @@ export function FeedSheet({ item, onClose, onOpenFull }: {
           </div>
 
           <h2 className="text-[21px] font-extrabold leading-tight" style={{ color: 'var(--brief-ink)' }}>{item.title}</h2>
-          {item.kind === 'event' && item.seller && (
-            <p className="text-[13px]" style={{ color: 'var(--brief-muted)' }}>
-              Hosted by <strong style={{ color: 'var(--brief-ink)' }}>{item.seller}</strong>
-            </p>
+          {item.kind === 'event' && (
+            <div className="flex items-center gap-3 flex-wrap">
+              {item.seller && (
+                <p className="text-[13px]" style={{ color: 'var(--brief-muted)' }}>
+                  Hosted by <strong style={{ color: 'var(--brief-ink)' }}>{item.seller}</strong>
+                </p>
+              )}
+              {item.recurrence && (
+                <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-[color:var(--color-primary-subtle)] text-[color:var(--color-primary)]">
+                  <Repeat className="w-3 h-3" /> {item.recurrence.ruleText || 'Repeats'}
+                </span>
+              )}
+            </div>
           )}
           {item.description && <p className="text-[14px] leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>{item.description}</p>}
 

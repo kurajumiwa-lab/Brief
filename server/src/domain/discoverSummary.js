@@ -137,6 +137,7 @@ export function discoverSummary({ viewerId = null, now = Date.now() } = {}) {
       mediaUrl: e.coverImageUrl ?? null,
       listedAt: e.publishedAt ?? e.startsAt ?? null,
       seller: e.hostName ?? null,
+      recurrence: e.recurrence ?? null,
       stock: null,
       orderable: null,
       contact: null,

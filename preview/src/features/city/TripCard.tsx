@@ -1,5 +1,5 @@
 import React from 'react';
-import { CalendarDays } from 'lucide-react';
+import { CalendarDays, Repeat } from 'lucide-react';
 import type { EventListing } from '../../api/briefApi';
 import { NoPhotoPlate } from './NoPhotoPlate';
 import { categoryAccent } from './categoryPalette';
@@ -59,6 +59,14 @@ export function TripCard({ event: e, onOpen }: { event: EventListing; onOpen: (s
             icon={<CalendarDays className="w-4 h-4" />}
             accent={categoryAccent(e.category)}
           />
+        )}
+        {e.recurrence && (
+          <span
+            className="absolute top-2 right-2 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wide inline-flex items-center gap-1"
+            style={{ background: 'rgba(255,255,255,0.92)', color: 'var(--color-primary)' }}
+          >
+            <Repeat className="w-3 h-3" /> {e.recurrence.ruleText || 'Repeats'}
+          </span>
         )}
       </div>
       <div className="p-3 space-y-1">

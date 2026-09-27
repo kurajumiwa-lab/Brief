@@ -19,7 +19,7 @@
 import type { ApiResult, Block, ResaleTicket, ResaleListing,  ResaleListingRow, TicketOrder, CapabilityUnavailable, Circle, CircleCreate, CircleUpdate, Member, Signal, TargetView, AppConfig, ReleaseStatus, AuthStatus, Campaign, CampaignCreate, CampaignUpdate, PublicCampaign, Registration, RegistrationStatus, ShareChannel, ShareLink, ShareChannels, CampaignShare, CampaignBanner, Venue, MediaUpload, MediaStorageStatus, TriageQueue, Subscription, Subscriber, SubscriptionJoin, PaymentConfirmation, Transaction, TransactionCreate, TransactionStatus, VerificationKind, Wallet, Source, RawItem, VoteTally, MemberEvidence, BriefItPreview, BriefItSaved, Vendor, VendorCreate, VendorUpdate, Listing, ListingRevision, ListingCreate, ListingUpdate, ListingStatus, Order, OrderCreate, Dispute, VendorEarnings, PaymentIntent, PaymentInitiation, Vault, VaultCreate, Footstep, FootstepPage, VaultRequest, VaultSearchResult, ResolutionItem, VaultEntry, Ticket, CheckInResult, CommandCentre, Space, SpaceCreate, SpaceMode, SpaceOfferCreate, SpaceActivity, SpaceConversation, SpaceQuote, SpacePaymentPrompt, SpaceExpense, SpaceCustomerTab, SpaceMoneySummary, SpaceDispatch, SpaceDispatchCreate, SpaceDispatchStatus, SpaceUpdate, PublicSpace, SpaceFieldStatus, SpaceMaintenance, SpaceEditorialItem, SpacePipeline, SpacePublicPageView, SpacePublicFace, GuardianNetwork, SpaceGuardian, RoleAssignment, Invite, IssueInviteInput, RedeemInviteResult, ShopBrief, ShopBriefPrefs, ShopBriefFlag, ShopBriefSpace, ShopBriefPerson } from "./types";
 import { enqueue, replayQueue, queueDepth, type QueuedWrite } from './offlineQueue';
 import { asTarget } from './types';
-import type { SpaceBroadcast, SpaceInsights, SpaceTemplate, PlaceSnapshot, PlacePriceClaim, PlacePriceClaimInput, MapPlace } from './types';
+import type { SpaceBroadcast, SpaceInsights, SpaceTemplate, PlaceSnapshot, PlacePriceClaim, PlacePriceClaimInput, MapPlace, EventRecurrence } from './types';
 import {
   areBlocks, areCampaigns, areCircles, areMembers, areRegistrations,
   areSignals, areTransactions, isAuthStatus, isCampaign, isCircle, isBlock,
@@ -2960,6 +2960,8 @@ export interface EventListing {
   /** The organiser's account name, allowed explicitly by the operator.
       Attribution, not social proof: a name with no counts behind it. */
   hostName: string | null;
+  /** Optional recurrence schedule when the event repeats. */
+  recurrence?: EventRecurrence | null;
   // NO `popularity` and NO `tableBankingOverlap`: Decision 6 forbids social
   // proof on events — no "X going", no attendee names, no view count. The
   // server's listing projection carries neither, so a card cannot render them.
@@ -4979,6 +4981,7 @@ export interface DiscoverFeedItem {
       other crowd number on events. Only listings carry a settled-order count. */
   interest: { label: string; count: number } | null;
   why: string;
+  recurrence?: EventRecurrence | null;
 }
 export interface DiscoverFlow {
   key: 'bulk' | 'direct' | 'niche' | 'group';

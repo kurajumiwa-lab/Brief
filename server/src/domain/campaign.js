@@ -374,7 +374,8 @@ export function createCampaign(ownerId, input = {}) {
     title, description = '', type = 'popup', location = null,
     startsAt = null, endsAt = null, capacity = null,
     price = 0, currency = 'KES', circleId = null, metadata = {},
-    objectId = null, venue = null, agenda = null, seriesId = null
+    objectId = null, venue = null, agenda = null, seriesId = null,
+    recurrence = null
   } = input;
 
   if (!title || !String(title).trim()) throw new Error('title is required');
@@ -459,7 +460,7 @@ export function createCampaign(ownerId, input = {}) {
     publicSlug: makeSlug(title),
     createdAt: now,
     updatedAt: now,
-    metadata: { ...(metadata ?? {}), ...normaliseOutdoor(metadata ?? {}) }
+    metadata: { ...(metadata ?? {}), ...normaliseOutdoor(metadata ?? {}), ...(recurrence ? { recurrence } : {}) }
   };
   store.insert('campaigns', campaign);
 
