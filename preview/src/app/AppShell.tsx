@@ -19,6 +19,7 @@ const CityFeedView = React.lazy(() => import('../features/city/CityFeedView').th
 import type { DiscoverRoom } from '../features/city/taxonomy';
 
 const PublicSpacePage = React.lazy(() => import('../features/spaces/PublicSpacePage').then(m => ({ default: m.PublicSpacePage })));
+const MarketStorefront = React.lazy(() => import('../features/market/MarketStorefront').then(m => ({ default: m.MarketStorefront })));
 import { CreateFlowModal } from '../features/spaces/CreateFlowModal';
 const PublicOfferModal = React.lazy(() => import('../features/offers/PublicOfferModal').then(m => ({ default: m.PublicOfferModal })));
 import { JoinRoom } from '../features/city/JoinRoom';
@@ -60,6 +61,7 @@ export const AppShell: React.FC<AppShellProps> = ({
   // not be looking at the app's own furniture.
   const [joinCode, setJoinCode] = useState('');
   const [spaceLink, setSpaceLink] = useState('');
+  const [storefrontOpen, setStorefrontOpen] = useState(false);
   const [spaceError, setSpaceError] = useState('');
   const [activeSpace, setActiveSpace] = useState<Space | null>(null);
   // Where the You tab opens. The ⓘ on a screen deep-links to the audit page
@@ -115,6 +117,7 @@ export const AppShell: React.FC<AppShellProps> = ({
    * opened nothing is worse than no nav item.
    */
   const goSheetTarget = (target: SheetTarget) => {
+    if (target.kind === 'storefront') { window.location.hash = 'storefront'; setStorefrontOpen(true); return; }
     if (target.kind === 'moderation') { window.location.hash = 'moderation'; setModerationOpen(true); return; }
     if (target.kind === 'signout') {
       void (async () => {
@@ -334,6 +337,10 @@ export const AppShell: React.FC<AppShellProps> = ({
         setManualOrderOpen(surface === 'manual-order');
         return;
       }
+      if (hash === 'storefront') {
+        setStorefrontOpen(true);
+        return;
+      }
       const shopId = shopIdFromHash(hash);
       if (shopId) {
         if (activeSpaceIdRef.current !== shopId) void openSpaceRef.current(shopId);
@@ -349,6 +356,7 @@ export const AppShell: React.FC<AppShellProps> = ({
       setSheetOpen(false);
       setCreateFlowOpen(false);
       setManualOrderOpen(false);
+      setStorefrontOpen(false);
       if (spaceLinkRef.current) setSpaceLink('');
       if (activeSpaceIdRef.current) {
         activeSpaceIdRef.current = '';
@@ -614,6 +622,14 @@ export const AppShell: React.FC<AppShellProps> = ({
               }}
               onOpenOffer={(id) => { window.location.hash = `offer/${encodeURIComponent(id)}`; }}
             />
+          </div>
+        )}
+        {/* The e-commerce storefront — a full-screen view of the street. */}
+        {storefrontOpen && (
+          <div className="fixed inset-0 z-40 bg-[color:var(--color-bg)] overflow-y-auto">
+            <React.Suspense fallback={<p className="p-6 text-sm">Loading the street…</p>}>
+              <MarketStorefront onBack={() => { setStorefrontOpen(false); window.location.hash = 'home'; }} />
+            </React.Suspense>
           </div>
         )}
         {['ledger', 'catalog'].includes(activeTab) && !activeSpace && (

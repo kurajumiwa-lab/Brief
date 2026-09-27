@@ -36,6 +36,7 @@ export type SheetTarget =
         | 'network' | 'how' | 'notifications' | 'privacy' | 'language';
     }
   | { kind: 'discover'; room: 'all' | 'events' | 'circles' | 'errands' | 'bulk' | 'direct' | 'group' }
+  | { kind: 'storefront' }
   | { kind: 'moderation' }
   | { kind: 'signout' };
 
@@ -68,6 +69,7 @@ export const SHEET_GROUPS: Array<{ id: string; label: string; items: SheetItem[]
   },
   {
     id: 'explore', label: 'Market', items: [
+      { id: 'storefront', label: 'Storefront', sub: 'The street, end to end', target: { kind: 'storefront' } },
       { id: 'explore-all', label: 'Offers & marketplace', sub: 'Products, services and sellers', target: { kind: 'discover', room: 'all' } },
       { id: 'explore-bulk', label: 'Wholesale', sub: 'Buy in volume for your shop', target: { kind: 'discover', room: 'bulk' } },
       { id: 'explore-direct', label: 'Source direct', sub: 'Buy closer to the producer', target: { kind: 'discover', room: 'direct' } },
