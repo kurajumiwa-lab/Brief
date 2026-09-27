@@ -1,7 +1,7 @@
 import { CategoryArt } from '../../ui/CategoryArt';
 import { MyTeamShops } from '../spaces/ShopTeam';
 import React, { useEffect, useState } from 'react';
-import { Store, Package, Plus } from 'lucide-react';
+import { Store, Package, Plus, ArrowRight, ShieldCheck, Sparkles } from 'lucide-react';
 import type { Space } from '../../api/types';
 import * as briefApi from '../../api/briefApi';
 import type { FollowsGroups } from '../../api/briefApi';
@@ -12,6 +12,8 @@ import { Sheet } from '../../ui/Sheet';
 import { Marketplace } from '../../components/Marketplace';
 import { soundEngine } from '../../utils/SoundEngine';
 import { EscrowRecords } from './EscrowRecords';
+import { WairoMark } from '../../components/WairoMark';
+import { PHOTO_FILTER } from '../city/room';
 
 // ---------------------------------------------------------------------------
 // MINE — the second door: what you kept, the shops you operate, orders.
@@ -177,11 +179,45 @@ export const MineSurface: React.FC<MineSurfaceProps> = ({
     </button>
   );
 
+  const heroCover = active[0]?.image ? briefApi.mediaFileUrl(active[0].image) : null;
+
   return (
     <div className={`space-y-6 max-w-2xl mx-auto ${className}`}>
-      <header className="shop-endplate flex items-center justify-between gap-4">
-        <div><p className="!text-xs uppercase tracking-widest mb-2">Your corner of Wairo</p><h1>Make yourself<br />at home.</h1><p className="mt-3">Your shops, your orders.<br />One place to keep things moving.</p></div><CategoryArt kind="shops" />
+      {/* ── Bolt-style hero cover + logo plate + contrast endplate ────── */}
+      <header className="relative overflow-hidden rounded-3xl" style={{ background: 'var(--navy)' }}>
+        <div className="relative h-[168px] overflow-hidden">
+          {heroCover ? (
+            <img src={heroCover} alt="" className="absolute inset-0 w-full h-full object-cover" style={{ filter: PHOTO_FILTER }} />
+          ) : (
+            <div className="absolute inset-0" style={{ background: 'radial-gradient(130% 130% at 85% 10%, rgba(64,145,108,0.42), rgba(13,27,42,0) 60%), #0D1B2A' }} />
+          )}
+          <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(13,27,42,0.85), rgba(13,27,42,0) 60%)' }} />
+          <div className="absolute -bottom-6 left-5 w-16 h-16 rounded-2xl bg-white grid place-items-center shadow-xl border border-black/5">
+            <WairoMark size={36} title="" />
+          </div>
+          <div className="absolute top-4 left-5 right-5 flex items-center justify-between">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider" style={{ background: 'rgba(255,255,255,0.14)', color: '#fff', backdropFilter: 'blur(8px)' }}>
+              <Sparkles className="w-3.5 h-3.5" /> Your corner
+            </span>
+            <span className="w-9 h-9 rounded-xl bg-white grid place-items-center shadow-md">
+              <CategoryArt kind="shops" className="!w-7 !h-7" />
+            </span>
+          </div>
+        </div>
+        <div className="pt-8 pb-5 px-5">
+          <h1 className="text-[24px] font-black leading-tight text-white tracking-tight">Make yourself<br />at home.</h1>
+          <p className="text-[13px] mt-2" style={{ color: 'rgba(255,255,255,0.72)' }}>Your shops, your orders. One place to keep things moving — counted, not invented.</p>
+        </div>
+        <div className="px-5 py-3 flex items-center justify-between" style={{ background: 'rgba(255,255,255,0.06)', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+          <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.72)' }}>
+            {active.length} shop{active.length === 1 ? '' : 's'} · {follows?.total ?? 0} kept
+          </span>
+          <button type="button" onClick={() => { soundEngine.play('tap'); onOpenCreateSpace(); }} className="inline-flex items-center gap-1 text-[11px] font-black rounded-full px-3 py-1.5" style={{ background: 'var(--color-primary)', color: 'var(--accent-ink)' }}>
+            <Plus className="w-3 h-3" /> New shop
+          </button>
+        </div>
       </header>
+
       {follows && <FollowBelt follows={follows} onOpenEntity={onOpenEntity} />}
 
       <EscrowRecords />

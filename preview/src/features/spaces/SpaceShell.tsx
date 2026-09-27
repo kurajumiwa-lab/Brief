@@ -598,9 +598,9 @@ export const SpaceShell: React.FC<SpaceShellProps> = ({
         </div>
       )}
 
-      {/* Surface Navigation Selector: quiet underline tabs, not pills. */}
-      <div className="flex items-center justify-between border-b" style={{ borderColor: 'var(--divider)' }}>
-        <div className="flex items-center gap-4 overflow-x-auto no-scrollbar">
+      {/* Surface Navigation — Bolt contrast endplates: pills on a well, selected is navy */}
+      <div className="flex items-center justify-between gap-3 p-2 rounded-2xl" style={{ background: 'var(--color-well)' }}>
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
           {tabs.map((tab) => {
             const isSelected = currentTab === tab.id;
             return (
@@ -611,10 +611,10 @@ export const SpaceShell: React.FC<SpaceShellProps> = ({
                   soundEngine.play('tap');
                   setActiveTab(tab.id);
                 }}
-                className="py-2 text-[13px] font-bold whitespace-nowrap cursor-pointer"
+                className="px-3.5 py-2 rounded-full text-[12px] font-black whitespace-nowrap cursor-pointer transition-all"
                 style={isSelected
-                  ? { color: 'var(--brief-ink)', borderBottom: '2px solid var(--color-primary)' }
-                  : { color: 'var(--muted-ink)', borderBottom: '2px solid transparent' }}
+                  ? { background: 'var(--navy)', color: '#fff', boxShadow: 'var(--lift-1)' }
+                  : { background: 'var(--color-paper)', color: 'var(--muted-ink)' }}
               >
                 {tab.label}
               </button>
