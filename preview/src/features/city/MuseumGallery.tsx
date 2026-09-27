@@ -1,29 +1,18 @@
 // ---------------------------------------------------------------------------
-// MUSEUM GALLERY — the events, as a two-column grid of the ONE card shape.
+// MUSEUM GALLERY — events and trips, byway-home style, honest rows only.
 //
-// The swipe case is gone: one card at a time with position dots and a
-// "New" chip in the corner was a special shape among equal rows, and the
-// card pattern's rule is one card shape with no corner badges. What the
-// case keeps:
-//   * every event is a REAL published campaign row from /api/events — nothing
-//     is seeded to fill the case;
-//   * no control row. This shelf used to carry a filter chip ("All exhibits",
-//     then "All events") and a drawer of wing/place/date filters. The chip was
-//     the third navigation for the events the board and Home already point at,
-//     and the reorg deleted it: the case is everything published, soonest
-//     first, and a reader who wants a narrower view goes to the board, where
-//     the filters sit beside what they filter. Decision 6 removed the featured
-//     toggle and the popularity sort for the same reason: a control the server
-//     no longer has would visibly do nothing;
-//   * no result counter — if you can see the exhibits, you can count them;
-//   * every card carries the same lines — cover or waiting plate, title, the
-//     real price, the where/when in mono, and the one action ("View event →")
-//     on EVERY card, because a card that only gets a button when it is "the
-//     active one" is two shapes pretending to be one;
-//   * the case refreshes when the tab comes back to the foreground. No "New"
-//     mark at all: a corner badge the device computes from its own memory of
-//     last visit is decoration, not a fact, so it is gone rather than moved;
-//   * an empty case says so plainly.
+// A navy hero ("Go somewhere."), then a horizontal rail of TRIPS — events
+// whose end date falls on a later day than their start — then the events
+// grid for everything else. Trips are not a second table: the same campaign
+// row renders as a journey when its own dates span days, with the span
+// computed from those dates and the host, price and place it stated.
+//
+// What the case keeps from before:
+//   * every row is a REAL published campaign from /api/events — nothing is
+//     seeded to fill a shelf;
+//   * no result countergames, no ranks, no "top trips": shelves sort by date,
+//     and the counts in the hero are the loaded rows, counted plainly;
+//   * Decision 6 stands: no featured slot, no popularity sort, no "N going".
 // ---------------------------------------------------------------------------
 
 import React, { useCallback, useEffect, useState } from "react";
@@ -32,7 +21,10 @@ import type { EventListing } from "../../api/briefApi";
 import { NoPhotoPlate } from "./NoPhotoPlate";
 import { categoryAccent } from "./categoryPalette";
 import { GlobysCard } from "../../ui/GlobysCard";
+import { TripCard, isTrip } from "./TripCard";
+import { HostEventSheet } from "./HostEventSheet";
 import { CalendarDays } from "lucide-react";
+import { soundEngine } from "../../utils/SoundEngine";
 
 function timeOf(iso: string | null): string | null {
   if (!iso) return null;
@@ -48,6 +40,7 @@ function money(amount: number, currency: string): string {
 export function MuseumGallery({ className = "" }: { className?: string }) {
   const [events, setEvents] = useState<EventListing[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   const load = useCallback(async (quiet = false) => {
     if (!quiet) setError(null);
@@ -88,6 +81,8 @@ export function MuseumGallery({ className = "" }: { className?: string }) {
   };
 
   const rows = events ?? [];
+  const trips = rows.filter(isTrip);
+  const singles = rows.filter((e) => !isTrip(e));
 
   return (
     <div className={className}>
@@ -95,43 +90,101 @@ export function MuseumGallery({ className = "" }: { className?: string }) {
       {events === null && !error && (
         <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>Loading…</p>
       )}
+
+      {events !== null && !error && (
+        <div
+          className="p-5 rounded-3xl"
+          style={{ background: 'radial-gradient(140% 130% at 88% 8%, rgba(64,145,108,0.38), rgba(64,145,108,0) 55%), #0D1B2A' }}
+        >
+          <p className="text-[11px] font-black uppercase tracking-[0.14em]" style={{ color: 'var(--sage)' }}>
+            Events &amp; trips
+          </p>
+          <p className="text-[26px] font-black leading-tight mt-1" style={{ color: '#FFFFFF' }}>
+            Go somewhere.
+          </p>
+          <p className="text-[13px] mt-1" style={{ color: 'var(--sage)' }}>
+            {trips.length} trip{trips.length === 1 ? '' : 's'} · {singles.length} event{singles.length === 1 ? '' : 's'} on the board
+          </p>
+          <button
+            type="button"
+            onClick={() => { soundEngine.play('heavyTap'); setSheetOpen(true); }}
+            className="mt-3 px-4 py-2 rounded-full text-[13px] font-black cursor-pointer"
+            style={{ background: 'var(--color-primary)', color: 'var(--accent-ink)' }}
+          >
+            Plan a trip
+          </button>
+        </div>
+      )}
+
       {events !== null && rows.length === 0 && !error && (
-        <div className="p-5 rounded-3xl border border-dashed" style={{ borderColor: 'var(--brief-line)', background: 'var(--color-paper)', boxShadow: 'var(--room-light), var(--lift-1)' }}>
+        <div className="p-5 rounded-3xl border border-dashed text-center space-y-2" style={{ borderColor: 'var(--brief-line)', background: 'var(--color-paper)', boxShadow: 'var(--room-light), var(--lift-1)' }}>
           <p className="text-sm font-bold" style={{ color: 'var(--color-text)' }}>
             Nothing is published yet.
           </p>
           <p className="text-xs mt-1" style={{ color: 'var(--color-text-muted)' }}>
             When an event goes live around you, it appears here.
           </p>
+          <button
+            type="button"
+            onClick={() => { soundEngine.play('heavyTap'); setSheetOpen(true); }}
+            className="px-4 py-2 rounded-full text-[13px] font-black cursor-pointer"
+            style={{ background: 'var(--color-primary)', color: 'var(--accent-ink)' }}
+          >
+            Host the first one
+          </button>
         </div>
       )}
 
-      {rows.length > 0 && (
-        <div className="grid grid-cols-2 gap-2.5">
-          {rows.map((e) => (
-            <GlobysCard
-              key={e.slug}
-              testId={`exhibit-${e.slug}`}
-              image={e.coverImageUrl}
-              imageAlt={e.title}
-              plate={
-                <NoPhotoPlate
-                  mark={e.categoryLabel ?? null}
-                  icon={<CalendarDays className="w-4 h-4" />}
-                  accent={categoryAccent(e.category)}
-                />
-              }
-              title={e.title}
-              price={e.goalAmount != null ? 'Contribution pot' : (e.price === 0 ? 'Free' : money(e.price, e.currency))}
-              seller={null}
-              mono={[timeOf(e.startsAt), e.location].filter(Boolean).join(' · ')}
-              actionLabel="View event →"
-              onAction={() => open(e.slug)}
-              onOpen={() => open(e.slug)}
-            />
-          ))}
-        </div>
+      {trips.length > 0 && (
+        <section className="space-y-2 mt-4" aria-label="Trips">
+          <h3 className="text-[12px] font-black uppercase tracking-wider" style={{ color: 'var(--brief-ink)' }}>
+            Trips
+          </h3>
+          <div className="flex gap-2.5 overflow-x-auto no-scrollbar pb-1">
+            {trips.map((e) => (
+              <TripCard key={e.slug} event={e} onOpen={open} />
+            ))}
+          </div>
+        </section>
       )}
+
+      {singles.length > 0 && (
+        <section className="space-y-2 mt-4" aria-label="Events">
+          <h3 className="text-[12px] font-black uppercase tracking-wider" style={{ color: 'var(--brief-ink)' }}>
+            Events
+          </h3>
+          <div className="grid grid-cols-2 gap-2.5">
+            {singles.map((e) => (
+              <GlobysCard
+                key={e.slug}
+                testId={`exhibit-${e.slug}`}
+                image={e.coverImageUrl}
+                imageAlt={e.title}
+                plate={
+                  <NoPhotoPlate
+                    mark={e.categoryLabel ?? null}
+                    icon={<CalendarDays className="w-4 h-4" />}
+                    accent={categoryAccent(e.category)}
+                  />
+                }
+                title={e.title}
+                price={e.goalAmount != null ? 'Contribution pot' : (e.price === 0 ? 'Free' : money(e.price, e.currency))}
+                seller={e.hostName ?? null}
+                mono={[timeOf(e.startsAt), e.location].filter(Boolean).join(' · ')}
+                actionLabel="View event →"
+                onAction={() => open(e.slug)}
+                onOpen={() => open(e.slug)}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      <HostEventSheet
+        open={sheetOpen}
+        onClose={() => setSheetOpen(false)}
+        onPublished={() => { void load(true); }}
+      />
     </div>
   );
 }

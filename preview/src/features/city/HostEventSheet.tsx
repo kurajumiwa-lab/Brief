@@ -11,6 +11,9 @@ import { soundEngine } from '../../utils/SoundEngine';
 // (the bar's [+] is the create door), so the form follows the action that
 // opens it: the Create sheet in the shell renders this component, and the
 // event is published the moment it is written.
+//
+// An end date on a later day than the start makes the row a trip: it renders
+// on the journeys rail with its real span in days. Same row, same honesty.
 // ---------------------------------------------------------------------------
 
 export interface HostEventSheetProps {
@@ -21,14 +24,14 @@ export interface HostEventSheetProps {
 }
 
 export function HostEventSheet({ open, onClose, onPublished }: HostEventSheetProps) {
-  const [draft, setDraft] = useState({ title: '', description: '', location: '', startsAt: '', price: '' });
+  const [draft, setDraft] = useState({ title: '', description: '', location: '', startsAt: '', endsAt: '', price: '' });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   if (!open) return null;
 
   const close = () => {
-    setDraft({ title: '', description: '', location: '', startsAt: '', price: '' });
+    setDraft({ title: '', description: '', location: '', startsAt: '', endsAt: '', price: '' });
     setError(null);
     setBusy(false);
     onClose();
@@ -45,6 +48,7 @@ export function HostEventSheet({ open, onClose, onPublished }: HostEventSheetPro
       description: draft.description.trim() || undefined,
       location: draft.location.trim() || null,
       startsAt: draft.startsAt || null,
+      endsAt: draft.endsAt || null,
       price: draft.price.trim() === '' ? 0 : Number(draft.price)
     });
     if (!created.ok) {
@@ -110,14 +114,27 @@ export function HostEventSheet({ open, onClose, onPublished }: HostEventSheetPro
             className="w-full px-3.5 py-2.5 rounded-xl text-xs border"
             style={{ background: 'var(--color-well)', boxShadow: 'var(--room-light-dim), inset 0 0 0 1px var(--brief-line)' }}
           />
-          <input
-            type="datetime-local"
-            aria-label="Event start"
-            value={draft.startsAt}
-            onChange={(e) => setDraft((d) => ({ ...d, startsAt: e.target.value }))}
-            className="w-full px-3.5 py-2.5 rounded-xl text-xs border"
-            style={{ background: 'var(--color-well)', boxShadow: 'var(--room-light-dim), inset 0 0 0 1px var(--brief-line)' }}
-          />
+          <div className="grid grid-cols-2 gap-2">
+            <input
+              type="datetime-local"
+              aria-label="Event start"
+              value={draft.startsAt}
+              onChange={(e) => setDraft((d) => ({ ...d, startsAt: e.target.value }))}
+              className="w-full px-3.5 py-2.5 rounded-xl text-xs border"
+              style={{ background: 'var(--color-well)', boxShadow: 'var(--room-light-dim), inset 0 0 0 1px var(--brief-line)' }}
+            />
+            <input
+              type="datetime-local"
+              aria-label="Event end"
+              value={draft.endsAt}
+              onChange={(e) => setDraft((d) => ({ ...d, endsAt: e.target.value }))}
+              className="w-full px-3.5 py-2.5 rounded-xl text-xs border"
+              style={{ background: 'var(--color-well)', boxShadow: 'var(--room-light-dim), inset 0 0 0 1px var(--brief-line)' }}
+            />
+          </div>
+          <p className="-mt-1 text-[11px]" style={{ color: 'var(--brief-muted)' }}>
+            Ends (optional) — an end date on a later day shows the row as a trip, with its real span in days.
+          </p>
           <textarea
             placeholder="Description (what happens, who it is for)"
             aria-label="Event description"
