@@ -5,6 +5,7 @@
 // Uploads: accept an actual image FILE, store it, and serve its bytes back.
 import fs from 'node:fs';
 import { canReadWorkEvidence } from '../domain/workOrders.js';
+import { canReadWorkforceEvidence } from '../domain/workExecution.js';
 import { canReadQuoteEvidence } from '../domain/quotes.js';
 import multer from 'multer';
 import { hasCapability } from '../identity.js';
@@ -190,7 +191,7 @@ export function register(app) {
   app.get('/api/media/file/:id', (req, res) => {
     const row = upload.getUpload(req.params.id);
     const privateEvidence = row?.purpose === 'private_evidence' || row?.purpose === 'private_request' || row?.purpose === 'private_quote' || row?.purpose === 'private_work';
-    if (privateEvidence && (!req.auth?.userId || (row.ownerId !== req.auth.userId && !(row.purpose === 'private_evidence' && hasCapability(req.auth.userId,'moderate')) && !(row.purpose === 'private_quote' && canReadQuoteEvidence(req.auth.userId,row.id)) && !(row.purpose === 'private_work' && canReadWorkEvidence(req.auth.userId,row.id))))) {
+    if (privateEvidence && (!req.auth?.userId || (row.ownerId !== req.auth.userId && !(row.purpose === 'private_evidence' && hasCapability(req.auth.userId,'moderate')) && !(row.purpose === 'private_quote' && canReadQuoteEvidence(req.auth.userId,row.id)) && !(row.purpose === 'private_work' && (canReadWorkEvidence(req.auth.userId,row.id) || canReadWorkforceEvidence(req.auth.userId,row.id)))))) {
       res.setHeader('Cache-Control','no-store');
       return res.status(404).json({error:'image not found',code:'not_found'});
     }

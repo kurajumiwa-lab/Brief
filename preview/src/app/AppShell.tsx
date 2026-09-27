@@ -32,6 +32,7 @@ import { JoinRoom } from '../features/city/JoinRoom';
 const SupplyWorkspace = React.lazy(() => import('../features/supply/SupplyWorkspace').then(m => ({ default: m.SupplyWorkspace })));
 import { RequestsWorkspace, requestPath } from '../features/requests/RequestsWorkspace';
 const PartnerDesk = React.lazy(() => import('../features/partner/PartnerDesk').then(m => ({ default: m.PartnerDesk })));
+const WorkforceDesk = React.lazy(() => import('../features/workforce/WorkforceDesk').then(m => ({ default: m.WorkforceDesk })));
 import { YouSurface, YOU_SECTION_IDS, type YouSection } from '../features/you/YouSurface';
 import { EntityDetail } from '../features/you/EntityDetail';
 import { FirstRunChecklist } from '../features/you/FirstRunChecklist';
@@ -466,7 +467,7 @@ export const AppShell: React.FC<AppShellProps> = ({
         // 'activity' is the old bar's fourth door: its surface now lives in the
         // drawer's check-in, so the legacy hash resolves there. 'mine' and
         // 'pulse' are the new bar's doors and the drawer's check-in.
-        const tabs: Record<string, BriefNavigationTab> = { home: 'home', spaces: 'mine', pipeline: 'pipeline', catalog: 'catalog', activity: 'pulse', mine: 'mine', pulse: 'pulse', ledger: 'ledger', partners: 'partners', you: 'you' };
+        const tabs: Record<string, BriefNavigationTab> = { home: 'home', spaces: 'mine', pipeline: 'pipeline', catalog: 'catalog', activity: 'pulse', mine: 'mine', pulse: 'pulse', ledger: 'ledger', partners: 'partners', workforce: 'workforce', 'workforce/org': 'workforce', you: 'you' };
         if (tabs[hash]) { setEntityId(null); setActiveTab(tabs[hash]); tabHashRef.current = hash; setBriefOpen(false); }
         else if (!hash) {
           // Empty hash IS home. Mapping it to `initialTab` (once 'city') made
@@ -760,6 +761,9 @@ export const AppShell: React.FC<AppShellProps> = ({
 
             {/* ── OPERATOR: PARTNER DESK (distribution partners) ── */}
             {activeTab === 'partners' && <PartnerDesk />}
+
+            {/* ── WORKFORCE (worker home + organisation desk) ── */}
+            {activeTab === 'workforce' && <WorkforceDesk />}
 
             {/* ── YOU (profile, follows, subscriptions) ── */}
             {activeTab === 'you' && (

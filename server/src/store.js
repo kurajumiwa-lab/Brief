@@ -143,6 +143,24 @@ const EMPTY = {
   // the shop, the purpose, the agent's own words and the approval; it stores
   // NO fee and NO week, because both are derived from the rows on read.
   fieldVisits: [],
+  // WORKFORCE — a distributed team run from phones (docs/WORKFORCE.md).
+  // HR rows (workforce, territories, members, one worker profile per person)
+  // are stored facts; the onboarding checklist is DERIVED from them.
+  // Execution rows: a program (intent + frozen rate card) decomposes into
+  // units, each unit into step tasks; each submission is a proof row. Worker
+  // earnings are DERIVED from approved tasks whose unit was approved — there
+  // is no balance column. Money moves only through workforceSettlements, each
+  // backed by a finance-confirmed ledger transaction (type work_task_fee).
+  // (`workSettlements` above is the unrelated Work Order payment record.)
+  workforces: [],
+  workforceTerritories: [],
+  workforceMembers: [],
+  workerProfiles: [],
+  workPrograms: [],
+  workUnits: [],
+  workTasks: [],
+  workProofs: [],
+  workforceSettlements: [],
   // Rider pickups — a local delivery assigned to a rider, originating from an
   // onboarded shop. Routing and completion are the product; the per-pickup
   // origin fee Decision 5 ended is not (see src/domain/pickups.js).

@@ -34,7 +34,8 @@
     "test:quotes": "node server/test/quotes.mjs",
     "test:quotes:ui": "npm run build:client && playwright test tests/quotes.spec.js",
     "test:work": "node server/test/workOrders.mjs",
-    "test:work:ui": "npm run build:client && playwright test tests/workOrders.spec.js"
+    "test:work:ui": "npm run build:client && playwright test tests/workOrders.spec.js",
+    "test:workforce": "node server/test/workforce.mjs"
   },
   "engines": {
     "node": ">=18.0.0",

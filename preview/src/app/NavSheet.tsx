@@ -27,7 +27,7 @@ import { ChevronRight, X } from 'lucide-react';
 import { SectionHeader } from '../ui/MenuTile';
 
 export type SheetTarget =
-  | { kind: 'tab'; tab: 'requests' | 'supply' | 'partners' | 'pulse' | 'mine' }
+  | { kind: 'tab'; tab: 'requests' | 'supply' | 'partners' | 'workforce' | 'pulse' | 'mine' }
   | {
       kind: 'you';
       section:
@@ -83,7 +83,8 @@ export const SHEET_GROUPS: Array<{ id: string; label: string; items: SheetItem[]
     items: [
       { id: 'requests', label: 'Requests', sub: 'Asks on the board that need a seller', target: { kind: 'tab', tab: 'requests' } },
       { id: 'supply', label: 'Supply', sub: 'Sellers and what they move', target: { kind: 'tab', tab: 'supply' } },
-      { id: 'partners', label: 'Partners', sub: 'Programs and networks behind the rows', target: { kind: 'tab', tab: 'partners' } }
+      { id: 'partners', label: 'Partners', sub: 'Programs and networks behind the rows', target: { kind: 'tab', tab: 'partners' } },
+      { id: 'workforce', label: 'Workforce', sub: 'Tasks, onboarding, territories and proof — from the phone', target: { kind: 'tab', tab: 'workforce' } }
     ]
   },
   {
