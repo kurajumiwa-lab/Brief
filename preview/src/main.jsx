@@ -4,7 +4,7 @@ import React, { lazy, Suspense } from 'react';
 import ReactDOM from 'react-dom/client';
 // Independent public entry points do not mount private shell effects.
 // The legacy App.tsx remains a test harness, not the production shell.
-const PublicCampaignPage = lazy(() => import('./model/core').then(m => ({ default: m.PublicCampaignPage })));
+const EventShowcase = lazy(() => import('./features/events/EventShowcase').then(m => ({ default: m.EventShowcase })));
 const AppShell = lazy(() => import('./app/AppShell.tsx').then(m => ({ default: m.AppShell })));
 const PublicGroupsPage = lazy(() => import('./components/PublicGroupsPage').then(m => ({ default: m.PublicGroupsPage })));
 import { flushOfflineQueue } from './api/briefApi.ts';
@@ -59,7 +59,7 @@ function Root() {
     document.getElementById('boot-splash')?.remove();
   }, []);
   if (/^\/groups\/?$/.test(window.location.pathname)) return <PublicGroupsPage />;
-  if (slug) return <PublicCampaignPage slug={slug} />;
+  if (slug) return <EventShowcase slug={slug} />;
   return <AppShell />;
 }
 

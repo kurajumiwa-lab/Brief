@@ -323,6 +323,102 @@ function normaliseVenue(venue) {
 }
 
 /**
+ * FESTIVAL DETAILS (owner-stated, all optional). The festival page renders
+ * only the sections that actually have rows: lineup (the stalls/trucks the
+ * organiser named), zones (named areas), priceTiers (the stated ticket tiers),
+ * daySchedules (per-day agenda), stages, artists, sponsors (names only — no
+ * logos), and faqs. Everything is the organiser's own words; a malformed
+ * entry is refused rather than stored, and nothing here is invented to fill a
+ * hole. This is the data behind the StreetBite-style event page.
+ */
+function str(v, max, label) {
+  if (v === undefined || v === null) return null;
+  if (typeof v !== 'string') throw new Error(`${label} must be text`);
+  const t = v.trim().slice(0, max);
+  return t === '' ? null : t;
+}
+function strList(v, maxItems, maxLen, label) {
+  if (v === undefined || v === null) return null;
+  if (!Array.isArray(v)) throw new Error(`${label} must be a list`);
+  const out = [];
+  for (const s of v.slice(0, maxItems)) {
+    const t = typeof s === 'string' ? s.trim().slice(0, maxLen) : '';
+    if (t) out.push(t);
+  }
+  return out.length > 0 ? out : null;
+}
+function rows(v, maxItems, pick, label) {
+  if (v === undefined || v === null) return [];
+  if (!Array.isArray(v)) throw new Error(`${label} must be a list`);
+  const out = [];
+  for (const item of v.slice(0, maxItems)) {
+    if (item === null || typeof item !== 'object' || Array.isArray(item)) {
+      throw new Error(`each ${label} entry must be an object`);
+    }
+    const clean = pick(item);
+    if (Object.keys(clean).length > 0) out.push(clean);
+  }
+  return out;
+}
+function normaliseFestival(festival) {
+  if (festival === null || festival === undefined) return null;
+  if (typeof festival !== 'object' || Array.isArray(festival)) throw new Error('festival must be an object');
+  const out = {};
+  out.lineup = rows(festival.lineup, 60, (it) => ({
+    name: str(it.name, 120, 'lineup name') ?? '',
+    tag: str(it.tag, 40, 'lineup tag'),
+    description: str(it.description, 300, 'lineup description'),
+    zone: str(it.zone, 40, 'lineup zone'),
+  }), 'lineup').filter((r) => r.name);
+  out.zones = rows(festival.zones, 12, (it) => ({
+    name: str(it.name, 80, 'zone name') ?? '',
+    description: str(it.description, 240, 'zone description'),
+    color: str(it.color, 20, 'zone color'),
+  }), 'zones').filter((r) => r.name);
+  out.priceTiers = rows(festival.priceTiers, 8, (it) => {
+    const price = Number(it.price);
+    return {
+      name: str(it.name, 80, 'tier name') ?? '',
+      price: Number.isFinite(price) && price >= 0 ? Math.round(price) : null,
+      currency: str(it.currency, 8, 'tier currency') ?? 'KES',
+      perks: strList(it.perks, 12, 200, 'tier perks'),
+      badge: str(it.badge, 40, 'tier badge'),
+    };
+  }, 'priceTiers').filter((r) => r.name);
+  out.daySchedules = rows(festival.daySchedules, 7, (it) => ({
+    day: str(it.day, 40, 'day label') ?? '',
+    label: str(it.label, 60, 'day title'),
+    items: rows(it.items, 40, (e) => ({
+      at: str(e.at, 40, 'schedule time'),
+      title: str(e.title, 160, 'schedule title') ?? '',
+      location: str(e.location, 80, 'schedule location'),
+      description: str(e.description, 300, 'schedule description'),
+    }), 'schedule items').filter((r) => r.title) ?? [],
+  }), 'daySchedules').filter((r) => r.day);
+  out.stages = rows(festival.stages, 12, (it) => ({
+    name: str(it.name, 80, 'stage name') ?? '',
+    description: str(it.description, 200, 'stage description'),
+  }), 'stages').filter((r) => r.name);
+  out.artists = rows(festival.artists, 24, (it) => ({
+    name: str(it.name, 120, 'artist name') ?? '',
+    day: str(it.day, 60, 'artist day'),
+    description: str(it.description, 300, 'artist description'),
+    url: str(it.url, 300, 'artist url'),
+  }), 'artists').filter((r) => r.name);
+  out.sponsors = rows(festival.sponsors, 24, (it) => ({
+    name: str(it.name, 120, 'sponsor name') ?? '',
+    tier: str(it.tier, 40, 'sponsor tier'),
+  }), 'sponsors').filter((r) => r.name);
+  out.faqs = rows(festival.faqs, 24, (it) => ({
+    q: str(it.q, 200, 'faq question') ?? '',
+    a: str(it.a, 600, 'faq answer'),
+  }), 'faqs').filter((r) => r.q);
+  // Drop the empty keys so an unset section reads as absent, not empty.
+  for (const k of Object.keys(out)) if (out[k] === null || (Array.isArray(out[k]) && out[k].length === 0)) delete out[k];
+  return Object.keys(out).length > 0 ? out : null;
+}
+
+/**
  * Ordered agenda (T4 detail model). A list of `{ at?, title, description? }`
  * items. `at` is free-form text (a time, a session label); every item needs a
  * title. A malformed item is refused rather than stored as arbitrary JSON.
@@ -375,7 +471,7 @@ export function createCampaign(ownerId, input = {}) {
     startsAt = null, endsAt = null, capacity = null,
     price = 0, currency = 'KES', circleId = null, metadata = {},
     objectId = null, venue = null, agenda = null, seriesId = null,
-    recurrence = null
+    recurrence = null, festival = null
   } = input;
 
   if (!title || !String(title).trim()) throw new Error('title is required');
@@ -404,6 +500,7 @@ export function createCampaign(ownerId, input = {}) {
   const venueNorm = normaliseVenue(venue);
   const agendaNorm = normaliseAgenda(agenda);
   const seriesIdNorm = normaliseSeriesId(seriesId);
+  const festivalNorm = normaliseFestival(festival);
 
   const now = new Date().toISOString();
 
@@ -453,10 +550,12 @@ export function createCampaign(ownerId, input = {}) {
     currency,
     // Contribution pots only (Tikiti T3); null otherwise.
     goalAmount,
-    // T4 detail model: structured venue, ordered agenda, recurring series.
+    // T4 detail model: structured venue, ordered agenda, recurring series,
+    // and owner-stated festival details (lineup, zones, tiers, schedule).
     venue: venueNorm,
     agenda: agendaNorm,
     seriesId: seriesIdNorm,
+    festival: festivalNorm,
     publicSlug: makeSlug(title),
     createdAt: now,
     updatedAt: now,
@@ -561,6 +660,9 @@ export function publicView(campaign, viewerId = null) {
     venue: campaign.venue ?? null,
     agenda: campaign.agenda ?? null,
     seriesId: campaign.seriesId ?? null,
+    // Festival details — owner-stated, surfaced only when actually set. The
+    // public page renders only the sections that have rows.
+    festival: campaign.festival ?? null,
     // Host profile: display name + a counted number of their public events.
     // Derived on every read; never a stored roster, never the ownerId.
     host,
@@ -576,7 +678,7 @@ export function publicView(campaign, viewerId = null) {
 
 const WRITABLE = [
   'title', 'description', 'location', 'startsAt', 'endsAt', 'price', 'currency', 'metadata',
-  'venue', 'agenda', 'seriesId'
+  'venue', 'agenda', 'seriesId', 'festival'
 ];
 
 /**
@@ -622,6 +724,7 @@ export function updateCampaign(id, patch = {}, ownerId = null) {
   if ('venue' in clean) clean.venue = normaliseVenue(clean.venue);
   if ('agenda' in clean) clean.agenda = normaliseAgenda(clean.agenda);
   if ('seriesId' in clean) clean.seriesId = normaliseSeriesId(clean.seriesId);
+  if ('festival' in clean) clean.festival = normaliseFestival(clean.festival);
 
   const updated = store.update('campaigns', id, clean);
   return updated ? hydrate(updated) : null;

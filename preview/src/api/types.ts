@@ -729,6 +729,9 @@ export interface CampaignCreate {
   circleId?: string | null;
   metadata?: Record<string, any>;
   recurrence?: EventRecurrence | null;
+  venue?: Venue | null;
+  agenda?: Array<{ at?: string | null; title: string; description?: string | null }> | null;
+  festival?: Festival | null;
 }
 
 /** Writable fields only. No metrics, no ownerId, no status, no slug. */
@@ -750,6 +753,29 @@ export interface CampaignUpdate {
 }
 
 /** The allow-listed public projection. No ownerId, no internal ids. */
+/** Owner-stated festival details. Every section is optional and only renders
+ *  when the organiser actually filled it in — nothing is invented to fill a
+ *  hole. This is the data behind the StreetBite-style event page. */
+export interface FestivalLineupItem { name: string; tag?: string | null; description?: string | null; zone?: string | null }
+export interface FestivalZone { name: string; description?: string | null; color?: string | null }
+export interface FestivalPriceTier { name: string; price: number | null; currency: string; perks?: string[] | null; badge?: string | null }
+export interface FestivalScheduleItem { at?: string | null; title: string; location?: string | null; description?: string | null }
+export interface FestivalDaySchedule { day: string; label?: string | null; items: FestivalScheduleItem[] }
+export interface FestivalStage { name: string; description?: string | null }
+export interface FestivalArtist { name: string; day?: string | null; description?: string | null; url?: string | null }
+export interface FestivalSponsor { name: string; tier?: string | null }
+export interface FestivalFaq { q: string; a?: string | null }
+export interface Festival {
+  lineup?: FestivalLineupItem[];
+  zones?: FestivalZone[];
+  priceTiers?: FestivalPriceTier[];
+  daySchedules?: FestivalDaySchedule[];
+  stages?: FestivalStage[];
+  artists?: FestivalArtist[];
+  sponsors?: FestivalSponsor[];
+  faqs?: FestivalFaq[];
+}
+
 export interface PublicCampaign {
   slug: string;
   /** Display label only -- never the internal ownerId. Absent when unset. */
@@ -784,6 +810,8 @@ export interface PublicCampaign {
   agenda?: Array<{ at?: string | null; title: string; description?: string | null }> | null;
   /** T4 detail model — a recurring-series token; null when not part of a series. */
   seriesId?: string | null;
+  /** Festival details (lineup, zones, tiers, schedule, ...); null when unset. */
+  festival?: Festival | null;
   /** DERIVED host profile: a display name plus a counted number of their events. */
   host?: { name: string | null; eventsHosted: number } | null;
   /** DERIVED per-viewer: which of the viewer's groups have members going. */

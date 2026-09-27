@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { X, Repeat } from 'lucide-react';
 import * as briefApi from '../../api/briefApi';
-import type { EventRecurrence } from '../../api/types';
+import type { EventRecurrence, Festival } from '../../api/types';
+import { FestivalBuilder, assembleFestival } from '../events/FestivalBuilder';
 import { soundEngine } from '../../utils/SoundEngine';
 
 // ---------------------------------------------------------------------------
@@ -47,6 +48,8 @@ export function HostEventSheet({ open, onClose, onPublished }: HostEventSheetPro
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Festival details (lineup, zones, tiers, schedule, ...) — all owner-stated.
+  const [festival, setFestival] = useState<Festival | null>(null);
 
   if (!open) return null;
 
@@ -67,6 +70,7 @@ export function HostEventSheet({ open, onClose, onPublished }: HostEventSheetPro
     });
     setError(null);
     setBusy(false);
+    setFestival(null);
     onClose();
   };
 
@@ -101,7 +105,8 @@ export function HostEventSheet({ open, onClose, onPublished }: HostEventSheetPro
       endsAt: draft.endsAt || null,
       price: draft.price.trim() === '' ? 0 : Number(draft.price),
       metadata: recurrence ? { recurrence } : undefined,
-      recurrence: recurrence ?? undefined
+      recurrence: recurrence ?? undefined,
+      festival: assembleFestival(festival)
     });
     if (!created.ok) {
       setBusy(false);
@@ -311,6 +316,21 @@ export function HostEventSheet({ open, onClose, onPublished }: HostEventSheetPro
               style={{ background: 'var(--color-well)', boxShadow: 'var(--room-light-dim), inset 0 0 0 1px var(--brief-line)' }}
             />
           </label>
+
+          {/* Festival details — optional. Turns the event page into a
+              StreetBite-style festival landing (lineup, zones, tiers,
+              schedule, music, sponsors, FAQ). Only what you fill in shows. */}
+          <details className="rounded-xl border" style={{ borderColor: 'var(--brief-line)' }}>
+            <summary className="px-4 py-3 text-[13px] font-black cursor-pointer select-none" style={{ color: 'var(--brief-ink)' }}>
+              Festival details (lineup, map, tickets, FAQ)
+            </summary>
+            <div className="px-4 pb-4 pt-1">
+              <p className="text-[11px] mb-3" style={{ color: 'var(--brief-muted)' }}>
+                Everything you add is your own wording. A section you leave empty won&apos;t appear on the event page.
+              </p>
+              <FestivalBuilder value={festival} onChange={setFestival} />
+            </div>
+          </details>
 
           <button
             type="submit"
