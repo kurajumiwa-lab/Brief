@@ -85,11 +85,13 @@ export function SpaceStorefrontHeader({
   const liveOffers = offers.length;
 
   return (
-    <header className="shop-identity-header" style={{ background: 'var(--color-paper)' }}>
-      <div className="shop-brand-cover">
-        {space.image ? <img src={mediaFileUrl(space.image)} alt={`${space.name} brand cover`} /> : (
-          <div className="brand-empty"><CategoryArt kind="shops" /><div><strong>{space.name}</strong><p>No brand cover yet</p>{isOwner && <button type="button" onClick={onEdit} className="mt-2 bg-white text-slate-900 px-3 py-2 rounded-xl text-xs font-bold">Add shop cover</button>}</div></div>
+    <header className="shop-identity-header overflow-hidden" style={{ background: 'var(--color-paper)', borderRadius: '24px' }}>
+      {/* ── Bolt hero cover: 220px, gradient, logo plate overlapping ─── */}
+      <div className="shop-brand-cover relative" style={{ height: '220px' }}>
+        {space.image ? <img src={mediaFileUrl(space.image)} alt={`${space.name} brand cover`} className="absolute inset-0 w-full h-full object-cover" style={{ filter: PHOTO_FILTER }} /> : (
+          <div className="brand-empty absolute inset-0" style={{ background: 'radial-gradient(140% 130% at 88% 8%, rgba(64,145,108,0.38), rgba(64,145,108,0) 55%), #0D1B2A' }}><CategoryArt kind="shops" /><div><strong>{space.name}</strong><p>No brand cover yet</p>{isOwner && <button type="button" onClick={onEdit} className="mt-2 bg-white text-slate-900 px-3 py-2 rounded-xl text-xs font-bold">Add shop cover</button>}</div></div>
         )}
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(13,27,42,0.72), rgba(13,27,42,0) 55%)' }} />
         <div className="absolute top-3 right-3 flex items-center gap-1.5">
           <span
             className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-black uppercase tracking-wider"
@@ -98,19 +100,18 @@ export function SpaceStorefrontHeader({
             {space.visibility === 'public' ? 'Public' : space.visibility === 'unlisted' ? 'Unlisted' : <><Lock className="w-3 h-3" /> Private</>}
           </span>
         </div>
-      </div>
-
-      <div className="px-4 pb-4">
-        <div className="flex items-end gap-3 pt-5">
-          <span
-            className="w-16 h-16 rounded-full grid place-items-center text-lg font-black shrink-0 border-4"
-            style={{ background: 'var(--color-paper)', borderColor: 'var(--color-paper)', color: 'var(--color-primary)', boxShadow: 'var(--lift-2)' }}
-            aria-hidden="true"
-          >
+        {/* Bolt logo plate overlapping the cover edge */}
+        <div className="absolute -bottom-7 left-4 w-[68px] h-[68px] rounded-2xl bg-white grid place-items-center shadow-xl border border-black/5" style={{ boxShadow: 'var(--lift-2)' }}>
+          <span className="text-[22px] font-black" style={{ color: 'var(--color-primary)' }} aria-hidden="true">
             {initials || '·'}
           </span>
-          <div className="min-w-0 pb-1">
-            <h1 className="text-[30px] font-extrabold leading-tight truncate" style={{ color: 'var(--brief-ink)' }}>
+        </div>
+      </div>
+
+      <div className="px-4 pb-4 pt-10">
+        <div className="flex items-end gap-3">
+          <div className="min-w-0 pb-1 flex-1">
+            <h1 className="text-[26px] font-extrabold leading-tight truncate" style={{ color: 'var(--brief-ink)' }}>
               {space.name}
             </h1>
             {/* Which arm of the business this row is, in the server's word for it.
@@ -222,8 +223,8 @@ export function SpaceStorefrontHeader({
           </button>
         </div>
 
-        {/* Stats strip. Instagram's shape; Brief's arithmetic. */}
-        <div className="flex items-stretch divide-x mt-4 rounded-2xl border overflow-hidden" style={{ borderColor: 'var(--brief-line)' }}>
+        {/* Stats strip — Bolt contrast endplate: dark navy bar, light numbers on dark */}
+        <div className="flex items-stretch divide-x mt-4 rounded-2xl overflow-hidden" style={{ background: 'var(--navy)', border: '1px solid rgba(255,255,255,0.08)' }}>
           {(isOwner
             ? [
                 // The views figure is a count of rows: one per opening of the public page.
@@ -248,15 +249,15 @@ export function SpaceStorefrontHeader({
                 { label: 'updates', value: num(audience?.broadcasts?.length ?? space.broadcastsLive ?? null), sub: 'live in 24h' }
               ]
           ).map((tile) => (
-            <div key={tile.label} className="flex-1 px-2 py-2.5 text-center" style={{ background: 'var(--color-paper)' }}>
-              <p className="font-mono text-[32px] font-extrabold leading-none brief-countdown" style={{ color: 'var(--brief-ink)' }}>
+            <div key={tile.label} className="flex-1 px-2 py-2.5 text-center" style={{ background: 'var(--navy)' }}>
+              <p className="font-mono text-[22px] font-extrabold leading-none" style={{ color: '#fff' }}>
                 {tile.value}
               </p>
-              <p className="text-[11px] font-medium tracking-wide uppercase mt-1" style={{ color: 'var(--brief-muted)' }}>
+              <p className="text-[10px] font-black tracking-wide uppercase mt-1" style={{ color: 'rgba(255,255,255,0.72)' }}>
                 {tile.label}
               </p>
               {tile.sub && (
-                <p className="text-[11px] font-mono mt-0.5 truncate" style={{ color: 'var(--color-quiet)' }}>
+                <p className="text-[10px] font-mono mt-0.5 truncate" style={{ color: 'var(--sage)' }}>
                   {tile.sub}
                 </p>
               )}

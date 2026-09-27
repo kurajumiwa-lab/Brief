@@ -38,6 +38,7 @@ export type SheetTarget =
   | { kind: 'discover'; room: 'all' | 'events' | 'circles' | 'errands' | 'bulk' | 'direct' | 'group' }
   | { kind: 'storefront' }
   | { kind: 'moderation' }
+  | { kind: 'elevate'; page: 'market' | 'ledger' | 'onboard' | 'hub' }
   | { kind: 'signout' };
 
 export interface SheetItem {
@@ -82,6 +83,15 @@ export const SHEET_GROUPS: Array<{ id: string; label: string; items: SheetItem[]
       { id: 'requests', label: 'Requests', sub: 'Asks on the board that need a seller', target: { kind: 'tab', tab: 'requests' } },
       { id: 'supply', label: 'Supply', sub: 'Sellers and what they move', target: { kind: 'tab', tab: 'supply' } },
       { id: 'partners', label: 'Partners', sub: 'Programs and networks behind the rows', target: { kind: 'tab', tab: 'partners' } }
+    ]
+  },
+  {
+    id: 'elevate',
+    label: 'Wairo Elevate',
+    items: [
+      { id: 'elevate-hub', label: 'Elevate', sub: 'Market · Ledger · Onboard — integrated', target: { kind: 'elevate', page: 'hub' } },
+      { id: 'elevate-market', label: 'Elevate Market', sub: 'Wholesale without guessing', target: { kind: 'elevate', page: 'market' } },
+      { id: 'elevate-ledger', label: 'Elevate Ledger', sub: 'Money stated once, derived', target: { kind: 'elevate', page: 'ledger' } },
     ]
   },
   {

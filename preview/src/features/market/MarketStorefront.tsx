@@ -15,6 +15,8 @@ import { NoPhotoPlate } from '../city/NoPhotoPlate';
 import { FLOW_ACCENT } from '../city/DiscoverFeed';
 import { PHOTO_FILTER, listedAgo } from '../city/room';
 import { soundEngine } from '../../utils/SoundEngine';
+import { Sheet } from '../../ui/Sheet';
+import { FollowingSurface } from '../../components/FollowingSurface';
 
 // ---------------------------------------------------------------------------
 // MARKET STOREFRONT — the e-commerce homepage for the Wairo street.
@@ -68,6 +70,8 @@ export const MarketStorefront: React.FC<{ onBack?: () => void }> = ({ onBack }) 
   const [menuOpen, setMenuOpen] = useState(false);
   const [carousel, setCarousel] = useState(0);
   const offersRef = useRef<HTMLDivElement>(null);
+  const [followSheetOpen, setFollowSheetOpen] = useState(false);
+  const [authed, setAuthed] = useState(true);
 
   useEffect(() => {
     let live = true;
@@ -76,6 +80,7 @@ export const MarketStorefront: React.FC<{ onBack?: () => void }> = ({ onBack }) 
     void briefApi.browseEvents({ limit: 12 }).then((r) => { if (live && r.ok) setEvents(r.data.events); });
     void briefApi.getMyOrders().then((r) => { if (live && r.ok) setOrders(r.data); });
     void briefApi.getMyFollows().then((r) => { if (live && r.ok) setFollows(r.data); });
+    void briefApi.whoAmI().then((r) => { if (live) setAuthed(r.ok); });
     return () => { live = false; };
   }, []);
 
@@ -226,12 +231,13 @@ export const MarketStorefront: React.FC<{ onBack?: () => void }> = ({ onBack }) 
           >
             <User className="w-5 h-5" />
           </button>
-          {/* Wishlist (real follows count) */}
+          {/* Wishlist — the ONLY following entry. Opens as primary sheet, not a navigation. */}
           <button
             type="button" aria-label={`Following ${followCount ?? ''}`}
-            onClick={() => go('you/following')}
+            onClick={() => { soundEngine.play('tap'); setFollowSheetOpen(true); }}
             className="relative p-2 rounded-full hover:bg-[var(--color-well)] cursor-pointer"
             style={{ color: 'var(--brief-ink)' }}
+            data-testid="storefront-heart"
           >
             <Heart className="w-5 h-5" />
             {followCount != null && followCount > 0 && (
@@ -566,7 +572,7 @@ export const MarketStorefront: React.FC<{ onBack?: () => void }> = ({ onBack }) 
             </p>
             <button
               type="button"
-              onClick={() => go('you/following')}
+              onClick={() => { soundEngine.play('tap'); setFollowSheetOpen(true); }}
               className="inline-flex items-center gap-2 px-5 py-3 rounded-full text-[14px] font-black cursor-pointer mt-5"
               style={{ background: 'var(--color-primary)', color: 'var(--accent-ink)' }}
             >
@@ -575,6 +581,11 @@ export const MarketStorefront: React.FC<{ onBack?: () => void }> = ({ onBack }) 
             <p className="text-[11px] text-[var(--color-text-faint)] mt-3">Your details stay on your account. You can unfollow anytime.</p>
           </div>
         </section>
+
+        {/* ── Following — the heart's primary sheet, not a detour to Mine ─── */}
+        <Sheet open={followSheetOpen} title="Following" onClose={() => setFollowSheetOpen(false)}>
+          <FollowingSurface authed={authed} variant="embedded" onOpenEntity={(id) => { setFollowSheetOpen(false); window.location.hash = `entity/${encodeURIComponent(id)}`; }} onRequireAuth={() => { setFollowSheetOpen(false); window.location.hash = 'you'; }} />
+        </Sheet>
 
         {/* ── 11. FOOTER ──────────────────────────────────────────────── */}
         <footer className="pt-6 pb-4 border-t border-[var(--brief-line)]" style={{ color: 'var(--color-text-muted)' }}>

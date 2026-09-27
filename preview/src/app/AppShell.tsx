@@ -20,6 +20,11 @@ import type { DiscoverRoom } from '../features/city/taxonomy';
 
 const PublicSpacePage = React.lazy(() => import('../features/spaces/PublicSpacePage').then(m => ({ default: m.PublicSpacePage })));
 const MarketStorefront = React.lazy(() => import('../features/market/MarketStorefront').then(m => ({ default: m.MarketStorefront })));
+const ElevateHub = React.lazy(() => import('../features/wairo/ElevateHub').then(m => ({ default: m.ElevateHub })));
+const WairoElevateMarket = React.lazy(() => import('../features/wairo/ElevateMarket').then(m => ({ default: m.WairoElevateMarket })));
+const WairoElevateLedger = React.lazy(() => import('../features/wairo/ElevateLedger').then(m => ({ default: m.WairoElevateLedger })));
+const WairoElevateOnboard = React.lazy(() => import('../features/wairo/ElevateOnboard').then(m => ({ default: m.WairoElevateOnboard })));
+
 import { CreateFlowModal } from '../features/spaces/CreateFlowModal';
 const PublicOfferModal = React.lazy(() => import('../features/offers/PublicOfferModal').then(m => ({ default: m.PublicOfferModal })));
 import { JoinRoom } from '../features/city/JoinRoom';
@@ -55,6 +60,7 @@ export const AppShell: React.FC<AppShellProps> = ({
   const [supplyRoute, setSupplyRoute] = useState(() => window.location.hash.replace(/^#\/?supply\/?/, ''));
   const [requestRoute, setRequestRoute] = useState('');
   const [offerLinkId, setOfferLinkId] = useState('');
+  const [elevatePage, setElevatePage] = useState<string | null>(null);
   // A join link pasted in a WhatsApp group opens a room's landing page for a
   // person with no account and no session. It is NOT a tab: the nav is hidden
   // while it is open, because a stranger deciding whether to join a room should
@@ -117,7 +123,8 @@ export const AppShell: React.FC<AppShellProps> = ({
    * opened nothing is worse than no nav item.
    */
   const goSheetTarget = (target: SheetTarget) => {
-    if (target.kind === 'storefront') { window.location.hash = 'storefront'; setStorefrontOpen(true); return; }
+    if (target.kind === 'storefront') { window.location.hash = 'home'; setActiveTab('home'); setStorefrontOpen(false); return; }
+    if (target.kind === 'elevate') { const page = target.page; window.location.hash = `elevate/${page}`; setElevatePage(page); return; }
     if (target.kind === 'moderation') { window.location.hash = 'moderation'; setModerationOpen(true); return; }
     if (target.kind === 'signout') {
       void (async () => {
@@ -143,9 +150,11 @@ export const AppShell: React.FC<AppShellProps> = ({
       window.location.hash = `city/${target.room}`;
       return;
     }
-    setYouSection(target.section);
-    setActiveTab('you');
-    window.location.hash = `you/${target.section}`;
+    if (target.kind === 'you') {
+      setYouSection(target.section);
+      setActiveTab('you');
+      window.location.hash = `you/${target.section}`;
+    }
   };
 
   /**
@@ -250,7 +259,7 @@ export const AppShell: React.FC<AppShellProps> = ({
    * state that decides what is on screen, so the two can never disagree.
    */
   const anySurfaceOpen = createOpen || hostSheetOpen || groupBuysOpen
-    || sheetOpen || createFlowOpen || manualOrderOpen;
+    || sheetOpen || createFlowOpen || manualOrderOpen || Boolean(elevatePage);
   // Back is for a second screen. A space held in memory while Home is showing
   // is not a second screen — that is how a Back toggle appeared on Home.
   const viewingSpace = Boolean(activeSpace) && (activeTab === 'pipeline' || activeTab === 'spaces');
@@ -261,6 +270,7 @@ export const AppShell: React.FC<AppShellProps> = ({
         : backLabel(tabHashRef.current || TAB_HASH[activeTab] || ''),
       onBack: () => {
         if (anySurfaceOpen) {
+          if (elevatePage) { setElevatePage(null); const back = tabHashRef.current || 'home'; window.location.hash = back; return; }
           const back = tabHashRef.current || TAB_HASH[activeTab] || 'home';
           if (window.location.hash.replace(/^#/, '') === back) {
             setCreateOpen(false);
@@ -338,7 +348,10 @@ export const AppShell: React.FC<AppShellProps> = ({
         return;
       }
       if (hash === 'storefront') {
-        setStorefrontOpen(true);
+        // Storefront is Home now — merged, no overlay. The street IS the feed.
+        setStorefrontOpen(false);
+        setActiveTab('home');
+        window.location.hash = 'home';
         return;
       }
       const shopId = shopIdFromHash(hash);
@@ -362,6 +375,15 @@ export const AppShell: React.FC<AppShellProps> = ({
         activeSpaceIdRef.current = '';
         setActiveSpace(null);
       }
+      if (hash === 'elevate' || hash.startsWith('elevate/')) {
+        const page = hash === 'elevate' ? 'hub' : (() => { try { return decodeURIComponent(hash.slice(8)); } catch { return hash.slice(8); } })();
+        setElevatePage(page);
+        // Elevate lives as a Wairo feature overlay atop You — no new door.
+        setActiveTab('you' as any);
+        tabHashRef.current = hash;
+        return;
+      }
+      setElevatePage(null);
       if (hash === 'supply' || hash.startsWith('supply/')) {
         setActiveTab('supply');
         setSupplyRoute(hash.slice(7) || 'mine');
@@ -629,6 +651,15 @@ export const AppShell: React.FC<AppShellProps> = ({
           <div className="fixed inset-0 z-40 bg-[color:var(--color-bg)] overflow-y-auto">
             <React.Suspense fallback={<p className="p-6 text-sm">Loading the street…</p>}>
               <MarketStorefront onBack={() => { setStorefrontOpen(false); window.location.hash = 'home'; }} />
+            </React.Suspense>
+          </div>
+        )}
+        {elevatePage && (
+          <div className="fixed inset-0 z-40 bg-[color:var(--color-bg)] overflow-y-auto p-4 pb-24">
+            <React.Suspense fallback={<p className="p-6 text-sm">Loading elevate…</p>}>
+              <OverlayScreen title={elevatePage === 'market' ? 'Elevate · Market' : elevatePage === 'ledger' ? 'Elevate · Ledger' : elevatePage === 'onboard' ? 'Elevate · Onboard' : 'Wairo Elevate'} onBack={() => { setElevatePage(null); const back = tabHashRef.current || 'home'; window.location.hash = back; }}>
+                {elevatePage === 'market' ? <WairoElevateMarket /> : elevatePage === 'ledger' ? <WairoElevateLedger /> : elevatePage === 'onboard' ? <WairoElevateOnboard onStart={() => { setElevatePage(null); setCreateFlowOpen(true); window.location.hash = 'home'; }} /> : <ElevateHub initial={elevatePage as any} />}
+              </OverlayScreen>
             </React.Suspense>
           </div>
         )}

@@ -22,11 +22,13 @@
 //     would teach the member that nothing here can be trusted.
 // ---------------------------------------------------------------------------
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, Menu, Search, MapPin } from 'lucide-react';
+import { ArrowLeft, Menu, Search, MapPin, Heart } from 'lucide-react';
 import { WairoMark } from '../components/WairoMark';
 import * as briefApi from '../api/briefApi';
 import type { CampaignBanner } from '../api/types';
 import { soundEngine } from '../utils/SoundEngine';
+import { Sheet } from '../ui/Sheet';
+import { FollowingSurface } from '../components/FollowingSurface';
 
 export const PLACE_KEY = 'brief.world.place';
 export const readPlace = () => {
@@ -66,6 +68,9 @@ export const AppBelt: React.FC<AppBeltProps> = ({
   const [q, setQ] = useState('');
   const [place] = useState(readPlace);
   const [banners, setBanners] = useState<CampaignBanner[] | null>(null);
+  const [followCount, setFollowCount] = useState<number | null>(null);
+  const [authed, setAuthed] = useState(true);
+  const [followOpen, setFollowOpen] = useState(false);
 
   // One read per mount. A failure leaves `banners` null, and a null list renders
   // no slot at all: an empty promotional frame would be a placeholder claiming a
@@ -74,6 +79,12 @@ export const AppBelt: React.FC<AppBeltProps> = ({
     let live = true;
     void briefApi.getCampaignBanners().then((res) => {
       if (live && res.ok) setBanners(res.data ?? []);
+    });
+    void briefApi.getMyFollows().then((res) => {
+      if (live && res.ok) setFollowCount(res.data.total);
+    });
+    void briefApi.whoAmI().then((res) => {
+      if (live) setAuthed(res.ok);
     });
     return () => { live = false; };
   }, []);
@@ -156,6 +167,26 @@ export const AppBelt: React.FC<AppBeltProps> = ({
             <Search className="w-4 h-4" />
           </button>
         </form>
+
+        {/* ── Following — heart is the ONLY entry, primary sheet ───── */}
+        <button
+          type="button"
+          aria-label={`Following ${followCount ?? ''}`}
+          onClick={() => { soundEngine.play('tap'); setFollowOpen(true); }}
+          className="relative p-2 rounded-xl shrink-0 cursor-pointer hover:bg-[var(--color-well)]"
+          style={{ color: 'var(--brief-ink)' }}
+          data-testid="belt-heart"
+        >
+          <Heart className="w-5 h-5" />
+          {followCount != null && followCount > 0 && (
+            <span
+              className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 rounded-full grid place-items-center text-[10px] font-black"
+              style={{ background: 'var(--color-primary)', color: 'var(--accent-ink)' }}
+            >
+              {followCount}
+            </span>
+          )}
+        </button>
       </div>
 
       {/* ── the area chip. Only ever what the member typed. ── */}
@@ -170,6 +201,11 @@ export const AppBelt: React.FC<AppBeltProps> = ({
           {place ? `Your area: ${place}` : 'Set your area'}
         </button>
       </div>
+
+      {/* ── heart sheet — primary response, not a detour to Mine ─── */}
+      <Sheet open={followOpen} title="Following" onClose={() => setFollowOpen(false)}>
+        <FollowingSurface authed={authed} variant="embedded" onOpenEntity={(id) => { setFollowOpen(false); window.location.hash = `entity/${encodeURIComponent(id)}`; }} onRequireAuth={() => { setFollowOpen(false); window.location.hash = 'you'; }} />
+      </Sheet>
 
       {/* ── the message slot. Nothing to say, nothing rendered. ── */}
       {banners && banners.length > 0 && (
