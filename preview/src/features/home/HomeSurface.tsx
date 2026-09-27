@@ -290,34 +290,6 @@ export const HomeSurface: React.FC<HomeSurfaceProps> = ({
         </section>
       ) : (
         loopSections.map((section) => {
-          // PROMOTED / SPONSORED BANNER
-          if (section.kind === 'promoted_banner' && section.banner) {
-            const b = section.banner;
-            return (
-              <section key={section.id} aria-label={b.title}>
-                <div
-                  className="p-4 rounded-2xl space-y-2 relative overflow-hidden transition-all hover:opacity-95 cursor-pointer"
-                  style={{
-                    background: 'radial-gradient(140% 120% at 90% 10%, rgba(64,145,108,0.22), rgba(13,27,42,0) 60%), #0D1B2A',
-                    color: '#FFFFFF'
-                  }}
-                  onClick={b.onAction}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-900">
-                      {b.tag}
-                    </span>
-                    <span className="text-[12px] font-bold text-[var(--sage)] inline-flex items-center gap-1">
-                      {b.actionLabel}
-                    </span>
-                  </div>
-                  <h4 className="text-[16px] font-bold leading-tight text-white">{b.title}</h4>
-                  <p className="text-[13px] leading-snug text-slate-300">{b.description}</p>
-                </div>
-              </section>
-            );
-          }
-
           // Section header with title and "See all"
           const SectionHeader = (
             <div className="flex items-center justify-between pb-1">

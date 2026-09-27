@@ -24,15 +24,6 @@ export interface LoopContext {
   persona: 'all' | 'customer' | 'vendor' | 'trader';
 }
 
-export interface LoopPromotedBanner {
-  id: string;
-  tag: 'PROMOTED' | 'SPONSORED';
-  title: string;
-  description: string;
-  actionLabel: string;
-  onAction: () => void;
-}
-
 export type LoopSectionKind =
   | 'popular'
   | 'merch'
@@ -40,8 +31,7 @@ export type LoopSectionKind =
   | 'suppliers'
   | 'events'
   | 'groups'
-  | 'wholesale'
-  | 'promoted_banner';
+  | 'wholesale';
 
 export interface LoopSection {
   id: string;
@@ -50,7 +40,6 @@ export interface LoopSection {
   seeAllRoom?: string;
   kind: LoopSectionKind;
   items: any[];
-  banner?: LoopPromotedBanner;
 }
 
 export function buildLoopSections(
@@ -96,21 +85,8 @@ export function buildLoopSections(
     items: listings.slice(2, 10)
   };
 
-  // Promoted Banner A: Trip package or freight journey
-  const promotedTripBanner: LoopSection = {
-    id: 'promo-trip',
-    title: '',
-    kind: 'promoted_banner',
-    items: [],
-    banner: {
-      id: 'promo-trip-1',
-      tag: 'PROMOTED',
-      title: 'Overland Rail & Coastal Trade Getaway',
-      description: 'Mombasa → Nairobi → Kisumu corridor. 3 days slow transit with partner stays.',
-      actionLabel: 'Explore Trips →',
-      onAction: () => callbacks.onExploreDiscover?.('events')
-    }
-  };
+  // Promoted banners live in the top Explore rail (PromoBanners), not inline
+  // here — two sets of the same banner on one feed read as a duplicate.
 
   // 3. Economic Gaps
   const gapsSection: LoopSection = {
@@ -130,22 +106,6 @@ export function buildLoopSections(
     seeAllRoom: 'shops',
     kind: 'suppliers',
     items: data.spaces.slice(0, 8)
-  };
-
-  // Promoted Banner B: Group buy & bulk deal
-  const promotedGroupBuyBanner: LoopSection = {
-    id: 'promo-groupbuy',
-    title: '',
-    kind: 'promoted_banner',
-    items: [],
-    banner: {
-      id: 'promo-gb-1',
-      tag: 'SPONSORED',
-      title: 'Wholesale Grain & Sugar Pool — Volume Discount',
-      description: 'Pool demand with 12 neighborhood shops for direct farmgate pricing.',
-      actionLabel: 'Join Group Buy →',
-      onAction: () => callbacks.onOpenGroupBuys?.()
-    }
   };
 
   // 5. Events & Trips This Week
@@ -184,7 +144,6 @@ export function buildLoopSections(
       suppliersSection,
       gapsSection,
       wholesaleSection,
-      promotedGroupBuyBanner,
       popularSection,
       eventsSection,
       groupsSection
@@ -195,7 +154,6 @@ export function buildLoopSections(
     return [
       popularSection,
       merchSection,
-      promotedTripBanner,
       eventsSection,
       groupsSection,
       gapsSection,
@@ -207,10 +165,8 @@ export function buildLoopSections(
   return [
     popularSection,
     merchSection,
-    promotedTripBanner,
     gapsSection,
     suppliersSection,
-    promotedGroupBuyBanner,
     eventsSection,
     groupsSection
   ];
