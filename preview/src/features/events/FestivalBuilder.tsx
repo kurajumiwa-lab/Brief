@@ -75,6 +75,23 @@ export const FestivalBuilder: React.FC<{ value: Festival | null; onChange: (f: F
 
   return (
     <div className="space-y-3">
+      <div className="rounded-xl border p-3" style={{ borderColor: 'rgba(0,0,0,0.1)' }}>
+        <label style={labelStyle} className="block mb-1.5">
+          What's included (per person) — one per line
+        </label>
+        <textarea
+          rows={3}
+          placeholder={'Transport\nMeals\nSleeping / camping\nGear'}
+          value={(v.inclusions ?? []).join('\n')}
+          onChange={(e) => set({ inclusions: e.target.value.split('\n').map((s) => s.trim()).filter(Boolean) })}
+          className="w-full px-3 py-2 rounded-lg text-[13px] border resize-none"
+          style={fieldStyle}
+        />
+        <p className="mt-1.5" style={{ ...labelStyle, color: 'rgba(28,25,23,0.45)' }}>
+          Shown as “What’s included” next to the per-person price — e.g. a safari team covering transport, food and sleeping.
+        </p>
+      </div>
+
       <Collapsible title="Lineup" hint="The stalls or trucks you're naming" count={(v.lineup ?? []).length} open={open === 'lineup'} onToggle={() => setOpen(open === 'lineup' ? null : 'lineup')}>
         {(v.lineup ?? []).map((l, i) => (
           <div key={i} className="flex gap-2 items-start">

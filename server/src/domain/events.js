@@ -137,7 +137,9 @@ export function browseEvents({
   if (category != null && !EVENT_CATEGORIES.includes(category)) {
     throw new Error(`category must be one of ${EVENT_CATEGORIES.join(', ')}`);
   }
-  let rows = store.filter('campaigns', (c) => c.status === 'published' || c.status === 'live');
+  // Unlisted campaigns are published (slug resolves, shareable by link) but are
+  // kept off the public feed — they're shared directly by the organiser.
+  let rows = store.filter('campaigns', (c) => (c.status === 'published' || c.status === 'live') && !c.unlisted);
 
   if (category != null) rows = rows.filter((c) => c.type === category);
   if (location != null) {

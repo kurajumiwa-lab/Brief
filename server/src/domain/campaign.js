@@ -413,6 +413,9 @@ function normaliseFestival(festival) {
     q: str(it.q, 200, 'faq question') ?? '',
     a: str(it.a, 600, 'faq answer'),
   }), 'faqs').filter((r) => r.q);
+  // Inclusions: what the per-person price covers (transport, food, sleeping…).
+  // The organiser's own words; a group experience shows these as "what's included".
+  out.inclusions = strList(festival.inclusions, 20, 120, 'inclusions');
   // Drop the empty keys so an unset section reads as absent, not empty.
   for (const k of Object.keys(out)) if (out[k] === null || (Array.isArray(out[k]) && out[k].length === 0)) delete out[k];
   return Object.keys(out).length > 0 ? out : null;
@@ -471,7 +474,7 @@ export function createCampaign(ownerId, input = {}) {
     startsAt = null, endsAt = null, capacity = null,
     price = 0, currency = 'KES', circleId = null, metadata = {},
     objectId = null, venue = null, agenda = null, seriesId = null,
-    recurrence = null, festival = null
+    recurrence = null, festival = null, unlisted = false
   } = input;
 
   if (!title || !String(title).trim()) throw new Error('title is required');
@@ -548,6 +551,10 @@ export function createCampaign(ownerId, input = {}) {
     capacity,
     price,
     currency,
+    // Unlisted = published (slug resolves, shareable by link) but kept out of
+    // the public feed. For invite-by-link group experiences (a safari team, a
+    // rally) that the organiser shares directly rather than posts to the board.
+    unlisted: unlisted ? true : false,
     // Contribution pots only (Tikiti T3); null otherwise.
     goalAmount,
     // T4 detail model: structured venue, ordered agenda, recurring series,
@@ -629,6 +636,8 @@ export function publicView(campaign, viewerId = null) {
     capacity: campaign.capacity,
     remaining: m.remaining,
     soldOut: m.remaining === 0,
+    // Unlisted: resolvable + shareable by link, but kept off the public feed.
+    unlisted: campaign.unlisted ? true : false,
     // NO `registered` count (Decision 6). This line used to serve "42
     // registered" under a comment calling it "aggregate social proof" -- and
     // that is precisely what the decision forbids: "No 'X going.' No attendee
@@ -678,7 +687,7 @@ export function publicView(campaign, viewerId = null) {
 
 const WRITABLE = [
   'title', 'description', 'location', 'startsAt', 'endsAt', 'price', 'currency', 'metadata',
-  'venue', 'agenda', 'seriesId', 'festival'
+  'venue', 'agenda', 'seriesId', 'festival', 'unlisted'
 ];
 
 /**

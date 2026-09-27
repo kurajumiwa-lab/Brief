@@ -732,6 +732,8 @@ export interface CampaignCreate {
   venue?: Venue | null;
   agenda?: Array<{ at?: string | null; title: string; description?: string | null }> | null;
   festival?: Festival | null;
+  /** Unlisted: published (shareable by link) but kept off the public feed. */
+  unlisted?: boolean;
 }
 
 /** Writable fields only. No metrics, no ownerId, no status, no slug. */
@@ -774,6 +776,9 @@ export interface Festival {
   artists?: FestivalArtist[];
   sponsors?: FestivalSponsor[];
   faqs?: FestivalFaq[];
+  /** What the per-person price covers (transport, food, sleeping…) — the
+   *  "what's included" list for a group experience package. */
+  inclusions?: string[];
 }
 
 export interface PublicCampaign {
@@ -812,6 +817,8 @@ export interface PublicCampaign {
   seriesId?: string | null;
   /** Festival details (lineup, zones, tiers, schedule, ...); null when unset. */
   festival?: Festival | null;
+  /** Unlisted: resolvable + shareable by link, but kept off the public feed. */
+  unlisted?: boolean;
   /** DERIVED host profile: a display name plus a counted number of their events. */
   host?: { name: string | null; eventsHosted: number } | null;
   /** DERIVED per-viewer: which of the viewer's groups have members going. */

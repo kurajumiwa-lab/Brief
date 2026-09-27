@@ -39,6 +39,8 @@ export function HostEventSheet({ open, onClose, onPublished }: HostEventSheetPro
     startsAt: '',
     endsAt: '',
     price: '',
+    capacity: '',
+    unlisted: false,
     category: 'event',
     isRecurring: false,
     frequency: 'weekly' as 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'custom',
@@ -61,6 +63,8 @@ export function HostEventSheet({ open, onClose, onPublished }: HostEventSheetPro
       startsAt: '',
       endsAt: '',
       price: '',
+      capacity: '',
+      unlisted: false,
       category: 'event',
       isRecurring: false,
       frequency: 'weekly',
@@ -104,6 +108,8 @@ export function HostEventSheet({ open, onClose, onPublished }: HostEventSheetPro
       startsAt: draft.startsAt || null,
       endsAt: draft.endsAt || null,
       price: draft.price.trim() === '' ? 0 : Number(draft.price),
+      capacity: draft.capacity.trim() === '' ? null : Number(draft.capacity),
+      unlisted: draft.unlisted,
       metadata: recurrence ? { recurrence } : undefined,
       recurrence: recurrence ?? undefined,
       festival: assembleFestival(festival)
@@ -304,7 +310,7 @@ export function HostEventSheet({ open, onClose, onPublished }: HostEventSheetPro
           </label>
 
           <label className="block text-[12px] font-bold" style={{ color: 'var(--brief-ink)' }}>
-            Entry price (KES)
+            Entry price (KES, per person)
             <input
               type="number"
               min={0}
@@ -315,6 +321,39 @@ export function HostEventSheet({ open, onClose, onPublished }: HostEventSheetPro
               className="mt-1 w-full px-3.5 py-2.5 rounded-xl text-xs font-mono border"
               style={{ background: 'var(--color-well)', boxShadow: 'var(--room-light-dim), inset 0 0 0 1px var(--brief-line)' }}
             />
+          </label>
+
+          <label className="block text-[12px] font-bold" style={{ color: 'var(--brief-ink)' }}>
+            Team size (max people)
+            <input
+              type="number"
+              min={1}
+              placeholder="e.g. 8 for a small safari team"
+              aria-label="Team size"
+              value={draft.capacity}
+              onChange={(e) => setDraft((d) => ({ ...d, capacity: e.target.value }))}
+              className="mt-1 w-full px-3.5 py-2.5 rounded-xl text-xs font-mono border"
+              style={{ background: 'var(--color-well)', boxShadow: 'var(--room-light-dim), inset 0 0 0 1px var(--brief-line)' }}
+            />
+          </label>
+
+          <label
+            className="flex items-start gap-2 p-3 rounded-xl cursor-pointer"
+            style={{ background: 'var(--color-well)', boxShadow: 'var(--room-light-dim), inset 0 0 0 1px var(--brief-line)' }}
+          >
+            <input
+              type="checkbox"
+              checked={draft.unlisted}
+              onChange={(e) => setDraft((d) => ({ ...d, unlisted: e.target.checked }))}
+              className="mt-0.5"
+            />
+            <span className="text-[12px]" style={{ color: 'var(--brief-ink)' }}>
+              <strong>Keep unlisted — share by link only.</strong>{' '}
+              <span style={{ color: 'var(--color-text-muted)' }}>
+                Available to anyone with the link, but not posted to the public board.
+                Good for invite-only group experiences like a safari team or rally.
+              </span>
+            </span>
           </label>
 
           {/* Festival details — optional. Turns the event page into a

@@ -159,6 +159,12 @@ export const EventShowcase: React.FC<{ slug: string; onBack?: () => void }> = ({
   const schedules = festival?.daySchedules ?? null;
   const currentSchedule = schedules && schedules.length > 0 ? schedules[Math.min(scheduleDay, schedules.length - 1)] : null;
   const hasFestivalContent = Boolean(festival && Object.keys(festival).length > 0);
+  const inclusions = festival?.inclusions ?? [];
+  const unlisted = Boolean(campaign.unlisted);
+  const teamLeft = campaign.capacity != null
+    ? (campaign.soldOut ? 'full' : campaign.remaining != null ? `${campaign.remaining} of ${campaign.capacity} spots left` : `${campaign.capacity} spots`)
+    : null;
+  const perPerson = campaign.price > 0 ? 'Per person' : 'Free to join';
 
   return (
     <div className="min-h-screen" style={{ background: '#fff', color: DARK }}>
@@ -196,6 +202,11 @@ export const EventShowcase: React.FC<{ slug: string; onBack?: () => void }> = ({
           {(campaign.seriesId || hasFestivalContent) && (
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[12px] font-black uppercase tracking-wider" style={{ background: 'rgba(255,255,255,0.22)', color: '#fff' }}>
               <Sparkles className="w-3.5 h-3.5" /> {campaign.seriesId ? 'Recurring series' : 'Community festival'}
+            </span>
+          )}
+          {unlisted && (
+            <span className="inline-flex items-center gap-1.5 ml-2 px-3 py-1 rounded-full text-[12px] font-black uppercase tracking-wider" style={{ background: 'rgba(0,0,0,0.35)', color: '#fff' }}>
+              Invite-only · shared by link
             </span>
           )}
           <h1 className="text-[38px] sm:text-[56px] font-black leading-[1.02] mt-4 text-white">{campaign.title}</h1>
@@ -332,22 +343,39 @@ export const EventShowcase: React.FC<{ slug: string; onBack?: () => void }> = ({
 
         {/* ── TICKETS ─────────────────────────────────────────────────── */}
         <section id="ev-tickets" className="py-12 bg-white">
-          <h2 className="text-[26px] sm:text-[32px] font-black text-center" style={{ color: DARK }}>Grab your ticket</h2>
+          <h2 className="text-[26px] sm:text-[32px] font-black text-center" style={{ color: DARK }}>
+            {inclusions.length > 0 || campaign.capacity != null ? 'Join this experience' : 'Grab your ticket'}
+          </h2>
+          {inclusions.length > 0 && (
+            <div className="max-w-md mx-auto mt-6">
+              <p className="text-[13px] font-black uppercase tracking-wider text-center" style={{ color: 'rgba(28,25,23,0.5)' }}>What&apos;s included</p>
+              <ul className="mt-3 grid grid-cols-2 gap-2">
+                {inclusions.map((inc, i) => (
+                  <li key={i} className="flex items-center gap-2 text-[14px] font-bold p-2.5 rounded-xl" style={{ background: ROSE_TINT, color: DARK }}>
+                    <Check className="w-4 h-4 shrink-0" style={{ color: ROSE }} /> {inc}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           {festival?.priceTiers && festival.priceTiers.length > 0 ? (
             <div className="grid md:grid-cols-3 gap-4 mt-8 max-w-4xl mx-auto">
               {festival.priceTiers.map((t, i) => <TicketCard key={i} tier={t} onBuy={() => setRegOpen(true)} />)}
             </div>
           ) : (
             <div className="max-w-md mx-auto mt-8 text-center rounded-2xl border p-6" style={{ borderColor: 'rgba(0,0,0,0.1)' }}>
-              <p className="text-[14px] font-bold" style={{ color: 'rgba(28,25,23,0.6)' }}>{priceLabel}</p>
+              <p className="text-[14px] font-bold" style={{ color: 'rgba(28,25,23,0.6)' }}>{perPerson}</p>
               <p className="text-[34px] font-black mt-1" style={{ color: ROSE }}>{campaign.price === 0 ? 'Free' : money(campaign.price, campaign.currency)}</p>
-              {campaign.capacity != null && <p className="text-[13px] mt-2" style={{ color: 'rgba(28,25,23,0.55)' }}>{campaign.soldOut ? 'Sold out' : campaign.remaining != null ? `${campaign.remaining} of ${campaign.capacity} left` : `${campaign.capacity} spots`}</p>}
+              {teamLeft && <p className="text-[13px] mt-2" style={{ color: 'rgba(28,25,23,0.55)' }}>{teamLeft}</p>}
               {ticket ? (
                 <TicketResult code={ticket.code} status={ticket.status} />
               ) : (
                 <>
                   <button type="button" onClick={() => setRegOpen((o) => !o)} className="mt-5 w-full py-3 rounded-full text-[15px] font-black cursor-pointer" style={{ background: ROSE, color: '#fff' }}>
-                    {regOpen ? 'Cancel' : campaign.price === 0 ? 'Reserve my spot' : 'Get my ticket'}
+                    {regOpen ? 'Cancel' : campaign.price === 0 ? 'Reserve my spot' : 'Join for the price above'}
+                  </button>
+                  <button type="button" onClick={() => void share()} className="mt-2 w-full py-3 rounded-full text-[15px] font-bold cursor-pointer inline-flex items-center justify-center gap-1.5" style={{ background: 'transparent', color: DARK, border: '1.5px solid rgba(0,0,0,0.2)' }}>
+                    <Share2 className="w-4 h-4" /> Share this {unlisted ? 'invite link' : 'event'}
                   </button>
                   {regOpen && (
                     <div className="mt-4 space-y-2 text-left">

@@ -62,6 +62,7 @@ app.post('/api/campaigns', (req, res) => {
       agenda: req.body?.agenda ?? null,
       seriesId: req.body?.seriesId ?? null,
       festival: req.body?.festival ?? null,
+      unlisted: req.body?.unlisted ? true : false,
       // Attach an existing Brief object instead of creating one. Authority is
       // checked in the domain layer against source membership.
       objectId: req.body?.objectId ?? null
