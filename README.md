@@ -248,4 +248,5 @@ a payment happened. Keep Brief "not a bank".
 
 - `PUBLIC-FEED-API.md` — the anonymous, read-only feed contract (`GET /api/public/feed`).
 - `ONBOARDING.md` — the service ladder (progress derived from real rows, never a stored counter).
+- `docs/WORKFORCE.md` — organisations run field teams and home workers from phones: onboarding checklist, territories, task templates, proof and review, flat fees paid only for approved outcomes. Lists the open decisions (provisional 20% fee, pay for honest non-conversion).
 - `server/CONNECTORS.md` — what each connector can and cannot do, and why.

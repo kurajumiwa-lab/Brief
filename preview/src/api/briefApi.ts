@@ -203,7 +203,7 @@ async function send<T>(
     // server-side idempotency makes the replay safe. A read is just offline.
     // Requests, Quotes and Work have explicit retry/revision semantics. Never silently replay
     // private demand after the user has edited or discarded their form.
-    if (/^\/api\/(requests|request-quotes|quote-requests|work-orders|matches|enterprises|supply|ops\/supply-verification)(?:\/|$)/.test(path)) {
+    if (/^\/api\/(requests|request-quotes|quote-requests|work-orders|matches|enterprises|supply|ops\/supply-verification|me\/work|workforces|work-programs|work-tasks|work-territories)(?:\/|$)/.test(path)) {
       return { ok: false, status: null, error: 'Could not confirm the save. Your form is still here. Retry to check or save it safely.' };
     }
     // Credentials must never enter the durable offline queue. Multipart
@@ -6101,4 +6101,175 @@ export function groupAdmissions(id: string): Promise<ApiResult<Array<{ id: strin
 }
 export function decideGroupAdmission(groupId: string, id: string, approve: boolean, reason: string): Promise<ApiResult<unknown>> {
   return request(`/api/groups/${encodeURIComponent(groupId)}/admission/decide`, { method: 'POST', body: JSON.stringify({ id, approve, reason }) });
+}
+
+// ---------------------------------------------------------------------------
+// WORKFORCE — a distributed team run from phones (docs/WORKFORCE.md).
+//
+// Every number here is served by the server and derived from rows: earnings,
+// counts, progress and money. The client never sends a fee, a worker id or an
+// owner id — identity is the session, and the price of work is the program's
+// frozen rate card. Workforce writes are never replayed from the offline
+// queue: a claim or a proof submitted twice later is not the same act.
+// ---------------------------------------------------------------------------
+export type WorkMode = 'home' | 'field';
+export interface WorkTemplateField { key: string; label: string; kind: 'text' | 'phone' | 'number' | 'yesno'; required: boolean }
+export interface WorkTemplateStep {
+  index: number; key: string; label: string; mode: WorkMode; share: number; hours: number; brief: string;
+  fields: WorkTemplateField[]; photosMin: number; gps: boolean; consent: boolean;
+  gate: { field: string; equals: string; closedAs: string } | null;
+}
+export interface WorkTemplate { key: string; label: string; summary: string; subjectKind: string; unitNoun: string; mode: WorkMode | 'hybrid'; steps: WorkTemplateStep[] }
+export interface WorkTerms { version: string; lines: string[] }
+export interface WorkRateCard { currency: 'KES'; unitPriceKes: number; feeBps: number; briefFeeKes: number; workerPoolKes: number; steps: Array<{ key: string; label: string; mode: WorkMode; share: number; feeKes: number }> }
+export interface WorkProgramHeadline {
+  id: string; workforceId: string; workforceName: string | null; title: string; objective: string;
+  templateKey: string; templateLabel: string; unitNoun: string; mode: WorkMode | 'hybrid';
+  audience: 'workforce' | 'network'; status: 'draft' | 'open' | 'paused' | 'closed'; deadline: string;
+  target: number; unitPriceKes: number; rateCard: WorkRateCard;
+  territories: Array<{ id: string; name: string; quota: number | null }>; revision: number;
+}
+export interface WorkProgramCounts { target: number; inProgress: number; awaitingReview: number; approved: number; rejected: number; notConverted: number; abandoned: number; remaining: number }
+export interface WorkProgramMoney { currency: 'KES'; committedKes: number; verifiedKes: number; remainingKes: number; workerKes: number; briefFeeKes: number; note: string }
+export interface WorkProgramSummary extends WorkProgramHeadline { counts: WorkProgramCounts; progressPct: number; money: WorkProgramMoney }
+export interface WorkProgramDashboard {
+  program: WorkProgramHeadline; counts: WorkProgramCounts; progressPct: number; money: WorkProgramMoney;
+  funnel: Array<{ stepKey: string; label: string; mode: WorkMode; open: number; assigned: number; submitted: number; approved: number; rejected: number }>;
+  coverage: Array<{ territoryId: string; name: string; quota: number | null; approved: number; inProgress: number }>;
+  results: Array<{ unitId: string; subjectLabel: string | null; territory: string | null; approvedAt: string }>;
+}
+export interface WorkCheck { key: string; label: string; status: 'pass' | 'flag' | 'not_checked'; detail: string }
+export interface WorkReview { decision: 'approve' | 'return' | 'reject'; reason: string | null; by: string; at: string }
+export interface WorkTaskView {
+  id: string; status: 'open' | 'assigned' | 'submitted' | 'approved' | 'rejected' | 'released';
+  stepIndex: number; stepCount: number; step: WorkTemplateStep; feeKes: number;
+  program: { id: string; title: string; templateLabel: string; unitNoun: string; deadline: string; workforceName: string | null };
+  territory: { id: string; name: string | null } | null; unitStatus: string; subjectLabel: string | null;
+  subject: Record<string, string | number> | null; assignedAt: string | null; dueAt: string | null; returns: number;
+  lastReview: WorkReview | null; lastProof: { id: string; attempt: number; submittedAt: string; checks: WorkCheck[]; flags: number } | null;
+  reasons?: string[];
+}
+export interface WorkChecklistItem { key: string; label: string; done: boolean; detail: string }
+export interface WorkChecklist { items: WorkChecklistItem[]; readyForActivation: boolean; complete: boolean; doneCount: number; total: number }
+export interface WorkerProfile {
+  id: string; userId: string; displayName: string; phone: string; modes: WorkMode[];
+  device: { smartphone: boolean; gps: boolean }; areas: string[]; languages: string[]; availableDays: number[];
+  termsAcceptedVersion: string | null; termsAcceptedAt: string | null; briefings: Array<{ templateKey: string; at: string }>;
+}
+export interface WorkRecordRow { templateKey: string; templateLabel: string; submitted: number; approved: number; rejected: number; returned: number; inReview: number; decided: number; statement: string; steps: Array<{ stepKey: string; stepLabel: string; approved: number; rejected: number }> }
+export interface WorkTrackRecord { userId: string; byTemplate: WorkRecordRow[]; lastActiveAt: string | null; note: string }
+export interface WorkEarningsRow { taskId: string; programId: string; programTitle: string; stepLabel: string; subjectLabel: string | null; feeKes: number; state: 'payable' | 'awaiting_outcome' | 'outcome_failed'; unitStatus: string; closedReason: string | null; approvedAt: string; week: string | null; settlementId: string | null; settlementStatus: 'pending' | 'confirmed' | null }
+export interface WorkEarnings { currency: 'KES'; rows: WorkEarningsRow[]; weeks: Array<{ week: string; tasks: number; kes: number; unsettledTasks: number; unsettledKes: number; settlements: Array<{ id: string; status: string; amountKes: number }> }>; payableKes: number; awaitingOutcomeKes: number; unsettledKes: number; confirmedKes: number; note: string }
+export interface WorkAvailable {
+  program: WorkProgramHeadline; firstStep: { label: string; mode: WorkMode; feeKes: number; hours: number };
+  remaining: number; eligible: boolean; reasons: string[]; blockers: string[];
+  territories: Array<{ id: string; name: string; remaining: number }>;
+}
+export interface WorkMembership { id: string; name: string; description: string; role: 'owner' | 'supervisor' | 'worker'; status: string; memberId: string | null; joinCode: string | null; onboarding?: WorkChecklist | null; territories?: string[] }
+export interface WorkerHome {
+  profile: WorkerProfile | null; terms: WorkTerms; memberships: WorkMembership[];
+  available: WorkAvailable[]; openSteps: WorkTaskView[]; held: WorkTaskView[]; inReview: WorkTaskView[]; recent: WorkTaskView[];
+  today: { submitted: number; approved: number; inReview: number; earnedKes: number };
+  earnings: WorkEarnings; record: WorkTrackRecord; limits: { maxHeld: number; maxBatch: number };
+}
+export interface WorkTerritory { id: string; workforceId: string; name: string; areas: string[]; center: { lat: number; lng: number } | null; radiusKm: number | null; status: string; members: number; approved: number; inProgress: number }
+export interface WorkRosterMember {
+  memberId: string; userId: string; name: string; handle: string | null; phone: string | null; modes: WorkMode[];
+  device: { smartphone: boolean; gps: boolean } | null; role: 'worker' | 'supervisor'; status: 'applied' | 'active' | 'suspended';
+  territoryIds: string[]; territories: string[]; supervisorId: string | null; supervisorName: string | null;
+  appliedAt: string; activatedAt: string | null; onboarding: WorkChecklist;
+  history: Array<{ at: string; actorId: string; action: string; note?: string }>; record: WorkTrackRecord;
+}
+export interface WorkforceDesk {
+  workforce: { id: string; name: string; description: string; joinCode: string | null; partnerId: string | null };
+  role: 'owner' | 'supervisor'; territories: WorkTerritory[]; members: WorkRosterMember[];
+  counts: { applied: number; readyToActivate: number; active: number; suspended: number; awaitingReview: number };
+  programs: WorkProgramSummary[]; templates: WorkTemplate[];
+}
+export interface WorkProof {
+  id: string; taskId: string; attempt: number; fields: Record<string, string | number>; photos: string[];
+  location: { lat: number; lng: number; accuracyM: number | null } | null;
+  consent: { given: boolean; name: string; words: string | null } | null; note: string | null;
+  checks: WorkCheck[]; flags: number; submittedAt: string; review: WorkReview | null;
+}
+export interface WorkReviewItem {
+  taskId: string; programId: string; programTitle: string; templateLabel: string; stepLabel: string; stepIndex: number; stepCount: number;
+  mode: WorkMode; fields: Array<{ key: string; label: string }>; worker: { userId: string; name: string; record: string };
+  ownSubmission: boolean; territory: string | null; subjectBefore: Record<string, string | number>; proof: WorkProof; previous: WorkReview[];
+}
+export interface WorkProofInput {
+  fields: Record<string, string>; photos: string[];
+  location: { lat: number; lng: number; accuracyM: number | null } | null;
+  consent: { given: boolean; name: string; words?: string } | null; note?: string;
+}
+export interface WorkProgramInput {
+  title: string; objective?: string; templateKey: string; target: number; unitPriceKes: number; deadline: string;
+  audience: 'workforce' | 'network'; territoryIds: string[]; territoryTargets?: Record<string, number> | null;
+}
+
+const wid = (s: string) => encodeURIComponent(s);
+const post = (body: unknown): RequestInit => ({ method: 'POST', body: JSON.stringify(body ?? {}) });
+
+export function getWorkTemplates(): Promise<ApiResult<{ templates: WorkTemplate[]; terms: WorkTerms }>> {
+  return request('/api/work-templates', undefined, (r) => (Array.isArray(r?.templates) ? r : undefined));
+}
+export function getWorkerHome(): Promise<ApiResult<WorkerHome>> {
+  return request('/api/me/work', undefined, (r) => (Array.isArray(r?.available) ? (r as WorkerHome) : undefined));
+}
+export function saveWorkerProfile(body: Partial<Pick<WorkerProfile, 'displayName' | 'phone' | 'modes' | 'device' | 'areas' | 'availableDays' | 'languages'>>): Promise<ApiResult<WorkerProfile>> {
+  return request('/api/me/work/profile', { method: 'PUT', body: JSON.stringify(body) }, (r) => r?.profile ?? undefined);
+}
+export function acceptWorkTerms(version: string): Promise<ApiResult<WorkerProfile>> {
+  return request('/api/me/work/terms', post({ version }), (r) => r?.profile ?? undefined);
+}
+export function acknowledgeWorkBriefing(templateKey: string): Promise<ApiResult<WorkerProfile>> {
+  return request('/api/me/work/briefings', post({ templateKey }), (r) => r?.profile ?? undefined);
+}
+export function joinWorkforce(code: string): Promise<ApiResult<{ id: string; status: string }>> {
+  return request('/api/me/work/join', post({ code }), (r) => r?.membership ?? undefined);
+}
+export function claimWork(programId: string, body: { count: number; territoryId: string | null; idempotencyKey: string }): Promise<ApiResult<WorkTaskView[]>> {
+  return request(`/api/work-programs/${wid(programId)}/claim`, post(body), (r) => (Array.isArray(r?.tasks) ? r.tasks : undefined));
+}
+export function acceptWorkTask(taskId: string): Promise<ApiResult<WorkTaskView>> {
+  return request(`/api/work-tasks/${wid(taskId)}/accept`, post({}), (r) => r?.task ?? undefined);
+}
+export function submitWorkProof(taskId: string, body: WorkProofInput): Promise<ApiResult<{ proof: WorkProof; task: WorkTaskView }>> {
+  return request(`/api/work-tasks/${wid(taskId)}/submit`, post(body), (r) => (r?.proof ? r : undefined));
+}
+export function releaseWorkTask(taskId: string, reason = ''): Promise<ApiResult<{ id: string }>> {
+  return request(`/api/work-tasks/${wid(taskId)}/release`, post({ reason }), (r) => r?.task ?? undefined);
+}
+export function listMyWorkforces(): Promise<ApiResult<WorkMembership[]>> {
+  return request('/api/workforces', undefined, (r) => (Array.isArray(r?.workforces) ? r.workforces : undefined));
+}
+export function createWorkforce(name: string, description = ''): Promise<ApiResult<{ id: string; name: string; joinCode: string }>> {
+  return request('/api/workforces', post({ name, description }), (r) => r?.workforce ?? undefined);
+}
+export function getWorkforceDesk(id: string): Promise<ApiResult<WorkforceDesk>> {
+  return request(`/api/workforces/${wid(id)}`, undefined, (r) => (r?.workforce ? (r as WorkforceDesk) : undefined));
+}
+export function createWorkTerritory(workforceId: string, body: { name: string; areas: string[]; lat?: number | null; lng?: number | null; radiusKm?: number | null }): Promise<ApiResult<WorkTerritory>> {
+  return request(`/api/workforces/${wid(workforceId)}/territories`, post(body), (r) => r?.territory ?? undefined);
+}
+export function workforceMemberAction(workforceId: string, memberId: string, body: { action: string; territoryIds?: string[]; role?: string; reason?: string }): Promise<ApiResult<{ id: string; status: string }>> {
+  return request(`/api/workforces/${wid(workforceId)}/members/${wid(memberId)}/actions`, post(body), (r) => r?.member ?? undefined);
+}
+export function createWorkProgram(workforceId: string, body: WorkProgramInput): Promise<ApiResult<WorkProgramHeadline>> {
+  return request(`/api/workforces/${wid(workforceId)}/programs`, post(body), (r) => r?.program ?? undefined);
+}
+export function changeWorkProgramStatus(programId: string, action: 'publish' | 'pause' | 'resume' | 'close', revision: number): Promise<ApiResult<WorkProgramHeadline>> {
+  return request(`/api/work-programs/${wid(programId)}/status`, post({ action, revision }), (r) => r?.program ?? undefined);
+}
+export function getWorkProgram(programId: string): Promise<ApiResult<WorkProgramDashboard>> {
+  return request(`/api/work-programs/${wid(programId)}`, undefined, (r) => (r?.program ? (r as WorkProgramDashboard) : undefined));
+}
+export function getWorkReviewQueue(workforceId: string): Promise<ApiResult<WorkReviewItem[]>> {
+  return request(`/api/workforces/${wid(workforceId)}/review`, undefined, (r) => (Array.isArray(r?.queue) ? r.queue : undefined));
+}
+export function reviewWorkTask(taskId: string, decision: 'approve' | 'return' | 'reject', reason = ''): Promise<ApiResult<{ task: { status: string }; unit: { status: string } }>> {
+  return request(`/api/work-tasks/${wid(taskId)}/review`, post({ decision, reason }), (r) => (r?.task ? r : undefined));
+}
+export function approveCleanWork(workforceId: string): Promise<ApiResult<{ approved: number }>> {
+  return request(`/api/workforces/${wid(workforceId)}/review/approve-clean`, post({}), (r) => (typeof r?.approved === 'number' ? r : undefined));
 }

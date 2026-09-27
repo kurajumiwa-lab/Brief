@@ -216,6 +216,7 @@ export function deleteUpload(id, ownerId) {
     return { ok: false, status: 404, code: 'not_found', error: 'upload not found' };
   }
   if(row.purpose==='private_work' && store.find('workOrders',w=>w.evidence.some(e=>e.uploadId===id)))return {ok:false,status:409,code:'evidence_in_use',error:'Operational evidence is retained in Work history'};
+  if (row.purpose === 'private_work' && store.find('workProofs', p => p.photos?.includes(id))) return { ok: false, status: 409, code: 'evidence_in_use', error: 'This photo is retained as proof of submitted workforce work' };
   if (row.purpose === 'private_quote' && store.find('requestQuotes', q => [...q.offers.map(o=>o.terms),q.draft].filter(Boolean).some(t=>t.evidence.some(e=>e.uploadId===id)))) {
     return {ok:false,status:409,code:'evidence_in_use',error:'This image is retained as part of a commercial record'};
   }

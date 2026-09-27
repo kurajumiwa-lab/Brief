@@ -39,6 +39,7 @@ const DEFINITIONS = [
   { key: 'attribution', domain: 'attribution', label: 'Distribution provenance (partner/program/cohort/invite)', configured: () => true },
   { key: 'partner', domain: 'partner', label: 'Distribution partners & revenue share', configured: () => true },
   { key: 'field_agents', domain: 'fieldAgent', label: 'Field agents & territory overrides', configured: () => true },
+  { key: 'workforce', domain: 'workforce', label: 'Workforce: onboarding, territories, work programs, proof & settlement', configured: () => true },
   { key: 'lipa_mdogo', domain: 'lipaMdogo', label: 'Asset-financing records & collection (Lipa Mdogo)', configured: () => true },
   { key: 'table_banking', domain: 'tableBanking', label: 'Table banking (contributions, rotation, loans)', configured: () => true },
   // Always-configured: these run on the local store and need no credential.

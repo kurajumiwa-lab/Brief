@@ -17,6 +17,7 @@ export type BriefNavigationTab =
   | 'ledger'
   | 'catalog'
   | 'partners'
+  | 'workforce'
   | 'you';
 
 export interface NavigationProps {

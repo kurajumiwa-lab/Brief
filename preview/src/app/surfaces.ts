@@ -45,6 +45,7 @@ export const TAB_HASH: Record<string, string> = {
   pulse: 'pulse',
   you: 'you',
   partners: 'partners',
+  workforce: 'workforce',
   supply: 'supply',
   requests: 'requests'
 };

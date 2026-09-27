@@ -4481,7 +4481,8 @@ console.log('\n=== FEATURE REGISTRY (§4.2) ===');
   // Default state: everything enabled; module features configured; provider
   // features NOT configured (no credentials in this run).
   check('every feature is enabled by default', features.list().every((f) => f.enabled));
-  check('the registry holds all registered features', features.list().length === 50, String(features.list().length));
+  check('the registry holds all registered features', features.list().length === 51, String(features.list().length));
+  check('workforce is registered and available by default', features.available('workforce') === true);
   check('auth is available by default', features.available('auth') === true);
   check('tea is available by default', features.available('tea') === true);
   check('vaults is available by default', features.available('vaults') === true);
