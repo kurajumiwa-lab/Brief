@@ -4962,6 +4962,8 @@ export interface DiscoverTile {
 export interface DiscoverFeatured {
   kind: 'listing' | 'event';
   id: string;
+  /** Same rule as DiscoverFeedItem.objectId: read from the row, never minted. */
+  objectId?: string | null;
   title: string;
   description: string | null;
   price: number;
@@ -4980,6 +4982,11 @@ export interface DiscoverFeatured {
 }
 export interface DiscoverFeedItem {
   kind: 'listing' | 'event';
+  /** The object this row can be ACTED on, or null when it has none. Saving and
+      "not for me" are keyed by an object id, so a surface may only offer them
+      where this is a real id the server will accept — never the row's own id
+      wearing an object's name. */
+  objectId?: string | null;
   flow?: string | null;
   commodity?: string | null;
   origin?: string | null;

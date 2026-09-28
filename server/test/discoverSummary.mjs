@@ -26,6 +26,7 @@ process.env.BRIEF_DATA_DIR = dir;
 const { store } = await import("../src/store.js");
 const auth = await import("../src/domain/auth.js");
 const spaces = await import("../src/domain/space.js");
+const campaigns = await import("../src/domain/campaign.js");
 const { discoverSummary } = await import("../src/domain/discoverSummary.js");
 
 let count = 0;
@@ -218,6 +219,102 @@ await test("a feed row carries its own timestamp and nothing else about time", (
   }
   assert.ok(!s.feed.some((f) => "views" in f || "saves" in f || "rank" in f || "score" in f),
     "no field pretends to measure interest a listing cannot have");
+});
+
+await test("a row says which object it can be acted on, and never invents one", () => {
+  // "Save" and "not for me" are keyed by an object id. A card may only offer
+  // them when the row really has one, so the honest field is the row's own —
+  // including the null — rather than the row's id dressed up as an object id
+  // (which would 404 on the first tap and look like a broken button).
+  const owner = auth.createUser({ handle: "ds_obj_owner", password: "a good passphrase" });
+  const camp = campaigns.createCampaign(owner.id, {
+    title: "Thursday Jazz at the Yard", type: "event", description: "", location: "Ngong Road",
+    startsAt: new Date(Date.now() + 3 * 86400000).toISOString(), price: 0
+  });
+  campaigns.transitionCampaign(camp.id, "published");
+
+  const s = discoverSummary({});
+  const event = s.feed.find((f) => f.id === camp.publicSlug);
+  assert.ok(event, "the fresh event is on the board");
+  assert.equal(event.objectId, camp.objectId,
+    "an event names its campaign's object — the id a save would land on");
+  assert.ok(store.find("objects", (o) => o.id === event.objectId),
+    "and that id resolves to a real object row, so the action has somewhere to go");
+  if (s.featured && s.featured.id === event.id) {
+    assert.equal(s.featured.objectId, event.objectId, "the featured copy carries the same id, not a second guess");
+  }
+  // Whatever holds the slot, an id is either absent or real — never a value
+  // that would 404 the moment somebody tapped it.
+  for (const row of [s.featured, ...s.feed].filter(Boolean)) {
+    assert.ok(row.objectId === null || store.find("objects", (o) => o.id === row.objectId),
+      `every objectId on the board resolves (${row.kind} ${row.id})`);
+  }
+
+  // Listings are written straight onto the counter and usually carry no object
+  // at all. Null is the truthful answer there, and it is NOT the listing id.
+  const listing = s.feed.find((f) => f.kind === "listing");
+  if (listing) {
+    const row = store.filter("listings", (l) => l.id === listing.id)[0];
+    assert.equal(listing.objectId, row.objectId ?? null, "the listing's own objectId, verbatim");
+    assert.notEqual(listing.objectId, listing.id, "a listing id is not an object id, and is never passed off as one");
+  }
+
+  // An event whose campaign was written without an object keeps the null.
+  store.insert("campaigns", {
+    id: "cmp_ds_noobj", title: "Bare Event", type: "event", status: "published",
+    price: 0, currency: "KES", ownerId: owner.id, location: null,
+    startsAt: new Date(Date.now() + 2 * 86400000).toISOString(), endsAt: null,
+    publicSlug: "bare-event-ds", slug: "bare-event-ds", objectId: null, metadata: {},
+    createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
+  });
+  const bare = discoverSummary({}).feed.find((f) => f.id === "bare-event-ds");
+  assert.equal(bare.objectId, null, "no object, so no id is minted to fill the gap");
+});
+
+await test("API: the reel's actions accept exactly what the board hands out", async () => {
+  const { default: app } = await import("../src/index.js");
+  const personal = await import("../src/domain/personal.js");
+  const srv = app.listen(0);
+  const port = srv.address().port;
+  const call = async (p, m = "GET", body, token) => {
+    const headers = { "content-type": "application/json" };
+    if (token) headers.authorization = `Bearer ${token}`;
+    const r = await fetch(`http://127.0.0.1:${port}${p}`, { method: m, headers, body: body ? JSON.stringify(body) : undefined });
+    return { status: r.status, body: await r.json().catch(() => null) };
+  };
+  try {
+    const board = await call("/api/discover/summary");
+    const event = board.body.feed.find((f) => f.kind === "event" && f.objectId);
+    assert.ok(event, "the board offers an event with an object");
+    const viewer = (await call("/api/auth/register", "POST", { handle: "ds_reel_" + Date.now().toString(36), password: "a good passphrase" })).body;
+
+    const saved = await call(`/api/me/saved/${encodeURIComponent(event.objectId)}`, "POST", {}, viewer.token);
+    assert.equal(saved.status, 200, "saving the id the card shows is accepted, not a 404");
+    assert.ok(saved.body.saved.includes(event.objectId), "and the save is the viewer's own row");
+    const savedState = await call("/api/me", "GET", undefined, viewer.token);
+    assert.ok(savedState.body.saved.includes(event.objectId), "/api/me agrees, so a reload still shows it kept");
+
+    const dismissed = await call("/api/me/relevance", "POST", { kind: "not_interested", objectId: event.objectId }, viewer.token);
+    assert.equal(dismissed.status, 200);
+    assert.ok(dismissed.body.relevance.notInterested.includes(event.objectId), "and 'not for me' is a real record");
+    const feed = await call("/api/me/feed", "GET", undefined, viewer.token);
+    assert.ok(!(feed.body.objects ?? []).some((o) => o.id === event.objectId),
+      "the personal feed honours it, which is why the card may say 'dealt with'");
+    const undone = await call("/api/me/relevance", "DELETE", { kind: "not_interested", objectId: event.objectId }, viewer.token);
+    assert.equal(undone.status, 200);
+    assert.ok(!undone.body.relevance.notInterested.includes(event.objectId), "and undo puts it back");
+
+    // A listing with no object cannot be saved by anybody — the reason the card
+    // does not offer the button. This is the failure the field exists to prevent.
+    const bare = board.body.feed.find((f) => f.kind === "listing" && !f.objectId);
+    if (bare) {
+      let threw = "";
+      try { personal.saveObject(viewer.user.id, bare.id); } catch (e) { threw = String(e.message); }
+      assert.match(threw, /object not found/, "passing a listing id where an object id belongs fails loudly");
+    }
+  } finally {
+    srv.close();
+  }
 });
 
 console.log(`\nPASS ${count}`);

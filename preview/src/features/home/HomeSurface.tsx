@@ -3,6 +3,7 @@ import { ArrowRight, Briefcase, CalendarDays, Package, Users } from 'lucide-reac
 import * as api from '../../api/briefApi';
 import type { DiscoverFeedItem, DiscoverSummary } from '../../api/briefApi';
 import { FeedSheet } from '../city/DiscoverFeed';
+import { ActivityReel, reelSelection } from './ActivityReel';
 import '../../ui/compact.css';
 
 export interface HomeSurfaceProps {
@@ -60,13 +61,15 @@ export function HomeSurface({ onOpenSpace, onExploreDiscover, onOpenSpaces, onOp
           {(['all', 'offers', 'events'] as const).map((key) => <button type="button" key={key} aria-pressed={filter === key} onClick={() => setFilter(key)}>{key === 'all' ? 'All activity' : key === 'offers' ? 'Offers' : 'Events'}</button>)}
         </div>
         {loading ? <p className="compact-empty" role="status">Reading activity…</p> : error ? <p className="compact-empty" role="alert">{error} <button type="button" onClick={() => void load()}>Retry</button></p> : !items.length ? <p className="compact-empty">No recent activity.</p> : (
-          <ul className="compact-list">{items.slice(0, 5).map((item) => <li key={`${item.kind}-${item.id}`}>
-            <button type="button" className="compact-row" onClick={() => { if (item.kind === 'event') window.location.hash = `wanderly/experience/${encodeURIComponent(item.id)}`; else setOpenItem(item); }}>
-              <span className="compact-avatar">{item.mediaUrl ? <img src={api.mediaFileUrl(item.mediaUrl)} alt="" /> : item.kind === 'event' ? <CalendarDays size={18} /> : <Package size={18} />}</span>
-              <span className="compact-row-text"><strong>{item.title}</strong><small>{item.kind === 'event' ? 'Event' : 'Offer'}{item.priceLabel ? ` · ${item.priceLabel}` : ''}{item.location ? ` · ${item.location}` : ''}</small></span>
-              <ArrowRight size={15} />
-            </button>
-          </li>)}</ul>
+          /* The reel is keyed on the filter: switching tab is a different set,
+             so it starts at the first activity rather than at whatever index
+             the previous set happened to leave behind. `reelSelection` is the
+             reel's own bounded, kind-fair choice of which five (see there). */
+          <ActivityReel
+            key={filter}
+            items={reelSelection(items)}
+            onOpenItem={(item) => { if (item.kind === 'event') window.location.hash = `wanderly/experience/${encodeURIComponent(item.id)}`; else setOpenItem(item); }}
+          />
         )}
       </section>
 
