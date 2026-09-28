@@ -41,6 +41,7 @@ import { isoWeekOf } from './fieldAgent.js';
 import { getTemplate, templateMode, templateView, TEMPLATE_KEYS } from './workTemplates.js';
 import * as wf from './workforce.js';
 import { getRequest } from './requests.js';
+import { announce } from './engine/announce.js';
 
 const { fail } = wf;
 
@@ -101,6 +102,45 @@ export function getTask(id) {
 
 function pushHistory(row, entry) {
   return [...(row.history ?? []), { at: nowIso(), ...entry }].slice(-200);
+}
+
+// The task state machine, in the log. `workTasks` moves through
+// open -> assigned -> submitted -> approved|rejected -> released, and every one
+// of those moves was previously visible only in the task's own history array.
+const TASK_SIGNAL = {
+  open: 'work_task_opened',
+  assigned: 'work_task_assigned',
+  submitted: 'work_task_submitted',
+  approved: 'work_task_approved',
+  rejected: 'work_task_rejected',
+  released: 'work_task_released'
+};
+
+/**
+ * Announce a task transition. The Work Order is the correlation id, because
+ * "everything that happened on this job" is the question a person actually
+ * asks — and a task is one step of it.
+ */
+function announceTask(task, from, to, { actorId = null, note = null } = {}) {
+  const type = TASK_SIGNAL[to];
+  if (!type || from === to) return null;
+  return announce(type, {
+    actorId,
+    actorKind: actorId ? 'worker' : 'rule',
+    entityKind: 'work_task',
+    entityId: task.id,
+    correlationId: task.workOrderId ?? task.programId ?? task.id,
+    metadata: {
+      taskId: task.id,
+      programId: task.programId ?? null,
+      unitId: task.unitId ?? null,
+      workOrderId: task.workOrderId ?? null,
+      stepIndex: task.stepIndex ?? null,
+      from,
+      to,
+      note
+    }
+  });
 }
 
 export function createProgram(workforceId, actorId, input = {}) {
@@ -201,6 +241,7 @@ export function changeProgramStatus(programId, actorId, { action, revision } = {
     if (action === 'close') {
       for (const task of store.filter('workTasks', (x) => x.programId === p.id && x.status === 'open')) {
         store.update('workTasks', task.id, { status: 'released', history: pushHistory(task, { action: 'withdrawn', note: 'program closed' }) });
+        announceTask(task, task.status, 'released', { note: 'program closed' });
         const unit = store.find('workUnits', (u) => u.id === task.unitId);
         if (unit?.status === 'in_progress') store.update('workUnits', unit.id, { status: 'abandoned', closedReason: 'Program closed before this step was taken', decidedAt: now });
       }
@@ -325,12 +366,14 @@ function releaseRow(task, { action, note, actorId = null }) {
   if (task.stepIndex === 0) {
     // A first step never started becomes nothing: the unit was only a slot.
     store.update('workTasks', task.id, { status: 'released', history: pushHistory(task, { actorId, action, note }) });
+    announceTask(task, task.status, 'released', { actorId, note });
     store.update('workUnits', task.unitId, { status: 'abandoned', closedReason: note, decidedAt: now });
   } else {
     store.update('workTasks', task.id, {
       status: 'open', workerId: null, assignedAt: null, dueAt: null, execution: null,
       history: pushHistory(task, { actorId, action, note })
     });
+    announceTask(task, task.status, 'open', { actorId, note });
   }
 }
 
@@ -419,6 +462,7 @@ export function claim(userId, programId, { count = 1, territoryId = null, idempo
         history: [{ at: now, actorId: userId, action: 'claimed' }],
         createdAt: now
       }));
+      announceTask(tasks.at(-1), null, 'assigned', { actorId: userId, note: 'claimed open work' });
     }
     return tasks;
   });
@@ -437,13 +481,15 @@ export function acceptOpenTask(userId, taskId) {
   if (heldBy(userId) + 1 > MAX_HELD_TASKS) fail(`you can hold ${MAX_HELD_TASKS} tasks at once. Submit or release some first.`, 409, 'too_many_held');
   const step = getTemplate(program.templateKey).steps[task.stepIndex];
   const now = nowIso();
-  return store.update('workTasks', task.id, {
+  const assigned = store.update('workTasks', task.id, {
     status: 'assigned',
     workerId: userId,
     assignedAt: now,
     dueAt: new Date(Date.now() + step.hours * 3600000).toISOString(),
     history: pushHistory(task, { actorId: userId, action: 'accepted' })
   });
+  announceTask(assigned, task.status, 'assigned', { actorId: userId, note: 'accepted an open task' });
+  return assigned;
 }
 
 export function releaseTask(userId, taskId, { reason = '' } = {}) {
@@ -640,12 +686,13 @@ export function submitProof(userId, taskId, input = {}) {
       submittedAt: now,
       review: null
     });
-    store.update('workTasks', task.id, {
+    const submitted = store.update('workTasks', task.id, {
       status: 'submitted',
       submittedAt: now,
       proofIds: [...task.proofIds, proof.id],
       history: pushHistory(task, { actorId: userId, action: 'submitted', note: proof.flags ? `${proof.flags} flag${proof.flags === 1 ? '' : 's'}` : 'clean' })
     });
+    announceTask(submitted, task.status, 'submitted', { actorId: userId, note: proof.flags ? `${proof.flags} flag(s)` : 'clean' });
     return proof;
   });
 }
@@ -681,16 +728,22 @@ export function reviewTask(reviewerId, taskId, { decision, reason = '' } = {}) {
         dueAt: new Date(Date.now() + step.hours * 3600000).toISOString(),
         history: pushHistory(task, { actorId: reviewerId, action: 'returned', note: why })
       });
+      // A return sends the task BACK to assigned. It is announced because the
+      // state changed and the person holding it needs to know, and because a
+      // rule that watches for repeated returns can only see them if they exist.
+      announceTask(task, 'submitted', 'assigned', { actorId: reviewerId, note: `returned: ${why}` });
       return { task: store.find('workTasks', (t) => t.id === task.id), unit };
     }
     if (decision === 'reject') {
       store.update('workTasks', task.id, { status: 'rejected', decidedAt: now, decidedBy: reviewerId, history: pushHistory(task, { actorId: reviewerId, action: 'rejected', note: why }) });
       store.update('workUnits', unit.id, { status: 'rejected', closedReason: why, decidedAt: now });
+      announceTask(task, 'submitted', 'rejected', { actorId: reviewerId, note: why });
       return { task: store.find('workTasks', (t) => t.id === task.id), unit: store.find('workUnits', (u) => u.id === unit.id) };
     }
 
     // APPROVE — the step happened as evidenced.
     store.update('workTasks', task.id, { status: 'approved', decidedAt: now, decidedBy: reviewerId, history: pushHistory(task, { actorId: reviewerId, action: 'approved', note: why }) });
+    announceTask(task, 'submitted', 'approved', { actorId: reviewerId, note: why });
     const labelField = step.fields.find((f) => f.subjectKey);
     const subject = { ...unit.subject, ...proof.fields };
     const patch = { subject, subjectLabel: unit.subjectLabel ?? (labelField ? proof.fields[labelField.key] ?? null : null) };

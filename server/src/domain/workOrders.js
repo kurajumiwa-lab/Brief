@@ -10,6 +10,7 @@ import {
 import { readFile } from "./upload.js";
 import { recordAudit } from "../routes/helpers.js";
 import * as procurement from "./procurement.js";
+import { announce } from './engine/announce.js';
 export const WORK_STATUSES = [
   "created",
   "specification_pending",
@@ -70,6 +71,51 @@ function audit(w, e) {
     },
   });
 }
+// The Work Order state machine, in the log. One map, beside the machine it
+// describes, so a status cannot be added without somebody deciding what it is
+// called in the event vocabulary.
+const WORK_ORDER_SIGNAL = {
+  created: "work_order_created",
+  confirmed: "work_order_confirmed",
+  in_progress: "work_order_started",
+  ready: "work_order_ready",
+  dispatched: "work_order_dispatched",
+  delivered: "work_order_delivered",
+  completed: "work_order_completed",
+  cancelled: "work_order_cancelled",
+  disputed: "work_order_disputed",
+};
+
+/**
+ * EVERY work-order transition is announced, including the ones no screen shows.
+ *
+ * Before this, the chain request -> quote -> work order -> task -> settlement
+ * emitted nothing at all: `workOrders.events` was a private array, which meant
+ * no rule could react to a delivery, no operator could see a cancellation, and
+ * a new service could not be built from the history. The row is still the
+ * source of truth; this is what makes it legible.
+ */
+function announceWorkOrder(w, user, from, to, extra = {}) {
+  const type = WORK_ORDER_SIGNAL[to];
+  if (!type || from === to) return null;
+  return announce(type, {
+    actorId: user,
+    entityKind: "work_order",
+    entityId: w.id,
+    // The whole process shares a correlation id, so "everything that happened
+    // because of this work" is one query rather than a join through five tables.
+    correlationId: w.requestId ?? w.id,
+    metadata: {
+      workOrderId: w.id,
+      requestId: w.requestId ?? null,
+      participantId: w.participantId ?? null,
+      from,
+      to,
+      ...extra,
+    },
+  });
+}
+
 function updateRequest(w, user, state, action) {
   const r = store.lookup("requests", w.requestId);
   if (!r || r.acceptedQuote?.quoteId !== w.acceptedQuoteId)
@@ -289,6 +335,7 @@ export function createFromAccepted(user, quoteId) {
     store.insert("workOrders", w);
     updateRequest(w, user, "ready_for_work", "work_order_created");
     audit(w, e);
+    announceWorkOrder(w, user, null, "created", { acceptedQuoteId: q.id, requesterId: w.requesterId });
     return view(user, w);
   });
 }
@@ -788,6 +835,12 @@ export function mutate(user, id, input) {
     patch.history = [...w.history, ...events];
     const updated = store.update("workOrders", id, patch);
     for (const e of events) audit(updated, e);
+    // One emit per transition, from the single place the row is written: the
+    // engine cannot miss a status change because a caller forgot to say so.
+    announceWorkOrder(updated, user, w.status, updated.status, {
+      action,
+      agreementRevision: patch.agreement?.revision ?? agreement(w).revision,
+    });
     // Phase 6: a completed Work Order becomes a reusable procurement memory.
     // Idempotent — one reference per Work Order, never a duplicate, never a
     // mutation of the original Request/Quote/Work Order.

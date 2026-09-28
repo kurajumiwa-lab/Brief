@@ -18,6 +18,7 @@ import * as signals from '../domain/signal.js';
 import { requireAuth, now, recordError } from './helpers.js';
 
 import { requireFeature } from '../features.js';
+import * as intake from '../domain/engine/intake.js';
 
 export function register(app) {
 app.use('/api/vendors', requireFeature('commerce'));
@@ -680,49 +681,77 @@ app.post('/api/webhooks/buni/:secret', (req, res) => {
     return res.status(400).json({ error: 'unrecognised payload' });
   }
 
-  const applied = payment.confirmPayment({
-    providerRef: parsed.checkoutRequestId,
-    succeeded: parsed.succeeded,
-    amount: parsed.amount,
-    receipt: parsed.receipt,
-    failureReason: parsed.failureReason,
-    cancelled: parsed.cancelled
-  });
+  // ONE GATE AT THE EDGE (EVENT-ENGINE.md §4.4).
+  //
+  // A provider retries a callback until it sees a 2xx, so the same payment
+  // arrives again and again. The three rails below are each idempotent in their
+  // own words, and that is not enough on its own: the guarantee people need is
+  // about the BOUNDARY, and it should not depend on four separate
+  // implementations agreeing. `intake.once` records the provider reference
+  // before anything is confirmed, and a repeat gets the FIRST outcome back —
+  // so a retry that was answered badly the first time is answered the same way,
+  // not answered twice.
+  const gate = intake.once(
+    {
+      key: `buni:${parsed.checkoutRequestId}`,
+      source: 'webhook',
+      handler: 'payment_callback',
+      meta: { provider: check.provider ?? 'buni', succeeded: parsed.succeeded }
+    },
+    () => {
+      const applied = payment.confirmPayment({
+        providerRef: parsed.checkoutRequestId,
+        succeeded: parsed.succeeded,
+        amount: parsed.amount,
+        receipt: parsed.receipt,
+        failureReason: parsed.failureReason,
+        cancelled: parsed.cancelled
+      });
 
-  // Phase 8: the SAME callback also serves Work Order payments. The
-  // provider reference is globally unique across both rails, so dispatch is
-  // unambiguous and both confirmations are idempotent.
-  let appliedWork = null;
-  if (!applied.ok && applied.reason === 'unknown_reference') {
-    appliedWork = workPayment.confirmPayment({
-      providerRef: parsed.checkoutRequestId,
-      succeeded: parsed.succeeded,
-      amount: parsed.amount,
-      receipt: parsed.receipt,
-      failureReason: parsed.failureReason,
-      cancelled: parsed.cancelled
-    });
+      // Phase 8: the SAME callback also serves Work Order payments. The
+      // provider reference is globally unique across both rails, so dispatch is
+      // unambiguous and both confirmations are idempotent.
+      let appliedWork = null;
+      if (!applied.ok && applied.reason === 'unknown_reference') {
+        appliedWork = workPayment.confirmPayment({
+          providerRef: parsed.checkoutRequestId,
+          succeeded: parsed.succeeded,
+          amount: parsed.amount,
+          receipt: parsed.receipt,
+          failureReason: parsed.failureReason,
+          cancelled: parsed.cancelled
+        });
+      }
+
+      // Lipa Mdogo: the same callback also serves installment collections. The
+      // reference is globally unique across all three rails; confirmation is
+      // idempotent and records a signed receipt hash.
+      let appliedLmd = null;
+      if (!applied.ok && (!appliedWork || !appliedWork.ok)) {
+        appliedLmd = lipaMdogo.confirmPayment({
+          providerRef: parsed.checkoutRequestId,
+          succeeded: parsed.succeeded,
+          amount: parsed.amount,
+          receipt: parsed.receipt,
+          failureReason: parsed.failureReason,
+          cancelled: parsed.cancelled
+        });
+      }
+      return { applied, appliedWork, appliedLmd };
+    }
+  );
+
+  const { applied, appliedWork, appliedLmd } = gate.outcome ?? {};
+  if (!applied) {
+    // The gate refused to run (it only does that for a missing key, which
+    // cannot happen here) — answer the provider honestly rather than 500.
+    return res.status(200).json({ ok: false, reason: 'callback_not_processed' });
   }
   if (appliedWork && appliedWork.ok) {
-    return res.json({ ok: true, duplicate: Boolean(appliedWork.duplicate) });
-  }
-
-  // Lipa Mdogo: the same callback also serves installment collections. The
-  // reference is globally unique across all three rails; confirmation is
-  // idempotent and records a signed receipt hash.
-  let appliedLmd = null;
-  if (!applied.ok && (!appliedWork || !appliedWork.ok)) {
-    appliedLmd = lipaMdogo.confirmPayment({
-      providerRef: parsed.checkoutRequestId,
-      succeeded: parsed.succeeded,
-      amount: parsed.amount,
-      receipt: parsed.receipt,
-      failureReason: parsed.failureReason,
-      cancelled: parsed.cancelled
-    });
+    return res.json({ ok: true, duplicate: Boolean(appliedWork.duplicate || gate.duplicate) });
   }
   if (appliedLmd && appliedLmd.ok) {
-    return res.json({ ok: true, duplicate: Boolean(appliedLmd.duplicate) });
+    return res.json({ ok: true, duplicate: Boolean(appliedLmd.duplicate || gate.duplicate) });
   }
 
   if (!applied.ok) {
@@ -733,7 +762,10 @@ app.post('/api/webhooks/buni/:secret', (req, res) => {
     return res.status(200).json({ ok: false, reason: applied.reason });
   }
 
-  if (applied.transactionId && !applied.duplicate && applied.intent?.orderId) {
+  // `!gate.duplicate` as well as `!applied.duplicate`: a replayed callback must
+  // not attach money to an order or emit `order_paid` a second time, whatever
+  // the rail's own answer says.
+  if (applied.transactionId && !applied.duplicate && !gate.duplicate && applied.intent?.orderId) {
     // Attach the money to the order and emit the signal. Settlement itself
     // still goes through the existing guarded transition.
     try {
@@ -755,7 +787,7 @@ app.post('/api/webhooks/buni/:secret', (req, res) => {
     });
   }
 
-  res.json({ ok: true, duplicate: Boolean(applied.duplicate) });
+  res.json({ ok: true, duplicate: Boolean(applied.duplicate || gate.duplicate) });
 });
 
 
@@ -786,17 +818,31 @@ app.post('/api/webhooks/mpesa-b2c/:secret', (req, res) => {
     return res.status(400).json({ error: 'unrecognised payload' });
   }
 
-  const applied = settlement.confirmPayout({
-    providerRef: parsed.conversationId,
-    succeeded: parsed.succeeded,
-    failureReason: parsed.failureReason
-  });
+  // A payout result is money leaving; a replayed result must not release it
+  // twice. Same gate as the inbound rail, keyed by the conversation id.
+  const gate = intake.once(
+    {
+      key: `mpesa-b2c:${parsed.conversationId}`,
+      source: 'webhook',
+      handler: 'payout_callback',
+      meta: { succeeded: parsed.succeeded }
+    },
+    () => settlement.confirmPayout({
+      providerRef: parsed.conversationId,
+      succeeded: parsed.succeeded,
+      failureReason: parsed.failureReason
+    })
+  );
+  const applied = gate.outcome;
+  if (!applied) {
+    return res.status(200).json({ ok: false, reason: 'callback_not_processed' });
+  }
   if (!applied.ok) {
     recordError('mpesa_b2c_webhook', null, `callback not applied: ${applied.reason}`);
     // 200 to Daraja: a retry will not help, and Daraja retries on non-2xx.
     return res.status(200).json({ ok: false, reason: applied.reason });
   }
-  res.json({ ok: true, duplicate: Boolean(applied.duplicate) });
+  res.json({ ok: true, duplicate: Boolean(applied.duplicate || gate.duplicate) });
 });
 
 

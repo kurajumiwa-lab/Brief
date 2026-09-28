@@ -1,5 +1,6 @@
 import { createFromAccepted } from "./workOrders.js";
 import { available } from "../features.js";
+import { announce } from './engine/announce.js';
 // Request commercial proposals. No payments, orders, chat threads or settlement.
 import { store, newId } from "../store.js";
 import * as v from "./supplyValidation.js";
@@ -369,13 +370,21 @@ function requestState(r, user, state, extra = {}) {
     fromStatus: r.status,
     toStatus: state,
   };
-  return store.update("requests", r.id, {
+  const updated = store.update("requests", r.id, {
     status: state,
     requirementsRevision: reqVersion(r),
     revision: r.revision + 1,
     history: [...r.history, e],
     ...extra,
   });
+  // The demand side of the same transition: a request that was `matching` and
+  // is now `quoted` has received an offer. That is what a reminder rule, a
+  // matching rule or an operator would react to, and it did not exist.
+  announce("request_quoted", {
+    actorId: user, entityKind: "request", entityId: r.id, correlationId: r.id,
+    metadata: { requestId: r.id, from: r.status, to: state }
+  });
+  return updated;
 }
 export function mutate(user, id, input) {
   const q = party(user, rawQuote(id)),

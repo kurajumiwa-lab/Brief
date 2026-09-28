@@ -576,7 +576,18 @@ export function createCampaign(ownerId, input = {}) {
   relate(object.id, 'promoted_by_campaign', campaign.id);
   if (circleId) relate(campaign.id, 'belongs_to_circle', circleId);
 
-  emitSignal({ type: 'campaign_created', circleId, objectId: object.id, metadata: { campaignId: campaign.id } });
+  emitSignal({
+    type: 'campaign_created',
+    circleId,
+    objectId: object.id,
+    // The offer is its own entity, not merely the object that wraps it. Without
+    // this, "what happened to this campaign" could only be answered by looking
+    // at an object's events and hoping the metadata agreed.
+    entityKind: 'campaign',
+    entityId: campaign.id,
+    correlationId: campaign.id,
+    metadata: { campaignId: campaign.id }
+  });
   return hydrate(campaign);
 }
 
@@ -808,7 +819,7 @@ function sameField(a, b) {
   return JSON.stringify(x) === JSON.stringify(y);
 }
 
-export function transitionCampaign(id, next) {
+export function transitionCampaign(id, next, options = {}) {
   const campaign = store.find('campaigns', (c) => c.id === id);
   if (!campaign) return null;
   const allowed = VALID_TRANSITIONS[campaign.status] ?? [];
@@ -835,7 +846,15 @@ export function transitionCampaign(id, next) {
     type: `campaign_${next}`,
     circleId: campaign.circleId,
     objectId: campaign.objectId,
-    metadata: { campaignId: campaign.id }
+    entityKind: 'campaign',
+    entityId: campaign.id,
+    correlationId: campaign.id,
+    // `by` distinguishes the two ways a campaign reaches a state: somebody
+    // decided, or the clock did. The lifecycle of an always-on system needs to
+    // tell those apart when it reports what runs without a person.
+    actorKind: options.actorKind ?? null,
+    actorId: options.actorId ?? null,
+    metadata: { campaignId: campaign.id, ...(options.reason ? { reason: options.reason } : {}) }
   });
   return hydrate(store.find('campaigns', (c) => c.id === id));
 }
@@ -1166,6 +1185,9 @@ export function deleteCampaign(id) {
   emitSignal({
     type: 'campaign_cancelled',
     objectId: campaign.objectId ?? null,
+    entityKind: 'campaign',
+    entityId: id,
+    correlationId: id,
     metadata: { campaignId: id, deleted: true, reason: 'nothing depended on this offer' }
   });
   return { removed: true, campaignId: id };
