@@ -922,7 +922,7 @@ export function App() {
 
 
   // Sub-navigation. Sections live INSIDE a destination, so the top
-  // bar stays three doors wide no matter how much is built.
+  // primary bar stays on Home, Selling, Spaces and You as features grow.
 
   // Challenges addressed to this user, awaiting a decision.
   // Gaming activity detected in groups the user is ALREADY a member of.

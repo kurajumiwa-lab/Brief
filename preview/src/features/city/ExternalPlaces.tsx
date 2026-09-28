@@ -147,7 +147,7 @@ function PlaceCard({
     <div className="brief-lobby-card p-3.5 space-y-1.5">
       <div className="flex items-start justify-between gap-2">
         <p className="text-[15px] font-black leading-snug" style={{ color: 'var(--brief-ink)' }}>{place.name}</p>
-        <span className="shrink-0 text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-full" style={{ background: 'var(--color-well)', color: 'var(--brief-muted)' }}>
+        <span className="shrink-0 text-[11px] font-black uppercase tracking-wider px-2 py-1 rounded-full" style={{ background: 'var(--color-well)', color: 'var(--brief-muted)' }}>
           Map listing
         </span>
       </div>

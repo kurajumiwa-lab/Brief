@@ -19,14 +19,12 @@
 //      nowhere counts as a bug rather than a mockup. Each of those has an explicit
 //      negative assertion below, because "we would never" is only true for as
 //      long as a test says so.
-//   3. THE SHEET IS THE ONE LONG LIST. Its entries are asserted as data
-//      (SHEET_GROUPS): Pulse leads, the settings group is exactly Language /
-//      Notifications / Privacy, nothing repeats a bar door, and nothing carries
-//      a count.
-//   4. THE DEDUPE. A destination the sheet owns does not also get a shelf on
-//      Home. Home's three duplicated cards were moved to You → Standing with a
-//      link in the sheet; the last section asserts the copy MOVED, not that it
-//      was deleted.
+//   3. THE DRAWER IS SECONDARY. Its eight existing rooms are asserted as data
+//      (SHEET_GROUPS): Pulse leads Explore, no primary door is repeated, and
+//      the account/settings surfaces stay under You.
+//   4. THE DEDUPE. A personal destination does not also get a shelf on Home.
+//      The seller dashboard reads operational rows; personal standing stays in
+//      You, with the same data kept out of duplicate cards.
 // ---------------------------------------------------------------------------
 const assert = require('assert').strict;
 const fs = require('fs');
@@ -171,37 +169,26 @@ async function main() {
   }
   pass('Banners: silence when there is nothing, the host’s own words when there is, no invented CTA');
 
-  // --- 4. the sheet holds the long list, once -----------------------------
+  // --- 4. secondary destinations stay in the drawer, once -----------------
   {
-    const ids = SHEET_GROUPS.flatMap((g) => g.items.map((i) => i.id));
+    const items = SHEET_GROUPS.flatMap((group) => group.items);
+    const ids = items.map((item) => item.id);
     assert.equal(new Set(ids).size, ids.length, 'no destination is listed twice in the sheet');
-    assert.equal(ids.length, 20, 'existing destinations plus eight explicit commerce and group destinations');
-    // Pulse leads: the reorg put the check-in at the top of the drawer, because
-    // a list that answers "what happened" should start there.
-    const firstGroup = SHEET_GROUPS[0];
-    assert.equal(firstGroup.items.length, 1, 'the first group is a single entry');
-    assert.equal(firstGroup.items[0].label, 'Pulse', 'and that entry is Pulse');
-    // The settings group is exactly the three controls the app can answer.
-    const settings = SHEET_GROUPS.find((g) => g.label === 'Settings');
-    assert.ok(settings, 'the settings group exists');
-    assert.deepEqual(settings.items.map((i) => i.label), ['Language', 'Notifications', 'Privacy'],
-      'Language · Notifications · Privacy, in that order');
-    // The closing group: the explanation and the exit, no group label.
-    const closing = SHEET_GROUPS.find((g) => g.id === 'closing');
-    assert.deepEqual(closing.items.map((i) => i.label), ['How Wairo works', 'Sign out'], 'How Wairo works · Sign out, on their own');
-    const sheetLabels = SHEET_GROUPS.flatMap((g) => g.items.map((i) => i.label));
-    // THE DEDUPE, in its new form: a door the bar owns is not also a row in the
-    // sheet. The bar is three destinations + one action, and the sheet must not
-    // reprint any of them.
-    const doorLabels = BOTTOM_BAR_ITEMS.filter((i) => i.type === 'destination').map((i) => i.label);
-    assert.ok(doorLabels.every((d) => !sheetLabels.includes(d)), 'no bar door is repeated in the sheet');
-    assert.ok(!['Spaces', 'Discover', 'Activity'].some((d) => sheetLabels.includes(d)),
-      'and the old bar\'s doors are not in the sheet either — Activity is Pulse now');
-    const labels = SHEET_GROUPS.flatMap((g) => g.items.map((i) => i.label));
-    assert.ok(labels.every((l) => l.trim().length > 2), 'every entry is a word a person can read');
-    // Nav entries carry no numbers: a count in a nav list is a count that has to
-    // be true everywhere it is printed, including before the member has rows.
-    assert.ok(labels.every((l) => !/\d/.test(l)), 'no counts on nav entries');
+    assert.equal(ids.length, 8, 'only the eight existing secondary destinations remain in the drawer');
+    assert.deepEqual(SHEET_GROUPS.find((group) => group.id === 'explore').items.map((item) => item.label),
+      ['Pulse', 'Marketplace', 'Wanderly · Parties & trips'], 'the Explore drawer group holds its distinct secondary rooms');
+    assert.deepEqual(SHEET_GROUPS.find((group) => group.id === 'work').items.map((item) => item.label),
+      ['Work', 'Requests', 'Supply', 'Partners', 'Elevate'], 'existing work areas remain reachable without crowding the primary bar');
+
+    const sheetLabels = items.map((item) => item.label);
+    const doorLabels = BOTTOM_BAR_ITEMS.filter((item) => item.type === 'destination').map((item) => item.label);
+    assert.ok(doorLabels.every((label) => !sheetLabels.includes(label)), 'no primary door is repeated in the sheet');
+    assert.ok(!['Mine', 'Discover', 'Activity', 'Selling', 'Spaces', 'You'].some((label) => sheetLabels.includes(label)),
+      'legacy and primary navigation labels are not reintroduced in the sheet');
+    assert.ok(sheetLabels.every((label) => label.trim().length > 2 && !/\\d/.test(label)),
+      'secondary entries are readable and carry no unsupported counts');
+    assert.ok(!SHEET_GROUPS.some((group) => ['Settings', 'You'].includes(group.label)),
+      'account and settings surfaces stay under You, not in a second menu');
 
     let went = null;
     let closed = 0;
@@ -215,26 +202,13 @@ async function main() {
     assert.ok(sheet.host.querySelector('[role="dialog"]'), 'it is a dialog, so the screen behind it is not left half-reachable');
     assert.match(sheet.t, /Your area/, 'the area is set here, once, and read by the band and the forecast');
     assert.ok(sheet.host.querySelector('#belt-place'), 'in a real input, not a display of a city we guessed');
-    // The entry is the ONE menu-tile shape: a 12px-radius tinted square with a
-    // thin-line icon, a bold 15px title, a grey 13px description capped at two
-    // lines; group headers small, grey, uppercase, mono.
-    const tiles = inEl(sheet.host, '[data-testid^=menu-tile-]');
-    assert.equal(tiles.length, SHEET_GROUPS.flatMap(g => g.items).length, 'every destination, including trade and groups, is a menu tile');
-    assert.deepEqual(SHEET_GROUPS.find(g => g.id === 'explore').items.map(i => i.label), ['Shops', 'Offers & marketplace', 'Wholesale', 'Source direct', 'Group buys', 'Events', 'Groups', 'Errands']);
-    const earnTile = sheet.host.querySelector('[data-testid="menu-tile-earn"]');
-    assert.ok(earnTile, 'Earn is one of them');
-    const tileIcon = earnTile.querySelector('span.rounded-xl');
-    assert.ok(tileIcon, 'the icon sits in a 12px-radius (rounded-xl) square');
-    const earnTitle = Array.from(earnTile.querySelectorAll('span')).find((s) => s.classList.contains('text-[15px]'));
-    const earnDesc = Array.from(earnTile.querySelectorAll('span')).find((s) => s.classList.contains('text-[13px]'));
-    assert.ok(earnTitle && earnTitle.classList.contains('font-bold'), 'the tile title is 15px and bold');
-    assert.ok(earnDesc && earnDesc.classList.contains('line-clamp-2'), 'the tile description is 13px, capped at two lines');
-    const settingsHeader = inEl(sheet.host, 'p').find((p) => text(p) === 'Settings');
-    assert.ok(settingsHeader && settingsHeader.classList.contains('font-mono') && settingsHeader.classList.contains('uppercase'),
-      'section headers are small grey uppercase mono');
-    click(earnTile);
-    assert.deepEqual(went, { kind: 'you', section: 'earn' }, 'an entry goes to a real section');
-    assert.equal(closed, 1, 'and choosing it closes the sheet');
+    assert.equal(sheet.host.querySelectorAll('button[data-testid]').length, items.length,
+      'each secondary destination renders once as a reachable row');
+    const pulse = sheet.host.querySelector('[data-testid="pulse"]');
+    assert.ok(pulse, 'Pulse remains a secondary entry in the drawer');
+    click(pulse);
+    assert.deepEqual(went, { kind: 'tab', tab: 'pulse' }, 'Pulse opens its existing destination');
+    assert.equal(closed, 1, 'and choosing a destination closes the sheet');
     assert.equal(inEl(sheet.host, 'button[aria-label="Close the menu"]').length, 2,
       'the backdrop and one visible control are the same affordance, not two competing buttons');
     sheet.root.unmount(); sheet.host.remove();
@@ -243,13 +217,13 @@ async function main() {
     assert.equal(shut.t, '', 'closed means nothing rendered, not a hidden tree');
     shut.root.unmount(); shut.host.remove();
   }
-  pass('The sheet owns the long list: each destination once, no counts, one close affordance');
+  pass('The secondary drawer stays distinct from the four primary doors and closes cleanly');
 
   // --- 5. what the sheet took over leaves the working screens -------------
   {
-    const home = src('./src/features/home/HomeSurface.tsx');
+    const home = src('./src/features/home/SellerHome.tsx');
     for (const gone of ['PositionCard', 'CommitmentsCard', 'ReciprocityCard', 'WorldStrip']) {
-      assert.ok(!home.includes(gone), `Home no longer imports ${gone} — that surface has one home now`);
+      assert.ok(!home.includes(gone), `operational Home does not duplicate the personal ${gone} surface`);
     }
     assert.ok(!fs.existsSync(path.join(__dirname, 'src/features/home/WorldStrip.tsx')),
       'and the component that put a whole week of weather on every visit is deleted, not left as a second answer');
@@ -258,8 +232,8 @@ async function main() {
       assert.ok(you.includes(kept), `${kept} still exists where it was moved to (You → Standing)`);
     }
     const sheetSrc = src('./src/app/NavSheet.tsx');
-    assert.match(sheetSrc, /section: 'standing'/, 'reached from the sheet');
-    assert.match(sheetSrc, /section: 'earn'/, 'and the same for Earn, whose rails Home now shows');
+    assert.ok(!/Earn|Standing/.test(sheetSrc), 'personal titles are not duplicated in the secondary drawer');
+    assert.match(you, /earn/, 'Earn remains on the personal You surface, not as a duplicate Home shortcut');
     // The definition that sat in Home's "Tip" box moved to the audit screen,
     // which is where a sentence about what a space IS belongs.
     const audit = src('./src/features/you/HowBriefWorks.tsx');

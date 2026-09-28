@@ -21,7 +21,9 @@ ALL="access admin alerts moneyband utf8 apic menusheet shopbuilder dukabook trus
 # 216 lines and 25 checks, one of them failing, and it appeared in no total this
 # script ever printed. An unlisted suite never runs, and a suite that never runs
 # cannot fail — the same class of lie as a test that cannot fail.
-ALL="$ALL discovery mine tiles activityreel wairobrand spacemoderation workforcedesk compacthome adminwiring wanderly brandlaunch productreviews businessfeed offlineisolation dialogfocus collectionroute cloudbites"
+# Name this suite apart from the public route: preview/cloudbites.jsx would
+# shadow /cloudbites in Vite's extension resolver during development.
+ALL="$ALL discovery mine tiles activityreel wairobrand spacemoderation workforcedesk compacthome sellerhome adminwiring wanderly brandlaunch productreviews businessfeed offlineisolation dialogfocus collectionroute cloudbitespage"
 
 # Files that look like suites but are not, each with the reason it is excluded.
 # Keeping the reasons here is what stops the next reader from "fixing" the list

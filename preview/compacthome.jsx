@@ -39,6 +39,16 @@ const filter = (label) => [...document.querySelectorAll('.home-filters button')]
   await mount();
   assert.equal(projections, 1, 'one projection supplies categories and feed');
   assert.equal(cards().length, 8, 'multiple cards are visible immediately');
+  assert.equal(document.querySelector('#home-activity-title').textContent, 'Offers & events');
+  assert.deepEqual([...document.querySelectorAll('.home-filters button')].map(b => b.textContent.trim()), ['All', 'Offers', 'Events']);
+  assert.equal(filter('All').getAttribute('aria-pressed'), 'true', 'All is the default segmented option');
+  assert.equal(document.querySelector('.home-hero').nextElementSibling.id, 'home-activity', 'the real feed follows the compact banner');
+  assert.equal(cards()[0].dataset.kind, 'listing');
+  assert.ok(cards()[0].querySelector('.home-feed-title').textContent.includes('Real offer 0'));
+  assert.ok(cards()[0].querySelector('.home-feed-meta').textContent.includes('Supplier'));
+  assert.equal(cards()[0].querySelector('.home-feed-bottom').textContent.replace(/\s+/g, ' ').trim(), 'KES 100 · Offer', 'price and kind share one clear footer line');
+  assert.equal(cards()[2].dataset.kind, 'event');
+  assert.equal(cards()[2].querySelector('.home-feed-kind').textContent.replace(/\s+/g, ' ').trim(), '· Event');
   assert.equal(cards()[2].textContent.includes('Saturday gathering'), true);
   assert.equal(document.querySelector('.reel-stage'), null, 'no swipe-only stage that traps vertical scrolling');
   assert.equal(document.querySelector('.home-feed').style.overflow, '', 'the feed is in the normal page flow');

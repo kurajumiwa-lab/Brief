@@ -244,7 +244,7 @@ export const ExperiencePage: React.FC<{ slug: string; onBack?: () => void }> = (
                   <div className="h-2 flex" aria-hidden="true" style={{ background: `linear-gradient(90deg, ${ROSE}, ${ORANGE})` }} />
                   <div className="p-4 space-y-1.5">
                     <div className="flex items-center gap-2 flex-wrap">
-                      {l.tag && <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wide" style={{ background: YELLOW, color: DARK }}>{l.tag}</span>}
+                      {l.tag && <span className="px-2 py-0.5 rounded-full text-[11px] font-black uppercase tracking-wide" style={{ background: YELLOW, color: DARK }}>{l.tag}</span>}
                       {l.zone && <span className="inline-flex items-center gap-1 text-[11px] font-bold" style={{ color: 'rgba(28,25,23,0.55)' }}><MapPin className="w-3 h-3" />{l.zone}</span>}
                     </div>
                     <p className="text-[15px] font-black leading-tight" style={{ color: DARK }}>{l.name}</p>
@@ -406,7 +406,7 @@ export const ExperiencePage: React.FC<{ slug: string; onBack?: () => void }> = (
             <div className="flex flex-wrap justify-center gap-3 mt-8 max-w-3xl mx-auto">
               {festival.sponsors.map((s, i) => (
                 <div key={i} className="px-5 py-3 rounded-xl bg-white/70">
-                  {s.tier && <p className="text-[10px] font-black uppercase tracking-wider" style={{ color: ROSE }}>{s.tier}</p>}
+                  {s.tier && <p className="text-[11px] font-black uppercase tracking-wider" style={{ color: ROSE }}>{s.tier}</p>}
                   <p className="text-[16px] font-black" style={{ color: DARK }}>{s.name}</p>
                 </div>
               ))}

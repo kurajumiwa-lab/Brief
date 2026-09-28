@@ -1,9 +1,9 @@
 // ---------------------------------------------------------------------------
 // WAIRO BRAND — the card is the mark and the four hues. The mockups are not.
 //
-// Added, not a replacement of Home · Mine · You. The knot and the wordmark
-// land on the band. The Trust-score screens, the Errands tab, the SACCO
-// KES 50,000, the 3 Bids, the Unga stock photo and the dark theme are refused.
+// The knot and wordmark stay distinct from the seller workspace navigation:
+// Home · Selling · Spaces · You. Trust-score screens, fabricated bids and
+// stock photos remain refused.
 // ---------------------------------------------------------------------------
 const assert = require('assert').strict;
 const fs = require('fs');
@@ -75,7 +75,7 @@ async function main() {
 
   {
     const doors = BOTTOM_BAR_ITEMS.filter((i) => i.type === 'destination').map((d) => d.label);
-    check('the bar is still Home · Mine · You', doors.join('·') === 'Home·Mine·You');
+    check('the bar is Home · Selling · Spaces · You', doors.join('·') === 'Home·Selling·Spaces·You');
     check('no Errands door, no Trust door, no Wallet door',
       !BOTTOM_BAR_ITEMS.some((i) => /errand|trust|wallet/i.test(i.label)));
     check('How Wairo works is the audit tile', SECTION_TITLES.how === 'How Wairo works' && YOU_SECTION_IDS.includes('how'));
@@ -118,8 +118,8 @@ async function main() {
     const audit = src('src/features/you/HowBriefWorks.tsx');
     check('the audit page names the mockups so they cannot sneak in as product',
       /trust score out of 100/.test(audit) && /KES 50,000/.test(audit) && /3 Bids/.test(audit));
-    check('the audit page keeps the bar as three doors',
-      /There is no Trust tab and no Errands tab/.test(audit));
+    check('the audit page names the four primary seller-workspace destinations',
+      /primary bar is Home · Selling · Spaces · You/.test(audit) && /There is no Trust tab and no Errands tab/.test(audit));
   }
 
   console.log(`\nPASSED ${passed} / FAILED ${failed}`);

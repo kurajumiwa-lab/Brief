@@ -60,7 +60,7 @@
   --brief-muted: #5A6472;
   --brief-faint: #6B7684;
   --brief-line: #DCE1E8;
-  --brief-green: #40916C;   /* primary accent = house emerald (legacy name kept; it finally tells the truth) */
+  --brief-green: #2F7A55;   /* primary accent = AA-contrast emerald (legacy name kept; it finally tells the truth) */
   --brief-green-ink: #FFFFFF;  /* text on the emerald accent — white, for contrast */
   --brief-warn: #B45309;
   --brief-danger: #DC2626;

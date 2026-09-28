@@ -126,19 +126,17 @@ global.fetch = async (input) => {
 
 async function main() {
   // --- 1. The bar: a room is not a door ------------------------------------
-  // The old rule was "'city' highlights Discover, never Home". The reorg made
-  // the stronger claim: the rooms are NOT doors at all. Home / Mine / You are
-  // the only destinations in the bar, plus one action; while the board is open
-  // nothing in the bar is selected, because a lit door is a lie about where you
-  // are.
+  // The board is a secondary room, not a primary destination. Home / Selling /
+  // Spaces / You are the primary destinations, plus one global action; while
+  // the board is open nothing in the bar is selected, because a lit door would
+  // misstate where the member is.
   {
     const c = mount(React.createElement(Navigation, { activeTab: 'city', onSelectTab: () => {} }));
     const tabs = Array.from(c.querySelectorAll('button[role="tab"]'));
     const labels = tabs.map((b) => text(b).replace(/\s+/g, ' ').trim());
-    assert.ok(labels.includes('Home') && labels.includes('Mine') && labels.includes('You'), 'the three doors render');
+    assert.ok(['Home', 'Selling', 'Spaces', 'You'].every((label) => labels.includes(label)), 'the four primary doors render');
     assert.equal(tabs.filter((b) => b.getAttribute('aria-selected') === 'true').length, 0, 'no door lights while a room is open');
-    // The old five doors are gone as labels.
-    assert.ok(!labels.some((l) => /^(Spaces|Discover|Activity)$/.test(l)), 'the old doors do not render as destinations');
+    assert.ok(!labels.some((l) => /^(Mine|Discover|Activity)$/.test(l)), 'legacy labels do not render as primary destinations');
   }
   pass('A room is not a door: nothing in the bar lights while the board is open');
 

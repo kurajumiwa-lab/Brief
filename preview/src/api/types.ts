@@ -1874,6 +1874,8 @@ export interface SpaceMetrics {
   customerCount: number;
   activeOrdersCount: number;
   totalOrdersCount: number;
+  /** Exact count over every open conversation; recentConversations is only a 10-row preview. */
+  inquiriesAwaitingReply?: number;
   offersCount: number;
   /** What `revenueKes` counted, in the server's words. Never inferred locally. */
   revenueBasis?: string;

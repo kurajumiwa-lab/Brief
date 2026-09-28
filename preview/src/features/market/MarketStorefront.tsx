@@ -163,7 +163,7 @@ export const MarketStorefront: React.FC<{ onBack?: () => void }> = ({ onBack }) 
             <WairoMark size={30} title="" />
             <span className="flex flex-col items-start leading-none">
               <span className="text-[17px] font-black tracking-tight" style={{ color: 'var(--wairo-slate)' }}>Wairo</span>
-              <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--color-text-muted)]">Blue Avenue</span>
+              <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--color-text-muted)]">Blue Avenue</span>
             </span>
           </button>
 
@@ -242,7 +242,7 @@ export const MarketStorefront: React.FC<{ onBack?: () => void }> = ({ onBack }) 
             <Heart className="w-5 h-5" />
             {followCount != null && followCount > 0 && (
               <span
-                className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 rounded-full grid place-items-center text-[10px] font-black"
+                className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 rounded-full grid place-items-center text-[11px] font-black"
                 style={{ background: 'var(--color-primary)', color: 'var(--accent-ink)' }}
               >
                 {followCount}
@@ -260,7 +260,7 @@ export const MarketStorefront: React.FC<{ onBack?: () => void }> = ({ onBack }) 
               <ShoppingBag className="w-5 h-5" />
               {openOrders.length > 0 && (
                 <span
-                  className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 rounded-full grid place-items-center text-[10px] font-black"
+                  className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 rounded-full grid place-items-center text-[11px] font-black"
                   style={{ background: 'var(--color-primary)', color: 'var(--accent-ink)' }}
                 >
                   {openOrders.length}
@@ -416,12 +416,12 @@ export const MarketStorefront: React.FC<{ onBack?: () => void }> = ({ onBack }) 
                           <NoPhotoPlate seller={l.seller} mark={l.flow ?? 'listing'} icon={plateIcon(l)} stamp={listedAgo(l.listedAt)} accent={(l.flow && FLOW_ACCENT[l.flow]) || null} />
                         )}
                         {l.why === 'seller-pin' && (
-                          <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wide" style={{ background: 'rgba(255,255,255,0.92)', color: 'var(--color-primary)' }}>
+                          <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full text-[11px] font-black uppercase tracking-wide" style={{ background: 'rgba(255,255,255,0.92)', color: 'var(--color-primary)' }}>
                             Pinned
                           </span>
                         )}
                         {isNew(l.listedAt) && (
-                          <span className="absolute top-2 right-2 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wide" style={{ background: 'var(--color-primary)', color: 'var(--accent-ink)' }}>
+                          <span className="absolute top-2 right-2 px-2 py-0.5 rounded-full text-[11px] font-black uppercase tracking-wide" style={{ background: 'var(--color-primary)', color: 'var(--accent-ink)' }}>
                             New
                           </span>
                         )}
@@ -445,7 +445,7 @@ export const MarketStorefront: React.FC<{ onBack?: () => void }> = ({ onBack }) 
             className="relative overflow-hidden rounded-3xl p-6 sm:p-8"
             style={{ background: 'radial-gradient(120% 140% at 90% 0%, rgba(64,145,108,0.35), rgba(13,27,42,0) 55%), var(--navy)' }}
           >
-            <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider" style={{ background: 'var(--sage)', color: 'var(--navy)' }}>
+            <span className="px-2.5 py-1 rounded-full text-[11px] font-black uppercase tracking-wider" style={{ background: 'var(--sage)', color: 'var(--navy)' }}>
               Pooled demand
             </span>
             <h3 className="text-[22px] sm:text-[26px] font-black text-white mt-3">Buy more together, pay less per unit</h3>
@@ -487,7 +487,7 @@ export const MarketStorefront: React.FC<{ onBack?: () => void }> = ({ onBack }) 
                     ) : (
                       <NoPhotoPlate seller={l.seller} mark={l.flow ?? 'listing'} icon={plateIcon(l)} />
                     )}
-                    <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wide" style={{ background: 'var(--color-primary)', color: 'var(--accent-ink)' }}>New</span>
+                    <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full text-[11px] font-black uppercase tracking-wide" style={{ background: 'var(--color-primary)', color: 'var(--accent-ink)' }}>New</span>
                   </div>
                   <div className="p-3 space-y-1">
                     <p className="text-[13px] font-bold leading-snug line-clamp-2" style={{ color: 'var(--brief-ink)' }}>{l.title}</p>

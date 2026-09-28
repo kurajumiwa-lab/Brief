@@ -1,8 +1,9 @@
 import '../ui/storefront.css';
 import React, { useState, useEffect } from 'react';
-import type { Space, Listing } from '../api/types';
+import type { CampaignBanner, Space, Listing } from '../api/types';
 import * as briefApi from '../api/briefApi';
-import { Navigation, BriefNavigationTab } from './Navigation';
+import { Navigation, BriefNavigationTab, type PrimaryDestination } from './Navigation';
+import type { SpaceWorkspaceTab } from '../features/home/SellerHome';
 import { AppBelt, readPlace, PLACE_KEY } from './AppBelt';
 import { NavSheet, type SheetTarget } from './NavSheet';
 import { TAB_HASH, backLabel, shopHref, shopIdFromHash, surfaceFromHash } from './surfaces';
@@ -11,7 +12,7 @@ const GroupBuyPortal = React.lazy(() => import('../components/GroupBuyPortal').t
 const AdminWorkspace = React.lazy(() => import('../features/admin/AdminWorkspace').then(m => ({ default: m.AdminWorkspace })));
 const SpaceModerationPanel = React.lazy(() => import('../components/SpaceModerationPanel').then(m => ({ default: m.SpaceModerationPanel })));
 const SearchResults = React.lazy(() => import('../components/SearchResults').then(m => ({ default: m.SearchResults })));
-const HomeSurface = React.lazy(() => import('../features/home/HomeSurface').then(m => ({ default: m.HomeSurface })));
+const SellerHome = React.lazy(() => import('../features/home/SellerHome').then(m => ({ default: m.SellerHome })));
 const SpaceShell = React.lazy(() => import('../features/spaces/SpaceShell').then(m => ({ default: m.SpaceShell })));
 import { SpaceMoney } from '../features/spaces/SpaceMoney';
 import { CatalogView } from '../features/spaces/CatalogView';
@@ -83,6 +84,9 @@ export const AppShell: React.FC<AppShellProps> = ({
   const [storefrontOpen, setStorefrontOpen] = useState(false);
   const [spaceError, setSpaceError] = useState('');
   const [activeSpace, setActiveSpace] = useState<Space | null>(null);
+  const [activeSpaceInitialTab, setActiveSpaceInitialTab] = useState<SpaceWorkspaceTab>('catalog');
+  const [campaignAnnouncements, setCampaignAnnouncements] = useState<CampaignBanner[] | null>(null);
+  const captureAnnouncements = React.useCallback((items: CampaignBanner[]) => setCampaignAnnouncements(items), []);
   // Where the You tab opens. The ⓘ on a screen deep-links to the audit page
   // rather than putting the explanation in the reader's way.
   const [youSection, setYouSection] = useState<string | null>(null);
@@ -183,7 +187,11 @@ export const AppShell: React.FC<AppShellProps> = ({
     setCreateOpen(false);
     const nextNonce = signalCounter + 1;
     setSignalCounter(nextNonce);
-    if (id === 'work') {
+    if (id === 'space') {
+      setCreateFlowInitialStep(1);
+      setCreateFlowOpen(true);
+      window.location.hash = 'new-space';
+    } else if (id === 'work') {
       setActiveTab('workforce');
       window.location.hash = 'workforce/org';
     } else if (id === 'offer') {
@@ -247,10 +255,11 @@ export const AppShell: React.FC<AppShellProps> = ({
     }
   }, [createOpen, groupBuysOpen, sheetOpen, createFlowOpen, manualOrderOpen]);
 
-  /** Open one space's workspace, and name it in the URL so back leaves it. */
-  const openSpace = (id: string) => {
+  /** Open one Space at the most useful existing workspace tab, and name it in the URL. */
+  const openSpace = (id: string, initialTab: SpaceWorkspaceTab = 'catalog') => {
     if (activeSpaceIdRef.current !== id) spaceFromRef.current = tabHashRef.current || 'spaces';
     activeSpaceIdRef.current = id;
+    setActiveSpaceInitialTab(initialTab);
     setActiveTab('pipeline');
     void (async () => {
       const res = await briefApi.getSpace(id);
@@ -471,8 +480,8 @@ export const AppShell: React.FC<AppShellProps> = ({
       } else if (hash === 'spaces' || hash.startsWith('spaces/') || hash === 'shopbrief' || hash === 'mine') {
         const nextSection = hash.slice(7);
         setMineSection(['orders', 'selling', 'team'].includes(nextSection) ? nextSection as 'orders' | 'selling' | 'team' : 'spaces');
-        // The morning brief is a notification, not a Mine shelf. Tapping it
-        // opens the read once; closing returns to Mine.
+        // The morning brief is a notification, not a Spaces shelf. Tapping it
+        // opens the read once; closing returns to Spaces.
         setJoinCode('');
         setSearchQuery('');
         setEntityId(null);
@@ -481,7 +490,7 @@ export const AppShell: React.FC<AppShellProps> = ({
         setBriefOpen(hash === 'shopbrief');
       } else if (hash === 'city' || hash.startsWith('city/') || hash === 'discover' || hash === 'events') {
         // Events and Circles are rooms of the board, not aliases of Errands.
-        // `#city/events` and `#city/circles` are the hashes Home's tiles write.
+        // `#city/events` and `#city/circles` are stable discovery-room links.
         setJoinCode('');
         setSearchQuery('');
         setEntityId(null);
@@ -502,9 +511,9 @@ export const AppShell: React.FC<AppShellProps> = ({
       } else if (hash === '' || (hash && hash !== 'join')) {
         setJoinCode('');
         setSearchQuery('');
-        // 'activity' is the old bar's fourth door: its surface now lives in the
-        // drawer's check-in, so the legacy hash resolves there. 'mine' and
-        // 'pulse' are the new bar's doors and the drawer's check-in.
+        // `activity` is a legacy hash for the drawer's Pulse read. `mine` is
+        // retained as a legacy alias for Spaces; primary Selling and Spaces
+        // links resolve through `#spaces/selling` and `#spaces`.
         const tabs: Record<string, BriefNavigationTab> = { home: 'home', spaces: 'mine', pipeline: 'pipeline', catalog: 'catalog', activity: 'pulse', mine: 'mine', pulse: 'pulse', ledger: 'ledger', partners: 'partners', workforce: 'workforce', 'workforce/org': 'workforce', you: 'you' };
         if (hash.startsWith('workforce/program/')) { setEntityId(null); setActiveTab('workforce'); tabHashRef.current = hash; setBriefOpen(false); }
         else if (tabs[hash]) { setEntityId(null); setActiveTab(tabs[hash]); tabHashRef.current = hash; setBriefOpen(false); }
@@ -638,12 +647,24 @@ export const AppShell: React.FC<AppShellProps> = ({
         <SyncStatusDot />
       </div>
 
-      {/* Three doors and one action (Desktop Sidebar / Mobile Bottom Bar) */}
+      {/* Home · Selling · Spaces · You, plus the global Create action. */}
       <Navigation
         activeTab={activeTab}
-        onSelectTab={(tab) => setActiveTab(tab)}
+        activePrimaryTab={activeTab === 'mine' ? (mineSection === 'selling' || mineSection === 'orders' ? 'selling' : 'spaces') : undefined}
+        onSelectTab={(tab: PrimaryDestination) => {
+          if (tab === 'selling') {
+            setMineSection('selling');
+            setMineSellingNonce((n) => n + 1);
+            setActiveTab('mine');
+          } else if (tab === 'spaces') {
+            setMineSection('spaces');
+            setActiveTab('mine');
+          } else {
+            setActiveTab(tab);
+          }
+        }}
         onOpenCreate={() => setCreateOpen(true)}
-        spaceName={activeSpace?.name || 'Your Trace'}
+        spaceName={activeSpace?.name || 'Your business'}
       />
 
       {/* Main Content Viewport */}
@@ -653,6 +674,8 @@ export const AppShell: React.FC<AppShellProps> = ({
             column so it behaves the same on a phone and on a desktop. */}
         <AppBelt
           minimal={(activeTab === 'city' || activeTab === 'discover') && businessFeedActive}
+          showAnnouncements={activeTab !== 'home'}
+          onBannersChange={captureAnnouncements}
           backTo={backTo}
           onOpenSheet={() => setSheetOpen(true)}
           onHome={() => { window.location.hash = 'home'; setActiveTab('home'); }}
@@ -660,12 +683,11 @@ export const AppShell: React.FC<AppShellProps> = ({
           className="-mx-4 sm:-mx-6 mb-3"
         />
         {activeTab === 'requests' ? <RequestsWorkspace route={requestRoute} /> : activeTab === 'supply' ? <SupplyWorkspace route={supplyRoute || 'mine'} /> : null}
-        {/* SPACES with no space open is the STREET: the shopfronts you operate
-            and the ones you follow. Circles and vaults are not here — belonging
-            and filing are different nouns from operating a business. */}
-        {/* The street of shops is Mine. Home → Shops and the Mine door are
-            the same shelf, so there is no second SpacesLanding to hunt through
-            for Create space. A shop still opens at #shop/<id>. */}
+        {/* Spaces is the directory of workspaces you operate or join. Circles
+            remain their own community layer; a Space is where a business's
+            identity, offers and conversations meet. */}
+        {/* The primary Spaces destination and its deep link resolve here; a
+            selected Space opens at #shop/<id> and returns to the place it came from. */}
 
         {/* A shared space link resolves here, and only here does a view row get
             written — so the vendor's view count means page openings. */}
@@ -706,39 +728,47 @@ export const AppShell: React.FC<AppShellProps> = ({
             {spaceError ? <><p role="alert" className="my-4">{spaceError}</p><button onClick={loadSpaces}>Retry</button><button className="ml-4 underline" onClick={() => requestPath()}>Sign in through My Requests</button></> : !loading && <><p className="my-4">No business space yet. Create a Request to describe what you need, or create a space for what you sell.</p><button className="px-4 py-3 rounded-xl bg-[color:var(--color-primary)] text-[color:var(--accent-ink)]" onClick={() => { setCreateFlowInitialStep(1); setCreateFlowOpen(true); }}>Create a space</button></>}
           </section>
         )}
-        {/* Legacy Home Surface Compatibility for tests */}
         {activeTab === 'home' ? (
           <>
+          <SellerHome
+            onOpenSpace={openSpace}
+            onOpenSelling={() => {
+              setMineSection('selling');
+              setMineSellingNonce((n) => n + 1);
+              setActiveTab('mine');
+              window.location.hash = 'spaces/selling';
+            }}
+            onOpenSpaces={() => {
+              setMineSection('spaces');
+              setActiveTab('mine');
+              window.location.hash = 'spaces';
+            }}
+            onCreateSpace={() => {
+              setCreateFlowInitialStep(1);
+              setCreateFlowOpen(true);
+              window.location.hash = 'new-space';
+            }}
+            onExplore={() => {
+              setDiscoverSubTab('all');
+              setActiveTab('city');
+              window.location.hash = 'city';
+            }}
+            onOpenWorkforce={() => {
+              setActiveTab('workforce');
+              window.location.hash = 'workforce/org';
+            }}
+            onRequireAuth={() => {
+              setActiveTab('you');
+              window.location.hash = 'you';
+            }}
+            announcements={campaignAnnouncements}
+          />
           {firstRun && <section data-testid="home-group-invitation" className="max-w-3xl mx-auto my-4" aria-label="Optional group setup">
-            <p className="text-sm mb-2">Want to organise a group? You can set one up whenever you’re ready. Browsing and shopping are available below.</p>
+            <p className="text-sm mb-2">Want to organise a group? You can set one up whenever you’re ready. Browse the Wairo board from Quick actions.</p>
             <FirstRunChecklist compact groups={[]}
               onStartGroup={() => { setFirstRun(false); setActiveTab('you'); window.location.hash = '#you'; }}
               onDismiss={() => { window.localStorage.setItem('brief.firstRunDismissed', '1'); setFirstRun(false); }} />
           </section>}
-          <HomeSurface
-            userName="there"
-            onOpenWork={() => { setActiveTab('workforce'); window.location.hash = 'workforce'; }}
-            onOpenSpace={openSpace}
-            onExploreDiscover={(sub, startRun) => {
-              const room = sub ?? 'all';
-              setDiscoverSubTab(room);
-              if (startRun) {
-                const nextNonce = signalCounter + 1;
-                setSignalCounter(nextNonce);
-                setErrandSignal({ nonce: nextNonce, kind: 'delivery' });
-              } else if (room !== 'errands') {
-                setErrandSignal(null);
-              }
-              setActiveTab('city');
-              window.location.hash = room === 'all' ? 'city' : `city/${room}`;
-            }}
-            onOpenPulse={() => { setActiveTab('pulse'); window.location.hash = 'pulse'; }}
-            onOpenSpaces={() => { setActiveTab('mine'); window.location.hash = 'mine'; }}
-            onOpenGroupBuys={() => setGroupBuysOpen(true)}
-            onGetPaid={() => setActiveTab('ledger')}
-            onOpenHow={() => { window.location.hash = 'you/how'; }}
-            onOpenEarn={() => { window.location.hash = 'you/earn'; }}
-          />
           </>
         ) : (
           <div>
@@ -758,7 +788,9 @@ export const AppShell: React.FC<AppShellProps> = ({
             {/* ── TAB 2: SPACES (the full workspace: build, sell, track) ── */}
             {(activeTab === 'pipeline' || activeTab === 'spaces') && activeSpace && (
               <SpaceShell
+                key={`${activeSpace.id}:${activeSpaceInitialTab}`}
                 spaceId={activeSpace.id}
+                initialTab={activeSpaceInitialTab}
                 onBack={closeSpace}
                 onShare={() => { /* SpaceShell copies and reports the truth itself */ }}
                 onCreateOrder={() => setManualOrderOpen(true)}
@@ -775,6 +807,7 @@ export const AppShell: React.FC<AppShellProps> = ({
             {(activeTab === 'mine' || ((activeTab === 'pipeline' || activeTab === 'spaces') && !activeSpace)) && (
               <MineSurface
                 onOpenSpace={openSpace}
+                onOpenPublicSpace={(slug) => { window.location.hash = `space/${encodeURIComponent(slug)}`; }}
                 onOpenCreateSpace={() => {
                   setCreateFlowInitialStep(1);
                   setCreateFlowOpen(true);
@@ -1032,7 +1065,7 @@ export const AppShell: React.FC<AppShellProps> = ({
       )}
 
       {briefOpen && (
-        <OverlayScreen title="The morning brief" onBack={() => { setBriefOpen(false); window.location.hash = 'mine'; }}>
+        <OverlayScreen title="The morning brief" onBack={() => { setBriefOpen(false); window.location.hash = 'spaces'; }}>
           <ShopBrief onOpenSpace={(id) => { setBriefOpen(false); openSpace(id); }} />
         </OverlayScreen>
       )}

@@ -3,7 +3,7 @@
 .compact-surface button, .compact-disclosure summary { cursor: pointer; }
 .compact-surface button:focus-visible, .compact-disclosure summary:focus-visible, .compact-identity button:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 4px; }
 .compact-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-.compact-eyebrow { font-size: 10px; font-weight: 700; letter-spacing: .14em; color: var(--color-primary); }
+.compact-eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .14em; color: var(--color-primary); }
 .compact-heading h1 { font-size: clamp(24px, 4vw, 32px); font-weight: 700; letter-spacing: -.045em; line-height: 1.25; margin: 5px 0; }
 .compact-heading p:not(.compact-eyebrow), .compact-work-entry p { color: var(--brief-muted, var(--color-text-muted)); font-size: 13px; }
 .compact-icon-btn { display: grid; place-items: center; border: 1px solid var(--divider); width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0; }
@@ -11,7 +11,7 @@
 .compact-shortcuts button { display: flex; align-items: center; gap: 10px; padding: 14px 12px; border: 1px solid var(--divider); border-radius: 12px; background: var(--color-paper); text-align: left; }
 .compact-shortcuts button > svg:first-child { color: var(--color-primary); flex-shrink: 0; }
 .compact-shortcuts span { flex: 1; font-size: 13px; font-weight: 650; }
-.compact-shortcuts small { display: block; font-size: 10px; font-weight: 400; margin-top: 3px; color: var(--brief-muted); }
+.compact-shortcuts small { display: block; font-size: 11px; font-weight: 400; margin-top: 3px; color: var(--brief-muted); }
 .compact-shortcuts button > svg:last-child { flex-shrink: 0; color: var(--brief-muted); }
 .compact-work-entry { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px; border-radius: 14px; border: 1px solid var(--divider); background: var(--color-primary-subtle, var(--color-paper)); }
 .compact-work-entry h2 { font-size: 19px; font-weight: 650; letter-spacing: -.035em; margin: 4px 0; }

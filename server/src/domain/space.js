@@ -1588,6 +1588,10 @@ function hydrateSpace(space, { callerId = null } = {}) {
       customerCount: customerSet.size,
       activeOrdersCount,
       totalOrdersCount: spaceOrders.length,
+      // This exact count uses the complete per-space conversation table. The
+      // hydrated `recentConversations` preview below is deliberately capped at
+      // ten and must not be used as an inbox count on Home.
+      inquiriesAwaitingReply: spaceConversations.filter((c) => ['new', 'active', 'replied'].includes(c.status)).length,
       offersCount: spaceListings.filter((l) => l.status === 'active').length,
       // What this figure is, in the server's own words, so a surface prints the
       // basis instead of implying one. It used to be captioned "Settled through

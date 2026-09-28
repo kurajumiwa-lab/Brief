@@ -28,7 +28,7 @@
 }
 .reel-segments li[data-at='now'] { background: var(--color-primary); }
 .reel-segments li[data-at='past'] { background: var(--color-primary); opacity: .38; }
-.reel-count { font-size: 10px; font-weight: 700; letter-spacing: .06em; color: var(--brief-muted); text-transform: uppercase; margin: 0; }
+.reel-count { font-size: 11px; font-weight: 700; letter-spacing: .06em; color: var(--brief-muted); text-transform: uppercase; margin: 0; }
 .reel-count-seen { font-weight: 400; letter-spacing: 0; text-transform: none; }
 
 /* --- The stage: one hand-sized area that owns the gestures ----------------- */
@@ -91,7 +91,7 @@
 .reel-chip {
   display: inline-flex; align-items: center;
   padding: 3px 8px; border-radius: 999px;
-  font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
+  font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
   background: var(--color-primary-subtle, var(--well)); color: var(--color-primary);
 }
 .reel-chip--quiet { background: transparent; border: 1px solid var(--divider, var(--brief-line)); color: var(--brief-muted); }
@@ -157,7 +157,7 @@
   color: #FFFFFF; pointer-events: none;
   animation: reel-peek-in var(--motion-fast) var(--ease-decelerate) both;
 }
-.reel-peek-kind { margin: 0; font-size: 10px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; opacity: .85; }
+.reel-peek-kind { margin: 0; font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; opacity: .85; }
 .reel-peek-title { margin: 0; font-size: 20px; font-weight: 750; letter-spacing: -.02em; }
 .reel-peek-price { margin: 0; font-size: 15px; font-weight: 800; }
 .reel-peek-line { margin: 0; font-size: 12px; opacity: .9; }
@@ -248,7 +248,7 @@
   .reel-facts > div { grid-template-columns: 74px 1fr; }
   /* The affordances stay — they are how the gestures are found — but they take
      a size that leaves the content the room. */
-  .reel-card-tap { font-size: 10px; }
+  .reel-card-tap { font-size: 11px; }
 }
 
 /* Reduced motion: the reel keeps every state change and drops the travel.

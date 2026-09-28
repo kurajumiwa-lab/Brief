@@ -119,7 +119,7 @@ export const HASH_TAB: Record<string, string> = Object.fromEntries(
 export const TAB_LABEL: Record<string, string> = {
   home: 'Home',
   city: 'the board',
-  spaces: 'your shopfronts',
+  spaces: 'Spaces',
   ledger: 'the money',
   catalog: 'the catalog',
   mine: 'Mine',
@@ -131,6 +131,8 @@ export const TAB_LABEL: Record<string, string> = {
 };
 
 export function backLabel(tabHash: string | null | undefined): string {
-  const want = String(tabHash ?? '').replace(/^#/, '').split('/')[0];
+  const full = String(tabHash ?? '').replace(/^#/, '');
+  if (full === 'spaces/selling' || full === 'spaces/orders') return 'Selling';
+  const want = full.split('/')[0];
   return TAB_LABEL[want] ?? 'where you came from';
 }

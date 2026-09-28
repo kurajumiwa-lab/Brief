@@ -83,7 +83,7 @@ export function HowBriefWorks({ className = '' }: { className?: string }) {
         'A margin against nothing sold is a dash, not 0%. “0%” states a fact — sold, kept nothing — and a shop with no settled order has not stated it.',
         'A mixed basket of currencies has no single total. The amount is dropped and the count is kept; nothing is converted at a rate Brief made up.',
         'A brief is not a bank. Brief holds no money, moves none, stores no card or M-Pesa credentials, and charges nothing. A payment you record is a record you attest to — the ledger’s authority is that you can trace every line back to a row, not that a stranger vouched for it.',
-        'Escrow on Mine is records of funds held between two sides until delivery — Brief moves no money itself. A held total is the sum of locked group-buy and frozen ticket rows; the section is omitted when none are locked. HudumaLink citizen escrow is phone-keyed and read at the operator desk. There is no vault, no “healthy” badge, and no locked-KES figure without those rows.'
+        'Escrow records in Selling describe funds held between two sides until delivery — Brief moves no money itself. A held total is the sum of locked group-buy and frozen ticket rows; the section is omitted when none are locked. HudumaLink citizen escrow is phone-keyed and read at the operator desk. There is no vault, no “healthy” badge, and no locked-KES figure without those rows.'
       ]
     },
     {
@@ -104,11 +104,11 @@ export function HowBriefWorks({ className = '' }: { className?: string }) {
       id: 'inout',
       title: 'Getting in and getting out',
       lines: [
-        'Home does not greet and does not reprint the ledger. “Hi …”, offers live, waiting on you, and “Nothing pending on your ledger” live on You → Standing, derived from the same rows. Home is the board: tiles, the one banner, shelves of real rows.',
-        'The band is All, search, and the area you typed — it does not reprint a screen title. Used for the forecast. Optional. A weather line appears on a day you have something planned; that is why the area exists, and why the band does not explain it twice.',
-        "The board does not reprint What's happening nearby or Discover. Those named the door, and the bar already has one. Browse the board is the entry; what people are selling, hosting and needing carried is what the rooms hold, not a subtitle.",
+        'Home is the operational read: open inquiries, open orders, active offers and money marked in today, each from its server rows. “Marked in” follows order status history and is not payment-rail settlement; an empty day stays a dash, and a failed read is unavailable rather than zero. The public board remains a separate Explore destination.',
+        'The band is search and the area you typed — it does not reprint a screen title. The area is used for the forecast and is optional. A weather line appears on a day you have something planned; that is why the area exists, and why the band does not explain it twice.',
+        "The board is a secondary room, not the operational Home. Explore Wairo is a direct entry; what people are selling, hosting and needing carried is what the board's rooms hold, not a fabricated seller metric.",
         'You is a list of titles. The notes under Profile, Standing, Following and the rest live here. Your account is not a page title. Identity, Business and Money stay on You. Tapping a title raises a sheet from the lower segment — the grid stays where it is, scroll does not move, and the groups are not covered by a full screen. Opening a panel under the list made the operator scroll past the tiles they just tapped, so that expansion left.',
-        'Mine is one shelf. “Your shop overview” was a second storefront on the same door; shops you operate are the grid, and creating a space sits on that heading. A tap on Shops and a tap on Mine are the same place. The morning brief is a notification — one per day when a day has rows — not a panel that opens because you opened Mine.',
+        'Spaces and Selling are separate destinations. Spaces holds the workspaces you operate or join; each Space keeps its own public identity, offers, conversations and community. Selling is the existing seller panel for listings and orders. The daily Home summary is a read over current rows; the longer morning brief remains a separate, optional day-by-day read.',
         'Every secondary screen is a URL: the drawer is #menu, the create sheet is #create, the event sheet is #host, a space you operate is #shop/<id>. That is not for sharing (though a pasted link does open the screen), it is so the back gesture on a phone is a way out. A screen held only in memory has no exit for a gesture, which is what “the back button doesn’t work” actually means.',
         'Closing a surface puts the URL back on the screen underneath it, not on nothing. Clearing a URL to the root is how an app throws a person to Home and looks, from a phone, like it lost their place.',
         'Where a control has nowhere to go, it is not rendered. A saved item with no detail screen is a row, not a button; a checklist step with no group behind it says “needs a group that exists first” instead of offering a tap that does nothing. The first-run card once carried three buttons wired to an empty function — three promises, none of them kept.',
@@ -182,10 +182,10 @@ export function HowBriefWorks({ className = '' }: { className?: string }) {
       lines: [
         'Seeded activity, demo crowds, “N buyers waiting”, verified badges nobody verified, counts of people viewing, urgency timers on a link that does not expire, leaderboards, streaks, tiers, badges for using the app, and QR codes for pages that do not resolve.',
         'A trust score out of 100, “Good Standing”, SACCO credit of KES 50,000, “3 Bids” on an errand nobody posted, a countdown on a bid, and a photograph of Unga that is not the seller’s file are mockups. They are not printed. Standing is counts over your rows. An empty errand board is empty.',
-        'There is no Trust tab and no Errands tab. The bar is Home · Mine · You · [+]. Wairo is the brand on the band; it does not grow a fourth door.',
-        'Wairo Blue Avenue is a landlord of rails, not a merchant. It does not take stock, does not promise a rider will arrive, and does not lend. Standing is counts over your rows — not a score out of 100, not a SACCO offer.',
-        'KEEP: Home · Mine · You · [+]. Circles stay Circles. Errands stay gated by a real basis. Create stays four verbs. Empty boards stay empty. M-Pesa is a rail we do not pretend to own.',
-        'ENHANCE: the knot and wordmark, Blue Avenue on the band, WhatsApp as the door on a group buy that has a real address.',
+        'There is no Trust tab and no Errands tab. The primary bar is Home · Selling · Spaces · You · [+]. Wairo is the network brand; it does not grow an invented trust score or pretend to own a payment rail.',
+        'Wairo is not a merchant. It does not take stock, promise a rider will arrive or lend. Standing is counts over your rows — not a score out of 100 or a SACCO offer.',
+        'KEEP: Home · Selling · Spaces · You · [+]. Spaces stay distinct from the public board. Errands stay gated by a real basis. Create lands on existing flows; empty boards stay empty. M-Pesa is a rail we do not pretend to own.',
+        'ENHANCE: the knot and wordmark, real seller activity on Home, and a small dismissible announcement after the working summary.',
         'NOT BUILT: voice-note listings, USSD *384#, STK escrow, a 2% cut, Wairo Pro, auto-filled speech, a demand line that invents three people in Ruiru. Each is named here so a mockup cannot land as a screen.',
         'Where a reference would have to be invented — a carrier’s phone number, a partner’s volume, a sector average — the field is empty and says why. An honest blank is the product.'
       ]

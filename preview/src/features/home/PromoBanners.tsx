@@ -73,7 +73,7 @@ export const PromoBanners: React.FC<{ className?: string }> = ({ className = '' 
             <div className="relative h-full flex flex-col justify-between p-5">
               <div>
                 <span
-                  className="inline-block px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest"
+                  className="inline-block px-2.5 py-1 rounded-full text-[11px] font-black uppercase tracking-widest"
                   style={{ background: 'rgba(255,255,255,0.92)', color: '#1C1917' }}
                 >
                   {b.tag}

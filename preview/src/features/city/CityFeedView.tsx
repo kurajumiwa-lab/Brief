@@ -38,7 +38,7 @@ export interface CityFeedViewProps {
    * rooms keep their existing implementations behind the feed's browse links.
    */
   initialSubTab?: DiscoverRoom;
-  /** Kept for the shell's contract; a space is opened from Mine now. */
+  /** Kept for the shell's contract; a business Space opens from Spaces or an attention action. */
   onOpenSpace?: (spaceId: string) => void;
   /**
    * The Create sheet's "Post an offer" lands on the counter's Selling tab —

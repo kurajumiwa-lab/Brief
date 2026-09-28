@@ -3,11 +3,9 @@
 // that owns the long list, and a message slot above the content.
 //
 // What it no longer is: a departments rail. The band used to carry a chip row
-// (All · Events · Circles · Errands) that duplicated the board's own picker
-// and Home's mode tiles — three chip lists for one taxonomy is the third
-// navigation system the reorg deleted. Now the band is the header the mock it
-// copies has: location + search + hamburger. Categories are Home's tiles and
-// the board's picker, and that is enough.
+// (All · Events · Circles · Errands) that duplicated the board's own picker.
+// Discovery keeps its filters in the board; the seller Home keeps its attention
+// summary in the content below. The band is location + search + menu.
 //
 // Everything else in the header is refused, on purpose:
 //   * no "Delivering to <city>" that was inferred from an IP. The chip says the
@@ -57,6 +55,9 @@ export interface AppBeltProps {
   backTo?: { label: string; onBack: () => void } | null;
   /** Local discovery owns search, location and provider follows. */
   minimal?: boolean;
+  /** Operational Home keeps announcements below its working summary. */
+  showAnnouncements?: boolean;
+  onBannersChange?: (banners: CampaignBanner[]) => void;
   className?: string;
 }
 
@@ -66,6 +67,8 @@ export const AppBelt: React.FC<AppBeltProps> = ({
   onSearch,
   backTo = null,
   minimal = false,
+  showAnnouncements = true,
+  onBannersChange,
   className = ''
 }) => {
   const [q, setQ] = useState('');
@@ -81,7 +84,11 @@ export const AppBelt: React.FC<AppBeltProps> = ({
   useEffect(() => {
     let live = true;
     void briefApi.getCampaignBanners().then((res) => {
-      if (live && res.ok) setBanners(res.data ?? []);
+      if (live && res.ok) {
+        const next = res.data ?? [];
+        setBanners(next);
+        onBannersChange?.(next);
+      }
     });
     void briefApi.getMyFollows().then((res) => {
       if (live && res.ok) setFollowCount(res.data.total);
@@ -90,7 +97,7 @@ export const AppBelt: React.FC<AppBeltProps> = ({
       if (live) setAuthed(res.ok);
     });
     return () => { live = false; };
-  }, []);
+  }, [onBannersChange]);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -183,7 +190,7 @@ export const AppBelt: React.FC<AppBeltProps> = ({
           <Heart className="w-5 h-5" />
           {followCount != null && followCount > 0 && (
             <span
-              className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 rounded-full grid place-items-center text-[10px] font-black"
+              className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 rounded-full grid place-items-center text-[11px] font-black"
               style={{ background: 'var(--color-primary)', color: 'var(--accent-ink)' }}
             >
               {followCount}
@@ -211,7 +218,7 @@ export const AppBelt: React.FC<AppBeltProps> = ({
       </Sheet>
 
       {/* ── the message slot. Nothing to say, nothing rendered. ── */}
-      {banners && banners.length > 0 && (
+      {showAnnouncements && banners && banners.length > 0 && (
         <div className="px-3 pb-2 space-y-1.5" aria-label="Announcements">
           {banners.slice(0, 2).map((b) => {
             const when = dayWords(b.startsAt);
