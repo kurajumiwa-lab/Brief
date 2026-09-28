@@ -62,6 +62,10 @@ export const NOTIFICATION_TYPES = [
                     // the owner's own words. Sent only to an owner who asked for
                     // it, at the hour they named, and never for a quiet day.
                     // See domain/shopBrief.js.
+  'reminder',       // something the person themselves left open, arriving when
+                    // the ENGINE decided the time had come (a schedule row, not
+                    // a timer in a process). Its own type so a person can turn
+                    // reminders off without muting alerts about the world.
   'errand',         // a posted errand an eligible carrier can pick up, or a
                     // stage change on one they are party to
   // --- legacy kinds (kept for the existing notification rail) ---------------
@@ -115,6 +119,7 @@ export const TYPE_TO_CATEGORY = {
   errand: 'alerts',
   broadcast: 'alerts',
   shop_brief: 'alerts',
+  reminder: 'alerts',
   confirmed: 'saved',
   challenge: 'events',
   saved_changed: 'saved',

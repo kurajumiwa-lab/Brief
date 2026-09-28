@@ -164,13 +164,127 @@ export const SIGNAL_TYPES = [
   'notification_generated',
   'notification_opened',
   'notification_marked_read',
-  'notification_pref_changed'
+  'notification_pref_changed',
+  // --- Operations engine: money moves, and it says so (EVENT-ENGINE.md §5.2)
+  // `transitionTransaction` emits one of these from INSIDE the transition, so
+  // a movement of money cannot happen without a record of it. Before this, the
+  // ledger was the one authoritative table with no voice: whatever reached the
+  // bus about money was emitted by whichever caller remembered to.
+  'ledger_created', 'ledger_pending', 'ledger_confirmed', 'ledger_held',
+  'ledger_settled', 'ledger_refunded', 'ledger_failed',
+
+  // --- The task lifecycle (EVENT-ENGINE.md §4.5) ----------------------------
+  // The chain request -> quote -> work order -> task -> settlement emitted
+  // NOTHING before this: its history lived in a per-row array nothing could
+  // subscribe to, replay or show. These are the events that make the state
+  // machine in that chain watchable.
+  'request_created', 'request_validated', 'request_rejected', 'request_matching',
+  'request_quoted', 'request_ready_for_work', 'request_in_progress', 'request_completed',
+  'request_cancelled', 'request_expired',
+  'match_suggested', 'quote_requested', 'quote_received', 'quote_accepted', 'quote_declined',
+  'work_order_created', 'work_order_confirmed', 'work_order_started', 'work_order_ready',
+  'work_order_dispatched', 'work_order_delivered', 'work_order_completed',
+  'work_order_cancelled', 'work_order_disputed',
+  'work_task_opened', 'work_task_assigned', 'work_task_started', 'work_task_submitted',
+  'work_task_approved', 'work_task_rejected', 'work_task_released',
+  'work_settlement_requested', 'work_settlement_confirmed', 'work_settlement_refused',
+
+  // --- Offers: published, edited, withdrawn ---------------------------------
+  'listing_archived', 'listing_paused', 'ticket_issued', 'registration_confirmed',
+  'refund_owed_cleared',
+
+  // --- Human escalation as a state (EVENT-ENGINE.md §5) ---------------------
+  'review_opened', 'review_decided', 'review_auto_approved', 'review_auto_rejected',
+  'review_requested', 'review_created',
+
+  // --- The engine's own acts. An automation that changes state is an actor,
+  // and its acts are indistinguishable from a person's act in the log unless
+  // actorKind is recorded — which is why the envelope carries it.
+  'automation_rule_changed', 'automation_level_changed',
+  'dead_letter_created', 'dead_letter_resolved',
+  'schedule_created', 'schedule_fired', 'schedule_cancelled',
+  'intake_rejected'
 ];
 
-export function emitSignal({ type, circleId = null, blockId = null, sourceId = null, objectId = null, actorId = null, value = null, metadata = {} }) {
+/**
+ * The next sequence number. The log is ordered by this, not by `createdAt`:
+ * two events written in the same millisecond have a defined order only if
+ * something counts them, and a runner that resumes "after the last one I saw"
+ * needs an integer, not a timestamp it must re-derive.
+ */
+export function nextSeq() {
+  const row = store.find('engineState', (r) => r.id === 'signals_seq');
+  const last = Number(row?.lastSeq) || 0;
+  const seq = last + 1;
+  if (row) store.update('engineState', row.id, { lastSeq: seq });
+  else store.insert('engineState', { id: 'signals_seq', lastSeq: seq, at: new Date().toISOString() });
+  return seq;
+}
+
+export function signalCount() {
+  return store.all('signals').length;
+}
+
+/**
+ * Append an event to the log.
+ *
+ * THE ENVELOPE (EVENT-ENGINE.md §4.1). The fields that were already here keep
+ * working exactly as before; the ones added answer questions the old shape
+ * could not:
+ *
+ *   seq              order. The runner's cursor and the replay order.
+ *   occurredAt       when the real-world thing happened (a webhook can be
+ *                    minutes late; `recordedAt` is when we accepted it).
+ *   actorKind        a rule, a worker, an integration or a person? "system"
+ *                    must not be indistinguishable from "somebody".
+ *   entityKind/Id    the subject. `objectId` only ever described objects, and
+ *                    work orders and ledger rows are not objects — which is
+ *                    precisely where the log was silent.
+ *   idempotencyKey   the edge's promise that this happened once. When a caller
+ *                    supplies one and it has been seen, NOTHING is appended
+ *                    and the original event is returned.
+ *   correlationId    one business process: a work order's whole life.
+ *   causationId      the event whose handling produced this one. This is what
+ *                    closes the loop instead of leaving a pipeline.
+ */
+export function emitSignal({
+  type,
+  circleId = null,
+  blockId = null,
+  sourceId = null,
+  objectId = null,
+  actorId = null,
+  value = null,
+  metadata = {},
+  // --- envelope additions ---
+  v = 1,
+  entityKind = null,
+  entityId = null,
+  actorKind = null,
+  occurredAt = null,
+  source = 'internal',
+  idempotencyKey = null,
+  correlationId = null,
+  causationId = null,
+  payload = null
+}) {
   if (!SIGNAL_TYPES.includes(type)) {
+    // A typo must not become a permanently silent consumer: refuse it, with
+    // the reason, at the only place events enter the system.
     throw new Error(`unknown signal type: ${type}`);
   }
+
+  // A key that has been seen means this real-world act has already been
+  // recorded. Append nothing; return the event that is already there.
+  if (idempotencyKey) {
+    const seen = store.find(
+      'signals',
+      (x) => x.type === type && x.idempotencyKey === idempotencyKey
+    );
+    if (seen) return seen;
+  }
+
+  const now = new Date().toISOString();
   const signal = {
     id: newId('sig'),
     type,
@@ -185,7 +299,22 @@ export function emitSignal({ type, circleId = null, blockId = null, sourceId = n
     actorId,
     value,
     metadata,
-    createdAt: new Date().toISOString()
+    createdAt: now,
+    // --- envelope ---
+    v,
+    seq: nextSeq(),
+    entityKind: entityKind ?? (objectId ? 'object' : circleId ? 'circle' : null),
+    entityId: entityId ?? objectId ?? circleId ?? null,
+    actorKind: actorKind ?? (actorId ? 'user' : 'system'),
+    occurredAt: occurredAt ?? now,
+    recordedAt: now,
+    source,
+    idempotencyKey,
+    correlationId,
+    causationId,
+    // The payload is the metadata by default: one place to read, and a
+    // projection can rebuild from the event without opening another table.
+    payload: payload ?? metadata ?? {}
   };
   store.insert('signals', signal);
 

@@ -41,7 +41,20 @@ import {
 import { normalisePhone } from "../connectors/phone.js";
 import { CURRENCIES } from "./quoteValidation.js";
 import * as ledger from "./ledger.js";
+import { emitSignal } from "./signal.js";
+import * as review from "./engine/review.js";
 import { recordAudit } from "../routes/helpers.js";
+
+/**
+ * THE PAYOUT FRONTIER (EVENT-ENGINE.md §8).
+ *
+ * Small payouts: a rule may release them, and the decision is recorded so it
+ * can be counted. Large ones: a person decides. The number is DATA (a constant
+ * an operator can override by environment, and the rule rows carry the
+ * frontier), not a branch buried in a route.
+ */
+export const PAYOUT_AUTO_MAX = Number(process.env.BRIEF_PAYOUT_AUTO_MAX) || 5000;
+export const RELEASE_THRESHOLD_KEY = 'payout_auto_max';
 
 export const INTENT_STATUS = [
   "intent",      // created — Brief decided what should be paid (server amount)
@@ -344,6 +357,96 @@ export function confirmPayment({
   });
 
   return { ok: true, intent: getIntent(intent.id), transactionId: tx.id, transaction: tx };
+}
+
+// ---------------------------------------------------------------------------
+// RELEASE — asking for the payee's money, and who is allowed to say yes.
+//
+// WHAT THIS DOES NOT DO: move money. It moves a STATE (`workSettlements`) and
+// asks the right party. The ledger keeps its authority over the money row, and
+// the payout rail keeps its own. That separation is why an automation may be
+// given this capability at all: the worst a misconfigured rule can do here is
+// create a request somebody has to answer.
+//
+// Every release decision — automatic or human — opens a review item, so the
+// automation frontier is a QUERY ("what did the machine decide on its own this
+// month?") rather than a claim in a document.
+// ---------------------------------------------------------------------------
+
+export function requestRelease(workOrderId, { actorId = null, actorKind = null, reason = null } = {}) {
+  const wo = store.find("workOrders", (w) => w.id === workOrderId);
+  if (!wo) return { ok: false, reason: "work_order_not_found" };
+
+  // Work that has not been delivered cannot be paid. Deliberately a RESULT and
+  // not a throw: "not yet" is a legitimate answer to a rule that ran early.
+  if (!["delivered", "completed", "ready"].includes(wo.status)) {
+    return { ok: false, reason: `not_deliverable (${wo.status})` };
+  }
+
+  const set = store.find("workSettlements", (s) => s.workOrderId === workOrderId);
+  if (!set) return { ok: false, reason: "no_settlement_record" };
+  if (["release_approved", "released"].includes(set.status)) {
+    return { ok: true, detail: { alreadyReleased: true, status: set.status, settlementId: set.id } };
+  }
+
+  const now = new Date().toISOString();
+  store.update("workSettlements", set.id, {
+    status: "release_requested",
+    releaseRequestedAt: now,
+    releaseRequestedBy: actorId,
+    releaseReason: reason,
+  });
+
+  emitSignal({
+    type: "work_settlement_requested",
+    actorId,
+    actorKind: actorKind ?? (actorId ? "user" : "rule"),
+    entityKind: "work_settlement",
+    entityId: set.id,
+    value: set.amount,
+    source: "internal",
+    correlationId: workOrderId,
+    metadata: { settlementId: set.id, workOrderId, amount: set.amount, currency: set.currency, reason },
+  });
+
+  const threshold = PAYOUT_AUTO_MAX;
+  const automatic = Number(set.amount) <= threshold;
+
+  const item = review.open({
+    // One queue for payout decisions, so an operator sees the auto ones going
+    // through rather than only the ones that needed them.
+    kind: "payout_large",
+    subject: { kind: "work_order", id: workOrderId },
+    reason: automatic
+      ? `Payout of ${set.currency} ${set.amount} is at or below the automatic release threshold (${threshold})`
+      : `Payout of ${set.currency} ${set.amount} is above the automatic release threshold (${threshold})`,
+    openedBy: actorId,
+    openedByKind: actorKind ?? (actorId ? "user" : "rule"),
+    data: { settlementId: set.id, amount: set.amount, currency: set.currency, threshold, workOrderId },
+  });
+
+  if (automatic) {
+    // The rule decides, and SAYS it decided: `auto_approved` is a different
+    // fact from `approved`, and the difference is the whole point of the
+    // frontier.
+    review.decide(item.id, { decision: "auto_approved", byKind: "rule", note: `at or below ${threshold}` });
+    store.update("workSettlements", set.id, {
+      status: "release_approved",
+      releaseApprovedAt: new Date().toISOString(),
+      releaseApprovedByKind: "rule",
+    });
+    return { ok: true, detail: { status: "release_approved", automatic: true, reviewId: item.id, amount: set.amount, threshold } };
+  }
+
+  return { ok: true, detail: { status: "release_requested", automatic: false, reviewId: item.id, amount: set.amount, threshold } };
+}
+
+export function releaseQueue({ limit = 100 } = {}) {
+  return store
+    .filter("workSettlements", (s) => ["release_requested", "release_approved"].includes(s.status))
+    .slice()
+    .sort((a, b) => String(b.releaseRequestedAt ?? "").localeCompare(String(a.releaseRequestedAt ?? "")))
+    .slice(0, limit);
 }
 
 // ---------------------------------------------------------------------------

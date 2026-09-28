@@ -19,6 +19,12 @@
 // ---------------------------------------------------------------------------
 
 import { store, newId } from '../store.js';
+// The ledger is the one table where money actually moves, so it is the one
+// table that must never be silent. Importing the signal log here (rather than
+// requiring callers to remember to emit) is the whole point: a movement of
+// money is an event, not a side effect somebody else is responsible for
+// describing. See domain/signal.js and EVENT-ENGINE.md §4.3.
+import { emitSignal } from './signal.js';
 import { providerStatus as providerStatusView, activeCollectionProvider } from '../providers.js';
 
 export const TX_STATUS = [
@@ -107,7 +113,52 @@ export function createTransaction({ amount, currency = 'KES', type, description 
     updatedAt: now
   };
   store.insert('ledgerTransactions', tx);
+  emitLedger(tx, 'ledger_created', { note: description, actorId: tx.metadata?.actorId ?? null, causationId: tx.metadata?.causationId ?? null });
   return tx;
+}
+
+/**
+ * One emitter, so every movement of money is described the same way.
+ *
+ * The signal names the transaction (entityKind/entityId), the amount and
+ * currency in the payload, and whatever causation it was given — which is how
+ * a refund caused by a withdrawal can be traced back to the withdrawal without
+ * a join table. Never throws: a log line must not be able to fail a payment.
+ */
+function emitLedger(tx, type, { note = '', actorId = null, causationId = null, actorKind = null, correlationId = null } = {}) {
+  try {
+    emitSignal({
+      type,
+      actorId,
+      actorKind: actorKind ?? (actorId ? 'user' : 'system'),
+      entityKind: 'ledger_transaction',
+      entityId: tx.id,
+      objectId: tx.objectId ?? null,
+      circleId: tx.circleId ?? null,
+      value: Number(tx.amount) || null,
+      source: 'internal',
+      causationId: causationId ?? null,
+      correlationId: correlationId ?? tx.campaignId ?? tx.registrationId ?? null,
+      idempotencyKey: null,
+      metadata: {
+        transactionId: tx.id,
+        status: tx.status,
+        // A refund of a settled sale and a refund of a held spot are different
+        // things to a person reading the log; the status alone does not say
+        // which transition produced this line.
+        from: tx.history?.at(-2)?.status ?? null,
+        to: tx.status,
+        amount: Number(tx.amount) || 0,
+        currency: tx.currency ?? 'KES',
+        note: note || null,
+        campaignId: tx.campaignId ?? null,
+        registrationId: tx.registrationId ?? null
+      }
+    });
+  } catch {
+    // Emitting never breaks a money path. The row is still the source of
+    // truth; the log is what makes it legible.
+  }
 }
 
 const VALID_TRANSITIONS = {
@@ -120,7 +171,15 @@ const VALID_TRANSITIONS = {
   refunded: []
 };
 
-export function transitionTransaction(id, next, note = '') {
+/**
+ * The only way money moves.
+ *
+ * `extra` is optional and backwards compatible: existing callers pass a note
+ * and nothing else. A caller that knows WHAT caused the transition (a
+ * withdrawal, a work order acceptance, an operator release) passes
+ * `causationId` and the resulting event can be traced back to it.
+ */
+export function transitionTransaction(id, next, note = '', extra = {}) {
   const tx = store.find('ledgerTransactions', (t) => t.id === id);
   if (!tx) throw new Error('transaction not found');
   const allowed = VALID_TRANSITIONS[tx.status] ?? [];
@@ -130,7 +189,15 @@ export function transitionTransaction(id, next, note = '') {
   const now = new Date().toISOString();
   tx.history.push({ status: next, at: now, note });
   store.update('ledgerTransactions', id, { status: next, history: tx.history });
-  return store.find('ledgerTransactions', (t) => t.id === id);
+  const after = store.find('ledgerTransactions', (t) => t.id === id);
+  emitLedger(after, `ledger_${next}`, {
+    note,
+    actorId: extra.actorId ?? null,
+    actorKind: extra.actorKind ?? null,
+    causationId: extra.causationId ?? null,
+    correlationId: extra.correlationId ?? null
+  });
+  return after;
 }
 
 export function listTransactions({ limit = 50 } = {}) {

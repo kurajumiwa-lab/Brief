@@ -488,7 +488,27 @@ const EMPTY = {
   spaceConversations: [],
   spaceExpenses: [],
   spaceCustomerTabs: [],
-  spaceDispatches: []
+  spaceDispatches: [],
+
+  // --- Operations engine (EVENT-ENGINE.md) ---------------------------------
+  // The machinery behind "always on". Two rules govern everything here, and
+  // they are the reason these collections exist at all:
+  //
+  //   1. NO INVISIBLE FAILURES. An automated action that fails leaves a row a
+  //      person can find. `queue.js` records a failure and moves on; that is
+  //      how a broken automation stays broken for a month.
+  //   2. THE RULE TABLE IS DATA. What fires, on what, and how far it may go
+  //      without a human is configuration with an author — not a branch in
+  //      somebody's code.
+  //
+  // `workflows` and `workflowRuns` already existed for the creator-facing
+  // trigger -> condition -> action feature and are EXTENDED by this engine
+  // rather than duplicated: two rule engines would be one lie.
+  intakeEvents: [],   // idempotency at the edge: one row per incoming key
+  deadLetters: [],    // terminal failures, awaiting a person
+  reviewItems: [],    // human escalation as a first-class state
+  schedules: [],      // durably "do X at T" — survives a restart
+  engineState: []     // the runner's cursor and bookkeeping (one row each)
 };
 
 function ensureDir() {
@@ -514,7 +534,7 @@ function ensureDir() {
 //   * migrations are deterministic and must be safe to re-run on a fresh DB
 // ---------------------------------------------------------------------------
 
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 const MIGRATIONS = [
   {
@@ -523,6 +543,41 @@ const MIGRATIONS = [
     // Everything that existed before versioning. Nothing to transform: the
     // EMPTY-merge already gave old databases every new collection.
     up: (db) => db
+  },
+  {
+    version: 3,
+    name: 'signal-sequence',
+    // The event log gains a monotonic `seq`: the runner's cursor, the replay
+    // order, and the one thing a `createdAt` timestamp cannot provide (two
+    // events in the same millisecond have no defined order). Old rows are
+    // numbered in their existing order — `createdAt`, then file position — so
+    // the backfilled sequence agrees with the order they were written in.
+    up: (db) => {
+      const signals = db.signals ?? [];
+      const ordered = signals
+        .map((sig, index) => ({ sig, index }))
+        .sort((a, b) => (String(a.sig.createdAt ?? '') < String(b.sig.createdAt ?? '') ? -1
+          : String(a.sig.createdAt ?? '') > String(b.sig.createdAt ?? '') ? 1
+          : a.index - b.index));
+      let seq = 0;
+      for (const { sig } of ordered) {
+        seq += 1;
+        sig.seq = seq;
+        sig.v = sig.v ?? 1;
+        sig.entityKind = sig.entityKind ?? (sig.objectId ? 'object' : sig.circleId ? 'circle' : null);
+        sig.entityId = sig.entityId ?? sig.objectId ?? sig.circleId ?? null;
+        sig.occurredAt = sig.occurredAt ?? sig.createdAt ?? null;
+        sig.recordedAt = sig.recordedAt ?? sig.createdAt ?? null;
+        sig.actorKind = sig.actorKind ?? (sig.actorId ? 'user' : 'system');
+        sig.source = sig.source ?? 'internal';
+      }
+      // The runner resumes from the end of history, not from its beginning:
+      // a workspace that has been live for months must not replay every signal
+      // it ever saw through the rules on the first boot after this ships.
+      db.engineState = (db.engineState ?? []).filter((r) => r.id !== 'workflow_cursor');
+      db.engineState.push({ id: 'workflow_cursor', lastSeq: seq, at: new Date().toISOString() });
+      return db;
+    }
   },
   {
     version: 2,
