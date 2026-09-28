@@ -12,6 +12,7 @@ import * as corrections from '../domain/corrections.js';
 import * as sourceTrust from '../domain/sourceTrust.js';
 import * as seed from '../domain/seed.js';
 import * as notifications from '../domain/notifications.js';
+import * as campaigns from '../domain/campaign.js';
 import { requireAuth, requireCap, recordAudit } from './helpers.js';
 import * as members from '../domain/members.js';
 
@@ -212,6 +213,35 @@ app.get('/api/ops/disputes', (req, res) => {
   res.json({ disputes: rows });
 });
 
+
+/**
+ * THE REFUND QUEUE — money a withdrawal promised and the ledger refused.
+ *
+ * When an offer is withdrawn, every refundable payment is refunded through the
+ * ledger on the spot. Anything the ledger will not refund becomes a
+ * `refundObligations` row with status `owed`, carrying the ledger's own refusal
+ * and the transaction it belongs to. This is the surface for those: an unpaid
+ * refund must be a row on a queue a person can see, because the alternative —
+ * a refund that silently did not happen — is the failure mode the whole
+ * withdrawal flow exists to prevent.
+ *
+ * Read-only by design, like the disputes wall: the remedy is a ledger
+ * transition, which happens on the money routes, not here.
+ */
+app.get('/api/ops/refund-obligations', (req, res) => {
+  if (!requireCap(req, res, 'ops.read')) return;
+  const status = typeof req.query.status === 'string' && req.query.status ? req.query.status : 'owed';
+  const rows = campaigns.listRefundObligations({ status: status === 'all' ? null : status });
+  const owedRows = store.filter('refundObligations', (o) => o.status === 'owed');
+  res.json({
+    obligations: rows,
+    owed: {
+      count: owedRows.length,
+      total: owedRows.reduce((s, o) => s + (Number(o.amount) || 0), 0),
+      currency: owedRows[0]?.currency ?? 'KES'
+    }
+  });
+});
 
 /**
  * T8 (F4 Attention): the resale listing wall -- active listings plus the

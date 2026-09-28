@@ -46,6 +46,12 @@ export const NOTIFICATION_TYPES = [
   'following',      // new meaningful activity from a followed entity
   'location',       // important/new activity in a followed location
   'event',          // a saved/followed event is approaching
+  // An event the person is PARTY TO changed under them, or was withdrawn.
+  // These are not the return-loop's "coming up" reminder: they are the host
+  // changing or cancelling something already relied on, so they fire from the
+  // host's action (domain/campaign.js), never from a generation sweep.
+  'event_changed',
+  'event_withdrawn',
   'offer',          // a saved offer is approaching expiry
   'alert',          // a relevant important alert appears
   'collection',     // a saved item's status changed
@@ -87,6 +93,8 @@ export const TYPE_LABELS = {
   confirmed: 'Confirmed',
   saved_changed: 'Saved',
   event_soon: 'Event',
+  event_changed: 'Event changed',
+  event_withdrawn: 'Event withdrawn',
   system: 'Brief',
   workflow: 'Workflow',
   coop: 'Co-op'
@@ -97,6 +105,8 @@ export const TYPE_TO_CATEGORY = {
   following: 'following',
   location: 'locations',
   event: 'events',
+  event_changed: 'events',
+  event_withdrawn: 'events',
   offer: 'offers',
   alert: 'alerts',
   collection: 'saved',

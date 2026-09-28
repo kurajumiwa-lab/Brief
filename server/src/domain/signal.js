@@ -35,6 +35,11 @@ export const SIGNAL_TYPES = [
   'campaign_closed',
   'campaign_cancelled',
   'campaign_completed',
+  // A withdrawal promised money back and the ledger did not give it yet. This
+  // is the one signal an operator is expected to watch: it names the campaign,
+  // the transaction and the amount still owed, so an unpaid refund is a row on
+  // a queue rather than a silence. See domain/campaign.js -> withdrawCampaign.
+  'campaign_refund_owed',
   'campaign_viewed',
   // A space's public page was opened. Its own type, so a space's view count
   // never mixes with object/campaign analytics that compute other things.

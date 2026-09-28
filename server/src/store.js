@@ -183,6 +183,21 @@ const EMPTY = {
   // One row per published price/term change, with the seller's own reason. Never
   // edited, never deleted: see domain/listing.js -> updateListing.
   listingRevisions: [],
+  // One row per edit to a CAMPAIGN after it left draft, with the pre-image and
+  // the actor. Same reasoning as listingRevisions: an offer people have already
+  // registered for may be edited, and the edit must be answerable afterwards
+  // ("the date moved from Saturday to Sunday, on Tuesday, by the host").
+  campaignRevisions: [],
+  // The record of an offer being WITHDRAWN. Withdrawal is a state transition,
+  // not a delete: one row per campaign, holding the receipt of what that
+  // withdrawal actually did (tickets voided, registrations cancelled, money
+  // refunded or still owed). A campaign row must never be hard-deleted while
+  // one of these, or anything else, depends on it.
+  campaignWithdrawals: [],
+  // Money the withdrawal promised and the ledger has NOT yet given back. One
+  // row per transaction, opened by the withdrawal and closed only by a real
+  // refund transition — a human-visible queue, never a silent failure.
+  refundObligations: [],
   // One row per movement of a stock count — a sale that took units, or a human
   // who re-typed the number. Append-only, and the only reason a morning brief
   // can say anything at all about the shelf: a listing stores one count, not a

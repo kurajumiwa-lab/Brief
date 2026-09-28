@@ -95,21 +95,60 @@ app.patch('/api/campaigns/:id', (req, res) => {
   }
 });
 
+/**
+ * DELETE — hard removal of an offer, allowed ONLY while nothing depends on it.
+ *
+ * This used to delete a published event outright, taking its object with it and
+ * leaving registrations, tickets and ledger rows pointing at a campaign that no
+ * longer existed. The rows survive a delete; the event they describe did not.
+ * Now the domain decides, and a row with a history is refused with the reasons
+ * and told to withdraw instead — 409, because the request conflicts with the
+ * state of the world rather than being malformed.
+ */
 app.delete('/api/campaigns/:id', (req, res) => {
   const c = ownedCampaign(req, res);
   if (!c) return;
   try {
-    if (c.status !== 'cancelled' && c.status !== 'closed') {
-      try { campaigns.transitionCampaign(c.id, 'cancelled'); } catch {}
-    }
-    store.remove('campaigns', c.id);
-    if (c.ownsObject !== false && c.objectId) {
-      store.remove('objects', c.objectId);
-    }
-    res.json({ ok: true, removed: true });
+    res.json({ ok: true, ...campaigns.deleteCampaign(c.id) });
   } catch (e) {
+    if (e.code === 'withdrawal_required') {
+      return res.status(409).json({ error: String(e.message ?? e), code: e.code, blockers: e.blockers ?? [], preview: e.preview ?? null });
+    }
     res.status(400).json({ error: String(e.message ?? e) });
   }
+});
+
+/**
+ * WITHDRAW — the offer stops being an offer; the record stays.
+ *
+ * The body may carry a reason, which is stored with the receipt and used in the
+ * refund notes. Safe to call twice: the second call returns the same receipt
+ * and touches no money (see domain/campaign.js).
+ */
+app.post('/api/campaigns/:id/withdraw', (req, res) => {
+  const c = ownedCampaign(req, res);
+  if (!c) return;
+  try {
+    const result = campaigns.withdrawCampaign(c.id, { actorId: callerId(req), reason: req.body?.reason ?? null });
+    res.json(result);
+  } catch (e) {
+    if (e.code === 'not_withdrawable') return res.status(409).json({ error: String(e.message ?? e), code: e.code, status: e.status });
+    res.status(400).json({ error: String(e.message ?? e) });
+  }
+});
+
+/** The consequence preview, plus the stored receipt when there is one. */
+app.get('/api/campaigns/:id/withdrawal', (req, res) => {
+  const c = ownedCampaign(req, res);
+  if (!c) return;
+  res.json({ preview: campaigns.withdrawalPreview(c), withdrawal: campaigns.getWithdrawal(c.id) });
+});
+
+/** What the offer said before, and who changed it. Append-only. */
+app.get('/api/campaigns/:id/revisions', (req, res) => {
+  const c = ownedCampaign(req, res);
+  if (!c) return;
+  res.json({ revisions: campaigns.listCampaignRevisions(c.id) });
 });
 
 

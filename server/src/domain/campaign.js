@@ -24,6 +24,8 @@
 
 import { store, newId, newTicketCode } from '../store.js';
 import * as ticketMarket from './ticketMarket.js';
+import * as ledger from './ledger.js';
+import * as notifications from './notifications.js';
 import { emitSignal } from './signal.js';
 import { personIdIfUser } from './person.js';
 import { hasEnded } from './events.js';
@@ -700,6 +702,12 @@ export function updateCampaign(id, patch = {}, ownerId = null) {
 
   const clean = {};
   for (const k of WRITABLE) if (k in patch) clean[k] = patch[k];
+  // The pre-image, taken before the write. `store.update` mutates the row in
+  // place, so a caller that reads the row again after the write is reading the
+  // new value and would record an empty audit trail.
+  const wasStatus = campaign.status;
+  const before = {};
+  for (const k of Object.keys(clean)) before[k] = campaign[k] ?? null;
 
   // Attach (or swap) the wrapped object on an existing campaign. Same
   // authority rule as create: source membership, never a client claim. The
@@ -717,13 +725,20 @@ export function updateCampaign(id, patch = {}, ownerId = null) {
   }
 
   if ('capacity' in patch) {
-    if (campaign.status !== 'draft') {
-      throw new Error('capacity cannot be changed after publication');
+    // A capacity that is not CHANGING is not a capacity change. A form that
+    // round-trips the whole row (an edit sheet sending every field back) is not
+    // trying to move the goalposts, and refusing it made an honest edit
+    // impossible — the refusal is for the edit that actually moves them.
+    const nextCapacity = patch.capacity === undefined ? null : patch.capacity;
+    if (!sameField(nextCapacity, campaign.capacity ?? null)) {
+      if (campaign.status !== 'draft') {
+        throw new Error('capacity cannot be changed after publication');
+      }
+      if (patch.capacity !== null && !(Number.isInteger(patch.capacity) && patch.capacity > 0)) {
+        throw new Error('capacity must be a positive integer when provided');
+      }
+      clean.capacity = nextCapacity;
     }
-    if (patch.capacity !== null && !(Number.isInteger(patch.capacity) && patch.capacity > 0)) {
-      throw new Error('capacity must be a positive integer when provided');
-    }
-    clean.capacity = patch.capacity;
   }
   if ('price' in clean && (!Number.isFinite(clean.price) || clean.price < 0)) {
     throw new Error('price must be a non-negative number');
@@ -736,7 +751,61 @@ export function updateCampaign(id, patch = {}, ownerId = null) {
   if ('festival' in clean) clean.festival = normaliseFestival(clean.festival);
 
   const updated = store.update('campaigns', id, clean);
-  return updated ? hydrate(updated) : null;
+  if (!updated) return null;
+
+  // AN EDIT AFTER PUBLICATION IS RECORDED, AND SOMETIMES ANNOUNCED.
+  //
+  // An offer is not a contract, and the repo's rule for listings is that a
+  // seller keeps control of their own words (locking them would only push
+  // people to delete-and-repost). The same right applies here — the difference
+  // is that an event can hold other people's decisions: a seat bought, a
+  // Saturday planned around. So:
+  //
+  //   * every change after draft leaves a revision row, with the pre-image and
+  //     the actor, so "what did it say when I registered?" stays answerable;
+  //   * a change to the terms somebody relied on (when, where, what, who) also
+  //     notifies the people holding a registration — silently moving a date is
+  //     not an edit, it is a surprise.
+  const changedFields = Object.keys(clean).filter((k) => !sameField(clean[k], before[k]));
+  if (wasStatus !== 'draft' && changedFields.length) {
+    store.insert('campaignRevisions', {
+      id: newId('crev'),
+      campaignId: id,
+      actorId: ownerId ?? null,
+      fields: changedFields,
+      before: Object.fromEntries(changedFields.map((k) => [k, before[k]])),
+      after: Object.fromEntries(changedFields.map((k) => [k, updated[k] ?? null])),
+      at: new Date().toISOString()
+    });
+    emitSignal({
+      type: 'object_updated',
+      actorId: ownerId ?? null,
+      objectId: updated.objectId ?? null,
+      metadata: { campaignId: id, fields: changedFields }
+    });
+    const holderFields = changedFields.filter((f) => HOLDER_MATERIAL.includes(f));
+    if (holderFields.length) {
+      const told = notifyHolders(updated, {
+        type: 'event_changed',
+        title: `“${updated.title}” changed`,
+        body: `The host updated ${holderFields.join(', ')} for an event you are registered for.`,
+        dedupeKey: `event_changed:${id}:${holderFields.join(',')}`,
+        metadata: { campaignId: id, fields: holderFields }
+      });
+      if (told) updated.holdersNotified = told;
+    }
+  }
+  return hydrate(updated);
+}
+
+/** Field-level equality that does not care about key order or undefined. */
+function sameField(a, b) {
+  const norm = (v) => (v === undefined ? null : v);
+  const x = norm(a);
+  const y = norm(b);
+  if (x === y) return true;
+  if (x === null || y === null || typeof x !== 'object' || typeof y !== 'object') return false;
+  return JSON.stringify(x) === JSON.stringify(y);
 }
 
 export function transitionCampaign(id, next) {
@@ -769,6 +838,345 @@ export function transitionCampaign(id, next) {
     metadata: { campaignId: campaign.id }
   });
   return hydrate(store.find('campaigns', (c) => c.id === id));
+}
+
+// ---------------------------------------------------------------------------
+// WITHDRAWAL — an offer can always be withdrawn; the row does not disappear
+// ---------------------------------------------------------------------------
+//
+// The right to withdraw is absolute: a host may end their own event at any
+// time, for any reason, without asking. What is NOT free is pretending nothing
+// was promised. By the time an offer is published it can already hold other
+// people's decisions — a seat bought, money settled, a ticket in someone's
+// phone — and those are rows. A hard delete with rows pointing at it is worse
+// than useless: the transactions, registrations and tickets stay, describing
+// an event that no longer exists.
+//
+// So there are two acts, and they are not the same act:
+//
+//   withdraw  the offer stops being an offer. The campaign row stays, the
+//             wrapped object goes private, tickets stop working, held seats are
+//             released, money that was taken is refunded THROUGH THE LEDGER,
+//             and the people holding a place are told. The receipt is stored.
+//
+//   delete    the row goes away, and is only allowed when nothing else refers
+//             to it — a draft nobody registered for. Otherwise the caller is
+//             refused with the reasons, and told to withdraw instead.
+//
+// The withdrawal is IDEMPOTENT on the campaign: there is at most one row per
+// campaign, and a second call returns that same receipt without touching money
+// again. A retried request (a flaky connection, a double-tapped button) cannot
+// refund twice, because there is nothing left for it to act on.
+
+/** FIELDS THAT CHANGED THE DEAL, not the wording. Editing these after people
+ *  have registered notifies them; editing a description does not. */
+const HOLDER_MATERIAL = ['title', 'startsAt', 'endsAt', 'location', 'venue', 'agenda'];
+
+/**
+ * The people who are party to this offer right now: a live registration, an
+ * account to tell, and not the host (who is doing the thing being announced).
+ */
+function holderRegistrations(campaignId, ownerId = null) {
+  const holders = new Map();
+  for (const reg of store.filter('registrations', (r) => r.campaignId === campaignId)) {
+    if (!reg.userId || reg.status === 'cancelled') continue;
+    if (ownerId && reg.userId === ownerId) continue;
+    holders.set(reg.userId, reg);
+  }
+  return [...holders.values()];
+}
+
+/**
+ * Tell everyone holding a live registration, once per event per reason.
+ *
+ * `holders` is passed IN rather than read here on purpose: a withdrawal
+ * releases the seats before it sends the notices, and a function that looked at
+ * the rows at that moment would find every registration already cancelled —
+ * telling nobody about the event they were just released from.
+ */
+function notifyHolders(campaign, { type, title, body, dedupeKey, metadata = {}, holders = null }) {
+  const audience = holders ?? holderRegistrations(campaign.id, campaign.ownerId);
+  let told = 0;
+  for (const reg of audience) {
+    const userId = reg.userId;
+    const row = notifications.notify(userId, {
+      type, title, body,
+      objectId: campaign.objectId ?? undefined,
+      priority: 'important',
+      dedupeKey: `${dedupeKey}:${userId}`,
+      metadata: { ...metadata, registrationId: reg.id }
+    });
+    if (row) told++;
+  }
+  return told;
+}
+
+/** The edit history of one campaign, newest first. Nothing here is ever edited. */
+export function listCampaignRevisions(campaignId, { limit = 50 } = {}) {
+  return store
+    .filter('campaignRevisions', (r) => r.campaignId === campaignId)
+    .sort((a, b) => (a.at < b.at ? 1 : -1))
+    .slice(0, limit);
+}
+
+/**
+ * What withdrawing this offer WOULD do, computed from real rows and changing
+ * nothing. Every number is countable; nothing is estimated. A surface shows
+ * this before the host commits, so the consequences are visible while they can
+ * still change their mind.
+ */
+export function withdrawalPreview(campaign) {
+  if (!campaign) return null;
+  const regs = store.filter('registrations', (r) => r.campaignId === campaign.id);
+  const byStatus = {};
+  for (const r of regs) byStatus[r.status] = (byStatus[r.status] ?? 0) + 1;
+
+  const tickets = store.filter('tickets', (t) => t.eventId === campaign.id);
+  const liveTickets = tickets.filter((t) => t.status === 'valid');
+  const listings = liveTickets
+    .map((t) => store.find('ticketListings', (l) => l.id === t.activeListingId))
+    .filter((l) => l && (l.status === 'active' || l.status === 'pending'));
+
+  // Money: only rows that represent money ACTUALLY taken can be refunded. A
+  // `created`/`pending` row is an attempt, not a payment — it is closed rather
+  // than refunded, because confirming it in order to refund it would invent a
+  // payment that never happened.
+  const txns = store.filter('ledgerTransactions', (t) => t.campaignId === campaign.id);
+  const taken = txns.filter((t) => ['confirmed', 'held', 'settled'].includes(t.status));
+  const attempts = txns.filter((t) => ['created', 'pending'].includes(t.status));
+
+  const holders = new Set(regs.filter((r) => r.userId && r.status !== 'cancelled').map((r) => r.userId));
+  const cancellable = regs.filter((r) => ['started', 'registered', 'confirmed'].includes(r.status));
+  // A person who already came in through the gate, or was marked absent, is
+  // not "cancelled" by a withdrawal — the attendance happened. Those rows are
+  // left exactly as they are and counted here so the receipt can say so.
+  const leftAlone = regs.filter((r) => ['checked_in', 'no_show'].includes(r.status));
+
+  const blockers = [];
+  if (regs.length) blockers.push(`${regs.length} registration${regs.length === 1 ? '' : 's'}`);
+  if (tickets.length) blockers.push(`${tickets.length} issued ticket${tickets.length === 1 ? '' : 's'}`);
+  if (txns.length) blockers.push(`${txns.length} ledger row${txns.length === 1 ? '' : 's'}`);
+
+  return {
+    campaignId: campaign.id,
+    status: campaign.status,
+    canWithdraw: ['draft', 'published', 'live'].includes(campaign.status),
+    canDelete: blockers.length === 0,
+    blockers,
+    registrations: { total: regs.length, byStatus, toCancel: cancellable.length, leftAlone: leftAlone.length },
+    tickets: { issued: tickets.length, live: liveTickets.length, resaleListings: listings.length },
+    money: {
+      transactions: txns.length,
+      refundable: taken.length,
+      refundableKes: taken.reduce((s, t) => s + (Number(t.amount) || 0), 0),
+      attemptsToClose: attempts.length,
+      settledKes: taken.filter((t) => t.status === 'settled').reduce((s, t) => s + (Number(t.amount) || 0), 0)
+    },
+    holders: { count: holders.size }
+  };
+}
+
+/**
+ * One refund, attempted through the ledger, with both outcomes recorded.
+ *
+ * Exported so the refusal path can be tested directly: a ledger that cannot
+ * complete a refund must leave an obligation row behind, and that branch is
+ * otherwise only reachable through a real-world fault (a transaction that has
+ * gone missing, a store that refuses the write). Its own words are kept — an
+ * operator reading "transaction not found" can act; "refund failed" cannot.
+ */
+export function refundOrOwe(tx, { campaignId, actorId = null, why = 'the offer was withdrawn', objectId = null } = {}) {
+  const base = {
+    campaignId,
+    transactionId: tx.id,
+    registrationId: tx.registrationId ?? null,
+    counterparty: tx.counterparty ?? null,
+    amount: Number(tx.amount) || 0,
+    currency: tx.currency ?? 'KES',
+    reason: why,
+    at: new Date().toISOString()
+  };
+  try {
+    ledger.transitionTransaction(tx.id, 'refunded', `${why} (offer withdrawn)`);
+    const obligation = store.insert('refundObligations', {
+      id: newId('rob'), ...base, status: 'refunded', resolvedAt: new Date().toISOString()
+    });
+    return { refunded: { transactionId: tx.id, amount: obligation.amount }, obligation };
+  } catch (e) {
+    const obligation = store.insert('refundObligations', {
+      id: newId('rob'), ...base, status: 'owed', refusal: String(e.message ?? e), resolvedAt: null
+    });
+    emitSignal({
+      type: 'campaign_refund_owed',
+      actorId,
+      objectId,
+      value: obligation.amount,
+      metadata: { campaignId, transactionId: tx.id, obligationId: obligation.id, refusal: obligation.refusal }
+    });
+    return {
+      owed: { transactionId: tx.id, amount: obligation.amount, refusal: obligation.refusal, currency: obligation.currency },
+      obligation
+    };
+  }
+}
+
+/** The stored receipt of a withdrawal, or null if this offer was never withdrawn. */
+export function getWithdrawal(campaignId) {
+  return store.find('campaignWithdrawals', (w) => w.campaignId === campaignId);
+}
+
+/**
+ * Withdraw an offer. Returns `{ campaign, withdrawal, alreadyWithdrawn }`.
+ *
+ * Idempotent: the first call does the work and stores the receipt; every call
+ * after it returns that same receipt and changes nothing.
+ */
+export function withdrawCampaign(id, { actorId = null, reason = null } = {}) {
+  const campaign = store.find('campaigns', (c) => c.id === id);
+  if (!campaign) return null;
+
+  const prior = getWithdrawal(id);
+  if (prior) {
+    return { campaign: hydrate(store.find('campaigns', (c) => c.id === id)), withdrawal: prior, alreadyWithdrawn: true };
+  }
+
+  const preview = withdrawalPreview(campaign);
+  if (!preview.canWithdraw) {
+    const err = new Error(
+      campaign.status === 'completed'
+        ? 'this event already happened; a completed event is closed, not withdrawn'
+        : `a ${campaign.status} offer cannot be withdrawn`
+    );
+    err.code = 'not_withdrawable';
+    err.status = campaign.status;
+    throw err;
+  }
+
+  const why = reason && String(reason).trim()
+    ? String(reason).trim().slice(0, 280)
+    : 'the host withdrew this offer';
+  // Read the audience BEFORE anything moves: the seats are released below, and
+  // a list read afterwards would be empty.
+  const holders = holderRegistrations(id, campaign.ownerId);
+
+  // 1. The state transition, through the existing machine (which also retracts
+  //    the wrapped object and emits campaign_cancelled).
+  transitionCampaign(id, 'cancelled');
+
+  // 2. Tickets stop admitting anyone. A valid ticket to a withdrawn event is a
+  //    promise the gate cannot keep.
+  const tickets = ticketMarket.voidForCampaign(id, why, { actorId });
+
+  // 3. Held seats are released, through the registration machine — which
+  //    refuses illegal moves and emits its own signal per row.
+  const released = [];
+  for (const reg of store.filter('registrations', (r) => r.campaignId === id)) {
+    if (!['started', 'registered', 'confirmed'].includes(reg.status)) continue;
+    try {
+      setRegistrationStatus(reg.id, 'cancelled');
+      released.push(reg.id);
+    } catch { /* the machine refused; the receipt reports what actually moved */ }
+  }
+
+  // 4. Money that was really taken goes back — through the ledger, so the
+  //    refund is a status transition of the authoritative money row and not a
+  //    second store of it. Anything the ledger refuses is recorded as OWED and
+  //    signalled, never swallowed.
+  const refunded = [];
+  const owed = [];
+  const closed = [];
+  for (const tx of store.filter('ledgerTransactions', (t) => t.campaignId === id)) {
+    if (['confirmed', 'held', 'settled'].includes(tx.status)) {
+      const outcome = refundOrOwe(tx, { campaignId: id, actorId, why, objectId: campaign.objectId ?? null });
+      if (outcome.refunded) refunded.push(outcome.refunded);
+      if (outcome.owed) owed.push(outcome.owed);
+    } else if (['created', 'pending'].includes(tx.status)) {
+      // An attempt, not a payment. It is closed so it can never settle into
+      // money for an event that no longer exists — and it is NOT counted as a
+      // refund, because nothing was ever taken.
+      try {
+        ledger.transitionTransaction(tx.id, 'failed', `${why} (offer withdrawn before settlement)`);
+        closed.push(tx.id);
+      } catch { /* already terminal; nothing to close */ }
+    }
+  }
+
+  // 5. The people holding a place are told — including that a refund is owed if
+  //    the ledger refused one, so the person is never the last to know.
+  const refundNote = owed.length
+    ? ` Refunds totalling ${owed.reduce((s, r) => s + r.amount, 0)} ${owed[0].currency ?? 'KES'} could not be completed automatically and are queued for a person.`
+    : refunded.length
+      ? ` Refunds totalling ${refunded.reduce((s, r) => s + r.amount, 0)} KES have been recorded against your payment.`
+      : '';
+  const told = notifyHolders(campaign, {
+    type: 'event_withdrawn',
+    title: `“${campaign.title}” was withdrawn`,
+    body: `The host withdrew this event.${refundNote}`,
+    dedupeKey: `event_withdrawn:${id}`,
+    metadata: { campaignId: id, refunded: refunded.length, owed: owed.length },
+    holders
+  });
+
+  const receipt = store.insert('campaignWithdrawals', {
+    id: newId('cwd'),
+    campaignId: id,
+    actorId,
+    reason: why,
+    at: new Date().toISOString(),
+    before: { status: preview.status },
+    receipt: {
+      registrationsCancelled: released.length,
+      registrationsLeftAlone: preview.registrations.leftAlone,
+      ticketsVoided: tickets.voided.length,
+      resaleListingsPulled: tickets.pulled.length,
+      ticketsStuckOnOpenOrder: tickets.stuck,
+      refunded,
+      owed,
+      attemptsClosed: closed.length,
+      holdersNotified: told
+    }
+  });
+
+  return { campaign: hydrate(store.find('campaigns', (c) => c.id === id)), withdrawal: receipt, alreadyWithdrawn: false };
+}
+
+/**
+ * Hard-delete an offer — ONLY when nothing else in the database depends on it.
+ *
+ * This is the rule the withdrawal feature exists to enforce: a campaign with a
+ * registration, a ticket or a ledger row is not a row you may remove, because
+ * removing it leaves real records describing nothing. The refusal is specific
+ * about what is in the way, so the caller can withdraw instead of guessing.
+ */
+export function deleteCampaign(id) {
+  const campaign = store.find('campaigns', (c) => c.id === id);
+  if (!campaign) throw new Error('campaign not found');
+  const preview = withdrawalPreview(campaign);
+  if (!preview.canDelete) {
+    const err = new Error(
+      `this offer has a history (${preview.blockers.join(', ')}) — withdraw it instead, so the people and the money it touched keep their records`
+    );
+    err.code = 'withdrawal_required';
+    err.blockers = preview.blockers;
+    err.preview = preview;
+    throw err;
+  }
+  store.remove('campaigns', id);
+  if (campaign.ownsObject !== false && campaign.objectId) store.remove('objects', campaign.objectId);
+  emitSignal({
+    type: 'campaign_cancelled',
+    objectId: campaign.objectId ?? null,
+    metadata: { campaignId: id, deleted: true, reason: 'nothing depended on this offer' }
+  });
+  return { removed: true, campaignId: id };
+}
+
+/** The queue of refunds a withdrawal promised and the ledger has not paid yet. */
+export function listRefundObligations({ status = 'owed', limit = 100 } = {}) {
+  return store
+    .filter('refundObligations', (o) => (status ? o.status === status : true))
+    .sort((a, b) => (a.at < b.at ? 1 : -1))
+    .slice(0, limit);
 }
 
 /** A view is a recorded event, not an increment. */
