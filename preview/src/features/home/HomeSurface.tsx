@@ -3,6 +3,7 @@ import { ArrowRight, Briefcase, CalendarDays, Package, Users } from 'lucide-reac
 import * as api from '../../api/briefApi';
 import type { DiscoverFeedItem, DiscoverSummary } from '../../api/briefApi';
 import { FeedSheet } from '../city/DiscoverFeed';
+import { ActivityReel } from './ActivityReel';
 import '../../ui/compact.css';
 
 export interface HomeSurfaceProps {
@@ -40,6 +41,12 @@ export function HomeSurface({ onOpenSpace, onExploreDiscover, onOpenSpaces, onOp
   useEffect(() => { void load(); }, [load]);
   const items = (summary?.feed ?? []).filter((i) => filter === 'all' || (filter === 'events' ? i.kind === 'event' : i.kind !== 'event'));
   const openWork = () => onOpenWork ? onOpenWork() : (window.location.hash = 'workforce');
+  // The reel's one real action keeps the row's existing destination: events
+  // go to Wanderly, offers raise the shared sheet.
+  const openFull = (item: DiscoverFeedItem) => {
+    if (item.kind === 'event') window.location.hash = `wanderly/experience/${encodeURIComponent(item.id)}`;
+    else setOpenItem(item);
+  };
 
   return (
     <div className={`compact-surface ${className}`} data-testid="compact-home">
@@ -60,13 +67,7 @@ export function HomeSurface({ onOpenSpace, onExploreDiscover, onOpenSpaces, onOp
           {(['all', 'offers', 'events'] as const).map((key) => <button type="button" key={key} aria-pressed={filter === key} onClick={() => setFilter(key)}>{key === 'all' ? 'All activity' : key === 'offers' ? 'Offers' : 'Events'}</button>)}
         </div>
         {loading ? <p className="compact-empty" role="status">Reading activity…</p> : error ? <p className="compact-empty" role="alert">{error} <button type="button" onClick={() => void load()}>Retry</button></p> : !items.length ? <p className="compact-empty">No recent activity.</p> : (
-          <ul className="compact-list">{items.slice(0, 5).map((item) => <li key={`${item.kind}-${item.id}`}>
-            <button type="button" className="compact-row" onClick={() => { if (item.kind === 'event') window.location.hash = `wanderly/experience/${encodeURIComponent(item.id)}`; else setOpenItem(item); }}>
-              <span className="compact-avatar">{item.mediaUrl ? <img src={api.mediaFileUrl(item.mediaUrl)} alt="" /> : item.kind === 'event' ? <CalendarDays size={18} /> : <Package size={18} />}</span>
-              <span className="compact-row-text"><strong>{item.title}</strong><small>{item.kind === 'event' ? 'Event' : 'Offer'}{item.priceLabel ? ` · ${item.priceLabel}` : ''}{item.location ? ` · ${item.location}` : ''}</small></span>
-              <ArrowRight size={15} />
-            </button>
-          </li>)}</ul>
+          <ActivityReel items={items.slice(0, 5)} onOpenFull={openFull} />
         )}
       </section>
 

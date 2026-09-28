@@ -1,0 +1,380 @@
+/* =========================================================================
+   ACTIVITY REEL — the physics are familiar (browse a deck, expand a story,
+   dismiss a feed); the tokens are the room's. No new palette, no new fonts:
+   the interaction language is borrowed on purpose, and it borrows the same
+   surfaces the rest of Brief already trusts.
+   ========================================================================= */
+
+.reel { position: relative; padding-bottom: 6px; }
+
+/* The background that darkens while a card lifts. Lives under the track,
+   above the panel's own paper — the section reads as "covered", not broken. */
+.reel-scrim-preview {
+  position: absolute;
+  inset: 0;
+  background: var(--overlay-scrim, #0A0E14);
+  opacity: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  z-index: 1;
+}
+
+/* ── position bar ────────────────────────────────────────────────────────
+   Story grammar without the countdown: seen is full, the item you are on
+   is half, what is ahead is a hairline. */
+.reel-progress-row { display: flex; align-items: center; gap: 10px; padding: 2px 16px 10px; }
+.reel-progress { display: flex; gap: 4px; flex: 1; }
+.reel-seg { flex: 1; height: 3px; border-radius: 99px; background: var(--divider); overflow: hidden; }
+.reel-seg-fill { display: block; height: 100%; width: 0; background: var(--color-primary); transition: width var(--motion-normal) var(--ease-standard); }
+.reel-seg.is-seen .reel-seg-fill { width: 100%; }
+.reel-seg.is-active .reel-seg-fill { width: 50%; }
+.reel-count {
+  font-size: 11px; font-weight: 650; color: var(--brief-muted);
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.reel-progress.is-small .reel-seg { height: 2px; }
+
+/* ── the deck ───────────────────────────────────────────────────────────── */
+.reel-viewport { overflow: hidden; padding: 10px 16px 18px; position: relative; z-index: 2; }
+.reel-track {
+  display: flex;
+  gap: 12px;
+  touch-action: pan-y;      /* horizontal is ours, vertical scroll stays native */
+  will-change: transform;
+}
+.reel-track.is-settling { transition: transform 340ms var(--ease-emphasized); }
+.reel-slot { flex: 0 0 auto; width: min(82%, 520px); }
+@media (min-width: 700px) {
+  .reel-slot { width: min(64%, 520px); }
+}
+
+.reel-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 330px;
+  border-radius: 16px;
+  background: var(--color-paper);
+  box-shadow: var(--lift-2);
+  overflow: hidden;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transform: translateZ(0);
+  transition: opacity var(--motion-normal) var(--ease-standard),
+              filter var(--motion-normal) var(--ease-standard);
+}
+@media (min-width: 700px) { .reel-card { height: 350px; } }
+
+/* Dealt with: the card stays, but it stops asking for attention. */
+.reel-card.is-seen { opacity: 0.6; filter: saturate(0.55); }
+
+.reel-card-media { position: relative; height: 47%; flex-shrink: 0; background: var(--color-well); }
+.reel-card-media > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+
+.reel-seen-stamp {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: rgba(10, 14, 20, 0.55);
+  color: #fff;
+}
+
+.reel-save-corner {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 34px;
+  height: 34px;
+  border-radius: 99px;
+  display: grid;
+  place-items: center;
+  background: rgba(246, 247, 244, 0.88);
+  color: var(--brief-ink);
+  box-shadow: var(--lift-1);
+}
+.reel-save-corner[aria-pressed='true'] { color: var(--color-primary); }
+.reel-save-corner:hover { background: var(--color-paper); }
+
+.reel-card-body { display: flex; flex-direction: column; gap: 5px; padding: 13px 15px 12px; min-height: 0; }
+.reel-card-kind {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+}
+.reel-card-title {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+  color: var(--brief-ink);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.reel-card-facts {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--brief-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* The two learned gestures, named — once, on unviewed cards only. */
+.reel-hints {
+  display: flex;
+  gap: 8px;
+  margin-top: auto;
+  padding: 0;
+}
+.reel-hints span {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--brief-faint, var(--brief-muted));
+  border: 1px solid var(--divider);
+  border-radius: 99px;
+  padding: 3px 9px;
+  background: var(--color-well);
+  white-space: nowrap;
+}
+
+/* ── hold: a peek that never leaves ─────────────────────────────────────── */
+.reel-peek {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 10px;
+  border-radius: 12px;
+  background: var(--color-paper);
+  box-shadow: var(--lift-3);
+  padding: 11px 12px 9px;
+  animation: reel-peek-in 160ms var(--ease-standard);
+}
+.reel-peek dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 10px;
+  margin: 0 0 7px;
+}
+.reel-peek dt {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-quiet);
+}
+.reel-peek dd { margin: 0; font-size: 12px; font-weight: 650; color: var(--brief-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.reel-peek-why { margin: 0 0 5px; font-size: 11.5px; line-height: 1.35; color: var(--color-text-secondary); }
+.reel-peek small { font-size: 10px; color: var(--color-quiet); }
+@keyframes reel-peek-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── double-tap: the save burst ─────────────────────────────────────────── */
+.reel-burst {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--color-primary);
+  pointer-events: none;
+  animation: reel-burst 700ms var(--ease-standard) forwards;
+}
+@keyframes reel-burst {
+  0%   { opacity: 0; transform: scale(0.5); }
+  25%  { opacity: 0.95; transform: scale(1.05); }
+  100% { opacity: 0; transform: scale(1.35); }
+}
+
+/* ── the expanded item: a takeover that rises, in the room's own idiom ──── */
+.reel-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  background: rgba(var(--room-shadow, 10, 14, 20), 0.55);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  animation: reel-scrim-in 200ms var(--ease-standard);
+}
+.reel-scrim:has(.is-closing) { animation: reel-scrim-out 200ms var(--ease-standard) forwards; }
+@keyframes reel-scrim-in  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes reel-scrim-out { from { opacity: 1; } to { opacity: 0; } }
+
+.reel-expanded {
+  position: relative;
+  width: min(440px, 100%);
+  height: min(86vh, 760px);
+  height: min(86dvh, 760px);
+  display: flex;
+  flex-direction: column;
+  background: var(--color-paper);
+  border-radius: 20px 20px 0 0;
+  box-shadow: var(--lift-4);
+  /* The body inside keeps native scroll; only the top bar and the media
+     area own the swipe-down-to-dismiss gesture (touch-action: none). */
+  animation: reel-expand-in 240ms var(--ease-emphasized);
+}
+.reel-expanded.is-closing { animation: reel-collapse 200ms var(--ease-standard) forwards; }
+@keyframes reel-expand-in {
+  from { opacity: 0; transform: translateY(28px) scale(0.985); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes reel-collapse {
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(70px); }
+}
+
+.reel-expanded-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px 8px;
+  touch-action: none;
+  flex-shrink: 0;
+}
+.reel-expanded-top .reel-progress { flex: 1; }
+.reel-expanded-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 99px;
+  display: grid;
+  place-items: center;
+  background: var(--color-well);
+  color: var(--brief-ink);
+  flex-shrink: 0;
+}
+.reel-expanded-close:hover { background: var(--divider); }
+
+.reel-expanded-media { position: relative; height: 200px; flex-shrink: 0; background: var(--color-well); touch-action: none; }
+.reel-expanded-media > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+@media (min-width: 700px) { .reel-expanded-media { height: 260px; } }
+
+.reel-expanded-body { flex: 1; min-height: 0; overflow-y: auto; padding: 14px 18px 18px; display: flex; flex-direction: column; gap: 10px; }
+.reel-chips { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.reel-chip {
+  padding: 3px 9px;
+  border-radius: 7px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: var(--color-primary-subtle);
+  color: var(--color-primary);
+}
+.reel-chip-soft { font-size: 12px; color: var(--brief-muted); }
+.reel-expanded-title { margin: 0; font-size: 23px; font-weight: 800; letter-spacing: -0.04em; line-height: 1.15; color: var(--brief-ink); }
+.reel-expanded-desc { margin: 0; font-size: 14px; line-height: 1.5; color: var(--color-text-secondary); }
+
+.reel-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0; }
+.reel-facts > div { padding: 9px 11px; border-radius: 10px; background: var(--color-well); min-width: 0; }
+.reel-facts dt { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-quiet); }
+.reel-facts dd { margin: 2px 0 0; font-size: 13px; font-weight: 650; color: var(--brief-ink); font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.reel-why { margin: 0; font-size: 11.5px; line-height: 1.45; color: var(--brief-muted); }
+
+.reel-actions { display: flex; gap: 10px; margin-top: auto; padding-top: 6px; }
+.reel-action-primary { flex: 1; padding: 12px 14px; font-size: 13px; }
+.reel-action-save {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 12px 16px;
+  border-radius: 9px;
+  border: 1px solid var(--divider);
+  background: var(--color-paper);
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--brief-ink);
+}
+.reel-action-save[aria-pressed='true'] { border-color: var(--color-primary); color: var(--color-primary); background: var(--color-primary-subtle); }
+.reel-actions button { cursor: pointer; }
+
+/* ── history: what the reel folded into after everything was seen ───────── */
+.reel-history {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  padding: 6px 16px 14px;
+  overflow-x: auto;
+}
+.reel-history-item {
+  flex: 0 0 auto;
+  width: 92px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+  padding: 8px;
+  border: 1px solid var(--divider);
+  border-radius: 12px;
+  background: var(--color-well);
+  text-align: left;
+  cursor: pointer;
+}
+.reel-history-thumb {
+  width: 100%;
+  height: 52px;
+  border-radius: 8px;
+  background: var(--color-paper);
+  display: grid;
+  place-items: center;
+  color: var(--color-primary);
+  overflow: hidden;
+}
+.reel-history-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.reel-history-title {
+  font-size: 10.5px;
+  font-weight: 650;
+  line-height: 1.25;
+  color: var(--brief-ink);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 26px;
+}
+.reel-history-stamp { font-size: 9px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-quiet); }
+.reel-replay { flex: 0 0 auto; align-self: center; display: inline-flex; }
+
+/* ── screen-reader position line (visually hidden, always announced) ────── */
+.reel-live {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+  padding: 0;
+}
+
+/* The room moves only when state changes: no idle motion anywhere in here. */
+@media (prefers-reduced-motion: reduce) {
+  .reel-track.is-settling,
+  .reel-card,
+  .reel-seg-fill,
+  .reel-scrim,
+  .reel-expanded,
+  .reel-peek,
+  .reel-burst {
+    transition: none;
+    animation: none;
+  }
+}

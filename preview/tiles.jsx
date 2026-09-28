@@ -286,21 +286,32 @@ async function main() {
     scrollY = 220;
     const { root } = mount(React.createElement(HomeSurface, { onOpenSpace: () => {} }));
     await flush(160);
-    const grid = document.querySelector('section[aria-label="Latest activity"] .compact-list');
-    check('Home activity is a compact list', Boolean(grid));
-    const orderBefore = Array.from(grid.querySelectorAll('li, article')).map((a) => a.getAttribute('data-testid')).join(',');
-    const card = document.querySelector('section[aria-label="Latest activity"] .compact-row');
+    const reel = document.querySelector('section[aria-label="Latest activity"] [data-testid="activity-reel"]');
+    check('Home activity is an Activity Reel', Boolean(reel));
+    const card = reel.querySelector('.reel-card');
     click(card);
+    await flush(340); // the deliberate tap delay that keeps double-tap save honest
+    const takeover = document.querySelector('[data-testid="reel-expanded"]');
+    check('tapping a reel card raises the expanded takeover', Boolean(takeover));
+    check('the takeover is not an inline expand inside the reel', !reel.contains(takeover));
+    check('the takeover offers the item\u2019s one real action',
+      Boolean(document.querySelector('[data-testid="reel-open"]')));
+    check('reel order is unchanged by selection',
+      Array.from(reel.querySelectorAll('.reel-card')).map((a) => a.getAttribute('data-item-id')).join(',') === 'f1');
+    check('selection so far does not write scrollY', scrollY === 220);
+    // That one action is, for an offer, the shared sheet — the row keeps its
+    // existing destination, it just arrives through the reel's takeover first.
+    click(document.querySelector('[data-testid="reel-open"]'));
     await flush(40);
     const sheet = document.querySelector('[data-testid="sheet"]');
-    check('tapping an Open now card raises the shared sheet', Boolean(sheet));
-    check('the Open now sheet is not inside the grid', !grid.querySelector('[data-testid="sheet"]'));
-    check('Open now grid order is unchanged',
-      orderBefore === Array.from(grid.querySelectorAll('li, article')).map((a) => a.getAttribute('data-testid')).join(','));
-    check('Open now selection does not write scrollY', scrollY === 220);
+    check('the offer opens the shared sheet from the reel', Boolean(sheet));
+    check('the sheet is not inside the reel', !reel.contains(sheet));
+    check('selection does not write scrollY', scrollY === 220);
     click(document.querySelector('[data-testid="sheet-scrim"]'));
     await flush(20);
-    check('Open now scrim dismisses the sheet', !document.querySelector('[data-testid="sheet"]'));
+    check('scrim dismisses the sheet', !document.querySelector('[data-testid="sheet"]'));
+    check('a dealt-with row folds into the reel\u2019s history',
+      Boolean(document.querySelector('[data-testid="reel-history"]')));
     root.unmount();
   }
 
