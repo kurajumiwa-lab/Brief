@@ -352,8 +352,7 @@ export function MyTickets({ onSell, onBrowseEvents, onOpenEvent }: MyTicketsProp
               <h2 className="text-xl font-black text-[var(--brief-ink)] tracking-tight">My tickets</h2>
             </div>
             <p className="text-xs text-[var(--ink-70)] max-w-xl leading-relaxed">
-              Seats you hold, with the code the gate accepts right now. Every transfer issues a
-              fresh code — old screenshots stop working, on purpose.
+              Your current admission codes.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -371,33 +370,12 @@ export function MyTickets({ onSell, onBrowseEvents, onOpenEvent }: MyTicketsProp
                 onClick={onBrowseEvents}
                 className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-[#40916C] text-[var(--accent-ink)] hover:opacity-90 transition cursor-pointer"
               >
-                <span>Find Events</span>
+                <span>Explore</span>
               </button>
             )}
           </div>
         </div>
 
-        {/* --- Quick Metrics Strip --- */}
-        {load.status === 'ready' && tickets.length > 0 && (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-4 pt-4 border-t border-[var(--brief-line)]">
-            <div className="bg-[color:var(--color-well)] rounded-2xl p-2.5">
-              <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--ink-60)]">Total Passes</p>
-              <p className="text-lg font-black text-[var(--brief-ink)] leading-tight mt-0.5">{counts.all}</p>
-            </div>
-            <div className="bg-[color:var(--color-well)] rounded-2xl p-2.5">
-              <p className="text-[11px] font-bold uppercase tracking-wider text-[#059669]">Ready to Scan</p>
-              <p className="text-lg font-black text-[#059669] leading-tight mt-0.5">{counts.active}</p>
-            </div>
-            <div className="bg-[color:var(--color-well)] rounded-2xl p-2.5">
-              <p className="text-[11px] font-bold uppercase tracking-wider text-[#40916C]">On Resale</p>
-              <p className="text-lg font-black text-[#40916C] leading-tight mt-0.5">{counts.listed}</p>
-            </div>
-            <div className="bg-[color:var(--color-well)] rounded-2xl p-2.5">
-              <p className="text-[11px] font-bold uppercase tracking-wider text-[#0891B2]">Checked In</p>
-              <p className="text-lg font-black text-[#0891B2] leading-tight mt-0.5">{counts.checkedIn}</p>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* --- Notification Toast --- */}
@@ -534,8 +512,7 @@ export function MyTickets({ onSell, onBrowseEvents, onOpenEvent }: MyTicketsProp
           <div className="max-w-md mx-auto space-y-1.5">
             <h3 className="text-base font-extrabold text-[var(--brief-ink)]">No tickets yet</h3>
             <p className="text-xs text-[var(--ink-70)] leading-relaxed">
-              Register for an event and confirm your seat — a ticket appears here the moment it
-              is yours. Seats from public links belong to whoever holds that code, not to an account.
+              Confirmed, account-bound tickets appear here. Paid reservations appear after payment is confirmed.
             </p>
           </div>
           {onBrowseEvents && (
@@ -543,41 +520,11 @@ export function MyTickets({ onSell, onBrowseEvents, onOpenEvent }: MyTicketsProp
               onClick={onBrowseEvents}
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-[#40916C] text-[var(--accent-ink)] text-xs font-black hover:opacity-90 transition cursor-pointer shadow-sm"
             >
-              <span>Explore What's On</span>
+              <span>Explore plans</span>
               <ExternalLink className="w-3.5 h-3.5" />
             </button>
           )}
 
-          {/* Educational Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-6 border-t border-[var(--brief-line)] text-left">
-            <div className="bg-[color:var(--color-well)] rounded-2xl p-3.5 space-y-1">
-              <p className="text-xs font-extrabold text-[var(--brief-ink)] flex items-center gap-1.5">
-                <ShieldCheck className="w-3.5 h-3.5 text-[#0891B2]" />
-                <span>Anti-Fraud QR</span>
-              </p>
-              <p className="text-[11px] text-[var(--ink-70)] leading-relaxed">
-                Codes are versioned. Old screenshots die instantly upon any resale or transfer.
-              </p>
-            </div>
-            <div className="bg-[color:var(--color-well)] rounded-2xl p-3.5 space-y-1">
-              <p className="text-xs font-extrabold text-[var(--brief-ink)] flex items-center gap-1.5">
-                <Gift className="w-3.5 h-3.5 text-[#40916C]" />
-                <span>Gift Instantly</span>
-              </p>
-              <p className="text-[11px] text-[var(--ink-70)] leading-relaxed">
-                Gift a seat directly to any friend's @handle. Fresh code issues straight to their wallet.
-              </p>
-            </div>
-            <div className="bg-[color:var(--color-well)] rounded-2xl p-3.5 space-y-1">
-              <p className="text-xs font-extrabold text-[var(--brief-ink)] flex items-center gap-1.5">
-                <Tag className="w-3.5 h-3.5 text-[#059669]" />
-                <span>Official Resale</span>
-              </p>
-              <p className="text-[11px] text-[var(--ink-70)] leading-relaxed">
-                Can't make it? List your seat on the event's official resale market in Workflows → Sell.
-              </p>
-            </div>
-          </div>
         </div>
       )}
 
@@ -869,6 +816,8 @@ export function MyTickets({ onSell, onBrowseEvents, onOpenEvent }: MyTicketsProp
                         <span>Gift to someone</span>
                       </button>
                     )}
+
+                    {t.eventSlug && onOpenEvent && <button className="wl-button quiet" onClick={() => onOpenEvent(t.eventSlug!)}>View plan</button>}
 
                     {/* Add to Calendar */}
                     <button

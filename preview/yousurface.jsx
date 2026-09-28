@@ -1,19 +1,4 @@
-// ---------------------------------------------------------------------------
-// YOU SURFACE SUITE — the section list is the contract.
-//
-// The reorg moved three destinations into the drawer's Settings group
-// (Language · Notifications · Privacy) and gave them sections here. The
-// assertion that matters is the one the old suite held and kept holding:
-// every Section the surface knows appears EXACTLY ONCE in the tab list, so a
-// reorganisation cannot silently drop or duplicate a section. The list was
-// eleven; it is now fourteen.
-//
-// Each new section is also checked for the thing it must say:
-//   * Language — one honest line, and no selector that switches nothing;
-//   * Notifications — the real notification centre, reading server rows;
-//   * Privacy — the device's own stores named: the area, the offline queue,
-//     and sign out.
-// ---------------------------------------------------------------------------
+// You regression: compact groups, inline details, working settings and real data.
 const assert = require('assert').strict;
 const { JSDOM } = require('jsdom');
 const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', { url: 'https://brief.test/', pretendToBeVisual: true });
@@ -78,20 +63,16 @@ const text = (el) => (el.textContent || '').replace(/\s+/g, ' ').trim();
 // The sections now stand as icon TILES (the drawer's one tile shape), each
 // with a stable test id, so the contract is checked by id and shape rather
 // than by exact button text — the tile's text is title + description.
-const SECTION_IDS = {
-  Profile: 'profile', Standing: 'standing', Following: 'following',
-  Selling: 'selling', Orders: 'orders', 'Your network': 'network',
-  Earn: 'earn', 'Table Banking': 'tableBanking', Subscriptions: 'subscriptions', Archive: 'archive',
-  'How Wairo works': 'how',
-  Language: 'language', Notifications: 'notifications', Privacy: 'privacy'
-};
-const tiles = () => Array.from(document.querySelectorAll('[data-testid^=menu-tile-]'));
+const SECTION_IDS = { Standing: 'standing', Following: 'following', 'Your network': 'network', Earn: 'earn', 'Table Banking': 'tableBanking', Subscriptions: 'subscriptions', Archive: 'archive', 'How it works': 'how', Language: 'language', Notifications: 'notifications', 'Privacy & sign out': 'privacy' };
+const tiles = () => Array.from(document.querySelectorAll('[data-testid=you-tile-grid] button'));
 const tileTitle = (t) => {
   const title = Array.from(t.querySelectorAll('span')).find((s) => s.classList.contains('text-[15px]'));
   return (title?.textContent || '').trim();
 };
-const clickTile = (id) => {
-  const b = document.querySelector(`[data-testid="menu-tile-${id}"]`);
+const clickTile = async (id) => {
+  const back = document.querySelector('[aria-label="Back to You"]');
+  if (back) { act(() => back.click()); await flush(20); }
+  const b = document.querySelector(`[data-testid="${id === 'profile' ? 'you-profile-head' : id}"]`);
   if (!b) throw new Error('no tile: ' + id);
   act(() => { b.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true, cancelable: true })); });
   return flush(20);
@@ -118,16 +99,13 @@ async function main() {
     allTiles.length > 0 && allTiles.every((t) => {
       const title = Array.from(t.querySelectorAll('span')).find((s) => s.classList.contains('text-[15px]'));
       const desc = Array.from(t.querySelectorAll('span')).find((s) => s.classList.contains('text-[13px]'));
-      return title && title.classList.contains('font-bold') && !desc;
+      return title && title.classList.contains('font-semibold') && !desc;
     }));
-  // Group headers are small, grey, uppercase, mono.
-  check('section headers are small grey uppercase mono',
-    Array.from(document.querySelectorAll('p'))
-      .filter((p) => ['Identity', 'Business', 'Money', 'About', 'Settings'].includes((p.textContent || '').trim()))
-      .every((p) => p.classList.contains('font-mono') && p.classList.contains('uppercase')));
+  check('only three groups, collapsed by default', document.querySelectorAll('[data-testid=you-tile-grid] details').length === 3 && document.querySelectorAll('[data-testid=you-tile-grid] details[open]').length === 0);
+  check('profile is one identity row; Orders/Selling link to their single home', document.querySelectorAll('[data-testid=you-profile-head]').length === 1 && document.querySelector('a[href="#spaces/orders"]') && !document.querySelector('[data-testid=orders]'));
 
   // The settings group exists, in the drawer's order.
-  const tileIdx = (id) => allTiles.findIndex((t) => t.getAttribute('data-testid') === `menu-tile-${id}`);
+  const tileIdx = (id) => allTiles.findIndex((t) => t.getAttribute('data-testid') === id);
   check('settings group holds Language · Notifications · Privacy',
     /Settings/.test(text(c)) && tileIdx('language') < tileIdx('notifications') && tileIdx('notifications') < tileIdx('privacy'));
 
@@ -163,12 +141,8 @@ async function main() {
   await clickTile('profile');
   check('profile shelf uses the session name, not a placeholder',
     text(c).includes('Amina') && /@amina/.test(text(c)));
-  check('the Identity · Business · Money groups stay on You while a section is open',
-    /Identity/.test(text(c)) && /Business/.test(text(c)) && /Money/.test(text(c)));
-  check('profile opens as a sheet, not a panel under the grid',
-    Boolean(document.querySelector('[data-testid="sheet"][aria-label="Profile"]')) &&
-    Boolean(document.querySelector('[data-testid="you-shelf-profile"]')) &&
-    !document.querySelector('[data-testid="you-tile-grid"] [data-testid="you-shelf-profile"]'));
+  check('detail replaces the group list', !document.querySelector('[data-testid="you-tile-grid"]'));
+  check('profile is inline, with a real back action', document.querySelector('[data-testid="you-detail"]') && document.querySelector('[data-testid="you-shelf-profile"]') && !document.querySelector('[data-testid="sheet"]') && document.querySelector('[aria-label="Back to You"]'));
 
   act(() => { root.unmount(); });
   console.log(`\nPASSED ${passed} / FAILED ${failed}`);

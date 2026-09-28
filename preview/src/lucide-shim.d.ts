@@ -1,6 +1,10 @@
 declare module 'lucide-react' {
   import * as React from 'react';
   export type LucideIcon = React.FC<React.SVGProps<SVGSVGElement> & { size?: number | string; className?: string }>;
+  export const ThumbsUp: LucideIcon;
+  export const ThumbsDown: LucideIcon;
+  export const Upload: LucideIcon;
+  export const PenLine: LucideIcon;
   export const Building2: LucideIcon;
   export const Search: LucideIcon;
   export const ShieldAlert: LucideIcon;

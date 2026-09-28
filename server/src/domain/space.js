@@ -1295,6 +1295,9 @@ export function createSpaceDispatch({
   conductorContact = '',
   stageFeeKes = 0,
   notes = '',
+  deliveryMode = 'stage',
+  estimatedDelivery = null,
+  quantity = null,
   callerId = null
 }) {
   const space = store.find('spaces', (s) => s.id === spaceId);
@@ -1319,6 +1322,17 @@ export function createSpaceDispatch({
     throw new Error('Receiver phone is required');
   }
 
+  const linkedOrder = orderId ? store.find('orders', o => o.id === orderId) : null;
+  if (orderId && (!linkedOrder || (linkedOrder.vendorOwnerId || store.find('vendors', v => v.id === linkedOrder.vendorId)?.ownerId) !== space.ownerId || (linkedOrder.spaceId && linkedOrder.spaceId !== spaceId))) throw new Error('Order does not belong to this space');
+  if (linkedOrder && ['cancelled','disputed'].includes(linkedOrder.status)) throw new Error('Resolve the order before dispatching');
+  if (!['stage','door'].includes(deliveryMode)) throw new Error('Choose stage pickup or door delivery');
+  if (estimatedDelivery && !Number.isFinite(Date.parse(estimatedDelivery))) throw new Error('Invalid delivery estimate');
+  if (quantity !== null && (!linkedOrder || !Number.isInteger(quantity) || quantity < 1 || quantity > linkedOrder.quantity)) throw new Error('Invalid shipment quantity');
+  if (quantity !== null) {
+    const assigned = store.filter('spaceDispatches', d => d.orderId === orderId && d.status !== 'cancelled').reduce((sum,d) => sum + (d.quantity || 0),0);
+    if (assigned + quantity > linkedOrder.quantity) throw new Error('Shipment quantities exceed the order quantity');
+  }
+
   const dispatchId = newId('dsp');
   const now = new Date().toISOString();
   const generatedWaybill = waybillRef || `WAY-${carrierSacco.slice(0, 3).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`;
@@ -1331,11 +1345,16 @@ export function createSpaceDispatch({
     destinationTown: String(destinationTown).trim(),
     carrierSacco: String(carrierSacco).trim(),
     waybillRef: generatedWaybill,
+    waybillSource: waybillRef ? 'carrier' : 'wairo',
     receiverName: String(receiverName).trim(),
     receiverPhone: String(receiverPhone).trim(),
     conductorContact: String(conductorContact || '').trim(),
     stageFeeKes: Number(stageFeeKes || 0),
     status: 'in_transit',
+    deliveryMode,
+    estimatedDelivery: estimatedDelivery ? new Date(estimatedDelivery).toISOString() : null,
+    quantity,
+    history: [{ status: 'in_transit', at: now, location: null }],
     notes: String(notes || '').trim(),
     createdAt: now,
     updatedAt: now
@@ -1343,12 +1362,12 @@ export function createSpaceDispatch({
 
   store.insert('spaceDispatches', dispatch);
 
-  // If tied to an order, update order status to fulfilled/dispatched
+  // Dispatch is NOT fulfilment, proof of receipt, or payment. Keep the
+  // compatibility pointer; split shipments are always read from spaceDispatches.
   if (orderId) {
     store.update('orders', orderId, {
       dispatchId: dispatch.id,
       dispatchWaybill: generatedWaybill,
-      status: 'fulfilled',
       updatedAt: now
     });
   }
@@ -1378,6 +1397,8 @@ export function updateDispatchStatus({
   dispatchId,
   status,
   conductorContact = null,
+  location = null,
+  estimatedDelivery = undefined,
   callerId = null
 }) {
   const space = store.find('spaces', (s) => s.id === spaceId);
@@ -1389,8 +1410,17 @@ export function updateDispatchStatus({
   const dispatch = store.find('spaceDispatches', (d) => d.id === dispatchId && d.spaceId === spaceId);
   if (!dispatch) throw new Error('Dispatch not found');
 
-  const patch = { updatedAt: new Date().toISOString() };
-  if (status) patch.status = status;
+  const path = (dispatch.deliveryMode || 'stage') === 'door'
+    ? ['staged','in_transit','out_for_delivery','delivered']
+    : ['staged','in_transit','ready_at_stage','collected'];
+  if (!status || ![...path,'cancelled'].includes(status)) throw new Error('Invalid dispatch status');
+  if (status !== dispatch.status && (['collected','delivered','cancelled'].includes(dispatch.status) || (status !== 'cancelled' && path.indexOf(status) < path.indexOf(dispatch.status)))) throw new Error('Dispatch cannot move backwards or reopen');
+  if (estimatedDelivery && !Number.isFinite(Date.parse(estimatedDelivery))) throw new Error('Invalid delivery estimate');
+  const patch = { updatedAt: new Date().toISOString(), status };
+  if (estimatedDelivery !== undefined) patch.estimatedDelivery = estimatedDelivery ? new Date(estimatedDelivery).toISOString() : null;
+  const place = String(location || '').trim().slice(0,160) || null;
+  const oldHistory = dispatch.history?.length ? dispatch.history : [{ status: dispatch.status, at: dispatch.updatedAt || dispatch.createdAt, location: null }];
+  if (status !== dispatch.status || (place && oldHistory.at(-1)?.location !== place)) patch.history = [...oldHistory, { status, at: patch.updatedAt, location: place }];
   if (conductorContact !== null) patch.conductorContact = String(conductorContact).trim();
 
   const updated = store.update('spaceDispatches', dispatchId, patch);

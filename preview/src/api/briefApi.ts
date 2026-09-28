@@ -62,6 +62,7 @@ const TOKEN_KEY = 'brief_session';
 let memoryToken: string | null = null;
 
 export function setSessionToken(token: string | null): void {
+  const changed = memoryToken !== token;
   memoryToken = token;
   try {
     if (token) window.localStorage.setItem(TOKEN_KEY, token);
@@ -70,6 +71,7 @@ export function setSessionToken(token: string | null): void {
     // Private browsing or a blocked store: the in-memory copy still works for
     // this session rather than the app failing to sign in at all.
   }
+  if (changed && typeof window !== 'undefined') window.dispatchEvent(new window.Event('brief:session-changed'));
 }
 
 export function getSessionToken(): string | null {
@@ -81,6 +83,13 @@ export function getSessionToken(): string | null {
   }
   return memoryToken;
 }
+
+// A login/logout in another tab must invalidate privileged screens here too.
+if (typeof window !== 'undefined') window.addEventListener('storage', (event) => {
+  if (event.key !== TOKEN_KEY && event.key !== null) return;
+  memoryToken = event.key === TOKEN_KEY ? event.newValue : null;
+  window.dispatchEvent(new window.Event('brief:session-changed'));
+});
 
 /** Called when the server reports a dead session, so the UI can re-prompt. */
 let onSessionExpired: (() => void) | null = null;
@@ -3558,6 +3567,7 @@ export interface MemberOnboarding { rung: string | null; latestEvent: string | n
 export interface MemberRow {
   id: string; handle: string; displayName: string; createdAt: string | null;
   status: 'active' | 'suspended' | string; platformRoles: string[];
+  effectiveRoles?: string[];
   verification: 'approved' | 'pending' | 'none' | string;
   onboarding: MemberOnboarding; shop: { name: string } | null;
 }
@@ -3568,6 +3578,20 @@ export interface OnboardingFunnel {
   totals: { members: number; withAnyEvent: number; finishedOnboarding: number };
   rungs: { id: string; label: string }[];
   note: string;
+}
+
+export interface AdminMemberProfile {
+  member: MemberRow;
+  account: { email: string | null; authProvider: string };
+  spaces: Array<{ id: string; name: string; type: string | null; visibility: string; status: string; publicSlug: string | null; createdAt: string | null }>;
+  businesses: Array<{ id: string; name: string; status: string | null; businessType: string | null; publication: string }>;
+  worker: { displayName: string; phone: string; modes: string[]; areas: string[]; languages: string[]; availableDays: number[]; termsAcceptedAt: string | null; briefings: Array<{ templateKey: string; at: string }> } | null;
+  memberships: Array<{ id: string; workforceId: string; name: string; role: string; status: string; territories: string[]; onboarding: WorkChecklist }>;
+  ownedWorkforces: Array<{ id: string; name: string }>;
+  record: WorkTrackRecord;
+}
+export function getAdminMemberProfile(id: string): Promise<ApiResult<AdminMemberProfile>> {
+  return request(`/api/ops/members/${encodeURIComponent(id)}`, undefined, (r) => r?.profile?.member?.id ? r.profile as AdminMemberProfile : undefined);
 }
 
 export function listMembers(query = '', page = 0): Promise<ApiResult<MembersPage>> {
@@ -4299,6 +4323,8 @@ export function createSpaceDispatch(spaceId: string, input: SpaceDispatchCreate)
 export function updateSpaceDispatchStatus(spaceId: string, dispatchId: string, input: {
   status: SpaceDispatchStatus;
   conductorContact?: string;
+  location?: string;
+  estimatedDelivery?: string | null;
 }): Promise<ApiResult<{ dispatch: SpaceDispatch }>> {
   return request<{ dispatch: SpaceDispatch }>(`/api/spaces/${encodeURIComponent(spaceId)}/dispatches/${encodeURIComponent(dispatchId)}`, {
     method: 'PATCH',
@@ -6133,6 +6159,7 @@ export interface WorkProgramCounts { target: number; inProgress: number; awaitin
 export interface WorkProgramMoney { currency: 'KES'; committedKes: number; verifiedKes: number; remainingKes: number; workerKes: number; briefFeeKes: number; note: string }
 export interface WorkProgramSummary extends WorkProgramHeadline { counts: WorkProgramCounts; progressPct: number; money: WorkProgramMoney }
 export interface WorkProgramDashboard {
+  sourceRequestId?: string | null;
   program: WorkProgramHeadline; counts: WorkProgramCounts; progressPct: number; money: WorkProgramMoney;
   funnel: Array<{ stepKey: string; label: string; mode: WorkMode; open: number; assigned: number; submitted: number; approved: number; rejected: number }>;
   coverage: Array<{ territoryId: string; name: string; quota: number | null; approved: number; inProgress: number }>;
@@ -6140,7 +6167,9 @@ export interface WorkProgramDashboard {
 }
 export interface WorkCheck { key: string; label: string; status: 'pass' | 'flag' | 'not_checked'; detail: string }
 export interface WorkReview { decision: 'approve' | 'return' | 'reject'; reason: string | null; by: string; at: string }
+export interface WorkExecutionStart { startedAt: string; location: { lat: number; lng: number; accuracyM: number | null } | null }
 export interface WorkTaskView {
+  execution?: WorkExecutionStart | null;
   id: string; status: 'open' | 'assigned' | 'submitted' | 'approved' | 'rejected' | 'released';
   stepIndex: number; stepCount: number; step: WorkTemplateStep; feeKes: number;
   program: { id: string; title: string; templateLabel: string; unitNoun: string; deadline: string; workforceName: string | null };
@@ -6187,6 +6216,7 @@ export interface WorkforceDesk {
   programs: WorkProgramSummary[]; templates: WorkTemplate[];
 }
 export interface WorkProof {
+  startedAt?: string | null; checkIn?: WorkExecutionStart['location'];
   id: string; taskId: string; attempt: number; fields: Record<string, string | number>; photos: string[];
   location: { lat: number; lng: number; accuracyM: number | null } | null;
   consent: { given: boolean; name: string; words: string | null } | null; note: string | null;
@@ -6203,6 +6233,7 @@ export interface WorkProofInput {
   consent: { given: boolean; name: string; words?: string } | null; note?: string;
 }
 export interface WorkProgramInput {
+  sourceRequestId?: string | null;
   title: string; objective?: string; templateKey: string; target: number; unitPriceKes: number; deadline: string;
   audience: 'workforce' | 'network'; territoryIds: string[]; territoryTargets?: Record<string, number> | null;
 }
@@ -6233,6 +6264,9 @@ export function claimWork(programId: string, body: { count: number; territoryId:
 }
 export function acceptWorkTask(taskId: string): Promise<ApiResult<WorkTaskView>> {
   return request(`/api/work-tasks/${wid(taskId)}/accept`, post({}), (r) => r?.task ?? undefined);
+}
+export function startWorkTask(taskId: string, location: WorkExecutionStart['location']): Promise<ApiResult<WorkTaskView>> {
+  return request(`/api/work-tasks/${wid(taskId)}/start`, post({ location }), (r) => r?.task ?? undefined);
 }
 export function submitWorkProof(taskId: string, body: WorkProofInput): Promise<ApiResult<{ proof: WorkProof; task: WorkTaskView }>> {
   return request(`/api/work-tasks/${wid(taskId)}/submit`, post(body), (r) => (r?.proof ? r : undefined));
@@ -6272,4 +6306,58 @@ export function reviewWorkTask(taskId: string, decision: 'approve' | 'return' | 
 }
 export function approveCleanWork(workforceId: string): Promise<ApiResult<{ approved: number }>> {
   return request(`/api/workforces/${wid(workforceId)}/review/approve-clean`, post({}), (r) => (typeof r?.approved === 'number' ? r : undefined));
+}
+
+// Tracking credentials travel in POST bodies, never query strings, offline
+// queues or browser storage. Public endpoints return an allowlisted projection.
+import type { TrackingAccess, OrderTracking, DeliveryDetails, TrackingRequestKind } from './trackingTypes';
+const trackingAccessOf = (r: any): TrackingAccess | undefined => typeof r?.token === 'string' && Array.isArray(r?.tracking?.shipments) ? r : undefined;
+const trackingOf = (r: any): {tracking: OrderTracking} | undefined => typeof r?.tracking?.orderNumber === 'string' && Array.isArray(r.tracking.shipments) ? r : undefined;
+export function lookupOrderTracking(orderNumber: string, email: string): Promise<ApiResult<TrackingAccess>> {
+  return request('/api/public/order-tracking/lookup', {method:'POST',body:JSON.stringify({orderNumber,email}),cache:'no-store'}, trackingAccessOf);
+}
+export function getAccountTracking(id: string): Promise<ApiResult<TrackingAccess>> {
+  return request(`/api/orders/${encodeURIComponent(id)}/tracking`, {cache:'no-store'}, trackingAccessOf);
+}
+export function readOrderTracking(token: string): Promise<ApiResult<{tracking:OrderTracking}>> {
+  return request('/api/public/order-tracking/read', {method:'POST',body:JSON.stringify({token}),cache:'no-store'}, trackingOf);
+}
+export function saveOrderDelivery(id: string, details: DeliveryDetails): Promise<ApiResult<TrackingAccess>> {
+  return request(`/api/orders/${encodeURIComponent(id)}/delivery-details`, {method:'PUT',body:JSON.stringify(details)}, trackingAccessOf);
+}
+export function sendTrackingRequest(token: string, input: {kind: TrackingRequestKind; message: string; shipmentId: string | null; key: string}): Promise<ApiResult<{tracking:OrderTracking}>> {
+  return request('/api/public/order-tracking/requests', {method:'POST',body:JSON.stringify({token,...input})}, trackingOf);
+}
+export function respondTrackingRequest(id: string, requestId: string, status: 'acknowledged' | 'declined'): Promise<ApiResult<{tracking:OrderTracking}>> {
+  return request(`/api/orders/${encodeURIComponent(id)}/tracking-requests/${encodeURIComponent(requestId)}`, {method:'POST',body:JSON.stringify({status})}, trackingOf);
+}
+
+// Product opinions and moderation, separate from orders/payment writes.
+import type {ReviewCatalog,ReviewPage,ReviewContext,ReviewInput,ProductReview,ReviewMedia,ReviewGalleryItem,ReviewReport} from './reviewTypes';
+export function getReviewCatalog(query:Record<string,string>={}):Promise<ApiResult<ReviewCatalog>>{return request(`/api/public/product-reviews?${new URLSearchParams(query)}`,{cache:'no-store'},r=>Array.isArray(r?.products)?r:undefined);}
+export function getProductReviews(id:string,query:Record<string,string>={}):Promise<ApiResult<ReviewPage>>{return request(`/api/public/product-reviews/${encodeURIComponent(id)}?${new URLSearchParams(query)}`,{cache:'no-store'},r=>r?.product?.id&&Array.isArray(r?.reviews)?r:undefined);}
+export function getReviewGallery(id:string,page=1):Promise<ApiResult<{items:ReviewGalleryItem[];page:number;pages:number;total:number}>>{return request(`/api/public/product-reviews/${encodeURIComponent(id)}/media?page=${page}`,{cache:'no-store'},r=>Array.isArray(r?.items)?r:undefined);}
+export function getReviewContext(id:string):Promise<ApiResult<ReviewContext>>{return request(`/api/product-reviews/${encodeURIComponent(id)}/context`,{cache:'no-store'},r=>Array.isArray(r?.orders)?r:undefined);}
+export function submitProductReview(id:string,input:ReviewInput):Promise<ApiResult<{review:ProductReview}>>{return request(`/api/product-reviews/${encodeURIComponent(id)}/submit`,{method:'POST',body:JSON.stringify(input)},r=>r?.review?.id?r:undefined);}
+export function voteProductReview(id:string,vote:'yes'|'no'|null):Promise<ApiResult<{review:ProductReview}>>{return request(`/api/product-reviews/${encodeURIComponent(id)}/vote`,{method:'POST',body:JSON.stringify({vote})},r=>r?.review?.id?r:undefined);}
+export function respondProductReview(id:string,body:string):Promise<ApiResult<{review:ProductReview}>>{return request(`/api/product-reviews/${encodeURIComponent(id)}/response`,{method:'POST',body:JSON.stringify({body})},r=>r?.review?.id?r:undefined);}
+export function reportProductReview(id:string,reason:string,note:string):Promise<ApiResult<{reported:boolean}>>{return request(`/api/product-reviews/${encodeURIComponent(id)}/report`,{method:'POST',body:JSON.stringify({reason,note})},r=>r?.reported?r:undefined);}
+export function withdrawProductReview(id:string):Promise<ApiResult<{removed:boolean}>>{return request(`/api/product-reviews/${encodeURIComponent(id)}`,{method:'DELETE'},r=>r?.removed?r:undefined);}
+export function uploadReviewMedia(file:File):Promise<ApiResult<{media:ReviewMedia;storage:string;limit:number}>>{const body=new FormData();body.append('file',file,file.name);return requestForm('/api/product-reviews/media',body,r=>r?.media?.id?r:undefined);}
+export function getReviewReports():Promise<ApiResult<{reports:ReviewReport[]}>>{return request('/api/product-reviews/moderation',{cache:'no-store'},r=>Array.isArray(r?.reports)?r:undefined);}
+export function moderateProductReview(id:string,action:'hide'|'restore'|'dismiss',reason:string):Promise<ApiResult<{status:string}>>{return request(`/api/product-reviews/${encodeURIComponent(id)}/moderate`,{method:'POST',body:JSON.stringify({action,reason})},r=>typeof r?.status==='string'?r:undefined);}
+
+// Business discovery is a read projection; these writes only affect private feed controls.
+import type { BusinessFeedPage, FeedControls, FeedPreferences, BusinessFeedAction } from './businessFeedTypes';
+export function getBusinessFeed(query: Record<string,string> = {}):Promise<ApiResult<BusinessFeedPage>> {
+  return request(`/api/discover/business?${new URLSearchParams(query)}`,{cache:'no-store'},r=>Array.isArray(r?.items)&&r?.preferences?r:undefined);
+}
+export function updateBusinessFeedPreferences(input: FeedControls):Promise<ApiResult<{preferences:FeedPreferences}>> {
+  return request('/api/discover/business/preferences',{method:'PUT',body:JSON.stringify(input)},r=>r?.preferences?r:undefined);
+}
+export function actOnBusinessFeed(input:BusinessFeedAction):Promise<ApiResult<{ok:boolean}>> {
+  return request('/api/discover/business/actions',{method:'POST',body:JSON.stringify(input)},r=>r?.ok?r:undefined);
+}
+export function resetBusinessFeed(what:'hidden'|'following'|'activity'|'all'):Promise<ApiResult<{preferences:FeedPreferences}>> {
+  return request('/api/discover/business/reset',{method:'POST',body:JSON.stringify({what})},r=>r?.preferences?r:undefined);
 }

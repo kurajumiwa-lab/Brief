@@ -148,8 +148,8 @@ const check = (n, c, d = '') => { if (c) { pass++; console.log('  PASS  ' + n); 
   check('index.html links the manifest and registers the worker', /manifest\.webmanifest/.test(html) && /sw\.js/.test(html));
   check('the service worker and manifest shipped', fs.existsSync(path.join(dist, 'sw.js')) && fs.existsSync(path.join(dist, 'manifest.webmanifest')));
   const sw = fs.readFileSync(path.join(dist, 'sw.js'), 'utf8');
-  check('the API is never cached', /pathname\.startsWith\('\/ingest'\)\)\s*return;/.test(sw), 'no /ingest early-return');
-  check('assets are cache-first, navigations fall back to the shell', sw.includes('brief-assets-v2') && sw.includes("caches.match('/')"));
+  check('the API is never cached', sw.includes("pathname.startsWith('/ingest')") && sw.includes("pathname.startsWith('/api/')"), 'no /ingest early-return');
+  check('assets are cache-first, navigations fall back to the shell', sw.includes('wairo-assets-v3') && sw.includes("caches.match('/')"));
 
   console.log(`\nPASS ${pass} FAIL ${fail}`);
   process.exit(fail ? 1 : 0);

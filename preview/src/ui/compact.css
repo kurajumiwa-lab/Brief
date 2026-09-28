@@ -1,0 +1,56 @@
+/* Shared compact surfaces: one accent, hairline dividers, no decorative covers. */
+.compact-surface { max-width: 820px; margin: 0 auto; padding-bottom: 24px; color: var(--brief-ink, var(--color-text)); display: grid; gap: 18px; }
+.compact-surface button, .compact-disclosure summary { cursor: pointer; }
+.compact-surface button:focus-visible, .compact-disclosure summary:focus-visible, .compact-identity button:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 4px; }
+.compact-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.compact-eyebrow { font-size: 10px; font-weight: 700; letter-spacing: .14em; color: var(--color-primary); }
+.compact-heading h1 { font-size: clamp(24px, 4vw, 32px); font-weight: 700; letter-spacing: -.045em; line-height: 1.25; margin: 5px 0; }
+.compact-heading p:not(.compact-eyebrow), .compact-work-entry p { color: var(--brief-muted, var(--color-text-muted)); font-size: 13px; }
+.compact-icon-btn { display: grid; place-items: center; border: 1px solid var(--divider); width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0; }
+.compact-shortcuts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.compact-shortcuts button { display: flex; align-items: center; gap: 10px; padding: 14px 12px; border: 1px solid var(--divider); border-radius: 12px; background: var(--color-paper); text-align: left; }
+.compact-shortcuts button > svg:first-child { color: var(--color-primary); flex-shrink: 0; }
+.compact-shortcuts span { flex: 1; font-size: 13px; font-weight: 650; }
+.compact-shortcuts small { display: block; font-size: 10px; font-weight: 400; margin-top: 3px; color: var(--brief-muted); }
+.compact-shortcuts button > svg:last-child { flex-shrink: 0; color: var(--brief-muted); }
+.compact-work-entry { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px; border-radius: 14px; border: 1px solid var(--divider); background: var(--color-primary-subtle, var(--color-paper)); }
+.compact-work-entry h2 { font-size: 19px; font-weight: 650; letter-spacing: -.035em; margin: 4px 0; }
+.compact-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-radius: 9px; background: var(--color-primary); color: var(--accent-ink); padding: 10px 14px; font-size: 12px; font-weight: 650; white-space: nowrap; }
+.compact-panel { border: 1px solid var(--divider); border-radius: 14px; overflow: hidden; background: var(--color-paper); }
+.compact-section-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 16px 8px; }
+.compact-section-heading h2 { font-size: 14px; font-weight: 650; }
+.compact-section-heading button { display: inline-flex; gap: 6px; align-items: center; font-size: 11px; color: var(--brief-muted); }
+.compact-tabs { display: flex; gap: 6px; padding: 6px 16px 12px; overflow-x: auto; }
+.compact-tabs button { padding: 6px 11px; border-radius: 7px; font-size: 12px; white-space: nowrap; color: var(--brief-muted); }
+.compact-tabs button[aria-pressed=true] { background: var(--color-surface-elevated, var(--color-bg)); color: var(--brief-ink); font-weight: 650; }
+.compact-list { list-style: none; margin: 0; padding: 0; }
+.compact-list li + li { border-top: 1px solid var(--divider); }
+.compact-row { width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px 16px; text-align: left; }
+.compact-row:hover, .compact-shortcuts button:hover { background: var(--color-surface-elevated); }
+.compact-avatar { height: 40px; width: 40px; flex-shrink: 0; overflow: hidden; border-radius: 10px; background: var(--color-primary-subtle, var(--color-bg)); color: var(--color-primary); display: grid; place-items: center; font-weight: 650; font-size: 13px; }
+.compact-avatar img { height: 100%; width: 100%; object-fit: cover; }
+.compact-row-text { min-width: 0; flex: 1; }
+.compact-row-text strong { font-size: 13px; font-weight: 650; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.compact-row-text small { display: block; font-size: 11px; color: var(--brief-muted); margin-top: 3px; }
+.compact-row > svg { flex-shrink: 0; color: var(--brief-muted); }
+.compact-empty { padding: 22px 16px; color: var(--brief-muted); font-size: 13px; }
+.compact-empty button { text-decoration: underline; }
+.compact-disclosure { border-top: 1px solid var(--divider); font-size: 12px; }
+.compact-disclosure summary { padding: 14px 0; font-weight: 600; }
+.compact-disclosure summary span { margin-left: 8px; font-size: 11px; font-weight: 400; color: var(--brief-muted); }
+.compact-more { display: flex; flex-wrap: wrap; gap: 8px; padding-bottom: 12px; }
+.compact-more button { display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border: 1px solid var(--divider); border-radius: 8px; font-size: 12px; }
+.compact-identity { border: 1px solid var(--divider); border-radius: 14px; padding: 16px; background: var(--color-paper); }
+.compact-identity .compact-avatar { width: 48px; height: 48px; }
+@media (max-width: 520px) {
+  .compact-surface { gap: 14px; }
+  .compact-shortcuts button { flex-direction: column; align-items: flex-start; padding: 12px; gap: 8px; }
+  .compact-shortcuts small, .compact-shortcuts button > svg:last-child { display: none; }
+  .compact-work-entry { align-items: flex-start; flex-direction: column; padding: 16px; gap: 12px; }
+  .compact-disclosure summary span { display: none; }
+}
+.shop-identity-header.compact-identity { border-radius: 14px; box-shadow: none; background: var(--color-paper); }
+/* The legacy storefront removes every border globally. Restore only these
+   deliberately quiet dividers; do not restyle unrelated marketplace pages. */
+.storefront-room .compact-surface :is(.compact-panel, .compact-shortcuts button, .compact-icon-btn, .compact-list li, .compact-more button),
+.storefront-room .compact-identity { border-color: var(--divider) !important; }

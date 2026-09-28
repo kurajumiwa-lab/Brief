@@ -268,12 +268,27 @@ app.get('/api/ops/audit', (req, res) => {
 // --- MEMBERS: the admin's directory for onboarding real people -------------
 
 app.get('/api/ops/members', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
   const me = requireCap(req, res, 'admin');
   if (!me) return;
   res.json(members.listMembers({ query: req.query?.q ?? '', page: Number(req.query?.page ?? 0) || 0 }));
 });
 
+app.get('/api/ops/members/:id', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  const me = requireCap(req, res, 'admin');
+  if (!me) return;
+  try {
+    const profile = members.memberProfile(me, req.params.id);
+    recordAudit('ops.member.view', { actorId: me, objectType: 'user', objectId: req.params.id });
+    res.json({ profile });
+  } catch (e) {
+    res.status(e.status ?? 400).json({ error: String(e.message ?? e) });
+  }
+});
+
 app.get('/api/ops/onboarding', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
   const me = requireCap(req, res, 'admin');
   if (!me) return;
   res.json(members.onboardingView());
@@ -297,6 +312,7 @@ app.post('/api/ops/roles', (req, res) => {
   const valid = [...new Set(roles.map(String))].filter((r) => PLATFORM_ROLES.includes(r));
   const user = store.find('users', (u) => u.id === userId || u.handle === userId);
   if (!user) return res.status(404).json({ error: 'user not found' });
+  if (user.id === me && !valid.includes('admin')) return res.status(409).json({ error: 'you cannot remove your own admin access' });
   const before = Array.isArray(user.platformRoles) ? user.platformRoles : [];
   store.update('users', user.id, { platformRoles: valid });
   recordAudit('ops.roles.set', {

@@ -61,7 +61,9 @@ const EXTENSIONS = {
   'image/jpeg': 'jpg',
   'image/png': 'png',
   'image/webp': 'webp',
-  'image/gif': 'gif'
+  'image/gif': 'gif',
+  'video/mp4': 'mp4',
+  'video/webm': 'webm'
 };
 
 /**
@@ -124,8 +126,8 @@ export function getUpload(id) {
  * error }`. Never throws for an ordinary refusal — a person picking the wrong
  * file is a normal event, not an exception.
  */
-export function saveUpload({ bytes, ownerId, originalName = null, alt = null, purpose = 'public' }) {
-  if (!['public','private_evidence','private_request','private_quote','private_work'].includes(purpose)) return {ok:false,status:400,code:'invalid_purpose',error:'invalid upload purpose'};
+export function saveUpload({ bytes, ownerId, originalName = null, alt = null, purpose = 'public', allowReviewVideo = false }) {
+  if (!(allowReviewVideo && purpose === 'review_media') && !['public','private_evidence','private_request','private_quote','private_work'].includes(purpose)) return {ok:false,status:400,code:'invalid_purpose',error:'invalid upload purpose'};
   const buf = Buffer.isBuffer(bytes) ? bytes : Buffer.from(bytes ?? []);
   if (!ownerId) {
     return { ok: false, status: 401, code: 'no_identity', error: 'authentication required' };
@@ -144,13 +146,13 @@ export function saveUpload({ bytes, ownerId, originalName = null, alt = null, pu
     };
   }
 
-  const mimeType = sniffImageType(buf);
+  const mimeType = sniffImageType(buf) || (allowReviewVideo ? sniffReviewVideo(buf) : null);
   if (!mimeType) {
     return {
       ok: false,
       status: 415,
       code: 'unsupported_image_type',
-      error: 'only JPEG, PNG, WebP and GIF images can be uploaded',
+      error: allowReviewVideo ? 'Use a JPEG, PNG, WebP or GIF photo, or an MP4/WebM video.' : 'only JPEG, PNG, WebP and GIF images can be uploaded',
       allowed: ALLOWED_TYPES
     };
   }
@@ -165,7 +167,7 @@ export function saveUpload({ bytes, ownerId, originalName = null, alt = null, pu
   }
 
   const row = store.insert('uploads', {
-    id: newId('upl'),
+    id: allowReviewVideo ? `upl_${crypto.randomBytes(16).toString('hex')}` : newId('upl'),
     ownerId,
     purpose,
     mimeType,
@@ -300,4 +302,17 @@ export function storageStatus() {
         'mounted volume to keep them.'
       : `Upload storage is not writable: ${dirError}`
   };
+}
+
+
+// Dedicated review media path. General uploads remain image-only; private
+// evidence cannot be promoted into public customer media through this seam.
+function sniffReviewVideo(buf) {
+  if (buf.length < 16) return null;
+  if (buf.toString('ascii',4,8) === 'ftyp' && ['isom','iso2','mp41','mp42','avc1','M4V '].includes(buf.toString('ascii',8,12))) return 'video/mp4';
+  if (buf.subarray(0,4).equals(Buffer.from([0x1a,0x45,0xdf,0xa3])) && buf.subarray(4,512).includes(Buffer.from('webm'))) return 'video/webm';
+  return null;
+}
+export function saveReviewUpload(input) {
+  return saveUpload({...input,purpose:'review_media',allowReviewVideo:true});
 }

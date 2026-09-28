@@ -35,7 +35,15 @@
     "test:quotes:ui": "npm run build:client && playwright test tests/quotes.spec.js",
     "test:work": "node server/test/workOrders.mjs",
     "test:work:ui": "npm run build:client && playwright test tests/workOrders.spec.js",
-    "test:workforce": "node server/test/workforce.mjs"
+    "test:workforce": "node server/test/workforce.mjs",
+    "test:reviews": "node server/test/productReviews.mjs",
+    "test:reviews:ui": "npm run build:client && playwright test tests/product-reviews.spec.js",
+    "test:tracking": "node server/test/orderTracking.mjs",
+    "test:tracking:ui": "npm run build:client && playwright test tests/order-tracking.spec.js",
+    "test:admin": "node server/test/adminMembers.mjs",
+    "test:admin:ui": "bash run-suites.sh adminwiring admin membersdesk",
+    "test:discovery": "node server/test/businessFeed.mjs",
+    "test:discovery:ui": "npm run build:client && playwright test tests/business-feed.spec.js"
   },
   "engines": {
     "node": ">=18.0.0",

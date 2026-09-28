@@ -250,3 +250,11 @@ a payment happened. Keep Brief "not a bank".
 - `ONBOARDING.md` — the service ladder (progress derived from real rows, never a stored counter).
 - `docs/WORKFORCE.md` — organisations run field teams and home workers from phones: onboarding checklist, territories, task templates, proof and review, flat fees paid only for approved outcomes. Lists the open decisions (provisional 20% fee, pay for honest non-conversion).
 - `server/CONNECTORS.md` — what each connector can and cannot do, and why.
+
+### Administration and registered users
+
+The live app exposes **All sections → Admin · Members** for platform admins.
+Search registrations, paginate the directory, and open each member's Account,
+Business profiles and Worker profile. Direct entry: `/#admin/members`.
+For first-admin provisioning (`BRIEF_ADMINS`), permission boundaries and tests,
+see [Admin members guide](docs/ADMIN-MEMBERS.md). No account is auto-promoted.

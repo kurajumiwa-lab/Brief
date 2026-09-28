@@ -61,7 +61,8 @@ export const SpaceDispatches: React.FC<SpaceDispatchesProps> = ({
   const handleUpdateStatus = async (dispatchId: string, nextStatus: SpaceDispatchStatus) => {
     soundEngine.play('reward');
     try {
-      await briefApi.updateSpaceDispatchStatus(spaceId, dispatchId, { status: nextStatus });
+      const result = await briefApi.updateSpaceDispatchStatus(spaceId, dispatchId, { status: nextStatus });
+      if (!result.ok) { showToast(result.error); return; }
       showToast(`Status updated to ${nextStatus.replace('_', ' ')}`);
       loadDispatches();
       onRefresh?.();
@@ -73,7 +74,7 @@ export const SpaceDispatches: React.FC<SpaceDispatchesProps> = ({
   const handleShareTracking = (d: SpaceDispatch) => {
     soundEngine.play('tap');
     const msg = encodeURIComponent(
-      `Habari ${d.receiverName}! Your parcel from ${spaceName} was dispatched via ${d.carrierSacco} to ${d.destinationTown} (${d.destinationCounty}). Waybill: ${d.waybillRef}${d.conductorContact ? `. Conductor contact: ${d.conductorContact}` : ''}. Asante sana!`
+      `Habari ${d.receiverName}! Parcel from ${spaceName}. Status: ${d.status.replace(/_/g,' ')}. Via ${d.carrierSacco} to ${d.destinationTown} (${d.destinationCounty}). Reference: ${d.waybillRef}${d.orderId ? `. Track: ${window.location.origin}/track?order=${encodeURIComponent(d.orderId)} (use your tracking email)` : ''}${d.conductorContact ? `. Carrier contact: ${d.conductorContact}` : ''}. Asante sana!`
     );
     const phone = d.receiverPhone.replace(/[^\d]/g, '');
     const url = phone ? `https://wa.me/${phone}?text=${msg}` : `https://wa.me/?text=${msg}`;
@@ -88,6 +89,8 @@ export const SpaceDispatches: React.FC<SpaceDispatchesProps> = ({
     in_transit: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'In Transit on Road' },
     ready_at_stage: { bg: 'bg-[color:var(--color-primary-subtle)]', text: 'text-[color:var(--color-text)]', label: 'Ready at Destination Stage' },
     collected: { bg: 'bg-[color:var(--color-surface-elevated)]', text: 'text-[color:var(--color-success)]', label: 'Collected by Receiver' },
+    out_for_delivery: { bg:'bg-blue-100', text:'text-blue-800', label:'Out for delivery' },
+    delivered: { bg:'bg-green-100', text:'text-green-800', label:'Delivered' },
     cancelled: { bg: 'bg-rose-100', text: 'text-rose-800', label: 'Cancelled' }
   };
 
@@ -184,6 +187,8 @@ export const SpaceDispatches: React.FC<SpaceDispatchesProps> = ({
                   )}
                 </div>
 
+                {d.orderId && <a href={`/track?order=${encodeURIComponent(d.orderId)}`} className="inline-flex text-xs font-bold text-emerald-700 underline">Tracking & delivery requests →</a>}
+                {!['collected','delivered','cancelled'].includes(d.status) && <DispatchUpdate dispatch={d} onSaved={() => {void loadDispatches();onRefresh?.();}} />}
                 {/* Actions */}
                 <div className="flex items-center justify-between pt-1 gap-2">
                   <button
@@ -196,7 +201,7 @@ export const SpaceDispatches: React.FC<SpaceDispatchesProps> = ({
                   </button>
 
                   <div className="flex items-center space-x-1.5">
-                    {d.status === 'in_transit' && (
+                    {d.status === 'in_transit' && d.deliveryMode !== 'door' && (
                       <button
                         type="button"
                         onClick={() => handleUpdateStatus(d.id, 'ready_at_stage')}
@@ -240,3 +245,17 @@ export const SpaceDispatches: React.FC<SpaceDispatchesProps> = ({
 };
 
 export default SpaceDispatches;
+
+
+function DispatchUpdate({dispatch:d,onSaved}:{dispatch:SpaceDispatch;onSaved:()=>void}) {
+  const [status,setStatus]=useState(d.status), [location,setLocation]=useState(''), [estimate,setEstimate]=useState('');
+  const [busy,setBusy]=useState(false), [error,setError]=useState('');
+  const stages:SpaceDispatchStatus[]=d.deliveryMode==='door' ? ['staged','in_transit','out_for_delivery','delivered'] : ['staged','in_transit','ready_at_stage','collected'];
+  useEffect(()=>setStatus(d.status),[d.status]);
+  return <details className="text-xs"><summary className="cursor-pointer font-bold py-2">Record tracking update</summary><form className="grid gap-2 pt-2" onSubmit={async e=>{e.preventDefault();if(busy)return;setBusy(true);setError('');const r=await briefApi.updateSpaceDispatchStatus(d.spaceId,d.id,{status,location,...(estimate?{estimatedDelivery:new Date(estimate).toISOString()}:{})});setBusy(false);if(r.ok){setLocation('');setEstimate('');onSaved();}else setError(r.error);}}>
+    <label>Status<select className="block w-full border rounded-lg p-2" value={status} onChange={e=>setStatus(e.target.value as SpaceDispatchStatus)}>{[...stages.slice(Math.max(0,stages.indexOf(d.status))),'cancelled'].map(s=><option value={s} key={s}>{s.replace(/_/g,' ')}</option>)}</select></label>
+    <label>Reported location (optional)<input maxLength={160} className="block w-full border rounded-lg p-2" value={location} onChange={e=>setLocation(e.target.value)} placeholder="Only a location you can confirm"/></label>
+    <label>New estimated arrival (optional, your local time)<input type="datetime-local" className="block w-full border rounded-lg p-2" value={estimate} onChange={e=>setEstimate(e.target.value)}/></label>
+    {error && <p role="alert" className="text-red-700">{error}</p>}<button disabled={busy} className="rounded-lg border bg-emerald-50 p-2 text-emerald-800 font-bold">{busy?'Saving…':'Save tracking update'}</button><p className="text-[11px] text-gray-500">Records delivery only. Does not fulfil the order, settle payment or trigger a refund.</p>
+  </form></details>;
+}

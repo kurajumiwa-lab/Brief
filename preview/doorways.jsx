@@ -11,7 +11,7 @@
 //   2. Pulse is NOT a door in the bar;
 //   3. Pulse IS reachable from the drawer, and picking it goes to the
 //      pulse tab;
-//   4. Home carries [data-testid="mode-tiles"] (six of them) and no
+//   4. Home carries nav[aria-label="Quick actions"] (three compact doorways) and no
 //      [data-testid="filter-chips"] anywhere on the screen;
 //   5. the bar is a solid anchored floor (fixed, bottom-0, 56px, no floating
 //      pill), and the drawer stops above it.
@@ -113,16 +113,18 @@ async function main() {
   // ── 4. HOME: the mode tiles, and no chip row ────────────────────────────
   {
     const { host, root } = await mount(React.createElement(HomeSurface, { onOpenSpace: () => {} }));
-    const tiles = host.querySelector('[data-testid="mode-tiles"]');
+    const tiles = host.querySelector('nav[aria-label="Quick actions"]');
     check('Home carries the mode tiles', Boolean(tiles));
     const tileButtons = Array.from(tiles.querySelectorAll('button'));
-    check('six tiles: Shops, Events, Groups, Errands, Runs, Group Buys',
-      tileButtons.length === 6 &&
-      ['Shops', 'Events', 'Groups', 'Errands', 'Runs', 'Group Buys']
+    check('three compact doorways: Discover, Wanderly, Work',
+      tileButtons.length === 3 &&
+      ['Discover', 'Wanderly', 'Work']
         .every((l) => tileButtons.some((b) => text(b).includes(l))));
     check('no filter-chips test id anywhere on Home',
       host.querySelector('[data-testid="filter-chips"]') === null &&
       !text(host).includes('filter-chips'));
+    check('secondary discovery is collapsed by default', host.querySelector('details')?.open === false);
+    check('Work is a direct doorway', Boolean(host.querySelector('[data-testid="home-work"]')));
     root.unmount(); host.remove();
   }
 
@@ -147,13 +149,13 @@ async function main() {
       Boolean(panel) && panel.className.includes('bottom-14') && panel.className.includes('md:bottom-0'));
     sRoot.unmount(); sHost.remove();
 
-    // The create sheet the action opens: four rows, in the spec's order.
+    // The create sheet the action opens: five real creation actions.
     const { host: cHost, root: cRoot } = await mount(React.createElement(CreateSheet, { open: true, onClose: () => {}, onPick: () => {} }));
-    const rows = Array.from(cHost.querySelectorAll('button')).filter((b) => /Post an offer|Host an event|Start a run|Post an errand/.test(text(b)));
-    check('the create sheet has exactly four rows', rows.length === 4);
+    const rows = Array.from(cHost.querySelectorAll('button')).filter((b) => /Create work|Post an offer|Host a party or trip|Start a run|Post an errand/.test(text(b)));
+    check('the create sheet has five real creation actions', rows.length === 5);
     check('in the spec’s order: offer, event, run, errand',
-      rows[0].textContent.includes('Post an offer') && rows[1].textContent.includes('Host an event')
-      && rows[2].textContent.includes('Start a run') && rows[3].textContent.includes('Post an errand'));
+      rows[0].textContent.includes('Create work') && rows[1].textContent.includes('Post an offer') && rows[2].textContent.includes('Host a party or trip')
+      && rows[3].textContent.includes('Start a run') && rows[4].textContent.includes('Post an errand'));
     cRoot.unmount(); cHost.remove();
   }
 

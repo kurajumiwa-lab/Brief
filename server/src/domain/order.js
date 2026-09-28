@@ -26,6 +26,8 @@
 // never fabricated here.
 // ---------------------------------------------------------------------------
 
+import crypto from 'node:crypto';
+import { deliveryFields } from './orderTracking.js';
 import { store, newId } from '../store.js';
 import * as referrals from './referrals.js';
 import * as listings from './listing.js';
@@ -78,7 +80,7 @@ const VALID_TRANSITIONS = {
  *                   never from the request body
  * @param quantity   whole number >= 1
  */
-export function createOrder({ listingId, buyerId, quantity = 1, note = '', idempotencyKey = null, leadAgentId = null }) {
+export function createOrder({ listingId, buyerId, quantity = 1, delivery = null, note = '', idempotencyKey = null, leadAgentId = null }) {
   if (!buyerId) throw new Error('buyerId is required');
 
   // DUPLICATE SUBMISSION PROTECTION.
@@ -162,7 +164,9 @@ export function createOrder({ listingId, buyerId, quantity = 1, note = '', idemp
 
   const now = new Date().toISOString();
   const order = {
-    id: newId('ord'),
+    // Public tracking uses this reference plus an email. New references must
+    // not be timestamp/Math.random guesses. Existing references stay valid.
+    id: `ord_${crypto.randomBytes(16).toString('hex')}`,
     listingId: listing.id,
     // Which space's book this lands in, copied from the listing at creation.
     // Stamped, not looked up later: a listing can be re-filed, and an order
@@ -173,6 +177,8 @@ export function createOrder({ listingId, buyerId, quantity = 1, note = '', idemp
     // archived; an order must still say what it was actually for.
     listingTitle: listing.title,
     listingType: listing.type,
+    listingImage: listing.media?.[0] || null,
+    ...deliveryFields(delivery, store.find('users', u => u.id === buyerId)?.email),
     buyerId,
     personId: personIdForUser(buyerId),
     vendorId: vendor.id,

@@ -3,10 +3,12 @@ import * as api from "../api/briefApi";
 /** Uses the existing authentication API/token storage, not a second identity. */
 export function SessionSignIn({
   onSignedIn,
+  brandName = "Brief",
   title = "Sign in to save your Request",
 }: {
   onSignedIn: () => void;
   title?: string;
+  brandName?: string;
 }) {
   const [joining, setJoining] = useState(false);
   const [handle, setHandle] = useState("");
@@ -16,9 +18,9 @@ export function SessionSignIn({
   return (
     <section className="request-panel request-auth">
       <span className="request-eyebrow">Your private workspace</span>
-      <h2>{joining ? "Create your Brief account" : title}</h2>
+      <h2>{joining ? `Create your ${brandName} account` : title}</h2>
       <p>
-        One Brief account for discovery and business. No enterprise registration
+        One {brandName} account for discovery and business. No enterprise registration
         required.
       </p>
       <form

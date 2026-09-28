@@ -11,6 +11,7 @@ const ledger = await import('../src/domain/ledger.js');
 const wf = await import('../src/domain/workforce.js');
 const work = await import('../src/domain/workExecution.js');
 const tpl = await import('../src/domain/workTemplates.js');
+const requests = await import('../src/domain/requests.js');
 const { isoWeekOf } = await import('../src/domain/fieldAgent.js');
 store._reset();
 
@@ -158,6 +159,20 @@ await test('program: owner only; field work needs territory; quotas cannot excee
   assert.equal(program.rateCard.steps[1].feeKes, 180);
 });
 
+await test('request provenance: owner-scoped, private, and does not create a second procurement chain', () => {
+  const request = requests.createRequest(owner.id, { title: 'Find packaging suppliers' });
+  const foreign = requests.createRequest(stranger.id, { title: 'Private supplier search' });
+  const input = { title: 'Research packaging options', templateKey: 'lead_calling', target: 5, unitPriceKes: 100, deadline: future(5), sourceRequestId: request.id };
+  const linked = work.createProgram(force.id, owner.id, input);
+  assert.equal(work.programDashboard(linked.id, owner.id).sourceRequestId, request.id);
+  assert.equal(work.programDashboard(linked.id, supervisor.id).sourceRequestId, null);
+  assert.equal(work.programHeadline(linked).sourceRequestId, undefined, 'not exposed on worker/network projections');
+  assert.equal(requests.getRequest(owner.id, request.id).revision, request.revision);
+  assert.equal(requests.getRequest(owner.id, request.id).status, 'draft');
+  rejects(() => work.createProgram(force.id, owner.id, { ...input, sourceRequestId: foreign.id }), 'not_found');
+  rejects(() => work.createProgram(force.id, owner.id, { ...input, sourceRequestId: 'nonexistent' }), 'not_found');
+});
+
 await test('claiming: drafts are not claimable; eligibility explains itself in words, never a score', () => {
   rejects(() => work.claim(jane.id, program.id), 'not_found');
   program = work.changeProgramStatus(program.id, owner.id, { action: 'publish', revision: program.revision });
@@ -201,6 +216,17 @@ await test('proof: hard failures are refused at the door and write nothing', () 
   rejects(() => work.submitProof(amina.id, clean1.id, { fields: { businessName: 'X', ownerName: 'Y', phone: '0711000001', category: 'z', area: 'a', interested: 'maybe' } }), 'invalid_field');
   rejects(() => work.submitProof(jane.id, clean1.id, { fields: {} }), 'not_found');
   assert.equal(store.all('workProofs').length, before);
+});
+
+await test('execution start: remote tasks need no GPS; only the assignee can start; retries are stable', () => {
+  rejects(() => work.startTask(jane.id, clean1.id), 'not_found');
+  const before = store.all('ledgerTransactions').length;
+  const started = work.startTask(amina.id, clean1.id);
+  assert.ok(started.execution.startedAt);
+  assert.equal(started.execution.location, null);
+  assert.deepEqual(work.startTask(amina.id, clean1.id).execution, started.execution);
+  assert.equal(work.taskView(started, stranger.id).execution, null);
+  assert.equal(store.all('ledgerTransactions').length, before, 'start creates no economic event');
 });
 
 await test('proof: clean submission passes checks; a duplicate phone is flagged, not refused', () => {
@@ -257,6 +283,25 @@ await test('open steps: subject details are private until accepted; ineligible w
   rejects(() => work.acceptOpenTask(supervisor.id, fieldTask.id), 'invalid_state');
 });
 
+await test('field check-in: requires numeric GPS, stays private and survives a retry', () => {
+  rejects(() => work.startTask(amina.id, fieldTask.id, { location: NEAR }), 'not_found');
+  rejects(() => work.startTask(jane.id, fieldTask.id), 'location_required');
+  for (const location of [{ lat: null, lng: 0 }, { lat: '', lng: 0 }, { lat: 91, lng: 0 }, { ...NEAR, accuracyM: -1 }]) {
+    rejects(() => work.startTask(jane.id, fieldTask.id, { location }), 'invalid_location');
+  }
+  const started = work.startTask(jane.id, fieldTask.id, { location: { ...NEAR, accuracyM: null } });
+  assert.equal(started.execution.location.accuracyM, null, 'unknown accuracy is not zero');
+  assert.deepEqual(work.startTask(jane.id, fieldTask.id, { location: FAR }).execution, started.execution);
+  assert.equal(work.taskView(started, stranger.id).execution, null);
+  assert.deepEqual(work.taskView(started, owner.id).execution, started.execution);
+  // Releasing a hybrid step must clear the former worker's check-in.
+  work.releaseTask(jane.id, fieldTask.id);
+  assert.equal(work.getTask(fieldTask.id).execution, null);
+  rejects(() => work.startTask(jane.id, fieldTask.id, { location: NEAR }), 'not_found');
+  work.acceptOpenTask(jane.id, fieldTask.id);
+  work.startTask(jane.id, fieldTask.id, { location: NEAR });
+});
+
 await test('field proof: photos, location and consent enforced; photos must be your own private work uploads', () => {
   const fields = { locationNote: 'Next to the matatu stage' };
   const consent = { given: true, name: 'Njeri', words: 'Yes, list my shop' };
@@ -272,6 +317,9 @@ await test('field proof: photos, location and consent enforced; photos must be y
   const terr = proof.checks.find((c) => c.key === 'territory');
   assert.equal(terr.status, 'pass');
   assert.equal(proof.flags, 0);
+  assert.equal(proof.startedAt, work.getTask(fieldTask.id).execution.startedAt);
+  assert.deepEqual(proof.checkIn, NEAR);
+  rejects(() => work.startTask(jane.id, fieldTask.id, { location: NEAR }), 'invalid_state');
   // Photos in a proof cannot be deleted out of the record.
   assert.equal(uploads.deleteUpload(a, jane.id).code, 'evidence_in_use');
 });
@@ -388,7 +436,8 @@ await test('settlement: only ended weeks; exact ledger amount; finance-confirmed
 await test('expiry: a held first step past its window is released and its slot abandoned', () => {
   const [t] = work.claim(amina.id, program.id, { territoryId: east.id });
   store.update('workTasks', t.id, { dueAt: new Date(Date.now() - 1000).toISOString() });
-  assert.equal(work.sweepExpired(), 1);
+  rejects(() => work.startTask(amina.id, t.id), 'expired');
+  assert.equal(work.sweepExpired(), 0);
   assert.equal(work.getTask(t.id).status, 'released');
   assert.equal(store.find('workUnits', (u) => u.id === t.unitId).status, 'abandoned');
   rejects(() => work.submitProof(amina.id, t.id, { fields: {} }), 'invalid_state');
@@ -513,6 +562,12 @@ try {
     const claimed = await call(`/api/work-programs/${pid}/claim`, worker.token, 'POST', { count: 1 });
     assert.equal(claimed.status, 201);
     const tid = claimed.body.tasks[0].id;
+    assert.equal((await call(`/api/work-tasks/${tid}/start`, null, 'POST', { location: NEAR })).status, 401);
+    assert.equal((await call(`/api/work-tasks/${tid}/start`, outsider.token, 'POST', { location: NEAR, workerId: worker.user.id })).status, 404);
+    const started = await call(`/api/work-tasks/${tid}/start`, worker.token, 'POST', { location: NEAR, startedAt: '1900-01-01', workerId: outsider.user.id });
+    assert.equal(started.status, 200);
+    assert.ok(started.body.task.execution.startedAt.startsWith(new Date().toISOString().slice(0, 10)));
+    assert.deepEqual((await call(`/api/work-tasks/${tid}/start`, worker.token, 'POST', { location: FAR })).body.task.execution, started.body.task.execution);
     // Upload through the real media route as private work evidence.
     const form = new FormData();
     form.append('file', new Blob([Buffer.concat([png, Buffer.from('http-proof')])], { type: 'image/png' }), 'shop.png');

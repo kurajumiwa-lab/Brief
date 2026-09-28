@@ -1,7 +1,8 @@
 import React from 'react';
 import * as briefApi from '../api/briefApi';
-import type { AuthedUser, MemberRow, MembersPage, OnboardingFunnel } from '../api/briefApi';
+import type { AuthedUser } from '../api/briefApi';
 import { SpaceModerationPanel } from './SpaceModerationPanel';
+import { AdminMembers } from '../features/admin/AdminMembers';
 import { X } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
@@ -69,22 +70,43 @@ function Fact({ ok, label, detail }: { ok: boolean | null; label: string; detail
   );
 }
 
-export function AdminDesk({ open, onClose, me }: { open: boolean; onClose: () => void; me: AuthedUser | null }) {
-  const [tab, setTab] = React.useState<Tab>('health');
+export function AdminDesk({ open, onClose, me, initialTab = 'health', memberId, onSelectMember, onAccessDenied }: { open: boolean; onClose: () => void; me: AuthedUser | null; initialTab?: Tab; memberId?: string | null; onSelectMember?: (id: string | null) => void; onAccessDenied?: () => void }) {
+  const [tab, setTab] = React.useState<Tab>(initialTab);
+  React.useEffect(() => { if (memberId) setTab('members'); }, [memberId]);
   const [tick, setTick] = React.useState(0);
   const refresh = () => setTick((t) => t + 1);
+  const dialog = React.useRef<HTMLDivElement>(null);
+  const close = React.useRef(onClose);
+  close.current = onClose;
+  React.useEffect(() => {
+    if (!open) return;
+    const previous = document.activeElement as HTMLElement | null;
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    dialog.current?.querySelector<HTMLButtonElement>('button')?.focus();
+    const key = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') { event.preventDefault(); close.current(); }
+      if (event.key !== 'Tab') return;
+      const items = Array.from(dialog.current?.querySelectorAll<HTMLElement>('button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary') ?? []);
+      const first = items[0], last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    };
+    document.addEventListener('keydown', key);
+    return () => { document.removeEventListener('keydown', key); document.body.style.overflow = overflow; previous?.focus(); };
+  }, [open]);
   const caps = me?.capabilities ?? [];
   const can = (c: string) => caps.includes(c);
 
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#40916C]/30 backdrop-blur-sm overflow-y-auto">
+    <div ref={dialog} role="dialog" aria-modal="true" aria-label="Admin desk" className="fixed inset-0 z-50 bg-[#40916C]/30 backdrop-blur-sm overflow-y-auto">
       <div className="max-w-3xl mx-auto min-h-full bg-[color:var(--color-well)]">
         <div className="sticky top-0 z-10 bg-[rgba(238, 241, 245, 0.95)] border-b border-[var(--brief-line)] px-4 pt-5 pb-3">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h2 className="text-lg font-extrabold text-[var(--brief-ink)]">Operate</h2>
+              <h2 className="text-lg font-extrabold text-[var(--brief-ink)]">Admin desk</h2>
               <p className="text-[11px] text-[var(--ink-60)] leading-snug">
                 The operator desk. Every action here is capability-checked again
                 on the server and written to the audit log. You carry:
@@ -108,7 +130,7 @@ export function AdminDesk({ open, onClose, me }: { open: boolean; onClose: () =>
           </div>
         </div>
         <div className="p-4 space-y-4">
-          {tab === 'members' && <MembersTab tick={tick} can={can} refresh={refresh} />}
+          {tab === 'members' && <AdminMembers tick={tick} canAdmin={can('admin')} meId={me?.id} memberId={memberId} onSelectMember={onSelectMember} onAccessDenied={onAccessDenied} />}
           {tab === 'health' && <HealthTab tick={tick} can={can} refresh={refresh} />}
           {tab === 'attention' && <AttentionTab tick={tick} can={can} refresh={refresh} />}
           {tab === 'ingestion' && <IngestionTab tick={tick} />}
@@ -120,175 +142,6 @@ export function AdminDesk({ open, onClose, me }: { open: boolean; onClose: () =>
         </div>
       </div>
     </div>
-  );
-}
-
-// --- Members: onboarding real people ------------------------------------------
-
-function MembersTab({ tick, can, refresh }: { tick: number; can: (c: string) => boolean; refresh: () => void }) {
-  const [query, setQuery] = React.useState('');
-  const [page, setPage] = React.useState<MembersPage | null>(null);
-  const [funnel, setFunnel] = React.useState<OnboardingFunnel | null>(null);
-  const [selected, setSelected] = React.useState<MemberRow | null>(null);
-  const [reason, setReason] = React.useState('');
-  const [note, setNote] = React.useState<string | null>(null);
-  const [busy, setBusy] = React.useState(false);
-
-  React.useEffect(() => {
-    let live = true;
-    void briefApi.listMembers(query).then((r) => { if (live) setPage(r.ok ? r.data : null); });
-    return () => { live = false; };
-  }, [tick, query]);
-
-  React.useEffect(() => {
-    let live = true;
-    void briefApi.onboardingFunnel().then((r) => { if (live) setFunnel(r.ok ? r.data : null); });
-    return () => { live = false; };
-  }, [tick]);
-
-  const act = async (fn: () => Promise<{ ok: boolean; error?: string }>, okText: () => string) => {
-    if (busy) return;
-    setBusy(true); setNote(null);
-    const r = await fn();
-    setBusy(false);
-    if (!r.ok) { setNote(r.error ?? 'the desk refused that'); return; }
-    setNote(okText());
-    refresh();
-    const refreshed = await briefApi.listMembers(query);
-    if (refreshed.ok) setPage(refreshed.data);
-    if (selected) {
-      const again = await briefApi.listMembers(selected.handle);
-      if (again.ok) setSelected(again.data.rows.find((x) => x.id === selected.id) ?? null);
-    }
-  };
-
-  const suspend = (m: MemberRow) => void act(
-    () => briefApi.setMemberStatus(m.id, 'suspended', reason),
-    () => `Suspended — ${m.handle} is locked out now.`
-  );
-  const reinstate = (m: MemberRow) => void act(
-    () => briefApi.setMemberStatus(m.id, 'active', ''),
-    () => `${m.handle} can sign in again.`
-  );
-  const toggleRole = (m: MemberRow, role: string) => {
-    const has = m.platformRoles.includes(role);
-    const next = has ? m.platformRoles.filter((x) => x !== role) : [...m.platformRoles, role];
-    return void act(
-      () => briefApi.setPlatformRoles(m.id, next, has ? `removed ${role} at the members desk` : `granted ${role} at the members desk`),
-      () => `${has ? 'Removed' : 'Granted'} ${role} for ${m.handle} — audited.`
-    );
-  };
-
-  const RUNG_LABEL: Record<string, string> = Object.fromEntries((funnel?.rungs ?? []).map((r) => [r.id, r.label]));
-
-  return (
-    <>
-      {note && <Empty>{note}</Empty>}
-
-      {!can('admin') ? (
-        <Card title="Members" note="The directory needs the admin capability.">
-          <Empty>You carry {can('operator') ? 'operator' : 'no desk'} capability — ask an admin for access.</Empty>
-        </Card>
-      ) : (
-        <>
-          <Card title="Onboarding" note={funnel?.note ?? 'Every count is a scan of real rows.'}>
-            {funnel === null ? <Empty>loading…</Empty> : (
-              <>
-                <Row>
-                  <span>Members</span><span className="font-extrabold">{funnel.totals.members}</span>
-                </Row>
-                <Row>
-                  <span>Started (any event)</span><span className="font-extrabold">{funnel.totals.withAnyEvent}</span>
-                </Row>
-                <Row>
-                  <span>Finished onboarding</span><span className="font-extrabold">{funnel.totals.finishedOnboarding}</span>
-                </Row>
-                {Object.keys(funnel.funnel).length > 0 && (
-                  <div className="flex flex-wrap gap-1 pt-1">
-                    {Object.entries(funnel.funnel).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([name, n]) => (
-                      <span key={name} className="rounded-full bg-[color:var(--color-well)] px-2 py-0.5 text-[11px] font-bold text-[var(--ink-70)]">{name} · {n}</span>
-                    ))}
-                  </div>
-                )}
-              </>
-            )}
-          </Card>
-
-          <Card title="Directory" note="Search by handle or name. Suspended members are locked out on their next request, not their next login.">
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="search members…"
-              className="w-full rounded-lg border border-[var(--brief-line)] bg-[color:var(--color-paper)] px-2.5 py-1.5 text-[12px] outline-none focus:border-[#40916C]"
-            />
-            {page === null ? <Empty>loading…</Empty>
-              : page.rows.length === 0 ? <Empty>No members match “{query}”.</Empty>
-              : page.rows.map((m) => (
-                <button key={m.id} type="button" onClick={() => { setSelected(m); setNote(null); setReason(''); }}
-                  className={`w-full rounded-xl border px-2.5 py-2 text-left cursor-pointer ${selected?.id === m.id ? 'border-[#40916C] bg-[color:var(--color-paper)]' : 'border-[var(--brief-line)] bg-[color:var(--color-paper)]'}`}>
-                  <Row>
-                    <span className="min-w-0 truncate font-extrabold">{m.displayName}</span>
-                    <span className="shrink-0 text-[11px] text-[var(--ink-60)]">{String(m.createdAt ?? '').slice(0, 10)}</span>
-                  </Row>
-                  <Row>
-                    <span className="text-[11px] text-[var(--ink-70)]">@{m.handle}</span>
-                    <span className="flex gap-1">
-                      {m.status !== 'active' && <span className="rounded-full bg-[#DC2626]/10 px-1.5 py-0.5 text-[11px] font-extrabold text-[#DC2626]">{m.status}</span>}
-                      {m.verification === 'approved' && <span className="rounded-full bg-[#059669]/10 px-1.5 py-0.5 text-[11px] font-extrabold text-[#059669]">verified</span>}
-                      {m.platformRoles.map((r) => <span key={r} className="rounded-full bg-[#40916C]/10 px-1.5 py-0.5 text-[11px] font-extrabold text-[#40916C]">{r}</span>)}
-                    </span>
-                  </Row>
-                  <p className="mt-0.5 text-[11px] text-[var(--ink-70)] truncate">
-                    {m.onboarding.rung ? `Climbed to: ${RUNG_LABEL[m.onboarding.rung] ?? m.onboarding.rung}` : 'No rung yet'}
-                    {m.onboarding.latestEvent ? ` · last: ${m.onboarding.latestEvent}` : ''}
-                  </p>
-                </button>
-              ))}
-            {page && <Empty>{page.total} member{page.total === 1 ? '' : 's'}{page.total > page.pageSize ? ` — showing the newest ${page.pageSize}` : ''}</Empty>}
-          </Card>
-
-          {selected && (
-            <Card title={`@${selected.handle}`} note="Roles and suspension are audited with before/after. A suspension needs a reason.">
-              <Row>
-                <span>Status</span>
-                <span className={`font-extrabold ${selected.status === 'active' ? 'text-[#059669]' : 'text-[#DC2626]'}`}>{selected.status}</span>
-              </Row>
-              <div className="pt-1">
-                <p className="text-[11px] font-extrabold uppercase tracking-[0.12em] text-[var(--ink-60)] pt-1">Platform roles</p>
-                <div className="flex flex-wrap gap-1 pt-1">
-                  {['operator', 'reviewer', 'finance', 'admin'].map((role) => (
-                    <button key={role} type="button" onClick={() => toggleRole(selected, role)}
-                      className={`rounded-full px-2 py-0.5 text-[11px] font-extrabold cursor-pointer border ${
-                        selected.platformRoles.includes(role)
-                          ? 'bg-[#40916C] text-[var(--accent-ink)] border-[#40916C]'
-                          : 'bg-[color:var(--color-paper)] text-[var(--ink-70)] border-[var(--brief-line)]'
-                      }`}>
-                      {role}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              {selected.status === 'active' ? (
-                <div className="space-y-1.5 pt-2">
-                  <input value={reason} onChange={(e) => setReason(e.target.value)}
-                    placeholder="why suspend? (audited)"
-                    className="w-full rounded-lg border border-[var(--brief-line)] bg-[color:var(--color-paper)] px-2.5 py-1.5 text-[11px] outline-none focus:border-[#40916C]" />
-                  <button type="button" onClick={() => suspend(selected)} disabled={busy || reason.trim().length < 4}
-                    className="rounded-lg border border-[#DC2626]/30 bg-[#DC2626]/5 px-3 py-1.5 text-[11px] font-extrabold text-[#DC2626] cursor-pointer disabled:opacity-40">
-                    Suspend — locks them out now
-                  </button>
-                </div>
-              ) : (
-                <button type="button" onClick={() => reinstate(selected)} disabled={busy}
-                  className="mt-2 rounded-lg border border-[#059669]/30 bg-[#059669]/5 px-3 py-1.5 text-[11px] font-extrabold text-[#059669] cursor-pointer disabled:opacity-40">
-                  Reinstate
-                </button>
-              )}
-            </Card>
-          )}
-        </>
-      )}
-    </>
   );
 }
 

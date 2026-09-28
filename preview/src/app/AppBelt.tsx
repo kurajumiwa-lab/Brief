@@ -55,6 +55,8 @@ export interface AppBeltProps {
    * disabled control is a promise the app decided not to keep.
    */
   backTo?: { label: string; onBack: () => void } | null;
+  /** Local discovery owns search, location and provider follows. */
+  minimal?: boolean;
   className?: string;
 }
 
@@ -63,6 +65,7 @@ export const AppBelt: React.FC<AppBeltProps> = ({
   onHome,
   onSearch,
   backTo = null,
+  minimal = false,
   className = ''
 }) => {
   const [q, setQ] = useState('');
@@ -145,7 +148,7 @@ export const AppBelt: React.FC<AppBeltProps> = ({
           </span>
         </button>
 
-        <form onSubmit={submit} role="search" className="flex-1 min-w-0 flex items-center gap-1.5">
+        {!minimal && <><form onSubmit={submit} role="search" className="flex-1 min-w-0 flex items-center gap-1.5">
           <label htmlFor="belt-search" className="sr-only">Search Wairo</label>
           <input
             id="belt-search"
@@ -186,11 +189,11 @@ export const AppBelt: React.FC<AppBeltProps> = ({
               {followCount}
             </span>
           )}
-        </button>
+        </button></>}
       </div>
 
       {/* ── the area chip. Only ever what the member typed. ── */}
-      <div className="px-3 pb-2 flex items-center">
+      {!minimal && <div className="px-3 pb-2 flex items-center">
         <button
           type="button"
           onClick={() => { soundEngine.play('tap'); onOpenSheet(); }}
@@ -200,7 +203,7 @@ export const AppBelt: React.FC<AppBeltProps> = ({
           <MapPin className="w-3.5 h-3.5" />
           {place ? `Your area: ${place}` : 'Set your area'}
         </button>
-      </div>
+      </div>}
 
       {/* ── heart sheet — primary response, not a detour to Mine ─── */}
       <Sheet open={followOpen} title="Following" onClose={() => setFollowOpen(false)}>

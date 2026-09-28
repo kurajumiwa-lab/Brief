@@ -9,9 +9,8 @@ import * as briefApi from '../../api/briefApi';
  * no stock figure simply omits that line rather than printing "Location: --",
  * which reads as a missing value the seller forgot to fill in.
  *
- * There is no rating, no review count and no "popular" badge: none of those
- * exist in the data, and inventing social proof is the fastest way to make a
- * marketplace dishonest.
+ * Ratings are derived on the product reviews page, not guessed or cached on
+ * this compact listing projection. No invented "popular" badge belongs here.
  */
 
 const TYPE_LABEL: Record<string, string> = {

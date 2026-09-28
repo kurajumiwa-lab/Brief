@@ -20,6 +20,9 @@
 import { store } from '../store.js';
 import { recordAudit } from '../routes/helpers.js';
 import { RUNGS } from './onboarding.js';
+import { hasCapability, platformRolesOf } from '../identity.js';
+import * as workforce from './workforce.js';
+import { trackRecord } from './workExecution.js';
 
 const PAGE = 30;
 
@@ -82,6 +85,7 @@ function memberView(u) {
     createdAt: u.createdAt ?? null,
     status: u.status ?? 'active',
     platformRoles: Array.isArray(u.platformRoles) ? u.platformRoles : [],
+    effectiveRoles: platformRolesOf(u.id),
     verification: verificationOf(u.id),
     onboarding: {
       rung: rungOf(u.id),
@@ -97,8 +101,10 @@ function memberView(u) {
 
 /** Search + page the directory. Query matches handle or display name. */
 export function listMembers({ query = '', page = 0 } = {}) {
-  const q = String(query ?? '').trim().toLowerCase();
-  let users = store.all('users').slice().sort((a, b) => String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? '')));
+  const q = String(query ?? '').trim().toLowerCase().replace(/^@/, '');
+  page = Number(page);
+  if (!Number.isSafeInteger(page) || page < 0) page = 0;
+  let users = store.all('users').slice().sort((a, b) => String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? '')) || String(a.id).localeCompare(String(b.id)));
   if (q) users = users.filter((u) => (u.handle ?? '').toLowerCase().includes(q) || String(u.displayName ?? '').toLowerCase().includes(q));
   const total = users.length;
   const rows = users.slice(page * PAGE, page * PAGE + PAGE).map(memberView);
@@ -131,9 +137,11 @@ export function onboardingView() {
 /** Suspend or reinstate. Suspension revokes every live session NOW — the
  *  decision takes effect on the next request, not the next login. */
 export function setMemberStatus(operatorId, userId, { status, reason = '' } = {}) {
+  if (operatorId === userId && status === 'suspended') { const e = new Error('you cannot suspend your own account'); e.status = 409; throw e; }
   if (!['active', 'suspended'].includes(status)) throw new Error('status must be active or suspended');
   const user = store.find('users', (u) => u.id === userId || u.handle === userId);
   if (!user) { const e = new Error('user not found'); e.status = 404; throw e; }
+  if (operatorId === user.id && status === 'suspended') { const e = new Error('you cannot suspend your own account'); e.status = 409; throw e; }
   if (user.status === status) return { user: memberView(user), changed: false, sessionsRevoked: 0 };
   const why = String(reason ?? '').trim();
   if (status === 'suspended' && why.length < 4) throw new Error('say why the account is suspended — the reason is audited');
@@ -156,4 +164,51 @@ export function setMemberStatus(operatorId, userId, { status, reason = '' } = {}
     reason: why || null
   });
   return { user: memberView(store.find('users', (u) => u.id === user.id)), changed: true, sessionsRevoked: revoked };
+}
+
+/** Admin-only, explicit projection. Never return a raw user, vendor or proof:
+ * those rows may contain password hashes, sessions, private commercial evidence
+ * or customer data. Reading this profile is itself audited by the route. */
+export function memberProfile(actorId, userId) {
+  if (!hasCapability(actorId, 'admin')) {
+    const e = new Error('this directory requires the admin capability');
+    e.status = actorId ? 403 : 401;
+    throw e;
+  }
+  const u = store.find('users', (row) => row.id === userId);
+  if (!u) { const e = new Error('member not found'); e.status = 404; throw e; }
+  const p = workforce.getProfile(u.id);
+  const spaces = store.filter('spaces', (row) => row.ownerId === u.id).map((row) => ({
+    id: row.id, name: row.name, type: row.type ?? null,
+    visibility: row.visibility ?? 'private', status: row.status ?? 'active',
+    // A private/unlisted/archived space must not acquire a public link here.
+    publicSlug: row.visibility === 'public' && row.status === 'active' && !row.publicPageModeration?.hidden ? row.slug ?? null : null,
+    createdAt: row.createdAt ?? null
+  }));
+  const businesses = store.filter('vendors', (row) => row.ownerId === u.id).map((row) => ({
+    id: row.id, name: row.displayName, status: row.status ?? null,
+    businessType: row.enterprise?.businessType ?? null,
+    publication: row.enterprise?.publication ?? 'private'
+  }));
+  const memberships = store.filter('workforceMembers', (row) => row.userId === u.id).map((row) => ({
+    id: row.id, workforceId: row.workforceId,
+    name: workforce.getWorkforce(row.workforceId)?.name ?? 'Workforce unavailable',
+    role: row.role, status: row.status,
+    territories: (row.territoryIds ?? []).map((id) => workforce.getTerritory(id)?.name ?? 'Territory unavailable'),
+    onboarding: workforce.onboardingChecklist(row)
+  }));
+  return {
+    member: memberView(u),
+    account: { email: u.email ?? null, authProvider: u.authProvider ?? 'password' },
+    spaces, businesses,
+    worker: p ? {
+      displayName: p.displayName, phone: p.phone, modes: p.modes,
+      areas: p.areas ?? [], languages: p.languages ?? [], availableDays: p.availableDays ?? [],
+      termsAcceptedAt: p.termsAcceptedAt ?? null,
+      briefings: (p.briefings ?? []).map((b) => ({ templateKey: b.templateKey, at: b.at }))
+    } : null,
+    memberships,
+    ownedWorkforces: store.filter('workforces', (row) => row.ownerId === u.id).map((row) => ({ id: row.id, name: row.name })),
+    record: trackRecord(u.id)
+  };
 }

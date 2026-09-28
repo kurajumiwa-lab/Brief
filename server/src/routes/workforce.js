@@ -93,6 +93,14 @@ export function register(app) {
     send(res, () => ({ task: work.taskView(work.acceptOpenTask(me, req.params.id), me) }));
   });
 
+  app.post('/api/work-tasks/:id/start', (req, res) => {
+    const me = requireAuth(req, res);
+    if (!me) return;
+    send(res, () => ({ task: work.taskView(work.startTask(me, req.params.id, {
+      location: req.body?.location ?? null
+    }), me) }));
+  });
+
   app.post('/api/work-tasks/:id/submit', (req, res) => {
     const me = requireAuth(req, res);
     if (!me) return;

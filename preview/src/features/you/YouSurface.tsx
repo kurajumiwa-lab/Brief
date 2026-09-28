@@ -1,10 +1,10 @@
+import '../../ui/compact.css';
 import React, { useEffect, useState } from "react";
 import {
   User, ShieldCheck, Heart, Store, Package, Users, Coins, Landmark,
   CreditCard, Archive, BookOpen, Globe, Bell, Lock
 } from "lucide-react";
 import { MenuTile, SectionHeader } from "../../ui/MenuTile";
-import { Sheet } from "../../ui/Sheet";
 import * as api from "../../api/briefApi";
 import type { AuthedUser, PersonMe, FollowsGroups, MyCommitments, MyPosition, MyReciprocity, Precedent } from "../../api/briefApi";
 import type { Space } from "../../api/types";
@@ -16,7 +16,6 @@ import { TableBankingSurface } from "./TableBankingSurface";
 import { HowBriefWorks } from "./HowBriefWorks";
 import { hrefForDest } from "../../app/surfaces";
 import { GuardianNetwork } from "./GuardianNetwork";
-import { Marketplace } from "../../components/Marketplace";
 import { Vault } from "../../components/vault/Vault";
 import { PositionCard } from "../home/PositionCard";
 import { CommitmentsCard } from "../home/CommitmentsCard";
@@ -62,54 +61,11 @@ const KIND_LABELS: Record<string, string> = {
 // The grouping of the You surface, in one list so the order, the labels and the
 // membership of each group are stated once. Kept as data (not as markup) so the
 // suite can assert that no section was silently dropped in a reorganisation:
-// every Section below appears exactly once here.
+// Commerce aliases stay routable, but are not duplicated in this menu.
 const YOU_GROUPS: Array<{ id: string; label: string; items: Array<{ id: Section; label: string }> }> = [
-  {
-    id: "identity",
-    label: "Identity",
-    items: [
-      { id: "profile", label: "Profile" },
-      { id: "standing", label: "Standing" },
-      { id: "following", label: "Following" }
-    ]
-  },
-  {
-    id: "business",
-    label: "Business",
-    items: [
-      { id: "selling", label: "Selling" },
-      { id: "orders", label: "Orders" },
-      { id: "network", label: "Your network" }
-    ]
-  },
-  {
-    id: "money",
-    label: "Money",
-    items: [
-      { id: "earn", label: "Earn" },
-      { id: "tableBanking", label: "Table Banking" },
-      { id: "subscriptions", label: "Subscriptions" },
-      { id: "archive", label: "Archive" }
-    ]
-  },
-  {
-    id: "about",
-    label: "About",
-    items: [{ id: "how", label: "How Wairo works" }]
-  },
-  {
-    // The drawer's Settings group lands here: three real, small controls —
-    // the ones the app can actually answer. Language is honest about being
-    // one language; Privacy names what is stored on this device;
-    // Notifications opens the real notification centre.
-    id: "settings",
-    label: "Settings",
-    items: [
-      { id: "language", label: "Language" },
-      { id: "notifications", label: "Notifications" },
-      { id: "privacy", label: "Privacy" }
-    ]
-  }
+  { id: 'identity', label: 'Activity & connections', items: [{ id: 'standing', label: 'Standing' }, { id: 'following', label: 'Following' }, { id: 'network', label: 'Your network' }] },
+  { id: 'money', label: 'Money', items: [{ id: 'earn', label: 'Earn' }, { id: 'tableBanking', label: 'Table Banking' }, { id: 'subscriptions', label: 'Subscriptions' }, { id: 'archive', label: 'Archive' }] },
+  { id: 'settings', label: 'Settings & help', items: [{ id: 'language', label: 'Language' }, { id: 'notifications', label: 'Notifications' }, { id: 'privacy', label: 'Privacy & sign out' }, { id: 'how', label: 'How it works' }] },
 ];
 
 export type YouSection =
@@ -119,28 +75,7 @@ export type YouSection =
 
 type Section = YouSection;
 
-export const YOU_SECTION_IDS: YouSection[] = YOU_GROUPS.flatMap((g) => g.items.map((i) => i.id));
-
-// The one tile shape across the You tab: a thin-line icon in a 12px tinted
-// square, a bold 15px title, a grey 13px description in the app's own words.
-// A pill row had a title and nothing else; a tile says what the section holds
-// before you go into it.
-const SECTION_ICONS: Record<Section, React.ReactNode> = {
-  profile: <User className="w-5 h-5" />,
-  standing: <ShieldCheck className="w-5 h-5" />,
-  following: <Heart className="w-5 h-5" />,
-  selling: <Store className="w-5 h-5" />,
-  orders: <Package className="w-5 h-5" />,
-  network: <Users className="w-5 h-5" />,
-  earn: <Coins className="w-5 h-5" />,
-  tableBanking: <Landmark className="w-5 h-5" />,
-  subscriptions: <CreditCard className="w-5 h-5" />,
-  archive: <Archive className="w-5 h-5" />,
-  how: <BookOpen className="w-5 h-5" />,
-  language: <Globe className="w-5 h-5" />,
-  notifications: <Bell className="w-5 h-5" />,
-  privacy: <Lock className="w-5 h-5" />
-};
+export const YOU_SECTION_IDS: YouSection[] = ['profile', 'orders', 'selling', ...YOU_GROUPS.flatMap((g) => g.items.map((i) => i.id))];
 
 export const SECTION_TITLES: Record<Section, string> = {
   profile: "Profile",
@@ -170,7 +105,7 @@ export function YouSurface({
   onRequireAuth: () => void;
   /** Deep link from the ⓘ on Home: the audit screen is a tab, not a footnote. */
   initialSection?: Section | null;
-  /** When the shell owns the URL (`#you/<section>`), this is the open sheet. */
+  /** When the shell owns the URL (`#you/<section>`), this is the inline detail. */
   openSection?: Section | null;
   onOpenSection?: (section: Section | null) => void;
 }) {
@@ -334,7 +269,8 @@ export function YouSurface({
   );
 
   return (
-    <section className="max-w-3xl mx-auto" aria-label="You">
+    <section className="compact-surface" aria-label="You">
+      {!section && <>
       {/* Profile first: who you are, then where to go. The groups below are
           quiet rows — typography and spacing, not tiles. Same groups, same
           sections, same test ids; only the shape changed. */}
@@ -363,10 +299,10 @@ export function YouSurface({
           View profile
         </span>
       </button>
-      <div className="space-y-5 mt-2" data-testid="you-tile-grid">
+      <div className="space-y-1 mt-2" data-testid="you-tile-grid">
         {YOU_GROUPS.map((group) => (
-          <div key={group.id}>
-            <SectionHeader>{group.label}</SectionHeader>
+          <details key={group.id} className="compact-disclosure">
+            <summary>{group.label}</summary>
             <div>
               {group.items.map((item) => (
                 <button
@@ -383,15 +319,14 @@ export function YouSurface({
                 </button>
               ))}
             </div>
-          </div>
+          </details>
         ))}
       </div>
 
-      <Sheet
-        open={section !== null}
-        title={section ? SECTION_TITLES[section] : ""}
-        onClose={() => { setSection(null); setNotice(""); }}
-      >
+      <a className="compact-row" href="#spaces/orders">Orders & selling <span aria-hidden="true">→</span></a>
+      </>}
+      {section && <div className="space-y-4" data-testid="you-detail">
+        <header className="compact-heading"><button type="button" onClick={() => { setSection(null); setNotice(''); }} aria-label="Back to You">← You</button><h1>{SECTION_TITLES[section]}</h1></header>
       {section === "profile" && shelf("profile", (
         <div className="space-y-3">
           <div>
@@ -583,17 +518,7 @@ export function YouSurface({
       {/* ── ORDERS / SELLING — the personal halves of commerce, moved off the
              browse screen. Same Marketplace rails, same server-authoritative
              money; only the address changed. ── */}
-      {section === "orders" && shelf("orders", (
-        <div className="rounded-2xl border p-4" style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}>
-          <Marketplace initialSection="orders" hideBrowse />
-        </div>
-      ))}
-
-      {section === "selling" && shelf("selling", (
-        <div className="rounded-2xl border p-4" style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}>
-          <Marketplace initialSection="selling" hideBrowse />
-        </div>
-      ))}
+      {(section === 'orders' || section === 'selling') && <a className="compact-primary" href={`#spaces/${section}`}>Open {section} in Spaces →</a>}
 
       {section === "earn" && shelf("earn", (
         <EarnSurface onRequireAuth={onRequireAuth} />
@@ -698,7 +623,7 @@ export function YouSurface({
           </div>
         </div>
       ))}
-      </Sheet>
+      </div>}
     </section>
   );
 }

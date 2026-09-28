@@ -15,7 +15,7 @@ import "./supply.css";
 // Lazy: the map engine is heavy and only the map section pays for it.
 const VendorLeadMap = React.lazy(() => import("./VendorLeadMap"));
 export function SupplyWorkspace({ route = "mine" }: { route?: string }) {
-  const [section, id] = route.split("/");
+  const [section, id] = route.split("?")[0].split("/");
   const isPublic = section === "profile";
   const [enterprise, setEnterprise] = useState<Enterprise | null>(null),
     [loading, setLoading] = useState(true),

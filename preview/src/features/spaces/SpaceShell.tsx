@@ -403,6 +403,8 @@ export const SpaceShell: React.FC<SpaceShellProps> = ({
             here, in the owner's own workspace, and nowhere public. */}
         <GuardianNotice spaceId={space!.id} />
 
+        <details className="compact-disclosure">
+          <summary>Public page & updates</summary>
         <PublicFacePanel
           space={space!}
           face={face}
@@ -420,6 +422,8 @@ export const SpaceShell: React.FC<SpaceShellProps> = ({
           onPost={broadcast}
           onDelete={(id) => void removeBroadcast(id)}
         />
+
+        </details>
 
         {/* NEXT STEP — one obvious action, derived from real rows. Not a menu. */}
         {space && (

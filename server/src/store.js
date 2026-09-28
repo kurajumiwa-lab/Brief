@@ -273,6 +273,11 @@ const EMPTY = {
   listings: [],
   orders: [],
   disputes: [],
+  // Product opinions, helpfulness ballots and moderation reports; no money counters.
+  businessFeedStates: [], // Private discovery controls/references; never money or copied supply.
+  productReviews: [],
+  productReviewVotes: [],
+  productReviewReports: [],
 
   // --- The Vault -----------------------------------------------------------
   // A persistent context layer wrapping a real-world activity. A Vault is NOT

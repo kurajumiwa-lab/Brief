@@ -58,6 +58,8 @@ import { register as feesRoutes } from './routes/fees.js';
 import { register as shopRoutes } from './routes/shop.js';
 import { register as shopBriefRoutes } from './routes/shopBrief.js';
 import { register as referralsRoutes } from './routes/referrals.js';
+import { register as productReviewRoutes } from './routes/productReviews.js';
+import { register as orderTrackingRoutes } from './routes/orderTracking.js';
 import { register as commerceRoutes } from './routes/commerce.js';
 import { register as commandRoutes } from './routes/command.js';
 import { register as campaignsRoutes } from './routes/campaigns.js';
@@ -103,6 +105,7 @@ import { register as pulseRoutes } from './routes/pulse.js';
 import { register as precedentRoutes } from './routes/precedent.js';
 import { register as errandsRoutes } from './routes/errands.js';
 import { register as worldRoutes } from './routes/world.js';
+import { register as businessFeedRoutes } from './routes/businessFeed.js';
 import { register as discoverRoutes } from './routes/discover.js';
 import { register as pickupsRoutes } from './routes/pickups.js';
 import { register as positionRoutes } from './routes/position.js';
@@ -214,8 +217,11 @@ app.use(ops.requestLogger);
 //                           kilimani, related content, nearby) — every payload
 //                           is the public projection of public objects only
 // Groups directory is an opt-in metadata-only projection, never a workspace.
-const PUBLIC_WITHOUT_SESSION = /^\/(auth|entities|locations|graph|nearby|collections\/personal|public\/(campaigns|feed|enterprises|capabilities|spaces)|groups\/directory|circles\/join|health|ready|readiness|media\/(file|telegram)|config|release|email-subscriptions|webhooks|telegram\/init|huduma\/webhooks|price-signals|pulse|world|discover\/summary)(\/|$)/;
+const PUBLIC_WITHOUT_SESSION = /^\/(auth|entities|locations|graph|nearby|collections\/personal|public\/(campaigns|feed|enterprises|capabilities|spaces|order-tracking|product-reviews)|groups\/directory|circles\/join|health|ready|readiness|media\/(file|telegram)|config|release|email-subscriptions|webhooks|telegram\/init|huduma\/webhooks|price-signals|pulse|world|discover\/(summary|business))(\/|$)/;
 app.use('/api', (req, res, next) => {
+  // Wanderly browse is a public, allowlisted listing projection (no attendee
+  // identities or owner IDs). Only these GETs; authoring still needs a session.
+  if (req.method === 'GET' && /^\/events(?:\/categories)?\/?$/.test(req.path)) return next();
   if (PUBLIC_WITHOUT_SESSION.test(req.path)) return next();
   const me = callerId(req);
   if (me) return next();
@@ -258,6 +264,8 @@ shopRoutes(app);
 shopBriefRoutes(app);
 referralsRoutes(app);
 commerceRoutes(app);
+orderTrackingRoutes(app);
+productReviewRoutes(app);
 commandRoutes(app);
 campaignsRoutes(app);
 ticketMarketRoutes(app);
@@ -300,6 +308,7 @@ pulseRoutes(app);
 precedentRoutes(app);
 errandsRoutes(app);
 discoverRoutes(app);
+businessFeedRoutes(app);
 worldRoutes(app);
 pickupsRoutes(app);
 positionRoutes(app);
@@ -389,13 +398,10 @@ if (servingFrontend) {
     }
   }));
 
-  // The rebrand intro page: a static build living at preview/public/intro,
-  // copied to dist/intro/ by the client build. Explicit route because
-  // `index: false` plus the SPA fallback below would otherwise resolve
-  // /intro/ to the app shell instead of the intro.
-  app.get(['/intro', '/intro/'], (req, res) => {
+  // Replay the SAME source-controlled brand cards, not a second static demo.
+  app.get(['/intro', '/intro/', '/intro/index.html'], (_req, res) => {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
-    res.sendFile(path.join(FRONTEND_DIST, 'intro', 'index.html'));
+    res.type('html').send(indexHtml);
   });
 
   // SPA fallback: any GET that is neither the API nor a real asset resolves to

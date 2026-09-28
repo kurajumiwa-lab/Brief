@@ -177,6 +177,7 @@ export function relatedEvents(campaign, limit = 6) {
   const same = (c) =>
     (c.status === 'published' || c.status === 'live') &&
     c.id !== campaign.id &&
+    !c.unlisted &&
     !hasEnded(c) &&
     (c.type === campaign.type || (campaign.location != null && c.location === campaign.location));
   return store.filter('campaigns', same)
@@ -195,6 +196,7 @@ export function hostEvents(ownerId, excludeId, limit = 6) {
   return store.filter('campaigns', (c) =>
     c.ownerId === ownerId &&
     c.id !== excludeId &&
+    !c.unlisted &&
     ['published', 'live', 'closed', 'completed'].includes(c.status)
   )
     .sort((a, b) => String(b.startsAt ?? '').localeCompare(String(a.startsAt ?? '')))
@@ -212,6 +214,7 @@ export function seriesOccurrences(seriesId, excludeId, limit = 12) {
   return store.filter('campaigns', (c) =>
     c.seriesId === seriesId &&
     c.id !== excludeId &&
+    !c.unlisted &&
     ['published', 'live', 'closed', 'completed'].includes(c.status) &&
     !hasEnded(c)
   )

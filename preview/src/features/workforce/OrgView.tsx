@@ -3,7 +3,8 @@
 // every number: this desk sends intents (activate, place in territory,
 // publish, approve) and shows the server's answer — including refusals,
 // verbatim. The rate card is shown only after the server computes it.
-import React, { useEffect, useState } from 'react';
+import { SessionSignIn } from '../../components/SessionSignIn';
+import React, { useEffect, useRef, useState } from 'react';
 import * as api from '../../api/briefApi';
 import { Btn, Card, CheckRow, Empty, Field, Notice, Pill, PrivatePhoto, Progress, Section, Stat, inputClass, inputStyle, kes, modeLabel, muted, strong } from './ui';
 
@@ -32,6 +33,9 @@ function NewProgram({ desk, onCreated }: { desk: api.WorkforceDesk; onCreated: (
   const [templateKey, setTemplateKey] = useState(desk.templates[0]?.key ?? '');
   const [title, setTitle] = useState('');
   const [objective, setObjective] = useState('');
+  const [sourceRequestId, setSourceRequestId] = useState('');
+  const [requests, setRequests] = useState<Array<{ id: string; title: string }>>([]);
+  useEffect(() => { let active = true; void api.listMyRequests().then((r) => { if (active && r.ok) setRequests(r.data); }); return () => { active = false; }; }, []);
   const [target, setTarget] = useState('50');
   const [price, setPrice] = useState('300');
   const [deadline, setDeadline] = useState(new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10));
@@ -46,7 +50,7 @@ function NewProgram({ desk, onCreated }: { desk: api.WorkforceDesk; onCreated: (
     const territoryTargets: Record<string, number> = {};
     for (const id of territoryIds) if (quotas[id]) territoryTargets[id] = Number(quotas[id]);
     const r = await api.createWorkProgram(desk.workforce.id, {
-      title, objective, templateKey, target: Number(target), unitPriceKes: Number(price), deadline, audience, territoryIds,
+      title, objective, sourceRequestId: sourceRequestId || null, templateKey, target: Number(target), unitPriceKes: Number(price), deadline, audience, territoryIds,
       territoryTargets: Object.keys(territoryTargets).length ? territoryTargets : null
     });
     setBusy(false);
@@ -67,6 +71,9 @@ function NewProgram({ desk, onCreated }: { desk: api.WorkforceDesk; onCreated: (
           {tpl.summary} Steps: {tpl.steps.map((s) => `${s.label} (${modeLabel(s.mode)}, ${s.share}%)`).join(' → ')}.
         </p>
       )}
+      {requests.length > 0 && <Field label="Related business request (optional)" hint="A private reference for you. This does not change the original request, its work order or its payment.">
+        <select className={inputClass} style={inputStyle} value={sourceRequestId} onChange={(e) => setSourceRequestId(e.target.value)}><option value="">Standalone work</option>{requests.map((r) => <option key={r.id} value={r.id}>{r.title}</option>)}</select>
+      </Field>}
       <Field label="Title"><input className={inputClass} style={inputStyle} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Onboard 50 retailers in Nairobi West" /></Field>
       <Field label="Objective (what success means)"><textarea className={inputClass} style={inputStyle} rows={2} value={objective} onChange={(e) => setObjective(e.target.value)} /></Field>
       <div className="grid grid-cols-3 gap-2">
@@ -130,6 +137,7 @@ function ProgramDetail({ id, onChanged }: { id: string; onChanged: (msg: string)
         <Stat value={`${d.progressPct}%`} label="approved" />
       </div>
       <p className="text-xs" style={muted}>{d.money.note}</p>
+      {d.sourceRequestId && <a className="text-xs underline" href={`#requests/${encodeURIComponent(d.sourceRequestId)}`}>View original business request</a>}
       <div>
         <p className="text-xs font-bold" style={muted}>Steps</p>
         <ul className="grid gap-1 mt-1 text-xs">
@@ -232,6 +240,7 @@ function ReviewItem({ item, onDone }: { item: api.WorkReviewItem; onDone: (msg: 
           <a href={`https://www.openstreetmap.org/?mlat=${p.location.lat}&mlon=${p.location.lng}#map=17/${p.location.lat}/${p.location.lng}`} target="_blank" rel="noreferrer" style={{ color: 'var(--color-primary)' }}>open map</a>
         </p>
       )}
+      {p.startedAt && <p className="text-xs mt-2" style={muted}>Device-reported start: {new Date(p.startedAt).toLocaleString()}{p.checkIn ? ` · ${p.checkIn.lat.toFixed(5)}, ${p.checkIn.lng.toFixed(5)}` : ' · remote'}. Submitted: {new Date(p.submittedAt).toLocaleString()}.</p>}
       {p.consent && <p className="text-xs mt-1" style={muted}>Consent given by {p.consent.name}{p.consent.words ? `: “${p.consent.words}”` : ''}</p>}
       {p.note && <p className="text-xs mt-1" style={strong}>Worker note: {p.note}</p>}
       {item.previous.length > 0 && <p className="text-xs mt-1" style={muted}>Earlier: {item.previous.map((r) => `${r.decision} — ${r.reason ?? ''}`).join('; ')}</p>}
@@ -396,6 +405,7 @@ function Territories({ desk, reload }: { desk: api.WorkforceDesk; reload: (msg: 
 
 // ---------------------------------------------------------------------------
 export function OrgView() {
+  const [signedOut, setSignedOut] = useState(false);
   const [list, setList] = useState<api.WorkMembership[] | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [desk, setDesk] = useState<api.WorkforceDesk | null>(null);
@@ -405,16 +415,19 @@ export function OrgView() {
 
   const loadList = async (pick?: string) => {
     const r = await api.listMyWorkforces();
-    if (!r.ok) { setError(r.status === 401 ? 'Sign in to manage a workforce.' : r.error); return; }
+    if (!r.ok) { setSignedOut(r.status === 401); setError(r.status === 401 ? 'Sign in to manage a workforce.' : r.error); return; }
+    setSignedOut(false); setError('');
     const managed = r.data.filter((w) => w.role === 'owner' || (w.role === 'supervisor' && w.status === 'active'));
     setList(managed);
     setSelected(pick ?? selected ?? managed[0]?.id ?? null);
   };
-  const loadDesk = async (id: string) => { const r = await api.getWorkforceDesk(id); if (r.ok) setDesk(r.data); else setError(r.error); };
+  const deskRead = useRef(0);
+  const loadDesk = async (id: string) => { const n = ++deskRead.current; const r = await api.getWorkforceDesk(id); if (n !== deskRead.current) return; if (r.ok) setDesk(r.data); else setError(r.error); };
   useEffect(() => { void loadList(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (selected) void loadDesk(selected); }, [selected]);
   const reload = (m: string) => { setMsg(m); setError(''); if (selected) void loadDesk(selected); };
 
+  if (signedOut) return <SessionSignIn title="Sign in to manage a workforce" onSignedIn={() => void loadList()} />;
   if (!list) return error ? <Empty>{error}</Empty> : <p className="text-sm mt-6" style={muted}>Reading your workforces…</p>;
 
   return (
@@ -422,7 +435,7 @@ export function OrgView() {
       {list.length > 1 && (
         <div className="flex flex-wrap gap-2 mt-4">
           {list.map((w) => (
-            <button key={w.id} type="button" onClick={() => setSelected(w.id)} className="rounded-full px-3 py-1.5 text-xs font-bold"
+            <button key={w.id} type="button" onClick={() => { deskRead.current++; setDesk(null); setError(''); setSelected(w.id); }} className="rounded-full px-3 py-1.5 text-xs font-bold"
               style={selected === w.id ? { background: 'var(--color-primary)', color: 'var(--accent-ink)' } : { background: 'var(--color-surface-elevated)', color: 'var(--color-text)' }}>{w.name}</button>
           ))}
         </div>
@@ -442,10 +455,10 @@ export function OrgView() {
                 style={tab === k ? { background: 'var(--color-text)', color: 'var(--color-surface)' } : { background: 'transparent', color: 'var(--color-text-muted)' }}>{label}</button>
             ))}
           </div>
-          {tab === 'programs' && <Programs desk={desk} reload={reload} />}
-          {tab === 'review' && <Review desk={desk} reload={reload} />}
-          {tab === 'people' && <People desk={desk} reload={reload} />}
-          {tab === 'territories' && <Territories desk={desk} reload={reload} />}
+          {tab === 'programs' && <Programs key={desk.workforce.id} desk={desk} reload={reload} />}
+          {tab === 'review' && <Review key={desk.workforce.id} desk={desk} reload={reload} />}
+          {tab === 'people' && <People key={desk.workforce.id} desk={desk} reload={reload} />}
+          {tab === 'territories' && <Territories key={desk.workforce.id} desk={desk} reload={reload} />}
         </>
       )}
       {list.length > 0 && (

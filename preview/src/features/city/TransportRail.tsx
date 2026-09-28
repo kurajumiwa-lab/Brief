@@ -24,13 +24,15 @@ import { soundEngine } from '../../utils/SoundEngine';
 // marked.
 // ---------------------------------------------------------------------------
 
-const STAGES: SpaceDispatchStatus[] = ['staged', 'in_transit', 'ready_at_stage', 'collected'];
+const stagesFor = (d:SpaceDispatch):SpaceDispatchStatus[] => d.deliveryMode==='door' ? ['staged','in_transit','out_for_delivery','delivered'] : ['staged','in_transit','ready_at_stage','collected'];
 const STAGE_LABEL: Record<SpaceDispatchStatus, string> = {
   staged: 'At the origin stage',
   in_transit: 'On the road',
   ready_at_stage: 'Waiting at the far stage',
   collected: 'Collected by the receiver',
-  cancelled: 'Cancelled'
+  cancelled: 'Cancelled',
+  out_for_delivery: 'Out for delivery',
+  delivered: 'Delivered'
 };
 
 const ago = (iso: string | null | undefined) => {
@@ -79,6 +81,7 @@ export function TransportRail({ className = '' }: { className?: string }) {
   }, [load]);
 
   const advance = async (d: SpaceDispatch) => {
+    const STAGES=stagesFor(d);
     const next = STAGES[Math.min(STAGES.length - 1, STAGES.indexOf(d.status) + 1)];
     if (next === d.status) return;
     setBusy(d.id);
@@ -109,7 +112,7 @@ export function TransportRail({ className = '' }: { className?: string }) {
     );
   }
 
-  const openCargo = dispatches.filter((d) => d.status !== 'collected' && d.status !== 'cancelled');
+  const openCargo = dispatches.filter((d) => d.status !== 'collected' && d.status !== 'delivered' && d.status !== 'cancelled');
   const livePickups = pickups.filter((p) => p.status !== 'delivered' && p.status !== 'cancelled');
 
   return (
@@ -132,6 +135,7 @@ export function TransportRail({ className = '' }: { className?: string }) {
       ) : (
         <ul className="space-y-2">
           {openCargo.map((d) => {
+            const STAGES=stagesFor(d);
             const idx = STAGES.indexOf(d.status);
             return (
               <li key={d.id} className="p-3 rounded-2xl border" style={{ borderColor: 'transparent', background: 'var(--color-paper)' }}>
@@ -177,11 +181,11 @@ export function TransportRail({ className = '' }: { className?: string }) {
                     className="ml-auto text-[12px] font-black px-3 py-1.5 rounded-full cursor-pointer disabled:opacity-50"
                     style={{ background: 'var(--color-primary)', color: 'var(--accent-ink)' }}
                   >
-                    {idx >= STAGES.length - 1 ? 'Collected' : `Mark “${STAGE_LABEL[STAGES[idx + 1]]}”`}
+                    {idx >= STAGES.length - 1 ? STAGE_LABEL[d.status] : `Mark “${STAGE_LABEL[STAGES[idx + 1]]}”`}
                   </button>
                 </div>
                 <p className="text-[11px] mt-1.5" style={{ color: 'var(--color-quiet)' }}>
-                  No ETA and no live position: Brief has no carrier feed to read. A stage changes when someone who
+                  No live carrier feed: estimates and locations are seller-reported. A stage changes when someone who
                   handled the parcel says so.
                 </p>
               </li>

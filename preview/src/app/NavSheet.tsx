@@ -1,27 +1,4 @@
-// ---------------------------------------------------------------------------
-// THE SHEET — the "All" drawer, and the one place the long list of
-// destinations lives.
-//
-// The reorg that owns this file: the bottom bar holds exactly three doors
-// (Home · Mine · You) plus one action ([+]). Everything else lives HERE, in
-// groups, or as a section on Home. The rule that keeps the two from growing
-// back into each other: a destination the sheet owns does not also get a door
-// in the bar, and `doorways.jsx` asserts the overlap is zero.
-//
-// A second rule, from the operator: the sheet does not repeat the primary
-// shelves either. Shops, Events, Groups, Errands and Group Buys already sit
-// on Home, so they are NOT listed again here. What stays is rooms with no
-// home of their own: the full marketplace, wholesale, and source-direct.
-//
-// The rows are quiet on purpose: a group label, then text rows with a
-// chevron and a hairline. No icon per row, no card per row, no description
-// per row — typography and spacing carry the hierarchy. Test ids, targets,
-// Pulse-first and the settings trio are unchanged.
-//
-// Deliberately absent: counts, badges, "new" tags, unread dots. A nav list
-// with numbers is a nav list that has to keep those numbers true, and every
-// one of them would arrive before the member has rows to fill it.
-// ---------------------------------------------------------------------------
+// Secondary destinations only. Profile/settings live in You; commerce lives in Spaces.
 import React, { useEffect, useState } from 'react';
 import { ChevronRight, X } from 'lucide-react';
 import { SectionHeader } from '../ui/MenuTile';
@@ -38,8 +15,9 @@ export type SheetTarget =
   | { kind: 'discover'; room: 'all' | 'events' | 'circles' | 'errands' | 'bulk' | 'direct' | 'group' }
   | { kind: 'storefront' }
   | { kind: 'moderation' }
+  | { kind: 'admin' }
   | { kind: 'elevate'; page: 'market' | 'ledger' | 'onboard' | 'hub' }
-  | { kind: 'wanderly'; dest: 'tokyo' }
+  | { kind: 'wanderly'; dest: 'explore' }
   | { kind: 'signout' };
 
 export interface SheetItem {
@@ -51,90 +29,24 @@ export interface SheetItem {
   target: SheetTarget;
 }
 
-/**
- * The sheet, as data. `doorways.jsx` asserts every `id` is unique, that Pulse
- * is in the first group, that the settings group is Language / Notifications /
- * Privacy, and that nothing here repeats a label from the bottom bar.
- */
 export const SHEET_GROUPS: Array<{ id: string; label: string; items: SheetItem[] }> = [
-  {
-    id: 'pulse',
-    label: 'Pulse',
-    items: [
-      {
-        id: 'pulse',
-        label: 'Pulse',
-        sub: 'What’s moving today',
-        target: { kind: 'tab', tab: 'pulse' }
-      }
-    ]
-  },
-  {
-    id: 'explore', label: 'Market', items: [
-      { id: 'storefront', label: 'Storefront', sub: 'The street, end to end', target: { kind: 'storefront' } },
-      { id: 'explore-all', label: 'Offers & marketplace', sub: 'Products, services and sellers', target: { kind: 'discover', room: 'all' } },
-      { id: 'explore-bulk', label: 'Wholesale', sub: 'Buy in volume for your shop', target: { kind: 'discover', room: 'bulk' } },
-      { id: 'explore-direct', label: 'Source direct', sub: 'Buy closer to the producer', target: { kind: 'discover', room: 'direct' } },
-    ]
-  },
-  {
-    id: 'work',
-    label: 'Your work',
-    items: [
-      { id: 'requests', label: 'Requests', sub: 'Asks on the board that need a seller', target: { kind: 'tab', tab: 'requests' } },
-      { id: 'supply', label: 'Supply', sub: 'Sellers and what they move', target: { kind: 'tab', tab: 'supply' } },
-      { id: 'partners', label: 'Partners', sub: 'Programs and networks behind the rows', target: { kind: 'tab', tab: 'partners' } },
-      { id: 'workforce', label: 'Workforce', sub: 'Tasks, onboarding, territories and proof — from the phone', target: { kind: 'tab', tab: 'workforce' } }
-    ]
-  },
-  {
-    id: 'elevate',
-    label: 'Wairo Elevate',
-    items: [
-      { id: 'elevate-hub', label: 'Elevate', sub: 'Market · Ledger · Onboard — integrated', target: { kind: 'elevate', page: 'hub' } },
-      { id: 'elevate-market', label: 'Elevate Market', sub: 'Wholesale without guessing', target: { kind: 'elevate', page: 'market' } },
-      { id: 'elevate-ledger', label: 'Elevate Ledger', sub: 'Money stated once, derived', target: { kind: 'elevate', page: 'ledger' } },
-    ]
-  },
-  {
-    id: 'wanderly',
-    label: 'Wanderly Destinations',
-    items: [
-      { id: 'tokyo', label: 'Tokyo, Japan', sub: 'Where ancient temples meet neon-lit streets — editorial guide', target: { kind: 'wanderly', dest: 'tokyo' } },
-    ]
-  },
-  {
-    id: 'you',
-    label: 'You, your standing, your money',
-    items: [
-      { id: 'standing', label: 'Standing', sub: 'What you owe, what is owed you', target: { kind: 'you', section: 'standing' } },
-      { id: 'earn', label: 'Earn', sub: 'Your money, the real way', target: { kind: 'you', section: 'earn' } },
-      { id: 'tableBanking', label: 'Table Banking', sub: 'Shared pots, kept in the open', target: { kind: 'you', section: 'tableBanking' } }
-    ]
-  },
-  {
-    id: 'settings',
-    label: 'Settings',
-    items: [
-      { id: 'language', label: 'Language', sub: 'One language, said plainly', target: { kind: 'you', section: 'language' } },
-      { id: 'notifications', label: 'Notifications', sub: 'The real bell for this device', target: { kind: 'you', section: 'notifications' } },
-      { id: 'privacy', label: 'Privacy', sub: 'What this device keeps, and how to clear it', target: { kind: 'you', section: 'privacy' } }
-    ]
-  },
-  {
-    // No group label: these two stand on their own, like the mock it came
-    // from. The renderer skips the header for an empty label.
-    id: 'closing',
-    label: '',
-    items: [
-      { id: 'how', label: 'How Wairo works', sub: 'How a row becomes trust', target: { kind: 'you', section: 'how' } },
-      { id: 'signout', label: 'Sign out', sub: 'End the session on this device', target: { kind: 'signout' } }
-    ]
-  }
+  { id: 'explore', label: 'Explore', items: [
+    { id: 'pulse', label: 'Pulse', target: { kind: 'tab', tab: 'pulse' } },
+    { id: 'explore-all', label: 'Marketplace', target: { kind: 'discover', room: 'all' } },
+    { id: 'wanderly', label: 'Wanderly · Parties & trips', target: { kind: 'wanderly', dest: 'explore' } },
+  ] },
+  { id: 'work', label: 'Work & business', items: [
+    { id: 'workforce', label: 'Work', target: { kind: 'tab', tab: 'workforce' } },
+    { id: 'requests', label: 'Requests', target: { kind: 'tab', tab: 'requests' } },
+    { id: 'supply', label: 'Supply', target: { kind: 'tab', tab: 'supply' } },
+    { id: 'partners', label: 'Partners', target: { kind: 'tab', tab: 'partners' } },
+    { id: 'elevate-hub', label: 'Elevate', target: { kind: 'elevate', page: 'hub' } },
+  ] },
 ];
 
 export interface NavSheetProps {
   canModerate?: boolean;
+  canAdmin?: boolean;
   open: boolean;
   onClose: () => void;
   onGo: (target: SheetTarget) => void;
@@ -155,7 +67,7 @@ const Row: React.FC<{ testId: string; label: string; onClick: () => void }> = ({
   </button>
 );
 
-export const NavSheet: React.FC<NavSheetProps> = ({ open, onClose, onGo, place, onSetPlace, canModerate = false }) => {
+export const NavSheet: React.FC<NavSheetProps> = ({ open, onClose, onGo, place, onSetPlace, canModerate = false, canAdmin = false }) => {
   const [draft, setDraft] = useState(place);
   useEffect(() => { if (open) setDraft(place); }, [open, place]);
 
@@ -169,7 +81,7 @@ export const NavSheet: React.FC<NavSheetProps> = ({ open, onClose, onGo, place, 
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[60]" role="dialog" aria-modal="true" aria-label="All sections">
+    <div className="fixed inset-0 z-[60]" role="dialog" aria-modal="true" aria-label="Menu">
       <button
         type="button"
         aria-label="Close the menu"
@@ -188,7 +100,7 @@ export const NavSheet: React.FC<NavSheetProps> = ({ open, onClose, onGo, place, 
       >
         <div className="flex items-center justify-between">
           <p className="text-[13px] font-black uppercase tracking-wider" style={{ color: 'var(--color-text)' }}>
-            All sections
+            Menu
           </p>
           <button
             type="button"
@@ -201,6 +113,7 @@ export const NavSheet: React.FC<NavSheetProps> = ({ open, onClose, onGo, place, 
           </button>
         </div>
 
+        {canAdmin && <nav aria-label="Administration"><SectionHeader>Administration</SectionHeader><Row testId="admin-members" label="Admin · Members" onClick={() => { onGo({ kind: 'admin' }); onClose(); }} /></nav>}
         {canModerate && (
           <nav aria-label="Moderation">
             <Row testId="page-moderation" label="Page moderation" onClick={() => { onGo({ kind: 'moderation' }); onClose(); }} />
@@ -220,6 +133,11 @@ export const NavSheet: React.FC<NavSheetProps> = ({ open, onClose, onGo, place, 
             ))}
           </nav>
         ))}
+
+        <a href="/track" className="inline-flex items-center gap-2 py-2 mr-5 text-[12px] font-bold text-emerald-700">Track an order <ChevronRight size={14}/></a>
+
+        <a href="/reviews" className="inline-flex items-center gap-2 py-2 text-[12px] font-bold text-emerald-700">Product reviews <ChevronRight size={14}/></a>
+        {canModerate && <a href="/reviews/moderation" className="block py-2 text-[12px] font-bold">Review moderation →</a>}
 
         {/* The area, set once and used by the only weather line this app shows.
             An empty field stays described as unset rather than defaulted to a

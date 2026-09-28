@@ -43,6 +43,12 @@ function mount(el) {
   document.body.appendChild(c);
   const root = createRoot(c);
   act(() => root.render(el));
+  // These contracts cover the preserved supply board, now reached from the
+  // business feed rather than replacing its default mixed discovery view.
+  if (el.type === CityFeedView) {
+    const supply = [...c.querySelectorAll('button')].find(b => b.textContent === 'Supply routes');
+    if (supply) act(() => supply.click());
+  }
   return { container: c, root };
 }
 const text = (el) => (el.textContent || '').replace(/\s+/g, ' ').trim();
