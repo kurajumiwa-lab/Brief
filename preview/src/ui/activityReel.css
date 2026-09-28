@@ -108,7 +108,9 @@
 .reel-card-price { font-size: 15px; font-weight: 800; color: var(--color-primary); }
 .reel-card[data-seen] { background: color-mix(in srgb, var(--color-paper) 92%, var(--brief-bg)); }
 
-.reel-card-foot { display: flex; align-items: center; gap: 10px; margin-top: auto; padding-top: 6px; }
+/* The affordances are sentences, not icons: they wrap rather than shrink into
+   an ellipsis nobody can read. */
+.reel-card-foot { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; margin-top: auto; padding-top: 6px; }
 .reel-details-btn {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 8px 12px; border-radius: 10px;
@@ -244,6 +246,9 @@
   .reel { padding: 0 12px 12px; }
   .reel-deck { min-height: clamp(210px, 62vw, 280px); }
   .reel-facts > div { grid-template-columns: 74px 1fr; }
+  /* The affordances stay — they are how the gestures are found — but they take
+     a size that leaves the content the room. */
+  .reel-card-tap { font-size: 10px; }
 }
 
 /* Reduced motion: the reel keeps every state change and drops the travel.
