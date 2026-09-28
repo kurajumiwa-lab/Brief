@@ -62,8 +62,8 @@ function Example() {
   });
   await click('#open-menu');
   check('menu starts inside its dialog', () => {
-    assert.equal(document.querySelector('[aria-label="Menu"]').getAttribute('aria-modal'), 'true');
-    assert.equal(document.activeElement.getAttribute('aria-label'), 'Close the menu');
+    assert.equal(document.querySelector('[aria-label="Directory"]').getAttribute('aria-modal'), 'true');
+    assert.equal(document.activeElement.getAttribute('aria-label'), 'Close the directory');
   });
   await key('Escape');
   check('menu Escape restores invoking button', () => assert.equal(document.activeElement.id, 'open-menu'));

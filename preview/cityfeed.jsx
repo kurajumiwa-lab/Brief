@@ -125,20 +125,27 @@ global.fetch = async (input) => {
 };
 
 async function main() {
-  // --- 1. The bar: a room is not a door ------------------------------------
-  // The board is a secondary room, not a primary destination. Home / Selling /
-  // Spaces / You are the primary destinations, plus one global action; while
-  // the board is open nothing in the bar is selected, because a lit door would
-  // misstate where the member is.
+  // --- 1. The bar: the board is a door now, and so is the desk -------------
+  // This suite used to prove the opposite: the board was a secondary room with
+  // no door, and nothing in the bar lit while it was open. The restructure put
+  // the market on the bar because browsing nearby is the most frequent job in
+  // the building — so the claim that is worth keeping is the precise one: a
+  // room that is NOT a wing (Pulse, Partners, Workforce, Elevate) still lights
+  // nothing, and the legacy address `#city` lights exactly one door.
   {
     const c = mount(React.createElement(Navigation, { activeTab: 'city', onSelectTab: () => {} }));
-    const tabs = Array.from(c.querySelectorAll('button[role="tab"]'));
+    const tabs = Array.from(c.querySelectorAll('nav[aria-label="Primary"] button[role="tab"]'));
     const labels = tabs.map((b) => text(b).replace(/\s+/g, ' ').trim());
-    assert.ok(['Home', 'Selling', 'Spaces', 'You'].every((label) => labels.includes(label)), 'the four primary doors render');
-    assert.equal(tabs.filter((b) => b.getAttribute('aria-selected') === 'true').length, 0, 'no door lights while a room is open');
-    assert.ok(!labels.some((l) => /^(Mine|Discover|Activity)$/.test(l)), 'legacy labels do not render as primary destinations');
+    assert.ok(['Home', 'Market', 'Trade', 'Shop', 'You'].every((label) => labels.includes(label)), 'the five doors render');
+    const lit = tabs.filter((b) => b.getAttribute('aria-selected') === 'true');
+    assert.equal(lit.length, 1, 'the board lights exactly one door');
+    assert.equal(lit[0].getAttribute('data-door'), 'market', 'and it is the market door');
+    assert.ok(!labels.some((l) => /^(Mine|Discover|Activity|Selling|Spaces)$/.test(l)), 'legacy and split labels do not render as primary destinations');
+    const r = mount(React.createElement(Navigation, { activeTab: 'pulse', onSelectTab: () => {} }));
+    assert.equal(Array.from(r.querySelectorAll('nav[aria-label="Primary"] button[role="tab"]')).filter((b) => b.getAttribute('aria-selected') === 'true').length, 0,
+      'a room that is not a wing still lights nothing');
   }
-  pass('A room is not a door: nothing in the bar lights while the board is open');
+  pass('The board is a door, and a room that is not a wing still lights nothing');
 
   // --- 2. The board has no floating create pill -----------------------------
   {

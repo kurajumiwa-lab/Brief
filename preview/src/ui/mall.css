@@ -1,0 +1,449 @@
+/* =============================================================================
+   THE MALL — one visual language for the wayfinding furniture of Wairo Blue
+   Avenue: signage plates, shelves, doors, the notice board, the floor strip.
+
+   WHY THIS FILE EXISTS
+   The app had good screens and no building. Each surface drew its own header,
+   its own list, its own divider, so moving between Home, the board, a request
+   and a shop felt like teleporting between unrelated shops — which is the
+   opposite of what a place called an avenue should do. This file makes the
+   furniture shared: a wing header, a shelf of doors, a plank under the cards,
+   a tag for a number, a board for a notice.
+
+   THE REFERENCE, AND THE RULE ABOUT IT
+   A Kenyan shopping mall: a big lit box with BOLD signage you can read from
+   across the floor, awnings over the shopfronts, goods stacked on a shelf you
+   can reach, prices written on tags, and a notice board by the entrance. What
+   is borrowed is the *wayfinding grammar* — heavy uppercase plates, one accent
+   per wing, a visible plank, a count on a tag, generous tap targets. What is
+   deliberately NOT borrowed is the noise: no fake "SALE", no countdown that is
+   not a real deadline, no photo of a shop that does not exist, no number the
+   server did not answer with. A tag with nothing real on it is not painted.
+
+   THE ROOM RULE STILL APPLIES (see ui/theme.css): surfaces are separated by
+   light, never by `border: 1px solid`. Signage is a dark plate — ink on it is
+   white, and white on it passes AA. Type floor is 11px, uppercase micro-labels
+   only. The plank is `role="presentation"`, because a shelf is not content.
+   ========================================================================== */
+
+/* --- The awning: one stripe band over a shopfront ------------------------- */
+.mall-awning {
+  height: 6px;
+  border-radius: 3px 3px 0 0;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--forest) 0 14px,
+    var(--sage) 14px 28px,
+    var(--mint) 28px 34px
+  );
+}
+
+/* --- Signage: the plate a wing wears --------------------------------------- */
+.mall-signage {
+  position: relative;
+  overflow: hidden;
+  padding: 16px 16px 14px;
+  border-radius: 20px;
+  background: linear-gradient(150deg, #12261B 0%, var(--forest) 58%, #235240 100%);
+  color: #F6FBF8;
+  box-shadow: var(--lift-2);
+}
+.mall-signage::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(120% 90% at 108% -10%, rgba(216, 243, 220, 0.22) 0%, transparent 58%);
+}
+.mall-signage > * { position: relative; z-index: 1; }
+.mall-signage__eyebrow {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--sage);
+}
+.mall-signage__name {
+  margin: 6px 0 0;
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: #FFFFFF;
+}
+.mall-signage__note {
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: rgba(246, 251, 248, 0.82);
+  max-width: 46ch;
+}
+.mall-signage__unit {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: rgba(246, 251, 248, 0.14);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #FFFFFF;
+}
+
+/* --- The floor strip: where you are, and when ---------------------------- */
+.mall-floor {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  border-radius: 14px;
+  background: var(--well);
+  box-shadow: var(--room-light);
+}
+.mall-floor__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--color-primary);
+  box-shadow: 0 0 0 4px rgba(64, 145, 108, 0.14);
+}
+.mall-floor__text {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+/* --- A shelf: header, goods, plank -------------------------------------- */
+.mall-shelf {
+  display: block;
+}
+.mall-shelf__head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 2px 8px;
+}
+.mall-shelf__kicker {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.mall-shelf__title {
+  margin: 2px 0 0;
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  color: var(--color-text);
+}
+.mall-shelf__note {
+  margin: 3px 0 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--color-text-muted);
+  max-width: 52ch;
+}
+.mall-shelf__see {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: transparent;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text);
+  cursor: pointer;
+}
+.mall-shelf__see:hover { background: var(--well); }
+/* The goods: one row you push sideways with your thumb, snap-aligned, and the
+   row is allowed to run off the edge of the screen — a shelf that ends exactly
+   at the viewport reads as a list, and a list you have to scroll the whole page
+   for is how the app used to feel. */
+.mall-shelf__row {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  padding: 2px;
+  margin: 0 -2px;
+}
+.mall-shelf__row::-webkit-scrollbar { display: none; }
+.mall-shelf__row > * { scroll-snap-align: start; flex: 0 0 auto; }
+.mall-shelf__grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+@media (min-width: 640px) {
+  .mall-shelf__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+.mall-shelf__stack { display: grid; gap: 10px; }
+.mall-shelf__after { margin-top: -2px; }
+
+/* --- A door: the tile you tap to walk into a wing ------------------------ */
+.mall-door {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 158px;
+  min-height: 132px;
+  padding: 12px;
+  border: 0;
+  border-radius: 18px;
+  background: var(--paper);
+  box-shadow: var(--lift-1);
+  text-align: left;
+  text-decoration: none;
+  color: var(--color-text);
+  cursor: pointer;
+  transition: transform 140ms ease, box-shadow 140ms ease;
+}
+.mall-door:hover { transform: translateY(-2px); box-shadow: var(--lift-2); }
+.mall-door:active { transform: translateY(0); }
+.mall-door:focus-visible { outline: 3px solid var(--color-primary); outline-offset: 3px; }
+.mall-door__art {
+  width: 100%;
+  height: 56px;
+  flex: none;
+  border-radius: 14px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+.mall-door__art svg { height: 56px; width: auto; display: block; }
+.mall-door__body { display: grid; gap: 3px; min-width: 0; }
+.mall-door__go { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: var(--color-text-faint); }
+.mall-door__label {
+  display: block;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+}
+.mall-door__hint {
+  display: block;
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--color-text-muted);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.mall-door__unit {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: var(--color-text-faint);
+}
+.mall-door--wide { width: 232px; }
+.mall-door--list {
+  width: 100%;
+  min-height: 0;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 16px;
+}
+.mall-door--list .mall-door__art { width: 46px; height: 40px; flex: none; }
+.mall-door--list .mall-door__art svg { height: 40px; }
+.mall-door--list .mall-door__label { font-size: 14px; }
+.mall-door--list .mall-door__hint { font-size: 12px; -webkit-line-clamp: 1; }
+.mall-door--list .mall-tag { margin-top: 0; }
+
+/* --- A tag: a number, hung on the door ---------------------------------- */
+.mall-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  align-self: flex-start;
+  margin-top: auto;
+  padding: 3px 8px;
+  border-radius: 4px 10px 10px 10px;
+  background: var(--mint);
+  color: var(--forest);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+.mall-tag--quiet { background: var(--well); color: var(--color-text-muted); }
+.mall-tag--signal { background: var(--color-primary); color: var(--accent-ink); }
+
+/* --- The notice board: announcements, pinned ---------------------------- */
+.mall-notice {
+  position: relative;
+  display: grid;
+  gap: 6px;
+  padding: 14px 14px 14px 18px;
+  border-radius: 16px;
+  background: var(--paper);
+  box-shadow: var(--lift-1);
+}
+.mall-notice::before {
+  content: '';
+  position: absolute;
+  left: 6px;
+  top: 16px;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--brief-warn);
+  box-shadow: 0 1px 2px rgba(var(--room-shadow), 0.4);
+}
+
+/* --- Rows inside a wing's index (the directory, the desk) --------------- */
+.mall-index {
+  display: grid;
+  gap: 6px;
+}
+.mall-index__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 11px 12px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--paper);
+  box-shadow: var(--room-light), 0 1px 1px rgba(var(--room-shadow), 0.04);
+  text-align: left;
+  color: var(--color-text);
+  cursor: pointer;
+}
+.mall-index__row:hover { background: var(--well); }
+.mall-index__no {
+  flex: none;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--color-text-faint);
+}
+.mall-index__copy { flex: 1 1 auto; min-width: 0; }
+.mall-index__label { font-size: 14px; font-weight: 700; line-height: 1.25; }
+.mall-index__hint {
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* --- A quiet empty shelf: one action, no invention ---------------------- */
+.mall-empty {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+  padding: 14px;
+  border-radius: 16px;
+  background: var(--well);
+  box-shadow: var(--room-light);
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--color-text-muted);
+}
+.mall-empty strong { color: var(--color-text); }
+
+@media (prefers-reduced-motion: reduce) {
+  .mall-door { transition: none; }
+  .mall-door:hover { transform: none; }
+}
+
+/* --- The atrium: Home wears the signage plate ---------------------------- */
+.mall-atrium { gap: 20px; }
+.mall-atrium .seller-home__header {
+  display: grid;
+  gap: 12px;
+  align-items: start;
+  padding: 18px 18px 14px;
+}
+.mall-signage__greeting {
+  margin: 10px 0 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--mint);
+}
+/* On the dark plate the room's ink must not be used for text. Every override
+   here is a contrast fix, not a taste adjustment. */
+.mall-atrium .seller-home__header h1,
+.mall-atrium .seller-home__header .seller-home__intro,
+.mall-atrium .seller-home__header .seller-home__intro strong { color: #FFFFFF; }
+.mall-atrium .seller-home__header .seller-home__eyebrow,
+.mall-atrium .seller-home__header .seller-home__eyebrow-mark { color: var(--sage); }
+.mall-atrium .seller-home__header .seller-home__intro { color: rgba(246, 251, 248, 0.86); }
+.mall-atrium .seller-home__header .seller-home__date-stamp {
+  background: rgba(246, 251, 248, 0.12);
+  color: #FFFFFF;
+  box-shadow: none;
+}
+.mall-atrium .seller-home__header .seller-home__date-stamp span { color: var(--sage); }
+.mall-atrium .seller-home__header .seller-home__date-stamp button { color: #FFFFFF; }
+.mall-atrium .seller-home__floor {
+  background: rgba(246, 251, 248, 0.1);
+  box-shadow: none;
+}
+.mall-floor__text { color: rgba(246, 251, 248, 0.88); }
+.mall-floor__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  padding: 5px 9px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #FFFFFF;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.mall-floor__link + .mall-floor__link { margin-left: 0; }
+.mall-floor__link:hover { background: rgba(246, 251, 248, 0.16); }
+
+/* The standing line, on a plate of its own under the metrics. */
+.mall-plate {
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--paper);
+  box-shadow: var(--lift-1);
+}
+.seller-home__shelf-block { display: grid; gap: 10px; }
+.seller-home__reel { margin: 0; }
+.seller-home__next-move { margin: 0; }
+@media (min-width: 720px) {
+  .mall-atrium .seller-home__header {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+  }
+  .mall-atrium .seller-home__floor { grid-column: 1 / -1; }
+}

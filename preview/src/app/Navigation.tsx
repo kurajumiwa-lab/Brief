@@ -1,6 +1,6 @@
 import React from 'react';
 import { WairoMark } from '../components/WairoMark';
-import { Home, Plus, ShoppingBag, Store, User } from 'lucide-react';
+import { Building2, Coins, Plus, ShoppingBag, Store, User } from 'lucide-react';
 import { soundEngine } from '../utils/SoundEngine';
 
 export type BriefNavigationTab =
@@ -13,6 +13,9 @@ export type BriefNavigationTab =
   | 'discover'
   | 'activity'
   | 'city'
+  | 'market'
+  | 'trade'
+  | 'duka'
   | 'pipeline'
   | 'ledger'
   | 'catalog'
@@ -20,11 +23,12 @@ export type BriefNavigationTab =
   | 'workforce'
   | 'you';
 
-export type PrimaryDestination = 'home' | 'selling' | 'spaces' | 'you';
+/** The five doors of the mall, plus the one global action. */
+export type PrimaryDestination = 'home' | 'market' | 'trade' | 'duka' | 'you';
 
 export interface NavigationProps {
   activeTab: BriefNavigationTab;
-  /** AppShell resolves Mine's legacy/internal sections to Selling or Spaces. */
+  /** AppShell resolves the shop's internal sections to one doorway. */
   activePrimaryTab?: PrimaryDestination | null;
   onSelectTab: (tab: PrimaryDestination) => void;
   /** The Create action opens a sheet, not a route. */
@@ -34,15 +38,34 @@ export interface NavigationProps {
 }
 
 // ---------------------------------------------------------------------------
-// PRIMARY NAVIGATION — four places and one global action.
+// PRIMARY NAVIGATION — five doors and one global action.
 //
-//   Home · Selling · Spaces · You · [+]
+//   Home · Market · Trade · Shop · You   (+)
 //
-// Home is the operational read; Selling holds orders and offers; Spaces keeps
-// Wairo's commerce-and-community workspaces distinct; You holds the person.
-// The board, work network and other rooms remain reachable from the app's
-// secondary navigation. The create action is global and never impersonates a
-// destination.
+// The doors are the mall's floor plan, and they are in the order a person
+// actually uses the building:
+//
+//   * HOME is the atrium — what needs you today, what is moving, and the shelf
+//     of every other wing. It is the one screen that must work for a member who
+//     sells nothing and for a member who runs three shops.
+//   * MARKET is the board — every offer, shop, event, group, errand and bulk
+//     lot nearby. It was a room with no door: reachable from Home and the
+//     drawer, but never from the bar, while two bar doors opened the same
+//     seller screens.
+//   * TRADE is the economic spine — demand you raise, matches, quotes, work
+//     orders, procurement, your supply profile. This loop is the reason the
+//     product exists and it was drawer-only.
+//   * SHOP (duka) is everything you run: your spaces, offers, orders and team.
+//     "Selling" and "Spaces" used to be two doors onto one screen with a
+//     different section pre-selected, which read as two halves of a whole.
+//   * YOU is the person: standing, follows, money rails, notifications,
+//     settings.
+//
+// The create action is global and never impersonates a destination.
+//
+// Labels are English because a door you cannot read is not a door. Swahili is
+// used as signage INSIDE each wing (kickers, headings), where it colours the
+// place without hiding the way out.
 // ---------------------------------------------------------------------------
 
 export type BottomBarItemId = PrimaryDestination | 'create';
@@ -51,36 +74,51 @@ export interface BottomBarItem {
   id: BottomBarItemId;
   type: 'destination' | 'action';
   label: string;
+  /** The wing's own signage word. Shown where there is room for a second line;
+      never load-bearing for understanding the destination. */
+  kicker?: string;
+  icon: React.ReactNode;
 }
 
 export const BOTTOM_BAR_ITEMS: BottomBarItem[] = [
-  { id: 'home', type: 'destination', label: 'Home' },
-  { id: 'selling', type: 'destination', label: 'Selling' },
-  { id: 'spaces', type: 'destination', label: 'Spaces' },
-  { id: 'you', type: 'destination', label: 'You' },
-  { id: 'create', type: 'action', label: 'Create' }
+  { id: 'home', type: 'destination', label: 'Home', kicker: 'Karibu', icon: <Building2 className="w-5 h-5" aria-hidden="true" /> },
+  { id: 'market', type: 'destination', label: 'Market', kicker: 'Soko', icon: <ShoppingBag className="w-5 h-5" aria-hidden="true" /> },
+  { id: 'trade', type: 'destination', label: 'Trade', kicker: 'Biashara', icon: <Coins className="w-5 h-5" aria-hidden="true" /> },
+  { id: 'duka', type: 'destination', label: 'Shop', kicker: 'Duka', icon: <Store className="w-5 h-5" aria-hidden="true" /> },
+  { id: 'you', type: 'destination', label: 'You', kicker: 'Mimi', icon: <User className="w-5 h-5" aria-hidden="true" /> },
+  { id: 'create', type: 'action', label: 'Create', icon: <Plus className="w-5 h-5" aria-hidden="true" /> }
 ];
 
-/** Map internal screens to their primary doorway. Discovery and other rooms
- * are reached from Home or the drawer and intentionally light no primary tab. */
+/** The hash each door writes. Every one of these is handled by AppShell. */
+export const DOOR_HASH: Record<PrimaryDestination, string> = {
+  home: 'home',
+  market: 'market',
+  trade: 'trade',
+  duka: 'duka',
+  you: 'you'
+};
+
+/** Map internal screens to their primary doorway. Rooms that live in the
+ * directory (Pulse, Partners, Workforce, Elevate) intentionally light no door:
+ * they are a wing you walk into, not the floor plan. */
 export const doorFor = (tab: BriefNavigationTab): PrimaryDestination | null => {
   switch (tab) {
     case 'home': return 'home';
+    case 'market':
+    case 'city':
+    case 'discover': return 'market';
+    case 'trade':
+    case 'requests':
+    case 'supply': return 'trade';
     case 'mine':
+    case 'duka':
     case 'pipeline':
-    case 'spaces': return 'spaces';
+    case 'spaces':
     case 'ledger':
-    case 'catalog': return 'selling';
+    case 'catalog': return 'duka';
     case 'you': return 'you';
     default: return null;
   }
-};
-
-const DOOR_ICONS: Record<PrimaryDestination, React.ReactNode> = {
-  home: <Home className="w-5 h-5" aria-hidden="true" />,
-  selling: <ShoppingBag className="w-5 h-5" aria-hidden="true" />,
-  spaces: <Store className="w-5 h-5" aria-hidden="true" />,
-  you: <User className="w-5 h-5" aria-hidden="true" />
 };
 
 export const Navigation: React.FC<NavigationProps> = ({
@@ -96,7 +134,7 @@ export const Navigation: React.FC<NavigationProps> = ({
   const goDoor = (door: PrimaryDestination) => {
     soundEngine.play('tap');
     if (typeof window !== 'undefined') {
-      window.location.hash = door === 'selling' ? 'spaces/selling' : door === 'spaces' ? 'spaces' : door;
+      window.location.hash = DOOR_HASH[door];
     }
     onSelectTab(door);
   };
@@ -106,23 +144,28 @@ export const Navigation: React.FC<NavigationProps> = ({
     onOpenCreate?.();
   };
 
-  // One button per item, in data order: four destinations, then the action.
+  const destinations = BOTTOM_BAR_ITEMS.filter((i) => i.type === 'destination');
+
+  // One button per item, in data order: five doors, then the action. Six slots
+  // is the honest cost of putting the economic spine on the bar; the row stays
+  // 56px and each slot is a 60px square at the narrowest phone we support.
   const barButtons = () =>
     BOTTOM_BAR_ITEMS.map((item) =>
       item.type === 'action' ? (
         <button
           key={item.id}
           type="button"
+          data-door={item.id}
           aria-label={`${item.label} — opens a sheet`}
           aria-haspopup="dialog"
           onClick={openCreate}
-          className="relative flex flex-col items-center justify-center cursor-pointer select-none"
+          className="relative flex flex-col items-center justify-center cursor-pointer select-none min-w-0"
         >
           <span
             className="w-9 h-9 rounded-full grid place-items-center -mt-3"
             style={{ background: 'var(--color-primary)', color: 'var(--accent-ink)', boxShadow: 'var(--lift-2)' }}
           >
-            <Plus className="w-5 h-5" />
+            {item.icon}
           </span>
           <span className="text-[11px] font-bold tracking-tight mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
             {item.label}
@@ -133,10 +176,11 @@ export const Navigation: React.FC<NavigationProps> = ({
           key={item.id}
           type="button"
           role="tab"
+          data-door={item.id}
           aria-selected={activeDoor === item.id}
           aria-current={activeDoor === item.id ? 'page' : undefined}
           onClick={() => goDoor(item.id as PrimaryDestination)}
-          className="relative flex flex-col items-center justify-center cursor-pointer select-none"
+          className="relative flex flex-col items-center justify-center cursor-pointer select-none min-w-0"
         >
           <span
             style={{
@@ -144,10 +188,10 @@ export const Navigation: React.FC<NavigationProps> = ({
               transform: activeDoor === item.id ? 'scale(1.05)' : undefined
             }}
           >
-            {DOOR_ICONS[item.id as PrimaryDestination]}
+            {item.icon}
           </span>
           <span
-            className="text-[11px] tracking-tight mt-0.5"
+            className="text-[11px] tracking-tight mt-0.5 truncate max-w-full px-0.5"
             style={{
               color: activeDoor === item.id ? 'var(--color-text)' : 'var(--color-text-muted)',
               fontWeight: activeDoor === item.id ? 800 : 500
@@ -174,14 +218,14 @@ export const Navigation: React.FC<NavigationProps> = ({
       <nav
         role="navigation"
         aria-label="Primary"
-        className={`md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[color:var(--color-paper)] border-t border-black/5 flex items-stretch justify-around px-2 ${className}`}
+        className={`md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[color:var(--color-paper)] border-t border-black/5 flex items-stretch justify-around gap-0.5 px-1.5 ${className}`}
         style={{ height: '56px', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
       >
         {barButtons()}
       </nav>
 
-      {/* ── DESKTOP SIDEBAR RAIL — the same four destinations and one action,
-          in a column. The rail and the bar are one navigation with two shapes. ── */}
+      {/* ── DESKTOP SIDEBAR RAIL — the same five doors and one action, in a
+          column. The rail and the bar are one navigation with two shapes. ── */}
       <aside
         role="navigation"
         aria-label="Primary"
@@ -199,40 +243,56 @@ export const Navigation: React.FC<NavigationProps> = ({
                   Wairo
                 </span>
                 <span className="text-[11px] font-bold uppercase tracking-[0.12em] mt-1" style={{ color: 'var(--color-text-muted)' }}>
-                  Seller workspace
+                  The avenue
                 </span>
               </span>
             </div>
-            <div className="p-2.5 rounded-2xl bg-[color:var(--color-paper)] border border-black/5 shadow-2xs flex items-center justify-between">
-              <div className="flex items-center space-x-2 min-w-0">
+            <button
+              type="button"
+              onClick={() => goDoor('duka')}
+              className="w-full p-2.5 rounded-2xl bg-[color:var(--color-paper)] border border-black/5 shadow-2xs flex items-center justify-between text-left cursor-pointer"
+              aria-label={`Your shop — ${spaceName}`}
+            >
+              <span className="flex items-center space-x-2 min-w-0">
                 <span className="w-2 h-2 rounded-full bg-[color:var(--color-primary)] shrink-0" />
-                <span className="text-xs font-black text-[color:var(--color-text)] truncate">
-                  {spaceName}
-                </span>
-              </div>
-            </div>
+                <span className="text-xs font-black text-[color:var(--color-text)] truncate">{spaceName}</span>
+              </span>
+              <span className="text-[11px] font-bold uppercase tracking-[0.1em] shrink-0" style={{ color: 'var(--color-text-muted)' }}>
+                Duka
+              </span>
+            </button>
           </div>
 
           {/* The doors, in order */}
           <nav className="space-y-1.5">
-            {BOTTOM_BAR_ITEMS.filter((i) => i.type === 'destination').map((item) => {
+            {destinations.map((item) => {
               const selected = activeDoor === item.id;
               return (
                 <button
                   key={item.id}
                   type="button"
                   role="tab"
+                  data-door={item.id}
                   aria-selected={selected}
                   aria-current={selected ? 'page' : undefined}
                   onClick={() => goDoor(item.id as PrimaryDestination)}
+                  title={`${item.label}${item.kicker ? ` · ${item.kicker}` : ''}`}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-bold transition-all cursor-pointer ${
                     selected
                       ? 'bg-[color:var(--color-text)] text-[color:var(--color-primary)] shadow-xs'
                       : 'text-[color:var(--color-text-muted)] hover:text-[color:var(--color-text)] hover:bg-black/5'
                   }`}
                 >
-                  {DOOR_ICONS[item.id as PrimaryDestination]}
-                  <span>{item.label}</span>
+                  {item.icon}
+                  <span className="flex-1 text-left">{item.label}</span>
+                  {item.kicker && (
+                    <span
+                      className="text-[11px] font-bold uppercase tracking-[0.1em]"
+                      style={{ color: selected ? 'var(--color-text-muted)' : 'var(--color-text-muted)', opacity: 0.75 }}
+                    >
+                      {item.kicker}
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -252,7 +312,7 @@ export const Navigation: React.FC<NavigationProps> = ({
           </nav>
         </div>
         <p className="text-[11px] text-[color:var(--color-text-muted)]">
-          Home · Selling · Spaces · You — plus one action to create.
+          Home · Market · Trade · Shop · You — plus one action to create.
         </p>
       </aside>
     </>

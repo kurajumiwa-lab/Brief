@@ -19,7 +19,7 @@
 
 /** The overlays, in the words that appear after the `#`. */
 export type SurfaceKey =
-  | 'create'        // the bar's [+] — the four verbs
+  | 'create'        // the bar's [+] — eight verbs, request first
   | 'host'          // Host an event (createCampaign → publish)
   | 'groupbuys'     // the group-buy portal
   | 'menu'         // the drawer: the long list of destinations
@@ -34,21 +34,66 @@ export const SURFACE_KEYS: SurfaceKey[] = [
 export const SHOP_PREFIX = 'shop/';
 
 /** The hash each tab answers to, so closing a surface lands on the tab, not on
- *  a blank URL. Mirrors the shell's own table; asserted in `backdoors.jsx`. */
+ *  a blank URL. Mirrors the shell's own table; asserted in `backdoors.jsx`.
+ *  The five mall doors come first; the rest are the rooms a wing contains and
+ *  the legacy addresses that must keep resolving (notifications, shared links,
+ *  and the deep links the surfaces themselves write). */
 export const TAB_HASH: Record<string, string> = {
   home: 'home',
+  market: 'market',
+  trade: 'trade',
+  duka: 'duka',
+  you: 'you',
   city: 'city',
+  discover: 'discover',
   pipeline: 'spaces',
   ledger: 'ledger',
   catalog: 'catalog',
   mine: 'mine',
+  spaces: 'spaces',
   pulse: 'pulse',
-  you: 'you',
   partners: 'partners',
   workforce: 'workforce',
   supply: 'supply',
   requests: 'requests'
 };
+
+/**
+ * Every address the app has ever written, and where it lands now.
+ *
+ * A restructure that renames a wing and leaves the old address dead is a
+ * restructure that breaks every link someone already sent in WhatsApp. So the
+ * aliases are data, in one place, and `resolveTabHash` is the only function
+ * allowed to turn a hash into a door. Legacy `#spaces`, `#mine`, `#city`,
+ * `#requests` and `#supply` all still open a real screen.
+ */
+export const HASH_ALIAS: Record<string, string> = {
+  city: 'market',
+  discover: 'market',
+  shops: 'market',
+  activity: 'pulse',
+  spaces: 'duka',
+  mine: 'duka',
+  selling: 'duka',
+  orders: 'duka',
+  pipeline: 'duka',
+  catalog: 'duka',
+  ledger: 'duka',
+  shopbrief: 'duka',
+  requests: 'trade',
+  supply: 'trade',
+  quotes: 'trade',
+  work: 'trade',
+  procurement: 'trade',
+  matches: 'trade'
+};
+
+/** The first segment of a hash, mapped to the tab the shell renders. */
+export function resolveTabHash(hash: string | null | undefined): string | null {
+  const want = tabFromHash(hash);
+  if (!want) return null;
+  return HASH_ALIAS[want] ?? want;
+}
 
 export function surfaceFromHash(hash: string | null | undefined): SurfaceKey | null {
   const want = String(hash ?? '').replace(/^#/, '');
@@ -118,7 +163,11 @@ export const HASH_TAB: Record<string, string> = Object.fromEntries(
  */
 export const TAB_LABEL: Record<string, string> = {
   home: 'Home',
+  market: 'the market',
+  trade: 'your deals',
+  duka: 'your shop',
   city: 'the board',
+  discover: 'the board',
   spaces: 'Spaces',
   ledger: 'the money',
   catalog: 'the catalog',
@@ -136,3 +185,5 @@ export function backLabel(tabHash: string | null | undefined): string {
   const want = full.split('/')[0];
   return TAB_LABEL[want] ?? 'where you came from';
 }
+
+

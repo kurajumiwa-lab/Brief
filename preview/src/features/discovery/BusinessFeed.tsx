@@ -13,9 +13,11 @@ import {
   Briefcase,
   BookOpen,
   Star,
-  MapPin
+  MapPin,
+  Compass
 } from 'lucide-react';
 import * as api from '../../api/briefApi';
+import type { DiscoverSummary } from '../../api/briefApi';
 import type {
   BusinessCard,
   BusinessFeedPage,
@@ -23,6 +25,7 @@ import type {
   FeedControls
 } from '../../api/businessFeedTypes';
 import { SessionSignIn } from '../../components/SessionSignIn';
+import { BoardPicker } from '../city/DiscoverFeed';
 import type { DiscoverRoom } from '../city/taxonomy';
 import '../requests/requests.css';
 import './business-feed.css';
@@ -326,10 +329,19 @@ export function BusinessFeed({
     [draft, setDraft] = useState<FeedControls>(emptyControls),
     [busy, setBusy] = useState(false),
     [focus, setFocus] = useState(sharedKey);
-  const [modal, setModal] = useState<'auth' | 'controls' | BusinessCard | null>(
-      null
-    ),
-    [shareUrl, setShareUrl] = useState('');
+  const [modal, setModal] = useState<
+      'auth' | 'controls' | 'board' | BusinessCard | null
+    >(null),
+    [shareUrl, setShareUrl] = useState(''),
+    // Read once, on the tap that asks for it — not on every render of the feed.
+    [boardCounts, setBoardCounts] = useState<DiscoverSummary | null>(null);
+  const openBoard = () => {
+    setModal('board');
+    if (!boardCounts)
+      void api.getDiscoverSummary().then((r) => {
+        if (r.ok) setBoardCounts(r.data);
+      });
+  };
   const ready = useRef(false),
     top = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -508,6 +520,22 @@ export function BusinessFeed({
             <em>good move.</em>
           </h1>
           <p>Useful tools. Work worth doing. Ideas you can put to work.</p>
+          {/* One entry into the taxonomy, on the face of the feed. Until now the
+              board's wings were a link at the end of a long list, so the picker —
+              and every count it holds — was reachable only by scrolling past
+              someone else's offers. This is wayfinding, not a second feed: the
+              tiles themselves stay on the board. */}
+          <button
+            type="button"
+            className="bf-browse"
+            aria-label="Browse the board"
+            onClick={openBoard}
+          >
+            <Compass size={16} />
+            <span>
+              Browse the board by wing <em>bulk · direct · niche · groups · events · errands</em>
+            </span>
+          </button>
         </div>
         <div className="bf-start">
           <a href="/#requests/new">
@@ -808,6 +836,18 @@ export function BusinessFeed({
           <a href="/reviews">Customer reviews ↗</a>
         </nav>
       </footer>
+      {modal === 'board' && (
+        <BoardPicker
+          summary={boardCounts}
+          room="all"
+          onClose={() => setModal(null)}
+          onPostListing={onPostListing}
+          onPick={(key) => {
+            setModal(null);
+            onBrowse(key as DiscoverRoom);
+          }}
+        />
+      )}
       {modal === 'auth' && (
         <Dialog title="Your Wairo account" onClose={() => setModal(null)}>
           <SessionSignIn

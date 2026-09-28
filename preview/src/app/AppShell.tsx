@@ -7,6 +7,7 @@ import type { SpaceWorkspaceTab } from '../features/home/SellerHome';
 import { AppBelt, readPlace, PLACE_KEY } from './AppBelt';
 import { NavSheet, type SheetTarget } from './NavSheet';
 import { TAB_HASH, backLabel, shopHref, shopIdFromHash, surfaceFromHash } from './surfaces';
+import { TradeDesk, isTradeSection, type TradeSectionId } from '../features/trade/TradeDesk';
 import { CreateSheet, type CreateActionId } from './CreateSheet';
 const GroupBuyPortal = React.lazy(() => import('../components/GroupBuyPortal').then(m => ({ default: m.GroupBuyPortal })));
 const AdminWorkspace = React.lazy(() => import('../features/admin/AdminWorkspace').then(m => ({ default: m.AdminWorkspace })));
@@ -31,8 +32,9 @@ const WairoElevateOnboard = React.lazy(() => import('../features/wairo/ElevateOn
 import { CreateFlowModal } from '../features/spaces/CreateFlowModal';
 const PublicOfferModal = React.lazy(() => import('../features/offers/PublicOfferModal').then(m => ({ default: m.PublicOfferModal })));
 import { JoinRoom } from '../features/city/JoinRoom';
-const SupplyWorkspace = React.lazy(() => import('../features/supply/SupplyWorkspace').then(m => ({ default: m.SupplyWorkspace })));
-import { RequestsWorkspace, requestPath } from '../features/requests/RequestsWorkspace';
+// The request path is still the address a notification or a workspace writes;
+// the screens themselves are mounted by the trade desk, not by the shell.
+import { requestPath } from '../features/requests/RequestsWorkspace';
 const PartnerDesk = React.lazy(() => import('../features/partner/PartnerDesk').then(m => ({ default: m.PartnerDesk })));
 const WorkforceDesk = React.lazy(() => import('../features/workforce/WorkforceDesk').then(m => ({ default: m.WorkforceDesk })));
 import { YouSurface, YOU_SECTION_IDS, type YouSection } from '../features/you/YouSurface';
@@ -44,6 +46,13 @@ import { ShopBrief } from '../features/spaces/ShopBrief';
 import { OverlayScreen } from '../ui/OverlayScreen';
 import { soundEngine } from '../utils/SoundEngine';
 import { SyncStatusDot } from '../ui/SyncStatusDot';
+
+/** A hash segment that failed to decode is reported as `invalid`, never
+   *  swallowed: a link people pasted is the one place a silent failure becomes
+   *  a screen that looks empty. */
+function safeDecode(value: string): string {
+  try { return decodeURIComponent(value); } catch { return 'invalid'; }
+}
 
 export interface AppShellProps {
   initialTab?: BriefNavigationTab;
@@ -116,6 +125,9 @@ export const AppShell: React.FC<AppShellProps> = ({
   const [groupBuysOpen, setGroupBuysOpen] = useState<boolean>(false);
   const [sellingNonce, setSellingNonce] = useState<number>(0);
   const [mineSection, setMineSection] = useState<'spaces' | 'orders' | 'selling' | 'team'>('spaces');
+  // Which part of the trade desk is open. `#requests` and `#supply` resolve
+  // into it, because those two addresses are already in sent links.
+  const [tradeSection, setTradeSection] = useState<TradeSectionId>('demand');
   const [mineSellingNonce, setMineSellingNonce] = useState<number>(0);
   const [briefOpen, setBriefOpen] = useState<boolean>(false);
   const [errandSignal, setErrandSignal] = useState<{ nonce: number; kind: string | null } | null>(null);
@@ -162,14 +174,38 @@ export const AppShell: React.FC<AppShellProps> = ({
       return;
     }
     if (target.kind === 'tab') {
+      // A drawer row that names a door goes through the door, so the shop's
+      // sections and the market's rooms keep their own resolution.
+      if (target.tab === 'duka' || target.tab === 'mine') {
+        setMineSection('spaces');
+        setActiveTab('mine');
+        window.location.hash = 'duka';
+        return;
+      }
       setActiveTab(target.tab);
       window.location.hash = target.tab;
       return;
     }
     if (target.kind === 'discover') {
       setDiscoverSubTab(target.room);
-      setActiveTab('city');
-      window.location.hash = `city/${target.room}`;
+      setActiveTab('market');
+      window.location.hash = `market/${target.room}`;
+      return;
+    }
+    if (target.kind === 'trade') {
+      setTradeSection(target.section);
+      setActiveTab('trade');
+      window.location.hash = `trade/${target.section}`;
+      return;
+    }
+    if (target.kind === 'duka') {
+      setMineSection(target.section);
+      setActiveTab('mine');
+      window.location.hash = target.section === 'spaces' ? 'duka' : `duka/${target.section}`;
+      return;
+    }
+    if (target.kind === 'surface') {
+      window.location.hash = target.surface;
       return;
     }
     if (target.kind === 'you') {
@@ -200,11 +236,20 @@ export const AppShell: React.FC<AppShellProps> = ({
       window.location.hash = 'spaces/selling';
     } else if (id === 'event') {
       window.location.hash = 'wanderly/host';
+    } else if (id === 'request') {
+      // The loop's entry point had no verb of its own: you could only reach
+      // "Create a Request" from inside the requests screen.
+      setTradeSection('demand');
+      setActiveTab('trade');
+      window.location.hash = 'trade/demand/new';
+    } else if (id === 'groupbuy') {
+      setGroupBuysOpen(true);
+      window.location.hash = 'groupbuys';
     } else if (id === 'run' || id === 'errand') {
       setDiscoverSubTab('errands');
       setErrandSignal({ nonce: nextNonce, kind: id === 'run' ? 'delivery' : null });
-      setActiveTab('city');
-      window.location.hash = 'city/errands';
+      setActiveTab('market');
+      window.location.hash = 'market/errands';
     }
   };
 
@@ -442,11 +487,37 @@ export const AppShell: React.FC<AppShellProps> = ({
       }
       setElevatePage(null);
       if (hash === 'supply' || hash.startsWith('supply/')) {
-        setActiveTab('supply');
+        setJoinCode(''); setSearchQuery(''); setEntityId(null);
+        setActiveTab('trade');
+        setTradeSection('supply');
         setSupplyRoute(hash.slice(7) || 'mine');
+        tabHashRef.current = 'supply';
       } else if (hash === 'requests' || hash.startsWith('requests/')) {
-        setActiveTab('requests');
+        setJoinCode(''); setSearchQuery(''); setEntityId(null);
+        setActiveTab('trade');
+        setTradeSection('demand');
         try { setRequestRoute(decodeURIComponent(hash.slice(9))); } catch { setRequestRoute('invalid'); }
+        tabHashRef.current = 'requests';
+      } else if (hash === 'trade' || hash.startsWith('trade/')) {
+        setJoinCode(''); setSearchQuery(''); setEntityId(null);
+        const rest = hash === 'trade' ? '' : hash.slice(6);
+        const head = rest.split('/')[0];
+        setActiveTab('trade');
+        if (isTradeSection(head)) setTradeSection(head);
+        else setTradeSection('demand');
+        const tail = rest.includes('/') ? rest.slice(rest.indexOf('/') + 1) : '';
+        setRequestRoute(tail ? safeDecode(tail) : head === 'demand' ? '' : '');
+        if (head === 'supply') setSupplyRoute(tail || 'mine');
+        tabHashRef.current = hash;
+      } else if (hash === 'duka' || hash.startsWith('duka/')) {
+        // The shop door. `#spaces/…` and `#mine` below stay alive as the
+        // addresses people already have in their notification history.
+        setJoinCode(''); setSearchQuery(''); setEntityId(null);
+        const rest = safeDecode(hash.startsWith('duka/') ? hash.slice(5) : '');
+        setMineSection((['orders', 'selling', 'team'].includes(rest) ? rest : 'spaces') as 'orders' | 'selling' | 'team' | 'spaces');
+        setActiveTab('mine');
+        tabHashRef.current = 'duka';
+        setBriefOpen(false);
       } else if (hash.startsWith('space/')) {
         try { setSpaceLink(decodeURIComponent(hash.slice(6))); } catch { setSpaceLink(''); }
       } else if (hash.startsWith('join/')) {
@@ -488,25 +559,29 @@ export const AppShell: React.FC<AppShellProps> = ({
         setActiveTab('mine');
         tabHashRef.current = hash === 'shopbrief' ? 'spaces' : hash;
         setBriefOpen(hash === 'shopbrief');
-      } else if (hash === 'city' || hash.startsWith('city/') || hash === 'discover' || hash === 'events') {
+      } else if (hash === 'city' || hash.startsWith('city/') || hash === 'market' || hash.startsWith('market/') || hash === 'discover' || hash === 'events' || hash === 'shops') {
         // Events and Circles are rooms of the board, not aliases of Errands.
         // `#city/events` and `#city/circles` are stable discovery-room links.
         setJoinCode('');
         setSearchQuery('');
         setEntityId(null);
-        setActiveTab('city');
+        setActiveTab('market');
         const CITY_ROOMS: DiscoverRoom[] = ['all', 'bulk', 'direct', 'niche', 'group', 'events', 'circles', 'errands', 'shops'];
         let room: DiscoverRoom = 'all';
-        if (hash.startsWith('city/')) {
-          const rest = hash.slice(5);
+        const rest = hash.startsWith('city/') ? hash.slice(5) : hash.startsWith('market/') ? hash.slice(7) : '';
+        if (hash.startsWith('city/') || hash.startsWith('market/')) {
           if (rest === 'groups') room = 'circles';
           else if ((CITY_ROOMS as string[]).includes(rest)) room = rest as DiscoverRoom;
         } else if (hash === 'events') {
           room = 'events';
+        } else if (hash === 'shops') {
+          room = 'shops';
         }
         setDiscoverSubTab(room);
         if (room !== 'errands') setErrandSignal(null);
-        tabHashRef.current = hash === 'discover' ? 'city' : hash;
+        // `#city/<room>` is remembered as the room it came from, so the back
+        // gesture returns to the room and not to the front of the market.
+        tabHashRef.current = hash === 'discover' || hash === 'city' || hash === 'market' ? 'market' : hash;
         setBriefOpen(false);
       } else if (hash === '' || (hash && hash !== 'join')) {
         setJoinCode('');
@@ -514,7 +589,7 @@ export const AppShell: React.FC<AppShellProps> = ({
         // `activity` is a legacy hash for the drawer's Pulse read. `mine` is
         // retained as a legacy alias for Spaces; primary Selling and Spaces
         // links resolve through `#spaces/selling` and `#spaces`.
-        const tabs: Record<string, BriefNavigationTab> = { home: 'home', spaces: 'mine', pipeline: 'pipeline', catalog: 'catalog', activity: 'pulse', mine: 'mine', pulse: 'pulse', ledger: 'ledger', partners: 'partners', workforce: 'workforce', 'workforce/org': 'workforce', you: 'you' };
+        const tabs: Record<string, BriefNavigationTab> = { home: 'home', market: 'market', trade: 'trade', duka: 'mine', spaces: 'mine', pipeline: 'pipeline', catalog: 'catalog', activity: 'pulse', mine: 'mine', pulse: 'pulse', ledger: 'ledger', partners: 'partners', workforce: 'workforce', 'workforce/org': 'workforce', you: 'you' };
         if (hash.startsWith('workforce/program/')) { setEntityId(null); setActiveTab('workforce'); tabHashRef.current = hash; setBriefOpen(false); }
         else if (tabs[hash]) { setEntityId(null); setActiveTab(tabs[hash]); tabHashRef.current = hash; setBriefOpen(false); }
         else if (!hash) {
@@ -650,15 +725,18 @@ export const AppShell: React.FC<AppShellProps> = ({
       {/* Home · Selling · Spaces · You, plus the global Create action. */}
       <Navigation
         activeTab={activeTab}
-        activePrimaryTab={activeTab === 'mine' ? (mineSection === 'selling' || mineSection === 'orders' ? 'selling' : 'spaces') : undefined}
         onSelectTab={(tab: PrimaryDestination) => {
-          if (tab === 'selling') {
-            setMineSection('selling');
-            setMineSellingNonce((n) => n + 1);
-            setActiveTab('mine');
-          } else if (tab === 'spaces') {
+          // The bar writes the hash and this resolves it, which is the same
+          // path a pasted link takes. Two ways into a door, one behaviour.
+          if (tab === 'duka') {
             setMineSection('spaces');
             setActiveTab('mine');
+          } else if (tab === 'market') {
+            setDiscoverSubTab('all');
+            setActiveTab('market');
+          } else if (tab === 'trade') {
+            setTradeSection('demand');
+            setActiveTab('trade');
           } else {
             setActiveTab(tab);
           }
@@ -673,7 +751,7 @@ export const AppShell: React.FC<AppShellProps> = ({
             the long list, and a message slot. It lives inside the scroll
             column so it behaves the same on a phone and on a desktop. */}
         <AppBelt
-          minimal={(activeTab === 'city' || activeTab === 'discover') && businessFeedActive}
+          minimal={(activeTab === 'market' || activeTab === 'city' || activeTab === 'discover') && businessFeedActive}
           showAnnouncements={activeTab !== 'home'}
           onBannersChange={captureAnnouncements}
           backTo={backTo}
@@ -682,7 +760,17 @@ export const AppShell: React.FC<AppShellProps> = ({
           onSearch={(term) => { window.location.hash = `search/${encodeURIComponent(term)}`; }}
           className="-mx-4 sm:-mx-6 mb-3"
         />
-        {activeTab === 'requests' ? <RequestsWorkspace route={requestRoute} /> : activeTab === 'supply' ? <SupplyWorkspace route={supplyRoute || 'mine'} /> : null}
+        {/* The trade desk owns requests, matches, quotes, work orders,
+            procurement and the supply profile. It is one wing with six
+            sections, because the loop is one thing and not six drawer rows. */}
+        {activeTab === 'trade' && (
+          <TradeDesk
+            section={tradeSection}
+            requestRoute={requestRoute}
+            supplyRoute={supplyRoute || 'mine'}
+            onSection={(next) => { setTradeSection(next); if (next !== 'demand') setRequestRoute(''); }}
+          />
+        )}
         {/* Spaces is the directory of workspaces you operate or join. Circles
             remain their own community layer; a Space is where a business's
             identity, offers and conversations meet. */}
@@ -761,6 +849,26 @@ export const AppShell: React.FC<AppShellProps> = ({
               setActiveTab('you');
               window.location.hash = 'you';
             }}
+            onOpenMarket={(room) => {
+              setDiscoverSubTab((room as DiscoverRoom) ?? 'all');
+              setActiveTab('market');
+              window.location.hash = room && room !== 'all' ? `market/${room}` : 'market';
+            }}
+            onOpenTrade={(section) => {
+              setTradeSection(isTradeSection(section) ? section : 'demand');
+              setActiveTab('trade');
+              window.location.hash = section ? `trade/${section}` : 'trade';
+            }}
+            onOpenGroupBuys={() => {
+              setGroupBuysOpen(true);
+              window.location.hash = 'groupbuys';
+            }}
+            onOpenYou={(section) => {
+              setYouSection(section ?? null);
+              setActiveTab('you');
+              window.location.hash = section ? `you/${section}` : 'you';
+            }}
+            place={place}
             announcements={campaignAnnouncements}
           />
           {firstRun && <section data-testid="home-group-invitation" className="max-w-3xl mx-auto my-4" aria-label="Optional group setup">
@@ -773,7 +881,7 @@ export const AppShell: React.FC<AppShellProps> = ({
         ) : (
           <div>
             {/* ── CITY (the board: what's happening nearby) ── */}
-            {(activeTab === 'city' || activeTab === 'discover') && (
+            {(activeTab === 'market' || activeTab === 'city' || activeTab === 'discover') && (
               <CityFeedView
                 key={discoverSubTab}
                 initialSubTab={discoverSubTab}

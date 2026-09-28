@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { Package, CalendarPlus, Truck, Bike, Briefcase, Store, X } from 'lucide-react';
+import { Package, CalendarPlus, Truck, Bike, Briefcase, Store, Megaphone, Layers, X } from 'lucide-react';
 import { soundEngine } from '../utils/SoundEngine';
 import { useDialogFocus } from '../ui/useDialogFocus';
 
@@ -13,13 +13,19 @@ import { useDialogFocus } from '../ui/useDialogFocus';
 // create action gets it from the bar, not from its own corner.
 //
 // Each row lands on an existing flow that writes a real row:
+//   Raise a request → the demand form, which is where the whole loop starts
 //   Create a space → the business workspace flow
 //   Post an offer  → Selling, where listings already live
 //   Host an event  → the createCampaign → publish loop
 //   Start a run / Post an errand → the existing errand composer
+//   Start a group buy → the group-buy portal, which had no door of its own
+//
+// Demand is FIRST because it is the product's front: everything else (matches,
+// quotes, work orders, procurement) is downstream of someone stating what they
+// need. It used to be reachable only from inside the requests screen.
 // ---------------------------------------------------------------------------
 
-export type CreateActionId = 'space' | 'offer' | 'event' | 'run' | 'errand' | 'work';
+export type CreateActionId = 'request' | 'space' | 'offer' | 'work' | 'event' | 'run' | 'errand' | 'groupbuy';
 
 export interface CreateAction {
   id: CreateActionId;
@@ -31,6 +37,10 @@ export interface CreateAction {
 
 /** The sheet, as data — every verb resolves to its existing creation flow. */
 export const CREATE_ACTIONS: CreateAction[] = [
+  {
+    id: 'request', label: 'Raise a request', hint: 'Say what you need — matching starts from this row',
+    icon: <Megaphone className="w-4 h-4" />
+  },
   {
     id: 'space', label: 'Create a space', hint: 'Bring your offers, conversations and people together',
     icon: <Store className="w-4 h-4" />
@@ -54,6 +64,10 @@ export const CREATE_ACTIONS: CreateAction[] = [
   {
     id: 'errand', label: 'Post an errand', hint: 'Something to carry, somewhere it needs to be',
     icon: <Bike className="w-4 h-4" />
+  },
+  {
+    id: 'groupbuy', label: 'Start a group buy', hint: 'One lot, many pockets, staged until it closes',
+    icon: <Layers className="w-4 h-4" />
   }
 ];
 
@@ -98,6 +112,9 @@ export const CreateSheet: React.FC<CreateSheetProps> = ({ open, onClose, onPick 
           </button>
         </div>
 
+        <p className="text-[11px] leading-snug px-1 pb-1" style={{ color: 'var(--color-text-muted)' }}>
+          Each row opens the form that writes the row. Nothing here is a placeholder.
+        </p>
         {CREATE_ACTIONS.map((a) => (
           <button
             key={a.id}

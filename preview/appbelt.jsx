@@ -174,11 +174,15 @@ async function main() {
     const items = SHEET_GROUPS.flatMap((group) => group.items);
     const ids = items.map((item) => item.id);
     assert.equal(new Set(ids).size, ids.length, 'no destination is listed twice in the sheet');
-    assert.equal(ids.length, 8, 'only the eight existing secondary destinations remain in the drawer');
-    assert.deepEqual(SHEET_GROUPS.find((group) => group.id === 'explore').items.map((item) => item.label),
-      ['Pulse', 'Marketplace', 'Wanderly · Parties & trips'], 'the Explore drawer group holds its distinct secondary rooms');
-    assert.deepEqual(SHEET_GROUPS.find((group) => group.id === 'work').items.map((item) => item.label),
-      ['Work', 'Requests', 'Supply', 'Partners', 'Elevate'], 'existing work areas remain reachable without crowding the primary bar');
+    assert.ok(ids.length >= 30, 'the directory lists the building, not eight leftovers');
+    assert.deepEqual(SHEET_GROUPS.map((group) => group.id), ['market', 'trade', 'duka', 'you', 'services'],
+      'the directory is floored by wing, in the order of a walk through it');
+    assert.deepEqual(SHEET_GROUPS[0].items.map((item) => item.label).slice(0, 2),
+      ['Everything on the board', 'Pulse'], 'the ground floor starts at the board and keeps Pulse, its numbers');
+    assert.ok(SHEET_GROUPS.find((group) => group.id === 'trade').items.some((item) => item.id === 'trade-demand'),
+      'the loop the product is built around is listed where a person looks for it');
+    assert.ok(items.every((item) => item.target || item.href),
+      'and no row is a word with nowhere to go');
 
     const sheetLabels = items.map((item) => item.label);
     const doorLabels = BOTTOM_BAR_ITEMS.filter((item) => item.type === 'destination').map((item) => item.label);
@@ -202,14 +206,14 @@ async function main() {
     assert.ok(sheet.host.querySelector('[role="dialog"]'), 'it is a dialog, so the screen behind it is not left half-reachable');
     assert.match(sheet.t, /Your area/, 'the area is set here, once, and read by the band and the forecast');
     assert.ok(sheet.host.querySelector('#belt-place'), 'in a real input, not a display of a city we guessed');
-    assert.equal(sheet.host.querySelectorAll('button[data-testid]').length, items.length,
-      'each secondary destination renders once as a reachable row');
-    const pulse = sheet.host.querySelector('[data-testid="pulse"]');
+    const rendered = items.filter((item) => sheet.host.querySelector(`[data-testid="menu-tile-${item.id}"]`));
+    assert.equal(rendered.length, items.length, 'each directory entry renders once as a reachable row');
+    const pulse = sheet.host.querySelector('[data-testid="menu-tile-pulse"]');
     assert.ok(pulse, 'Pulse remains a secondary entry in the drawer');
     click(pulse);
     assert.deepEqual(went, { kind: 'tab', tab: 'pulse' }, 'Pulse opens its existing destination');
     assert.equal(closed, 1, 'and choosing a destination closes the sheet');
-    assert.equal(inEl(sheet.host, 'button[aria-label="Close the menu"]').length, 2,
+    assert.equal(inEl(sheet.host, 'button[aria-label="Close the directory"]').length, 2,
       'the backdrop and one visible control are the same affordance, not two competing buttons');
     sheet.root.unmount(); sheet.host.remove();
 
@@ -217,7 +221,7 @@ async function main() {
     assert.equal(shut.t, '', 'closed means nothing rendered, not a hidden tree');
     shut.root.unmount(); shut.host.remove();
   }
-  pass('The secondary drawer stays distinct from the four primary doors and closes cleanly');
+  pass('The directory stays distinct from the five doors and closes cleanly');
 
   // --- 5. what the sheet took over leaves the working screens -------------
   {

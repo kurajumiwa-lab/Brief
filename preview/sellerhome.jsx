@@ -93,7 +93,7 @@ async function main() {
   // Navigation is the requested seller-workspace IA, plus one global action.
   {
     const destinations = BOTTOM_BAR_ITEMS.filter((item) => item.type === 'destination').map((item) => item.label);
-    assert.deepEqual(destinations, ['Home', 'Selling', 'Spaces', 'You']);
+    assert.deepEqual(destinations, ['Home', 'Market', 'Trade', 'Shop', 'You']);
     assert.equal(BOTTOM_BAR_ITEMS.filter((item) => item.type === 'action').length, 1);
   }
   pass('primary navigation is Home · Selling · Spaces · You, plus Create');

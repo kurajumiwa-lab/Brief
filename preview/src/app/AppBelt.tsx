@@ -20,7 +20,7 @@
 //     would teach the member that nothing here can be trusted.
 // ---------------------------------------------------------------------------
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, Menu, Search, MapPin, Heart } from 'lucide-react';
+import { ArrowLeft, Menu, Search, MapPin, Heart, Bell } from 'lucide-react';
 import { WairoMark } from '../components/WairoMark';
 import * as briefApi from '../api/briefApi';
 import type { CampaignBanner } from '../api/types';
@@ -77,6 +77,10 @@ export const AppBelt: React.FC<AppBeltProps> = ({
   const [followCount, setFollowCount] = useState<number | null>(null);
   const [authed, setAuthed] = useState(true);
   const [followOpen, setFollowOpen] = useState(false);
+  /** Notices are the one thing the bar cannot do without. The count is the
+   *  server's own `unread`; it is null (nothing painted) until a read answers,
+   *  and a failed read leaves it null rather than printing a confident zero. */
+  const [unread, setUnread] = useState<number | null>(null);
 
   // One read per mount. A failure leaves `banners` null, and a null list renders
   // no slot at all: an empty promotional frame would be a placeholder claiming a
@@ -96,7 +100,22 @@ export const AppBelt: React.FC<AppBeltProps> = ({
     void briefApi.whoAmI().then((res) => {
       if (live) setAuthed(res.ok);
     });
-    return () => { live = false; };
+    const readUnread = () => {
+      void briefApi.getNotifications().then((res) => {
+        if (live && res.ok) setUnread(typeof res.data.unread === 'number' ? res.data.unread : null);
+      });
+    };
+    readUnread();
+    // A notice arrives while you are looking at another screen, and this band is
+    // the only place the count can live. Refresh on focus, the same way the
+    // shell refreshes its session, so the badge is a read and not a snapshot.
+    window.addEventListener('focus', readUnread);
+    window.addEventListener('brief:notice', readUnread);
+    return () => {
+      live = false;
+      window.removeEventListener('focus', readUnread);
+      window.removeEventListener('brief:notice', readUnread);
+    };
   }, [onBannersChange]);
 
   const submit = (e: React.FormEvent) => {
@@ -194,6 +213,29 @@ export const AppBelt: React.FC<AppBeltProps> = ({
               style={{ background: 'var(--color-primary)', color: 'var(--accent-ink)' }}
             >
               {followCount}
+            </span>
+          )}
+        </button>
+
+        {/* ── Notices — the way into what arrived for you ───────────── */}
+        <button
+          type="button"
+          aria-label={`Notices${unread ? `, ${unread} unread` : ''}`}
+          onClick={() => {
+            soundEngine.play('tap');
+            window.location.hash = 'you/notifications';
+          }}
+          className="relative p-2 rounded-xl shrink-0 cursor-pointer hover:bg-[var(--color-well)]"
+          style={{ color: 'var(--brief-ink)' }}
+          data-testid="belt-notices"
+        >
+          <Bell className="w-5 h-5" />
+          {unread != null && unread > 0 && (
+            <span
+              className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 rounded-full grid place-items-center text-[11px] font-black"
+              style={{ background: 'var(--brief-warn)', color: '#FFFFFF' }}
+            >
+              {unread}
             </span>
           )}
         </button></>}

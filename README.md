@@ -35,17 +35,30 @@ success: an unconfigured payment rail returns `503` with a reason, not a fake
 ## The product surface
 
 Production enters through `preview/src/main.jsx` → `preview/src/app/AppShell.tsx`.
-The current bottom bar has **Home, Mine, You**, plus a **Create** action:
+The bar is **five doors and one action**, in the order the loop actually runs:
 
-| Door | What it is |
-|---|---|
-| **Home** | Nearby activity and discovery. |
-| **Mine** | Your shops, orders and saved items. |
-| **You** | Identity, standing, money and settings. |
-| **Create (+)** | Opens the creation sheet; it is not a destination. |
+| Door | Hash | What it is |
+|---|---|---|
+| **Home** | `#home` | The atrium (`SellerHome`): what needs attention, your own numbers, a shelf of doors that exist, then what is moving on the board. |
+| **Market** | `#market` | The board. The mixed feed is its face; the taxonomy (bulk · direct · niche · groups · events · errands · shops · circles) sits behind one entry that opens the picker. |
+| **Trade** | `#trade` | The work loop as six deep-linkable sections: `demand · open · quotes · work · procurement · supply` (`#trade/<section>[/<id>]`). |
+| **Shop** | `#duka` | Your business: spaces, offers, orders, team, ledger, catalogue, pipeline, tools, operating (`#duka/<section>`). |
+| **You** | `#you` | Identity, standing, connections, money, settings, help (`#you/<section>`). |
+| **Create (+)** | `#create` | Eight verbs, "I need something done" first. Not a destination. |
 
-Requests, Supply, Partners and Pulse remain reachable through the drawer.
-See `preview/src/app/Navigation.tsx` and `NavSheet.tsx` for the current routing.
+Legacy addresses keep working and light the door that now owns them:
+`#city` → Market, `#requests`/`#supply` → Trade,
+`#mine`/`#spaces`/`#selling`/`#orders`/`#ledger`/`#catalog`/`#pipeline` → Shop.
+Nothing 404s because the map changed.
+
+What the bar refuses to hold, the **directory** (`#menu`) does: Pulse, Partners,
+Workforce, Elevate, group-buy, table banking, the shop sections, notices, following,
+saved, subscriptions, language, privacy, and the gated admin / moderation rows — each
+with a unit number, grouped by floor. The shape and the reason for it are in
+`docs/MALL-RESTRUCTURE-REPORT.md`; the routing itself is
+`preview/src/app/Navigation.tsx` (doors), `surfaces.ts` (aliases) and
+`NavSheet.tsx` (directory). If those three and this table ever disagree, the code is
+right and this table is a bug.
 
 ---
 
