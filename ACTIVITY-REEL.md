@@ -34,12 +34,23 @@ familiar *physics*, given a purpose here.
 | ↑ | `open-detail` | "There is more here." | **Details** button, ↑ key |
 | ↓ | `close-detail` (in the detail) / `dismiss` (in the set) | "Back", or "I've dealt with this." | **Close**, **Not for me**, ↓ / Esc |
 | tap | `act` | "I can inspect this." | the same Details button |
+| 2× tap | `quick` | "Act on this one, now." | the card's own quick-action button, and the same button in the detail |
 | hold | peek | "I can look without leaving." | the detail (the peek reveals nothing it doesn't) |
 
 The numbers are thresholds on a fingertip, pinned by the suite:
 
-    tapSlopPx 10 · holdMs 320 · browseCommitPx 52 · depthCommitPx 56
-    dismissCommitPx 96 · axisBias 1.15 · flickVelocity 0.45 px/ms
+    tapSlopPx 10 · holdMs 320 · doubleTapMs 280 · browseCommitPx 52
+    depthCommitPx 56 · dismissCommitPx 96 · axisBias 1.15 · flickVelocity 0.45 px/ms
+
+**The double tap does not defer the single tap.** Two taps on one spot run the
+card's single honest quick action (Save, or Message the seller where a seller
+published a number) — but the first tap has *already* done its job the moment
+it happened, so nothing waits 280 ms to find out whether a second tap is
+coming. Selection stays instant; the second tap says "no, the thing itself",
+puts the panel the first tap opened back down, and runs the action. The suite
+pins all the ways this must *not* fire: two taps 600 ms apart, two taps in
+different places, a swipe between two taps, and a card with no quick action
+writing nothing at all.
 
 `axisBias` is the one that matters most in practice: a diagonal drag belongs to
 neither axis until one clearly wins, so browsing and scrolling never race each
@@ -48,11 +59,14 @@ drag; a 20 px nudge commits to nothing and snaps back.
 
 ### Every gesture has a labelled twin
 
-A gesture nobody can find is not a feature, it is a secret. The reel therefore
-ships the words on screen — **← → browse · ↑ details · hold peek · ↓ deal with
-it** — plus real controls: Previous / Next activity, Details, Save, Not for me,
-Close. Nothing in the reel is reachable *only* by a swipe, and the position is
-announced (`1 of 5`, `aria-live="polite"`).
+A gesture nobody can find is not a feature, it is a secret. So the words are on
+the card itself, in the phrases people already use for these moves — *Swipe ↑
+for details · Swipe ← → to browse*, and *Double-tap to save* on the cards that
+actually have a quick action — under a legend that names the whole vocabulary:
+**← → browse · ↑ details · 2× quick action · hold peek · ↓ deal with it**. Every
+one of them is also a real control: Previous / Next activity, Details, Save, Not
+for me, Close. Nothing in the reel is reachable *only* by a swipe, and the
+position is announced (`1 of 5`, `aria-live="polite"`).
 
 ## The rules that keep it from becoming a toy
 
@@ -82,12 +96,8 @@ announced (`1 of 5`, `aria-live="polite"`).
    `not_interested` cannot be recorded, it is taken back out of the server-side
    set and kept (and named) as a device-only hide.
 
-Two things are deliberately absent:
+One thing is deliberately absent:
 
-- **No double-tap.** A double-tap has to defer the first tap to see whether a
-  second arrives — latency on every selection, to hide an action that changes
-  stored state. The quick action is a visible button on the card and in the
-  detail instead.
 - **No app-wide rollout yet.** The grammar is a shared module so the vocabulary
   can spread; the reel is the first surface that speaks it. Other surfaces
   adopt it as they are reworked, rather than being rewritten blind.
@@ -96,7 +106,7 @@ Two things are deliberately absent:
 
     npm run test:typecheck                      # tsc, clean
     npm run build:client                        # vite build, clean
-    bash run-suites.sh activityreel compacthome # 17 passed / 0 failed
+    bash run-suites.sh activityreel compacthome # 18 passed / 0 failed
     cd server && node test/discoverSummary.mjs  # PASS 10
 
 `discoverSummary.mjs` now ends with two checks aimed straight at this feature:
@@ -108,16 +118,18 @@ with `object not found`.
 
 Then a live pass with the real client against a real server — the whole point
 being the part a stub cannot tell you. With `BRIEF_DEV_AUTH=1` on a throwaway
-copy of the store, the reel was mounted over the live board and driven entirely
-through its **labelled controls**: `Next activity` to walk to an event,
-`Save` (server `POST /api/me/saved/<obj>` → 200, the row appears in `/api/me`,
-the card says "Saved"), pressing it again (`DELETE` → 200, the row is gone),
+copy of the store, the reel was mounted over the live board and driven with
+real pointer gestures and labelled controls: `Next activity` to walk to an
+event; **a double tap on the card** (`POST /api/me/saved/<obj>` → 200, the row
+appears in `/api/me`, the card says "Saved", the panel the first tap opened is
+back down); the same double tap again (`DELETE` → 200, the row is gone);
 `Details` → `Not for me` (`POST /api/me/relevance` → `not_interested` on the
-object, the card leaves the set), then `Undo` (`DELETE` → the control is gone
-from the server's own state). 13 checks, 0 failures. This is also how two
-things were caught before they shipped: the events being cut off the end of
-Home, and the seller's "WhatsApp" contact being shown as though there were a
-number behind it.
+object, the card leaves the set) → `Undo` (`DELETE` → gone from the server's
+own state); and a double tap on an offer with no object, which wrote **nothing**
+rather than 404ing behind the user's back. 16 checks, 0 failures. This is also
+how two things were caught before they shipped: the events being cut off the
+end of Home, and the seller's "WhatsApp" contact being shown as though there
+were a number behind it.
 
 `preview/activityreel.jsx` pins, among others:
 
@@ -130,7 +142,10 @@ number behind it.
   carries, with Undo taking it back out of the server too;
 - a row with no object offering no Save button, and no phone number invented;
 - a failed save reported as failed, and a device-only hide called a device-only
-  hide.
+  hide;
+- the double tap: one action from two taps on one spot, and **no** action from
+  two taps apart, two taps in different places, a swipe in between, or a card
+  that has nothing to do.
 
 ### Pre-existing failures (unchanged by this work, verified against the baseline)
 

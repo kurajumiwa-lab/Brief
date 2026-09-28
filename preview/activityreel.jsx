@@ -108,6 +108,13 @@ const swipe = async (dx, dy, { steps = 4 } = {}) => {
   await at(el, 'pointerup', 200 + dx, 300 + dy);
   await flush(10);
 };
+/** A whole tap: down and up in one spot, the way a finger does it. */
+const tap = async (x, y, waitMs = 0) => {
+  if (waitMs) await flush(waitMs);
+  await at(stage(), 'pointerdown', x, y);
+  await at(stage(), 'pointerup', x, y);
+  await flush(10);
+};
 const hold = async (ms = 400) => {
   const el = stage();
   await at(el, 'pointerdown', 200, 300);
@@ -141,7 +148,13 @@ const byLabel = (label) => buttons().find((b) => (b.getAttribute('aria-label') |
     assert.ok(grammar.withResistance(80, false) < 80, 'at the end of the set the deck resists instead of pretending');
     assert.deepEqual(grammar.axisOf(30, 20), 'horizontal', 'the dominant axis owns the gesture');
     assert.equal(grammar.axisOf(28, 26), null, 'and a tie owns nothing');
-    pass(`the grammar is fixed by numbers: tap ${g.tapSlopPx}px, hold ${g.holdMs}ms, browse ${g.browseCommitPx}px, depth ${g.depthCommitPx}px, deal ${g.dismissCommitPx}px`);
+    assert.equal(grammar.isDoubleTap({ x: 10, y: 10, at: 1000 }, { x: 12, y: 11, at: 1000 + g.doubleTapMs }), true,
+      'two taps on one spot, inside the window, are one gesture');
+    assert.equal(grammar.isDoubleTap({ x: 10, y: 10, at: 1000 }, { x: 12, y: 11, at: 1601 }), false,
+      'and two taps a moment apart are two decisions');
+    assert.equal(grammar.isDoubleTap({ x: 10, y: 10, at: 1000 }, { x: 90, y: 10, at: 1100 }), false,
+      'as are two taps in different places — time alone is not enough');
+    pass(`the grammar is fixed by numbers: tap ${g.tapSlopPx}px, hold ${g.holdMs}ms, double ${g.doubleTapMs}ms, browse ${g.browseCommitPx}px, depth ${g.depthCommitPx}px, deal ${g.dismissCommitPx}px`);
   }
 
   // ── 2. One thing at a time, and where you are in the set ─────────────────
@@ -217,6 +230,57 @@ const byLabel = (label) => buttons().find((b) => (b.getAttribute('aria-label') |
     await click(byLabel('Details'));
     assert.equal(detail().hidden, false, 'the labelled Details twin opens it too');
     pass('a tap selects, and a press that starts on a control never becomes a card gesture');
+  }
+
+  // ── 5b. Two taps on one spot are one action, not two selections ──────────
+  {
+    calls = []; localStorage.clear();
+    personal = { saved: [], relevance: { more: [], less: [], notInterested: [], hiddenSources: [] } };
+    await mount();
+    await tap(200, 300);
+    assert.equal(detail().hidden, false,
+      'the first tap acts at once — the reel does not sit on it waiting to see if a second one is coming');
+    await tap(202, 300);
+    assert.equal(calls.some((c) => c.url.includes('/api/me/saved/obj_fest') && c.method === 'POST'), true,
+      'the second tap runs the single quick action the card really has: a real save');
+    assert.equal(detail().hidden, true, 'and puts the panel the first tap opened back down');
+    assert.ok(document.querySelector('.reel-notice').textContent.includes('saved things'), 'saying where it went');
+    assert.equal(byLabel('Saved') !== undefined, true, 'and the card now reads Saved');
+
+    await tap(200, 300);
+    await tap(200, 300);
+    assert.equal(calls.some((c) => c.url.includes('/api/me/saved/obj_fest') && c.method === 'DELETE'), true,
+      'twice more is the same action inverted: the quick action is whatever the card offers now');
+
+    // Timing and distance are both halves of the rule, and neither is optional.
+    calls = []; await mount();
+    await tap(220, 300);
+    await tap(220, 300, 600);
+    assert.equal(calls.some((c) => c.method === 'POST' && c.url.includes('/api/me/saved')), false,
+      'two separate decisions, a moment apart, are not a double tap');
+    assert.equal(detail().hidden, false, 'the second one just opens the card again');
+
+    calls = []; await mount();
+    await tap(200, 300);
+    await tap(320, 300);
+    assert.equal(calls.some((c) => c.method === 'POST' && c.url.includes('/api/me/saved')), false,
+      'and two taps in different places are two taps, however fast they were');
+
+    calls = []; await mount();
+    await tap(200, 300);
+    await swipe(-90, 0);        // a gesture in between breaks the pair
+    await tap(200, 300);
+    assert.equal(calls.some((c) => c.method === 'POST' && c.url.includes('/api/me/saved')), false,
+      'a swipe between two taps ends the pair rather than being skipped over');
+
+    // A card with nothing to do: a second tap does not invent an action.
+    calls = []; await mount([listing({ id: 'quickless', title: 'Nothing to do here', objectId: null, contact: null })]);
+    await tap(200, 300);
+    await tap(200, 300);
+    assert.equal(calls.some((c) => c.method !== 'GET' && /\/api\/me\/(saved|relevance)/.test(c.url)), false,
+      'on a card with no quick action, a second tap writes nothing anywhere');
+    assert.equal(detail().hidden, false, 'and simply leaves the detail the first tap opened standing');
+    pass('two taps on one spot run the card\'s one honest quick action, and time or distance alone never fakes one');
   }
 
   // ── 6. Hold peeks without leaving, and a peek is not a tap ───────────────
@@ -385,9 +449,15 @@ const byLabel = (label) => buttons().find((b) => (b.getAttribute('aria-label') |
     personal = { saved: [], relevance: { more: [], less: [], notInterested: [], hiddenSources: [] } };
     await mount();
     const legend = document.querySelector('.reel-legend').textContent;
-    for (const word of ['browse', 'details', 'peek', 'deal with it']) {
+    for (const word of ['browse', 'details', 'quick action', 'peek', 'deal with it']) {
       assert.ok(legend.includes(word), `the legend names "${word}" — a gesture nobody can find is a secret`);
     }
+    // The affordance the user reads on the card itself, in the words they
+    // already know — and it is the same words whether the card is a photo or
+    // plain, an event or an offer.
+    const foot = document.querySelector('.reel-card-foot').textContent;
+    assert.ok(foot.includes('Swipe ↑ for details'), 'the card says how to go deeper');
+    assert.ok(foot.includes('Swipe ← → to browse'), 'and how to move on');
     const labels = buttons().map((b) => b.getAttribute('aria-label') || b.textContent.trim());
     for (const label of ['Previous activity', 'Next activity', 'Details', 'Save', 'Not for me', 'Close details']) {
       assert.ok(labels.includes(label), `"${label}" is a labelled control, so no verb is finger-only`);

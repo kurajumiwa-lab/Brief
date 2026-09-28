@@ -14,6 +14,7 @@
 //   ↓        BACK/DONE  in the detail: return to the set.
 //                       in the set:   dealt with — it leaves the set
 //   tap      ACT        select the thing under the finger
+//   2× tap   QUICK      the one action the card really has, without opening it
 //   hold     PEEK       examine it without leaving or changing anything
 //
 // Two properties make this honest rather than clever:
@@ -41,6 +42,10 @@ export const GestureMetrics = {
   tapSlopPx: 10,
   /** A press held this long, without moving, is a peek. */
   holdMs: 320,
+  /** Two taps on the same spot, within this long of each other, are one
+   *  gesture — the card's quick action. Long enough for a deliberate second
+   *  tap, short enough not to catch two separate decisions. */
+  doubleTapMs: 280,
   /** Horizontal distance that commits to the next / previous item. */
   browseCommitPx: 52,
   /** Vertical distance that opens the detail (up) or returns from it (down). */
@@ -68,7 +73,9 @@ export type GestureIntent =
   /** ↓ in the set : dealt with, it leaves the set */
   | { kind: 'dismiss' }
   /** a tap : select the thing under the finger */
-  | { kind: 'act' };
+  | { kind: 'act' }
+  /** two taps on the same spot : the one quick action the card really has */
+  | { kind: 'quick' };
 
 export interface GestureSample {
   /** Horizontal travel since the press, in px. Negative is left. */
@@ -107,6 +114,28 @@ export function axisOf(dx: number, dy: number): GestureAxis | null {
 /** True while the press is still a press and not yet a drag or a hold. */
 export function isStill(sample: Pick<GestureSample, 'dx' | 'dy'>): boolean {
   return Math.hypot(sample.dx, sample.dy) <= GestureMetrics.tapSlopPx;
+}
+
+/** One completed tap, kept only so the next tap can be compared with it. */
+export interface TapRecord {
+  /** Where the finger was, in client coordinates. */
+  x: number;
+  y: number;
+  /** When it lifted, in ms. */
+  at: number;
+}
+
+/**
+ * Two taps that mean one thing: the same spot, close together in time.
+ *
+ * Both halves are checked, because either one alone is wrong. Time alone makes
+ * "tap the card, then tap its Save button" a quick action on whatever happened
+ * to be under the second finger; distance alone makes two separate decisions a
+ * minute apart into one.
+ */
+export function isDoubleTap(first: TapRecord, second: TapRecord): boolean {
+  if (second.at - first.at > GestureMetrics.doubleTapMs) return false;
+  return Math.hypot(second.x - first.x, second.y - first.y) <= GestureMetrics.tapSlopPx;
 }
 
 /** True when a press that has not moved should be treated as a peek. */

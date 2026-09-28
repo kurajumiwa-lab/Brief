@@ -303,19 +303,35 @@ export function ActivityReel({ items, onOpenItem, className = '' }: ActivityReel
     for (const objectId of objectIds) void api.unsetRelevanceControl('not_interested', { objectId });
   }, [notInterested]);
 
+  /** The one quick action this card can honestly offer, or nothing. It is
+   *  computed here, above the gesture surface, because whether a second tap has
+   *  a meaning is a property of the card under it. */
+  const quick = current ? quickActionFor(current, savedSet, busy, save) : null;
+
   const handleIntent = useCallback((intent: GestureIntent) => {
     if (!current) return;
     if (intent.kind === 'browse') { browse(intent.direction); return; }
     if (intent.kind === 'open-detail' || intent.kind === 'act') { openDetail(current); return; }
     if (intent.kind === 'close-detail') { setExpanded(false); return; }
+    if (intent.kind === 'quick') {
+      // The first tap already opened the detail — that is what a tap means
+      // here, and it happened without waiting to see whether a second one was
+      // coming. A second tap on the same spot means the thing itself, not more
+      // detail: put the panel back down and do the one action the card has. A
+      // card with no quick action simply stays open, which is where the first
+      // tap had already taken you.
+      if (quick && !quick.busy) { setExpanded(false); quick.run(); }
+      return;
+    }
     if (intent.kind === 'dismiss') dismiss(current);
-  }, [browse, current, dismiss, openDetail]);
+  }, [browse, current, dismiss, openDetail, quick]);
 
   const { handlers, drag, wasGesture } = useGestureSurface({
     state: expanded ? 'detail' : 'set',
     onIntent: handleIntent,
     onPeek: (phase) => setPeeking(phase === 'start'),
-    canBrowse: { next: hasNext, prev: hasPrev }
+    canBrowse: { next: hasNext, prev: hasPrev },
+    doubleTap: Boolean(quick)
   });
 
   const onKeyDown = (event: React.KeyboardEvent) => {
@@ -347,7 +363,6 @@ export function ActivityReel({ items, onOpenItem, className = '' }: ActivityReel
   const openProgress = expanded ? 1 : drag.axis === 'vertical' && drag.dy < 0 ? drag.progress : 0;
   const dismissProgress = !expanded && drag.axis === 'vertical' && drag.dy > 0 ? drag.progress : 0;
   const currentSeen = current ? seenKeys.has(reelKey(current)) : false;
-  const quick = current ? quickActionFor(current, savedSet, busy, save) : null;
   const seenCount = visible.filter((item) => seenKeys.has(reelKey(item))).length;
 
   return (
@@ -517,6 +532,7 @@ export function ActivityReel({ items, onOpenItem, className = '' }: ActivityReel
       <p className="reel-legend">
         <span><b>← →</b> browse</span>
         <span><b>↑</b> details</span>
+        <span><b>2×</b> quick action</span>
         <span><b>hold</b> peek</span>
         <span><b>↓</b> deal with it</span>
       </p>
@@ -602,7 +618,15 @@ function CardFace({ item, slot, seen = false, quick = null, onOpen }: CardFacePr
             <button type="button" className="reel-details-btn" data-gesture-static onClick={onOpen}>
               Details <ArrowUp size={14} />
             </button>
-            <span className="reel-card-tap">or tap the card</span>
+            {/* The verbs, said where the finger is — in the words people
+                already use for these moves. The quick action is named only on
+                the cards that actually have one. */}
+            <span className="reel-card-tap">Swipe ↑ for details · Swipe ← → to browse</span>
+            {quick && (
+              <span className="reel-card-tap">
+                Double-tap to {quick.label.startsWith('Saved') ? 'unsave' : quick.label.toLowerCase()}
+              </span>
+            )}
           </div>
         )}
       </div>

@@ -29,10 +29,11 @@ import {
   axisOf,
   classifyGesture,
   commitProgress,
+  isDoubleTap,
   isStill,
   withResistance
 } from './grammar';
-import type { GestureAxis, GestureIntent, GestureState } from './grammar';
+import type { GestureAxis, GestureIntent, GestureState, TapRecord } from './grammar';
 
 export interface GestureSurfaceOptions {
   /** Where the surface is standing. A downward swipe means two things. */
@@ -43,6 +44,10 @@ export interface GestureSurfaceOptions {
   /** Whether there is anything to browse to, per direction. Used only for the
    *  resistance at the ends — the intent is still reported, the sets decide. */
   canBrowse?: { next: boolean; prev: boolean };
+  /** Report two taps on one spot as the `quick` intent. A surface without a
+   *  quick action for the current item leaves this off, and a second tap is
+   *  then simply a second selection rather than a gesture with no meaning. */
+  doubleTap?: boolean;
   /** Off for a surface that should only be driven by its own buttons. */
   enabled?: boolean;
 }
@@ -88,11 +93,16 @@ export function useGestureSurface({
   onIntent,
   onPeek,
   canBrowse = { next: true, prev: true },
+  doubleTap = false,
   enabled = true
 }: GestureSurfaceOptions): { handlers: GestureSurfaceHandlers; drag: GestureDrag; end: () => void; wasGesture: () => boolean } {
   const [drag, setDrag] = useState<GestureDrag>(AT_REST);
 
   const press = useRef<Press>({ ...NO_PRESS });
+  /** The last tap that could still be the first half of a double tap. Cleared
+   *  by anything that is not a tap, so a swipe between two taps breaks the
+   *  pair instead of being skipped over. */
+  const lastTap = useRef<TapRecord | null>(null);
   /** Whether the press that just ended was a real gesture (a drag or a hold)
    *  rather than a tap. A browser still fires `click` after a mouse drag, and a
    *  surface that acts on tap must not act on the echo of a swipe. */
@@ -108,6 +118,8 @@ export function useGestureSurface({
   canBrowseRef.current = canBrowse;
   const stateRef = useRef(state);
   stateRef.current = state;
+  const doubleTapRef = useRef(doubleTap);
+  doubleTapRef.current = doubleTap;
 
   const clearHold = () => {
     if (press.current.holdTimer !== null) {
@@ -231,8 +243,35 @@ export function useGestureSurface({
     press.current = { ...NO_PRESS };
     setDrag(AT_REST);
     if (peeked) peekRef.current?.('end');
-    if (cancelled || !sample || peeked) return;
+    if (cancelled || !sample || peeked) {
+      // Not a tap, so it cannot be half of one either.
+      lastTap.current = null;
+      return;
+    }
     const intent = classifyGesture(sample, stateRef.current);
+
+    // Two taps on one spot are one gesture, and it is not two selections. This
+    // does NOT defer the first tap: the first one has already been reported and
+    // acted on the moment it happened (that is why selection never feels laggy).
+    // The second tap says "no, the thing itself" — so it reports `quick`
+    // instead, and the surface puts down whatever the first tap opened.
+    if (doubleTapRef.current && intent?.kind === 'act') {
+      const record: TapRecord = { x: event!.clientX, y: event!.clientY, at: Date.now() };
+      const first = lastTap.current;
+      if (first && isDoubleTap(first, record)) {
+        lastTap.current = null;
+        // The click the browser fires after this lift is the echo of a gesture,
+        // not a selection, so it must not open the detail a third time.
+        lastWasGesture.current = true;
+        intentRef.current({ kind: 'quick' });
+        return;
+      }
+      lastTap.current = record;
+      intentRef.current(intent);
+      return;
+    }
+
+    lastTap.current = null;
     if (intent) intentRef.current(intent);
   }, []);
 
