@@ -14,7 +14,9 @@ against **this** codebase rather than in the abstract. It has five parts:
    announced — §3;
 4. **the design you asked for**: the event schema, the state machines, the
    database tables, the worker processes and the automation frontier — §4–§9;
-5. the build order, as commits — §10.
+5. the build order, as commits — §10;
+6. **what is now built**, what was corrected while building it, and what is
+   still deliberately not done — §11.
 
 ---
 
@@ -598,3 +600,101 @@ worth doing even if nothing else here is ever built, because they are what turns
 
 Everything above is additive: no collection in this list replaces an existing
 one, and every rule's execution is a row.
+
+
+---
+
+## 11. Built. Here is what is true now.
+
+Everything in §4–§7 is implemented on this branch, in-process, with no new
+runtime and no second log. Where building it proved the document wrong, the
+document lost.
+
+### 11.1 What now exists
+
+| piece | where | what it does |
+|---|---|---|
+| the log's envelope | `domain/signal.js` | `seq`, `occurredAt`/`recordedAt`, `actorKind`, `entityKind`/`entityId`, `source`, `correlationId`, `causationId`, `v`, `payload`, and a mandatory-at-edges `idempotencyKey`. The vocabulary grew from 108 to **159 types**: money, the task lifecycle, review, the engine's own acts. |
+| `signals.seq` | `store.js` migration 3 | monotonic, backfilled from history, and the runner's cursor |
+| intake | `domain/engine/intake.js` | `once(key, fn)` write-ahead; a duplicate returns **the first outcome**, not a second one; `reject`, `note`, `recoverStale`, `stats` |
+| the money speaks | `domain/ledger.js` | `createTransaction` and every `transitionTransaction` emit `ledger_*` from inside the transition, with optional `causationId`. Money can no longer move silently. |
+| the runner | `domain/workflow.js` | cursor-based (a backlog **drains**), run rows written **before** the actions, per-action results, retry ladder, state rules with a per-subject cooldown, schedules |
+| retries | `domain/engine/deadLetters.js` | 30s → 5m → 1h, then a dead letter carrying the payload, attempts and the failing system's own words |
+| review as a state | `domain/engine/review.js` | `pending` / `auto_approved` / `auto_rejected` / `approved` / `rejected` / `withdrawn`, deduped per subject, with deadlines and an overdue count |
+| schedules | `domain/engine/schedules.js` | durable "do X at T" keyed so a missed tick fires once |
+| actions | `domain/engine/actions.js` | `notify`, `tag`, `blast`, `remind`, `close_campaign`, `archive_listing`, `request_release`, `escalate`, `schedule`, `release_payment` (money-flagged) |
+| the payout frontier | `domain/workPayment.js` | `requestRelease`: below `PAYOUT_AUTO_MAX` a rule approves and records `auto_approved`; above it, a review item. **Every** payout decision opens a review item, so "what did the machine decide on its own?" is a query. |
+| the task chain speaks | `requests`, `quotes`, `workOrders`, `workExecution`, `matching` | the lifecycle that emitted **nothing** now emits `request_*`, `quote_*`, `match_suggested`, `work_order_*`, `work_task_*`, correlated by request/work order |
+| four default rules | seeded by `slug`, editable in the ops plane | a campaign past its end closes itself; a work order created schedules a 24h reminder; a work order confirmed-but-unstarted escalates after 48h; a delivered work order asks for release into review |
+| the control plane | `routes/ops.js` | `GET /api/ops/engine`, `/dead-letters` (+ resolve), `/review-items` (+ decide), `/payouts`, `/rules` (+ enable/re-level), `/schedules`, `/intake`, `/signals`, `POST /engine/tick`, and `GET /api/ops/entities/:kind/:id/timeline` |
+| boot | `index.js` | intake recovery, rule seeding, and a tick every 60s that reacts, fires, retries and evaluates ages |
+
+### 11.2 Corrections the build forced
+
+Four statements in the first draft were wrong, and the code says so now:
+
+1. **"There is an automation engine already"** — true, and **it had a live bug**:
+   `sweep()` read `signals.slice(-500)` with no cursor, so a burst of more than
+   500 events silently skipped the older ones. Fixed with `engineState.last_seq`;
+   `sweep()` now returns `examined` **and `remaining`**, so a backlog is visible.
+2. **"A throwing action escapes the sweep"** — also true, and fixed in the same
+   file: the run row is written before the actions, a throw marks it `failed`,
+   and the already-successful siblings are not re-run (the results are
+   per-action).
+3. **`executed` semantics.** The existing suite counted successful *actions*;
+   the first cut of my runner counted *runs*. `run.js` caught it. The old
+   meaning is restored — that is what the callers were promised.
+4. **The timeline needed three shapes, not one.** Events from before the
+   envelope describe their subject with `objectId`, and features that are not
+   objects link themselves with `metadata.<kind>Id`. The timeline matches all
+   three plus `correlationId`, which is why `GET
+   /api/ops/entities/campaign/camp_x/timeline` reads
+   `campaign_created → campaign_published → campaign_closed` for a campaign that
+   was never touched by a person.
+
+### 11.3 Changed on purpose, and reviewed
+
+* `SCHEMA_VERSION` is **3**. The two assertions in `server/test/run.js` that
+  named version 2 were updated to the current version — a suite that encodes a
+  schema number has to move when the schema moves.
+* `transitionCampaign(id, next)` gained an optional third argument
+  (`{ actorId, actorKind, reason }`) so the log can say whether a person or the
+  clock closed an offer. Existing callers are unaffected.
+* `isMoneyAction` is recorded per action result, so the frontier report can
+  count what moved on its own without reading code.
+
+### 11.4 Deliberately not done
+
+* **No replay projection.** The log is now complete enough for one, and that is
+  exactly why it should be built carefully: a projection must be diffed against
+  rows, and that test does not exist yet.
+* **The four bespoke idempotency sites record, they do not enforce.**
+  `externalPlaces`, `huduma/orders`, `huduma/router` and `lipaMdogo` now write
+  their keys into `intakeEvents`, but the *enforcement* stays in the domain
+  where the live row is. Moving enforcement to the edge there would return a
+  stale copy of a row that has since moved, which is worse than the duplication.
+  The webhooks — where a retry is certain, not hypothetical — do enforce at the
+  edge.
+* **`settlementEscalations` is not yet folded into `reviewItems`.** Both exist,
+  both are visible on the ops plane; merging them touches the settlement rail,
+  and a settlement rail is not the place for a refactor you cannot test the same
+  day.
+* **No tests were added for any of this** (see §11.5): the verification is the
+  existing suites plus throwaway smoke checks.
+
+### 11.5 How it was verified
+
+* `server/test/run.js` — **2048 passed, 0 failed** (it caught the two semantics
+  bugs above).
+* The 60-suite server tail and the work-path suites (`workOrders` 44,
+  `workPayment` 27, `workforce` 33, `requests` 30, `quotes` 53, `matching` 43,
+  `procurement` 20, `orchestration` 48, `engine` 71, `notifications` 67,
+  `integration` 12, `flows` 10, `decisions` 22, `eventWithdrawal` 10,
+  `eventDetail` 13, `eventExpiry` 4) — green.
+* Client suites via `run-suites.sh`, and `build:client`.
+* Smoke checks, run and discarded: the retry ladder ending in a dead letter with
+  the ledger's own words (`transaction not found`); `intake.once` returning the
+  same outcome three times and refusing a keyless call; a published campaign with
+  a past end closing itself on one tick and its timeline reading
+  `campaign_created → campaign_published → campaign_closed`; every ops endpoint
+  refusing anonymous callers (401) and answering an operator.
