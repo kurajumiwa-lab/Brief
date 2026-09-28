@@ -15,7 +15,7 @@
 .wairo-intro-top,.wairo-intro-bottom { width:100%; max-width:1180px; margin:0 auto; display:flex; align-items:center; justify-content:space-between; gap:20px; }
 .wairo-intro-brand { display:flex; align-items:center; gap:10px; }
 .wairo-intro-brand strong { display:block; font-size:24px; font-weight:800; line-height:1; letter-spacing:-.06em; }
-.wairo-intro-brand small { display:block; margin-top:6px; font-size:9px; font-weight:650; text-transform:uppercase; letter-spacing:.18em; color:var(--launch-muted); }
+.wairo-intro-brand small { display:block; margin-top:6px; font-size: 11px; font-weight:650; text-transform:uppercase; letter-spacing:.18em; color:var(--launch-muted); }
 .wairo-intro-skip { display:flex; align-items:center; gap:16px; border:1px solid #dce1e8; border-radius:30px; background:#fff; padding:10px 16px; font-size:12px; color:#35434b; }
 .wairo-intro-skip span { font-size:20px; line-height:1; }
 .wairo-intro-stage { width:100%; max-width:1180px; margin:auto; padding:34px 0; }
@@ -23,9 +23,9 @@
 .wairo-brand-art { grid-area:art; position:relative; display:grid; align-items:center; min-width:0; background:#f0edd8; overflow:hidden; }
 .wairo-brand-card--go .wairo-brand-art { background:#cfeee3; }
 .wairo-brand-art img { display:block; width:100%; height:100%; object-fit:cover; }
-.wairo-art-seal { display:inline-flex; align-items:center; gap:8px; position:absolute; bottom:20px; left:20px; background:#ffffffec; border:1px solid #ffffffcc; padding:9px 13px; border-radius:25px; font-size:10px; font-weight:600; letter-spacing:.015em; color:#134e4a; }
+.wairo-art-seal { display:inline-flex; align-items:center; gap:8px; position:absolute; bottom:20px; left:20px; background:#ffffffec; border:1px solid #ffffffcc; padding:9px 13px; border-radius:25px; font-size: 11px; font-weight:600; letter-spacing:.015em; color:#134e4a; }
 .wairo-brand-copy { grid-area:copy; padding:clamp(28px,4vw,55px); display:flex; flex-direction:column; align-items:start; justify-content:center; }
-.wairo-intro-eyebrow { display:flex; align-items:center; gap:8px; font-size:10px; font-weight:650; letter-spacing:.12em; text-transform:uppercase; color:#52646a; }
+.wairo-intro-eyebrow { display:flex; align-items:center; gap:8px; font-size: 11px; font-weight:650; letter-spacing:.12em; text-transform:uppercase; color:#52646a; }
 .wairo-intro-eyebrow i { width:7px; height:7px; border-radius:50%; background:#2563eb; }
 .wairo-brand-card--go .wairo-intro-eyebrow i { background:#0d9488; }
 .wairo-brand-copy h1 { margin:25px 0 20px; font-family:Fraunces,Georgia,serif; font-size:clamp(34px,4.3vw,58px); font-weight:500; line-height:1.08; letter-spacing:-.05em; }
@@ -33,7 +33,7 @@
 .wairo-brand-card--go h1 em { color:#0d766c; }
 .wairo-brand-copy p { margin:0; max-width:330px; font-size:14px; line-height:1.7; color:var(--launch-muted); }
 .wairo-brand-tags { display:flex; flex-wrap:wrap; list-style:none; padding:0; margin:24px 0 30px; gap:7px; }
-.wairo-brand-tags li { border:1px solid #dee7e2; background:#f7faf8; border-radius:20px; padding:6px 11px; font-size:10px; color:#52646a; }
+.wairo-brand-tags li { border:1px solid #dee7e2; background:#f7faf8; border-radius:20px; padding:6px 11px; font-size: 11px; color:#52646a; }
 .wairo-intro-next { display:flex; align-items:center; justify-content:space-between; gap:26px; padding:14px 18px; border:0; border-radius:12px; font-size:12px; font-weight:650; color:#fff; background:#2d6a4f; min-width:200px; }
 .wairo-intro-next span { font-size:21px; line-height:1; }
 .wairo-brand-card--go .wairo-intro-next { background:#0d766c; }
@@ -51,10 +51,10 @@
 .wairo-story-dots .playing { animation:wairo-story-progress linear forwards; }
 .wairo-playback { display:flex; align-items:center; gap:9px; font-size:11px; border:0; background:transparent; padding:10px 0 10px 12px; color:#35434b; }
 .wairo-playback span { font-size:16px; }
-.wairo-motion-note { font-size:10px; }
+.wairo-motion-note { font-size: 11px; }
 @keyframes wairo-card-in { from{opacity:0;transform:translateY(14px) scale(.992)} to{opacity:1;transform:none} }
 @keyframes wairo-story-progress { from{transform:scaleX(0)} to{transform:scaleX(1)} }
 @media(min-width:1300px) { .wairo-brand-card{min-height:510px} }
-@media(max-width:700px) { .wairo-intro{padding:20px;min-height:100dvh}.wairo-intro-stage{padding:22px 0}.wairo-brand-card{grid-template-columns:1fr;grid-template-areas:'art' 'copy';min-height:0;border-radius:20px}.wairo-brand-art{aspect-ratio:1.85}.wairo-brand-art img{object-fit:cover;object-position:center 57%}.wairo-art-seal{bottom:12px;left:12px;padding:6px 10px;font-size:9px}.wairo-brand-copy{padding:24px}.wairo-brand-copy h1{font-size:clamp(32px,8.8vw,47px);margin:14px 0}.wairo-brand-copy p{font-size:12px;line-height:1.65;max-width:none}.wairo-brand-tags{margin:16px 0 20px}.wairo-intro-next{width:100%;padding:13px 16px}.wairo-intro-bottom>p{display:none}.wairo-intro-brand strong{font-size:23px}.wairo-story-controls{gap:12px}.wairo-intro-skip{padding:9px 13px} }
+@media(max-width:700px) { .wairo-intro{padding:20px;min-height:100dvh}.wairo-intro-stage{padding:22px 0}.wairo-brand-card{grid-template-columns:1fr;grid-template-areas:'art' 'copy';min-height:0;border-radius:20px}.wairo-brand-art{aspect-ratio:1.85}.wairo-brand-art img{object-fit:cover;object-position:center 57%}.wairo-art-seal{bottom:12px;left:12px;padding:6px 10px;font-size: 11px}.wairo-brand-copy{padding:24px}.wairo-brand-copy h1{font-size:clamp(32px,8.8vw,47px);margin:14px 0}.wairo-brand-copy p{font-size:12px;line-height:1.65;max-width:none}.wairo-brand-tags{margin:16px 0 20px}.wairo-intro-next{width:100%;padding:13px 16px}.wairo-intro-bottom>p{display:none}.wairo-intro-brand strong{font-size:23px}.wairo-story-controls{gap:12px}.wairo-intro-skip{padding:9px 13px} }
 @media(max-height:740px) and (max-width:700px) { .wairo-intro{padding:16px}.wairo-intro-stage{padding:16px 0}.wairo-brand-art{aspect-ratio:2.35}.wairo-brand-copy{padding:20px}.wairo-brand-copy h1{font-size:32px}.wairo-brand-tags{margin:12px 0}.wairo-brand-copy p{font-size:12px} }
 @media(prefers-reduced-motion:reduce) { .wairo-brand-card,.wairo-story-dots .playing{animation:none}.wairo-story-dots .playing{transform:scaleX(1)} }

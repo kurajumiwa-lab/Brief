@@ -45,7 +45,7 @@ global.localStorage = dom.window.localStorage;
 const React = require('react');
 const { createRoot } = require('react-dom/client');
 const { act } = require('react-dom/test-utils');
-const { CityFeedView } = require('./src/features/city/CityFeedView.tsx');
+const { DiscoverFeed } = require('./src/features/city/DiscoverFeed.tsx');
 const { listedAgo, PLASTER, roomSurface, plateGlow } = require('./src/features/city/room.ts');
 
 let count = 0;
@@ -249,7 +249,7 @@ async function main() {
 
   // --- 3. a card on the board carries no border, and takes a lift ---------
   {
-    const { container } = mount(React.createElement(CityFeedView, {}));
+    const { container } = mount(React.createElement(DiscoverFeed, { room: 'all', onRoomChange: () => {}, onPostListing: () => {} }));
     await flush();
     const offenders = allStyled(container).filter(({ cls, style }) => {
       const isCard = /rounded-(2xl|3xl)/.test(cls);
@@ -278,7 +278,7 @@ async function main() {
 
   // --- 4. a photo gets the room's ink; a missing photo gets a plate -------
   {
-    const { container } = mount(React.createElement(CityFeedView, {}));
+    const { container } = mount(React.createElement(DiscoverFeed, { room: 'all', onRoomChange: () => {}, onPostListing: () => {} }));
     await flush();
     assert.ok(/rgba\(10, 14, 20/.test(roomTs), 'the scrim is the room\'s own ink fading up through a photo, not pure black');
     assert.ok(/filter:\s*PHOTO_FILTER/.test(fs.readFileSync(path.join(__dirname, 'src/features/city/DiscoverFeed.tsx'), 'utf8')),
@@ -309,7 +309,7 @@ async function main() {
 
   // --- 5. a zero is a true count, printed quietly, with a next step -------
   {
-    const { container } = mount(React.createElement(CityFeedView, {}));
+    const { container } = mount(React.createElement(DiscoverFeed, { room: 'all', onRoomChange: () => {}, onPostListing: () => {} }));
     await flush();
     const { entry: direct } = await openRoom(container, 'Direct');
     assert.ok(text(direct).includes('0'), 'an empty flow shows its zero — it is not hidden and not padded');
@@ -541,7 +541,7 @@ async function main() {
   // screen. A terse UI that hides how a number was made is a marketing site; a
   // documented UI that makes you read it is a legal disclaimer. This is neither.
   {
-    const { container } = mount(React.createElement(CityFeedView, {}));
+    const { container } = mount(React.createElement(DiscoverFeed, { room: 'all', onRoomChange: () => {}, onPostListing: () => {} }));
     await flush();
     const ps = Array.from(container.querySelectorAll('p, span'))
       .map((el) => text(el))
@@ -571,9 +571,9 @@ async function main() {
       ['belong to no space', 'what a space-scoped number leaves out, and says'],
       ['dash, not 0%', 'why an unmeasurable figure is not a zero'],
       ['never shows', 'the things the product refuses outright'],
-      ['Home does not greet', 'why Home no longer reprints the ledger line'],
-      ['What\'s happening nearby', 'why Discover no longer reprints the door'],
-      ['Your shop overview', 'why Mine is one shelf, not two storefronts'],
+      ['Home is the operational read', 'why Home is the seller activity workspace'],
+      ['public board remains a separate Explore destination', 'why public discovery is separate from seller activity'],
+      ['Spaces and Selling are separate destinations', 'why workspaces and seller operations have distinct doors'],
       ['There is no Hubs tab', 'that Circles did not grow a Hubs door'],
       ['Every secondary screen is a URL', 'why the back gesture works on a phone'],
       ['no placeholder frame', 'that an offer carries only pictures the seller supplied'],
@@ -582,7 +582,7 @@ async function main() {
       ['marked in minus recorded out', 'what the morning brief’s money actually is'],
       ['nobody is ever reported absent', 'that a rota does not exist, so no absence flag is built'],
       ['one brief per day at most', 'how the morning notification behaves when it is switched on'],
-      ['moves no money itself', 'that escrow on Mine is records, not a vault']
+      ['moves no money itself', 'that escrow in Selling is records, not a vault']
     ]) {
       assert.ok(t.includes(needle), `the audit page still carries ${why}`);
     }

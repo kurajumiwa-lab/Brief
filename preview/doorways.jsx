@@ -1,18 +1,17 @@
 // ---------------------------------------------------------------------------
-// DOORWAYS — the reorg's four rules, as the only tests that can hold them.
+// DOORWAYS — the seller-workspace navigation and its global creation action.
 //
-// The bar is three doors for what you do (Home · Mine · You) and one action
-// for what you make ([+]). Everything else lives in the drawer or on Home.
-// This suite exists so the bar cannot grow a fourth door back in, the drawer
-// cannot lose its check-in, Home cannot lose its tiles, and the drawer cannot
-// slide back over the floor.
+// The bar is Home · Selling · Spaces · You, plus one action ([+]). The board
+// and other rooms remain reachable without being duplicated as primary tabs.
+// This suite pins the destinations, the drawer's check-in, and the fixed mobile
+// floor so the IA stays legible on a phone.
 //
-//   1. the bar is exactly three destinations + one action;
+//   1. the bar is exactly four destinations + one action;
 //   2. Pulse is NOT a door in the bar;
 //   3. Pulse IS reachable from the drawer, and picking it goes to the
 //      pulse tab;
-//   4. Home carries nav[aria-label="Quick actions"] (three compact doorways) and no
-//      [data-testid="filter-chips"] anywhere on the screen;
+//   4. Home is the operational seller dashboard, with its live reads and
+//      actionable states ahead of secondary discovery;
 //   5. the bar is a solid anchored floor (fixed, bottom-0, 56px, no floating
 //      pill), and the drawer stops above it.
 // ---------------------------------------------------------------------------
@@ -36,7 +35,7 @@ const { act } = require('react-dom/test-utils');
 const { Navigation, BOTTOM_BAR_ITEMS, doorFor } = require('./src/app/Navigation.tsx');
 const { NavSheet, SHEET_GROUPS } = require('./src/app/NavSheet.tsx');
 const { CreateSheet, CREATE_ACTIONS } = require('./src/app/CreateSheet.tsx');
-const { HomeSurface } = require('./src/features/home/HomeSurface.tsx');
+const { SellerHome } = require('./src/features/home/SellerHome.tsx');
 
 let passed = 0;
 let failed = 0;
@@ -47,8 +46,8 @@ const check = (name, cond) => {
 const flush = (ms = 40) => new Promise((r) => setTimeout(r, ms));
 const text = (el) => (el.textContent || '').replace(/\s+/g, ' ').trim();
 
-// The world is offline for this suite: Home's shelves are all empty and every
-// one of them hides itself, which is exactly the state the tiles must survive.
+// The business APIs are offline for this suite: the dashboard must show an
+// unavailable state, not a successful empty shop or a set of made-up numbers.
 global.fetch = async () => ({ ok: false, status: 503, text: async () => JSON.stringify({ error: 'offline for the suite' }) });
 
 async function mount(el) {
@@ -61,20 +60,20 @@ async function mount(el) {
 }
 
 async function main() {
-  // ── 1. THE BAR: exactly three destinations, one action ──────────────────
+  // ── 1. THE BAR: four destinations, one action ───────────────────────────
   {
     const destinations = BOTTOM_BAR_ITEMS.filter((i) => i.type === 'destination');
     const actions = BOTTOM_BAR_ITEMS.filter((i) => i.type === 'action');
-    check('the bar has exactly three destinations', destinations.length === 3);
+    check('the bar has exactly four destinations', destinations.length === 4);
     check('and exactly one action', actions.length === 1);
-    check('the doors are Home · Mine · You, in that order',
-      destinations.map((d) => d.label).join('·') === 'Home·Mine·You');
+    check('the doors are Home · Selling · Spaces · You, in that order',
+      destinations.map((d) => d.label).join('·') === 'Home·Selling·Spaces·You');
     check('the one action is the create', actions[0].id === 'create');
 
     const { host, root } = await mount(React.createElement(Navigation, { activeTab: 'home', onSelectTab: () => {} }));
     const doors = Array.from(host.querySelectorAll('nav[aria-label="Primary"] button[role="tab"]'));
     const actionsRendered = Array.from(host.querySelectorAll('nav[aria-label="Primary"] button[aria-haspopup="dialog"]'));
-    check('the rendered bar has three door buttons', doors.length === 3);
+    check('the rendered bar has four destination buttons', doors.length === 4);
     check('and one action button, marked as opening a dialog', actionsRendered.length === 1);
     root.unmount(); host.remove();
   }
@@ -110,21 +109,19 @@ async function main() {
     root.unmount(); host.remove();
   }
 
-  // ── 4. HOME: all categories visible, not behind a More disclosure ───
+  // ── 4. HOME: operational first, unavailable rather than fabricated ─────
   {
-    const { host, root } = await mount(React.createElement(HomeSurface, { onOpenSpace: () => {} }));
-    const tiles = host.querySelector('nav[aria-label="Explore categories"]');
-    check('Home carries the category doors', Boolean(tiles));
-    const tileButtons = Array.from(tiles.querySelectorAll('button'));
-    check('offers, events, work, groups and errands have direct doors',
-      tileButtons.length === 9 &&
-      ['Offers', 'Events', 'Work', 'Groups', 'Errands', 'Runs']
-        .every((l) => tileButtons.some((b) => text(b).includes(l))));
-    check('no filter-chips test id anywhere on Home',
-      host.querySelector('[data-testid="filter-chips"]') === null &&
-      !text(host).includes('filter-chips'));
-    check('secondary discovery is visible by default', host.querySelector('details') === null);
-    check('Work is a direct doorway', Boolean(host.querySelector('[data-testid="home-work"]')));
+    const { host, root } = await mount(React.createElement(SellerHome, {
+      onOpenSpace: () => {}, onOpenSelling: () => {}, onOpenSpaces: () => {},
+      onCreateSpace: () => {}, onExplore: () => {}, onOpenWorkforce: () => {}
+    }));
+    check('Home opens on the operational question', text(host).includes('What needs your attention today?'));
+    check('the seller workspace is the primary Home surface', Boolean(host.querySelector('[data-testid="seller-home"]')));
+    check('an offline read is said out loud', Boolean(host.querySelector('[role="alert"]')));
+    check('unavailable activity is a dash, not a sample zero',
+      host.querySelector('[data-testid="metric-orders-value"]')?.textContent === '—' &&
+      host.querySelector('[data-testid="metric-marked-in-value"]')?.textContent === '—');
+    check('the operational page does not mount a discovery promo video', host.querySelector('video') === null);
     root.unmount(); host.remove();
   }
 
@@ -149,13 +146,13 @@ async function main() {
       Boolean(panel) && panel.className.includes('bottom-14') && panel.className.includes('md:bottom-0'));
     sRoot.unmount(); sHost.remove();
 
-    // The create sheet the action opens: five real creation actions.
+    // The create sheet opens real flows, with commerce actions first.
     const { host: cHost, root: cRoot } = await mount(React.createElement(CreateSheet, { open: true, onClose: () => {}, onPick: () => {} }));
-    const rows = Array.from(cHost.querySelectorAll('button')).filter((b) => /Create work|Post an offer|Host a party or trip|Start a run|Post an errand/.test(text(b)));
-    check('the create sheet has five real creation actions', rows.length === 5);
-    check('in the spec’s order: offer, event, run, errand',
-      rows[0].textContent.includes('Create work') && rows[1].textContent.includes('Post an offer') && rows[2].textContent.includes('Host a party or trip')
-      && rows[3].textContent.includes('Start a run') && rows[4].textContent.includes('Post an errand'));
+    const rows = Array.from(cHost.querySelectorAll('button')).filter((b) => /Create a space|Post an offer|Create work|Host a party or trip|Start a run|Post an errand/.test(text(b)));
+    check('the create sheet has six real creation actions', rows.length === 6);
+    check('Spaces and offers lead, followed by the existing work and event flows',
+      rows[0].textContent.includes('Create a space') && rows[1].textContent.includes('Post an offer') && rows[2].textContent.includes('Create work')
+      && rows[3].textContent.includes('Host a party or trip') && rows[4].textContent.includes('Start a run') && rows[5].textContent.includes('Post an errand'));
     cRoot.unmount(); cHost.remove();
   }
 

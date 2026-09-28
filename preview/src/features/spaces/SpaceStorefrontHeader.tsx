@@ -227,11 +227,11 @@ export function SpaceStorefrontHeader({
               <p className="font-mono text-[18px] font-extrabold leading-none" style={{ color: 'var(--brief-ink)' }}>
                 {tile.value}
               </p>
-              <p className="text-[10px] font-black tracking-wide uppercase mt-1" style={{ color: 'var(--brief-muted)' }}>
+              <p className="text-[11px] font-black tracking-wide uppercase mt-1" style={{ color: 'var(--brief-muted)' }}>
                 {tile.label}
               </p>
               {tile.sub && (
-                <p className="text-[10px] font-mono mt-0.5 truncate" style={{ color: 'var(--brief-muted)' }}>
+                <p className="text-[11px] font-mono mt-0.5 truncate" style={{ color: 'var(--brief-muted)' }}>
                   {tile.sub}
                 </p>
               )}

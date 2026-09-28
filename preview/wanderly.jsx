@@ -250,12 +250,12 @@ const pass = (s) => { passed++; console.log('PASS ' + s); };
     for (const alias of ['events', 'city/events', 'destinations/tokyo']) {
       await mount(alias, host.token);
       await wait(() => document.querySelector('[data-testid="wanderly"]'), alias);
-      assert.equal(document.querySelector('[data-testid="compact-home"]'), null);
+      assert.equal(document.querySelector('[data-testid="seller-home"]'), null);
     }
     await go('home');
     localStorage.setItem('brief.firstRunDismissed', '1');
     await mount('home', host.token);
-    await wait(() => document.querySelector('[data-testid="compact-home"]'), 'home');
+    await wait(() => document.querySelector('[data-testid="seller-home"]'), 'home');
     assert.equal(document.querySelectorAll('.compact-work-entry').length, 0);
     await click(await wait(() => document.querySelector('[aria-label="Open all sections"]'), 'menu'));
     await click(await wait(() => by('wanderly'), 'Wanderly menu entry'));
@@ -266,7 +266,7 @@ const pass = (s) => { passed++; console.log('PASS ' + s); };
     localStorage.setItem('brief.firstRunDismissed', '1');
     await mount('you/orders', host.token);
     await wait(() => window.location.hash === '#spaces/orders', 'legacy commerce redirect');
-    await wait(() => document.querySelector('[aria-label="Spaces sections"]'), 'single commerce owner');
+    await wait(() => text().includes('Offers and orders your business manages.'), 'legacy orders lands in the Selling workspace');
     assert.equal(document.querySelector('[aria-label="You"]'), null);
     await go('you');
     await wait(() => by('you-profile-head'), 'profile');
@@ -278,7 +278,7 @@ const pass = (s) => { passed++; console.log('PASS ' + s); };
     assert.equal(document.querySelector('[data-testid="sheet"]'), null);
     await click(document.querySelector('[aria-label="Back to You"]'));
     await wait(() => by('you-profile-head'), 'back to You');
-    pass('You has three collapsed groups and inline details; Orders/Selling resolve to Spaces');
+    pass('You has three collapsed groups and inline details; the legacy Orders/Selling URL resolves to Selling');
 
     console.log(`PASSED ${passed} FAILED 0`);
   } finally { if (root) act(() => root.unmount()); server.kill(); await sleep(80); fs.rmSync(dir, { recursive: true, force: true }); }

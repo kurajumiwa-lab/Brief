@@ -1,6 +1,6 @@
 import React from 'react';
 import { WairoMark } from '../components/WairoMark';
-import { Plus } from 'lucide-react';
+import { Home, Plus, ShoppingBag, Store, User } from 'lucide-react';
 import { soundEngine } from '../utils/SoundEngine';
 
 export type BriefNavigationTab =
@@ -20,102 +20,83 @@ export type BriefNavigationTab =
   | 'workforce'
   | 'you';
 
+export type PrimaryDestination = 'home' | 'selling' | 'spaces' | 'you';
+
 export interface NavigationProps {
   activeTab: BriefNavigationTab;
-  onSelectTab: (tab: BriefNavigationTab) => void;
-  /** The Create action. It opens a sheet, not a route — it is the one thing in
-      the bar that is a verb, not a place. */
+  /** AppShell resolves Mine's legacy/internal sections to Selling or Spaces. */
+  activePrimaryTab?: PrimaryDestination | null;
+  onSelectTab: (tab: PrimaryDestination) => void;
+  /** The Create action opens a sheet, not a route. */
   onOpenCreate?: () => void;
   spaceName?: string;
   className?: string;
 }
 
 // ---------------------------------------------------------------------------
-// THE BOTTOM BAR — three doors for what you do, one action for what you make.
+// PRIMARY NAVIGATION — four places and one global action.
 //
-//   Home · Mine · You · [+]
+//   Home · Selling · Spaces · You · [+]
 //
-// The bar used to be five destinations (Home / Spaces / Discover / Activity /
-// You). Three of those were really two: Spaces, Discover and Activity were all
-// "somewhere else in the app", and a five-door bar plus a chip row plus a
-// ten-item drawer was three navigation systems fighting for the same thumb.
-//
-// The resolution:
-//   * HOME — what's happening nearby (the landing)
-//   * MINE — your shops, orders, saved
-//   * YOU  — identity, standing, money, settings
-//   * [+]  — an action, not a door. It opens a sheet (Post an offer / Host an
-//            event / Start a run / Post an errand). Standard pattern in the
-//            apps this one is measured against (Gojek, Grab, Shopee).
-//
-// Everything else is a shelf in the drawer or a section on Home. That is the
-// whole reorg, and `doorways.jsx` asserts it so the bar cannot grow a fourth
-// door back in.
+// Home is the operational read; Selling holds orders and offers; Spaces keeps
+// Wairo's commerce-and-community workspaces distinct; You holds the person.
+// The board, work network and other rooms remain reachable from the app's
+// secondary navigation. The create action is global and never impersonates a
+// destination.
 // ---------------------------------------------------------------------------
 
-export type BottomBarItemId = 'home' | 'mine' | 'you' | 'create';
+export type BottomBarItemId = PrimaryDestination | 'create';
 
 export interface BottomBarItem {
   id: BottomBarItemId;
-  /** 'destination' = a place the bar takes you to. 'action' = a sheet it
-      opens. The distinction is the point of the reorg: three places, one verb. */
   type: 'destination' | 'action';
   label: string;
 }
 
-/** The bar, as data. `doorways.jsx` asserts exactly three destinations and
-    one action, that Pulse is not here, and that nothing in the drawer
-    repeats a label from this list. */
 export const BOTTOM_BAR_ITEMS: BottomBarItem[] = [
   { id: 'home', type: 'destination', label: 'Home' },
-  { id: 'mine', type: 'destination', label: 'Mine' },
+  { id: 'selling', type: 'destination', label: 'Selling' },
+  { id: 'spaces', type: 'destination', label: 'Spaces' },
   { id: 'you', type: 'destination', label: 'You' },
   { id: 'create', type: 'action', label: 'Create' }
 ];
 
-// Which door lights up for a given internal tab. Rooms (the board, supply,
-// requests, partners) are not doors — they are reached from Home's tiles or
-// the drawer, so nothing is highlighted while one is open. A bar that
-// highlights Home while you are reading the board is the bug this bar
-// replaces, so the honest answer is "none".
-export const doorFor = (tab: BriefNavigationTab): 'home' | 'mine' | 'you' | null => {
+/** Map internal screens to their primary doorway. Discovery and other rooms
+ * are reached from Home or the drawer and intentionally light no primary tab. */
+export const doorFor = (tab: BriefNavigationTab): PrimaryDestination | null => {
   switch (tab) {
     case 'home': return 'home';
     case 'mine':
     case 'pipeline':
-    case 'spaces':
+    case 'spaces': return 'spaces';
     case 'ledger':
-    case 'catalog':
-      return 'mine';
+    case 'catalog': return 'selling';
     case 'you': return 'you';
     default: return null;
   }
 };
 
-// Filled navigation marks, distinct from the larger category illustrations.
-const DoorwayIcon = ({ className = 'w-5 h-5' }) => <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 11 12 2l10 9-2 2-1-1v10h-5v-7h-4v7H5V12l-1 1z" /></svg>;
-const MineIcon = ({ className = 'w-5 h-5' }) => <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 3h16l3 7a3 3 0 0 1-5 2 3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-5-2zM4 14v8h7v-6h4v6h5v-8a5 5 0 0 1-5-1 5 5 0 0 1-6 0 5 5 0 0 1-5 1z" /></svg>;
-const YouIcon = ({ className = 'w-5 h-5' }) => <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="7" r="5"/><path d="M3 22v-2c0-4 4-7 9-7s9 3 9 7v2z" /></svg>;
-
-const DOOR_ICONS: Record<string, React.ReactNode> = {
-  home: <DoorwayIcon className="w-5 h-5" />,
-  mine: <MineIcon className="w-5 h-5" />,
-  you: <YouIcon className="w-5 h-5" />
+const DOOR_ICONS: Record<PrimaryDestination, React.ReactNode> = {
+  home: <Home className="w-5 h-5" aria-hidden="true" />,
+  selling: <ShoppingBag className="w-5 h-5" aria-hidden="true" />,
+  spaces: <Store className="w-5 h-5" aria-hidden="true" />,
+  you: <User className="w-5 h-5" aria-hidden="true" />
 };
 
 export const Navigation: React.FC<NavigationProps> = ({
   activeTab,
+  activePrimaryTab,
   onSelectTab,
   onOpenCreate,
-  spaceName = 'Wairo',
+  spaceName = 'Your business',
   className = ''
 }) => {
-  const activeDoor = doorFor(activeTab);
+  const activeDoor = activePrimaryTab === undefined ? doorFor(activeTab) : activePrimaryTab;
 
-  const goDoor = (door: 'home' | 'mine' | 'you') => {
+  const goDoor = (door: PrimaryDestination) => {
     soundEngine.play('tap');
     if (typeof window !== 'undefined') {
-      window.location.hash = door;
+      window.location.hash = door === 'selling' ? 'spaces/selling' : door === 'spaces' ? 'spaces' : door;
     }
     onSelectTab(door);
   };
@@ -125,7 +106,7 @@ export const Navigation: React.FC<NavigationProps> = ({
     onOpenCreate?.();
   };
 
-  // One button per item, in data order: three doors, then the action.
+  // One button per item, in data order: four destinations, then the action.
   const barButtons = () =>
     BOTTOM_BAR_ITEMS.map((item) =>
       item.type === 'action' ? (
@@ -154,7 +135,7 @@ export const Navigation: React.FC<NavigationProps> = ({
           role="tab"
           aria-selected={activeDoor === item.id}
           aria-current={activeDoor === item.id ? 'page' : undefined}
-          onClick={() => goDoor(item.id as 'home' | 'mine' | 'you')}
+          onClick={() => goDoor(item.id as PrimaryDestination)}
           className="relative flex flex-col items-center justify-center cursor-pointer select-none"
         >
           <span
@@ -163,7 +144,7 @@ export const Navigation: React.FC<NavigationProps> = ({
               transform: activeDoor === item.id ? 'scale(1.05)' : undefined
             }}
           >
-            {DOOR_ICONS[item.id]}
+            {DOOR_ICONS[item.id as PrimaryDestination]}
           </span>
           <span
             className="text-[11px] tracking-tight mt-0.5"
@@ -199,8 +180,8 @@ export const Navigation: React.FC<NavigationProps> = ({
         {barButtons()}
       </nav>
 
-      {/* ── DESKTOP SIDEBAR RAIL — the same three doors and one action, in a
-          column. The rail and the bar are one navigation with two shapes. ── */}
+      {/* ── DESKTOP SIDEBAR RAIL — the same four destinations and one action,
+          in a column. The rail and the bar are one navigation with two shapes. ── */}
       <aside
         role="navigation"
         aria-label="Primary"
@@ -218,7 +199,7 @@ export const Navigation: React.FC<NavigationProps> = ({
                   Wairo
                 </span>
                 <span className="text-[11px] font-bold uppercase tracking-[0.12em] mt-1" style={{ color: 'var(--color-text-muted)' }}>
-                  Blue Avenue
+                  Seller workspace
                 </span>
               </span>
             </div>
@@ -243,14 +224,14 @@ export const Navigation: React.FC<NavigationProps> = ({
                   role="tab"
                   aria-selected={selected}
                   aria-current={selected ? 'page' : undefined}
-                  onClick={() => goDoor(item.id as 'home' | 'mine' | 'you')}
+                  onClick={() => goDoor(item.id as PrimaryDestination)}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-bold transition-all cursor-pointer ${
                     selected
                       ? 'bg-[color:var(--color-text)] text-[color:var(--color-primary)] shadow-xs'
                       : 'text-[color:var(--color-text-muted)] hover:text-[color:var(--color-text)] hover:bg-black/5'
                   }`}
                 >
-                  {DOOR_ICONS[item.id]}
+                  {DOOR_ICONS[item.id as PrimaryDestination]}
                   <span>{item.label}</span>
                 </button>
               );
@@ -271,7 +252,7 @@ export const Navigation: React.FC<NavigationProps> = ({
           </nav>
         </div>
         <p className="text-[11px] text-[color:var(--color-text-muted)]">
-          Three doors for what you do. One action for what you make.
+          Home · Selling · Spaces · You — plus one action to create.
         </p>
       </aside>
     </>

@@ -163,7 +163,7 @@ async function main() {
     assert.ok(!/Ledger Synchronized|Vault healthy|LIVE ESCROW|Audited/i.test(t), 'no Stitch ledger pulse');
     assert.ok(!/ETA|Receive Pass|Confirm & Release|TR-8921/i.test(t), 'no invented fulfilment');
     const doors = BOTTOM_BAR_ITEMS.filter((i) => i.type === 'destination').map((i) => i.label);
-    assert.deepEqual(doors, ['Home', 'Mine', 'You'], 'the bar is still three doors');
+    assert.deepEqual(doors, ['Home', 'Selling', 'Spaces', 'You'], 'the bar is the seller workspace navigation');
   }
   pass('Mine did not grow Hubs, a vault, or an ETA');
 

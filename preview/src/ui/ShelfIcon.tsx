@@ -35,7 +35,7 @@ const THEME_BG: Record<ShelfTheme, string> = {
   explore: 'linear-gradient(145deg, #F59E0B 0%, #EA580C 100%)',
   work: 'linear-gradient(145deg, #40916C 0%, #0891B2 100%)',
   money: 'linear-gradient(145deg, #059669 0%, #65A30D 100%)',
-  system: 'linear-gradient(145deg, #475569 0%, #111827 100%)',
+  system: 'linear-gradient(145deg, var(--brief-muted) 0%, var(--brief-ink) 100%)',
   danger: 'linear-gradient(145deg, #E11D48 0%, #9F1239 100%)'
 };
 

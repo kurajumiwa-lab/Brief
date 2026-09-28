@@ -1,6 +1,7 @@
-import React, { useEffect } from 'react';
-import { Package, CalendarPlus, Truck, Bike, Briefcase, X } from 'lucide-react';
+import React, { useRef } from 'react';
+import { Package, CalendarPlus, Truck, Bike, Briefcase, Store, X } from 'lucide-react';
 import { soundEngine } from '../utils/SoundEngine';
+import { useDialogFocus } from '../ui/useDialogFocus';
 
 // ---------------------------------------------------------------------------
 // THE CREATE SHEET — the one action in the bottom bar.
@@ -11,17 +12,14 @@ import { soundEngine } from '../utils/SoundEngine';
 // deletes — and it lives in exactly one place, so a surface that wants a
 // create action gets it from the bar, not from its own corner.
 //
-// Each row lands on the flow that actually writes the row:
-//   Post an offer  → Mine’s Selling tab, where a listing (and the shop it
-//                    belongs to) is really written — not a fourth browse shelf
-//   Host an event  → the createCampaign → publish loop (it is public the
-//                    moment it is written)
-//   Start a run    → the errand board with the delivery kind chosen and the
-//                    composer open
-//   Post an errand → the errand board with the composer open
+// Each row lands on an existing flow that writes a real row:
+//   Create a space → the business workspace flow
+//   Post an offer  → Selling, where listings already live
+//   Host an event  → the createCampaign → publish loop
+//   Start a run / Post an errand → the existing errand composer
 // ---------------------------------------------------------------------------
 
-export type CreateActionId = 'offer' | 'event' | 'run' | 'errand' | 'work';
+export type CreateActionId = 'space' | 'offer' | 'event' | 'run' | 'errand' | 'work';
 
 export interface CreateAction {
   id: CreateActionId;
@@ -31,34 +29,30 @@ export interface CreateAction {
   icon: React.ReactNode;
 }
 
-/** The sheet, as data — every verb resolves to its creation surface. */
+/** The sheet, as data — every verb resolves to its existing creation flow. */
 export const CREATE_ACTIONS: CreateAction[] = [
+  {
+    id: 'space', label: 'Create a space', hint: 'Bring your offers, conversations and people together',
+    icon: <Store className="w-4 h-4" />
+  },
+  {
+    id: 'offer', label: 'Post an offer', hint: 'Add a product or service to your selling shelf',
+    icon: <Package className="w-4 h-4" />
+  },
   {
     id: 'work', label: 'Create work', hint: 'Buy a verified outcome from your distributed team',
     icon: <Briefcase className="w-4 h-4" />
   },
   {
-    id: 'offer',
-    label: 'Post an offer',
-    hint: 'A row in your catalog, with the shop it belongs to',
-    icon: <Package className="w-4 h-4" />
-  },
-  {
-    id: 'event',
-    label: 'Host a party or trip',
-    hint: 'A plan on Wanderly',
+    id: 'event', label: 'Host a party or trip', hint: 'A plan on Wanderly',
     icon: <CalendarPlus className="w-4 h-4" />
   },
   {
-    id: 'run',
-    label: 'Start a run',
-    hint: 'A delivery run, with the fee you state',
+    id: 'run', label: 'Start a run', hint: 'A delivery run, with the fee you state',
     icon: <Truck className="w-4 h-4" />
   },
   {
-    id: 'errand',
-    label: 'Post an errand',
-    hint: 'Something to carry, somewhere it needs to be',
+    id: 'errand', label: 'Post an errand', hint: 'Something to carry, somewhere it needs to be',
     icon: <Bike className="w-4 h-4" />
   }
 ];
@@ -70,12 +64,8 @@ export interface CreateSheetProps {
 }
 
 export const CreateSheet: React.FC<CreateSheetProps> = ({ open, onClose, onPick }) => {
-  useEffect(() => {
-    if (!open) return undefined;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    if (typeof window !== 'undefined') window.addEventListener('keydown', onKey);
-    return () => { if (typeof window !== 'undefined') window.removeEventListener('keydown', onKey); };
-  }, [open, onClose]);
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  useDialogFocus(open, panelRef, onClose);
 
   if (!open) return null;
 
@@ -88,7 +78,9 @@ export const CreateSheet: React.FC<CreateSheetProps> = ({ open, onClose, onPick 
         className="absolute inset-0 bg-black/45"
       />
       <div
-        className="absolute bottom-0 left-0 right-0 max-w-xl mx-auto rounded-t-3xl p-4 pb-6 space-y-1"
+        ref={panelRef}
+        tabIndex={-1}
+        className="absolute bottom-0 left-0 right-0 max-h-[85vh] overflow-y-auto max-w-xl mx-auto rounded-t-3xl p-4 pb-6 space-y-1"
         style={{ background: 'var(--color-bg)', boxShadow: 'var(--lift-3)' }}
       >
         <div className="flex items-center justify-between pb-2">

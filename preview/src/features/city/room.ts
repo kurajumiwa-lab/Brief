@@ -20,11 +20,11 @@
 //   * `PHOTO_SCRIM` — the ink of the room (not pure black) fading up through a
 //     real photograph, so type over a photo reads and the photo reads as lit by
 //     this room. `.brief-scrim` in index.css is the same gradient for class use.
-//   * `PHOTO_FILTER` — the house grade on real pictures: −10% saturation,
-//     +5% contrast, a breath of warmth. A photograph of a crate of tomatoes
-//     is never re-coloured into something it is not; this is a grade, not a
-//     disguise. Grain is deliberately absent: it needs an overlay per image,
-//     and the feed does not pay for decoration.
+//   * `PHOTO_FILTER` — the house grade on real pictures: −10% saturation and
+//     +5% contrast, with no hue shift. A photograph of a crate of tomatoes is
+//     never re-coloured into something it is not; this is a restrained tonal
+//     grade, not a disguise. Grain is deliberately absent: it needs an overlay
+//     per image, and the feed does not pay for decoration.
 //   * `LISTED_AGO` — the only sentence a photo-less card is allowed about time,
 //     and only when the row carries a real timestamp.
 //
@@ -73,7 +73,7 @@ export function roomPlate(accent: string | null): string {
 
 export const PHOTO_SCRIM = `linear-gradient(to top, rgba(${SCRIM_INK}, 0.95) 0%, rgba(${SCRIM_INK}, 0.62) 34%, rgba(${SCRIM_INK}, 0.16) 68%, rgba(${SCRIM_INK}, 0.04) 100%)`;
 
-export const PHOTO_FILTER = 'saturate(0.9) contrast(1.05) sepia(0.08)';
+export const PHOTO_FILTER = 'saturate(0.9) contrast(1.05)';
 
 /** Small chip that sits on the plate: quiet, warm, unmistakably not a number. */
 export const PLATE_CHIP: React.CSSProperties = {

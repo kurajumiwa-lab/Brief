@@ -91,6 +91,19 @@ const conv = spaces.createSpaceConversation({
 check('conversation created with offer context', conv.offerId === offer.id && conv.offerTitle === 'Birthday Cake');
 check('conversation customer message attached', conv.messages.length === 1 && conv.messages[0].text.includes('Saturday'));
 
+// Home needs a complete inbox count, not the newest ten conversation previews.
+for (let i = 0; i < 11; i++) {
+  spaces.createSpaceConversation({
+    spaceId: space.id,
+    offerId: offer.id,
+    customerName: `Customer ${i + 1}`,
+    message: `Question ${i + 1}`
+  });
+}
+const inboxHydrated = spaces.getSpace(space.id);
+check('inbox count includes all 12 open inquiries, beyond the 10-row preview',
+  inboxHydrated.metrics.inquiriesAwaitingReply === 12 && inboxHydrated.recentConversations.length === 10);
+
 // 7. Inbound WhatsApp Message Route
 const waConv = spaces.routeInboundWhatsAppMessage({
   spaceId: space.id,
@@ -143,6 +156,8 @@ check('hydrated space shows active offer count', hydrated.metrics.offersCount >=
 check('hydrated space shows customer count', hydrated.metrics.customerCount >= 1);
 check('hydrated space shows total paid revenue KES 5,200', hydrated.metrics.revenueKes === 5200);
 check('hydrated space shows active orders count', hydrated.metrics.activeOrdersCount >= 1);
+check('converted inquiry leaves the exact awaiting-reply count', hydrated.metrics.inquiriesAwaitingReply === 11);
+check('the full inbox count is not replaced by its ten-row preview', hydrated.recentConversations.length === 10);
 
 // 12. Activity Stream
 const activities = spaces.getSpaceActivities(space.id);

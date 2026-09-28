@@ -132,7 +132,7 @@
   line-height: 1.2;
 }
 .rv-brand small {
-  font-size: 8px;
+  font-size: 11px;
   letter-spacing: 2px;
   display: block;
   margin-top: 5px;
@@ -157,7 +157,7 @@
 }
 .rv-eyebrow {
   display: block;
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 750;
   letter-spacing: 1.65px;
   color: var(--rv-green);
@@ -273,7 +273,7 @@
   margin-top: 6px;
 }
 .rv-product-tile > span b {
-  font-size: 10px;
+  font-size: 11px;
 }
 .rv-product-image {
   display: grid;
@@ -299,7 +299,7 @@
   flex-wrap: wrap;
   margin: 28px 0;
   color: var(--rv-muted);
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.7;
 }
 .rv-breadcrumb > a:nth-last-of-type(1) {
@@ -380,7 +380,7 @@
   gap: 7px;
   padding: 12px 0 24px;
   color: var(--rv-muted);
-  font-size: 10px;
+  font-size: 11px;
 }
 .rv-trust-line svg {
   color: var(--rv-green);
@@ -423,7 +423,7 @@
   vertical-align: middle;
 }
 .rv-average > p {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--rv-muted);
   margin-top: 10px;
 }
@@ -458,13 +458,13 @@
 .rv-breakdown > button > b {
   min-width: 28px;
   text-align: right;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 550;
 }
 .rv-breakdown > button > small {
   width: 28px;
   text-align: right;
-  font-size: 9px;
+  font-size: 11px;
 }
 .rv-bar {
   height: 7px;
@@ -505,7 +505,7 @@
   letter-spacing: 0;
 }
 .rv-recommend p {
-  font-size: 9px;
+  font-size: 11px;
   color: #70826f;
   margin-top: 9px;
 }
@@ -520,7 +520,7 @@
   min-width: 0;
 }
 .rv-category-ratings span {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--rv-muted);
   display: block;
 }
@@ -531,7 +531,7 @@
   margin: 4px 0 8px;
 }
 .rv-category-ratings strong > small {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 400;
 }
 .rv-category-ratings > div > div {
@@ -547,7 +547,7 @@
   height: 100%;
 }
 .rv-category-ratings > div > small {
-  font-size: 9px;
+  font-size: 11px;
   margin-top: 4px;
   display: block;
 }
@@ -565,7 +565,7 @@
   font-size: 17px;
 }
 .rv-label {
-  font-size: 9px;
+  font-size: 11px;
   color: #6f7b69;
   border: 1px solid #dce2d5;
   background: #f8faf5;
@@ -595,7 +595,7 @@
 }
 .rv-theme-chips button > span {
   color: #778973;
-  font-size: 10px;
+  font-size: 11px;
 }
 .rv-pros-cons {
   display: grid;
@@ -622,7 +622,7 @@
   overflow-wrap: anywhere;
 }
 .rv-pros-cons p > span {
-  font-size: 9px;
+  font-size: 11px;
   white-space: nowrap;
   color: #83907e;
 }
@@ -660,7 +660,7 @@
 }
 .rv-media-thumb small {
   padding: 0 8px;
-  font-size: 10px;
+  font-size: 11px;
 }
 .rv-gallery-empty {
   display: flex;
@@ -677,7 +677,7 @@
   color: var(--rv-muted);
 }
 .rv-gallery-empty small {
-  font-size: 10px;
+  font-size: 11px;
 }
 .rv-text-btn {
   display: inline-flex;
@@ -723,7 +723,7 @@
   margin-bottom: 12px;
 }
 .rv-review-top time {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--rv-muted);
   white-space: nowrap;
 }
@@ -748,7 +748,7 @@
   color: #7c8d73;
   background: #eef1e7;
   border: 1px solid #e1e6d7;
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 650;
 }
 .rv-review-person > strong {
@@ -757,7 +757,7 @@
   overflow-wrap: anywhere;
 }
 .rv-review-person > small {
-  font-size: 9px;
+  font-size: 11px;
 }
 .rv-verified {
   display: inline-flex;
@@ -765,7 +765,7 @@
   gap: 4px;
   background: #eff6ef;
   color: #39744f;
-  font-size: 9px;
+  font-size: 11px;
   padding: 3px 7px;
   border-radius: 5px;
   font-weight: 600;
@@ -800,24 +800,24 @@
 }
 .rv-review-points b {
   color: #486353;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 650;
   margin-right: 6px;
 }
 .rv-variant {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--rv-muted);
   margin-bottom: 12px !important;
 }
 .rv-variant small {
-  font-size: 9px;
+  font-size: 11px;
   display: block;
   color: #8b9694;
 }
 .rv-incentive {
   display: inline-block;
   color: #8e6c3c;
-  font-size: 9px;
+  font-size: 11px;
   background: #f9f3e8;
   border: 1px solid #f0e4ce;
   border-radius: 6px;
@@ -858,7 +858,7 @@
   overflow-wrap: anywhere;
 }
 .rv-seller-response time {
-  font-size: 9px;
+  font-size: 11px;
   color: #86958b;
   display: block;
   margin-top: 7px;
@@ -873,7 +873,7 @@
   flex-wrap: wrap;
 }
 .rv-review-actions > span {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--rv-muted);
 }
 .rv-votes {
@@ -888,7 +888,7 @@
   background: #fff;
   border: 1px solid #dce5df;
   color: #64776a;
-  font-size: 10px !important;
+  font-size: 11px !important;
   border-radius: 7px;
   padding: 6px 10px;
   min-height: 34px;
@@ -899,7 +899,7 @@
   color: #285d3c;
 }
 .rv-votes b {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
 }
 .rv-icon-btn {
@@ -918,13 +918,13 @@
 }
 .rv-helpful-count {
   display: block;
-  font-size: 9px !important;
+  font-size: 11px !important;
   color: #81907c !important;
   margin-top: 9px;
 }
 .rv-review-card > .rv-text-btn {
   margin-top: 11px;
-  font-size: 10px !important;
+  font-size: 11px !important;
 }
 .rv-all-reviews {
   margin-top: 42px;
@@ -1029,7 +1029,7 @@
   padding-bottom: 17px;
 }
 .rv-filter-popover legend {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--rv-muted);
   margin-bottom: 12px;
 }
@@ -1040,7 +1040,7 @@
   display: flex;
   align-items: center;
   gap: 9px;
-  font-size: 10px !important;
+  font-size: 11px !important;
   color: var(--rv-muted);
 }
 .rv-sort select {
@@ -1054,14 +1054,14 @@
   align-items: center;
   gap: 10px;
   padding: 17px 1px;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--rv-muted);
 }
 .rv-results-line button {
   border: 0;
   background: none;
   color: var(--rv-green);
-  font-size: 10px;
+  font-size: 11px;
   text-decoration: underline;
   text-underline-offset: 3px;
 }
@@ -1125,7 +1125,7 @@
   display: flex;
   align-items: center;
   gap: 7px;
-  font-size: 10px;
+  font-size: 11px;
 }
 .rv-pagination input {
   width: 65px !important;
@@ -1216,7 +1216,7 @@
   padding: 26px 0;
   border-top: 1px solid var(--rv-line);
   color: var(--rv-muted);
-  font-size: 10px;
+  font-size: 11px;
 }
 .rv-footer span,
 .rv-footer a {
@@ -1357,7 +1357,7 @@
 }
 .rv-order-proof small {
   display: block;
-  font-size: 10px;
+  font-size: 11px;
   margin-top: 9px;
   color: #6e8474;
 }
@@ -1407,7 +1407,7 @@
   cursor: pointer;
 }
 .rv-upload > label span {
-  font-size: 10px;
+  font-size: 11px;
   color: #8c9b8d;
   font-weight: 400;
 }
@@ -1420,7 +1420,7 @@
 }
 .rv-upload > small {
   display: block;
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.8;
   margin-top: 8px;
 }
@@ -1694,7 +1694,7 @@
   }
   .rv-nav > div {
     gap: 16px;
-    font-size: 10px;
+    font-size: 11px;
   }
   .rv-nav > div > a:first-child {
     display: none;
@@ -1703,7 +1703,7 @@
     padding: 0 20px;
   }
   .rv-breadcrumb {
-    font-size: 9px;
+    font-size: 11px;
     margin: 23px 0;
     gap: 5px;
   }
@@ -1734,11 +1734,11 @@
   }
   .rv-product-header p > span {
     display: block;
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 400;
   }
   .rv-product-header a {
-    font-size: 10px;
+    font-size: 11px;
     margin-top: 8px;
   }
   .rv-product-header > .rv-primary {
@@ -1748,7 +1748,7 @@
   }
   .rv-trust-line {
     flex-wrap: wrap;
-    font-size: 9px;
+    font-size: 11px;
     gap: 7px;
     padding: 0 0 21px;
   }
@@ -1783,7 +1783,7 @@
     max-width: none;
     width: 100%;
     margin: 0;
-    font-size: 9px;
+    font-size: 11px;
   }
   .rv-recommend h2 {
     font-size: 11px;
@@ -1804,7 +1804,7 @@
     margin-top: 23px;
   }
   .rv-category-ratings span {
-    font-size: 9px;
+    font-size: 11px;
   }
   .rv-category-ratings strong {
     font-size: 16px;
@@ -1827,7 +1827,7 @@
   .rv-label {
     display: inline-block;
     margin-top: 7px;
-    font-size: 8px;
+    font-size: 11px;
   }
   .rv-highlights > .rv-subtle {
     font-size: 11px;
@@ -1838,13 +1838,13 @@
     margin-top: 19px;
   }
   .rv-pros-cons p {
-    font-size: 10px;
+    font-size: 11px;
   }
   .rv-theme-chips {
     gap: 7px;
   }
   .rv-theme-chips button {
-    font-size: 10px;
+    font-size: 11px;
     min-height: 36px;
     padding: 5px 9px;
   }
@@ -1881,7 +1881,7 @@
     font-size: 15px;
   }
   .rv-review-top time {
-    font-size: 9px;
+    font-size: 11px;
   }
   .rv-review-person {
     gap: 7px;
@@ -1922,7 +1922,7 @@
     align-items: center;
   }
   .rv-all-reviews > .rv-section-title > .rv-text-btn {
-    font-size: 9px !important;
+    font-size: 11px !important;
     max-width: 105px;
     text-align: right;
   }
@@ -1957,19 +1957,19 @@
     font-size: 11px !important;
   }
   .rv-results-line {
-    font-size: 9px;
+    font-size: 11px;
     flex-wrap: wrap;
     padding: 15px 1px;
   }
   .rv-pagination {
     gap: 10px;
     justify-content: center;
-    font-size: 10px;
+    font-size: 11px;
   }
   .rv-pagination button {
     min-height: 40px;
     padding: 7px 10px;
-    font-size: 10px;
+    font-size: 11px;
   }
   .rv-page-numbers {
     gap: 4px;
@@ -1993,7 +1993,7 @@
     font-size: 16px;
   }
   .rv-write-banner p {
-    font-size: 10px;
+    font-size: 11px;
   }
   .rv-write-banner > button {
     grid-column: 1/-1;
@@ -2047,10 +2047,10 @@
     font-size: 17px;
   }
   .rv-related a {
-    font-size: 10px;
+    font-size: 11px;
   }
   .rv-footer {
-    font-size: 9px;
+    font-size: 11px;
     align-items: start;
     gap: 17px;
     flex-wrap: wrap;
