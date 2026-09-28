@@ -163,7 +163,11 @@ async function main() {
     assert.ok(!/Ledger Synchronized|Vault healthy|LIVE ESCROW|Audited/i.test(t), 'no Stitch ledger pulse');
     assert.ok(!/ETA|Receive Pass|Confirm & Release|TR-8921/i.test(t), 'no invented fulfilment');
     const doors = BOTTOM_BAR_ITEMS.filter((i) => i.type === 'destination').map((i) => i.label);
-    assert.deepEqual(doors, ['Home', 'Selling', 'Spaces', 'You'], 'the bar is the seller workspace navigation');
+    // Mall, market, trade, duka, you. The two seller doors this suite used to
+    // pin ('Selling' and 'Spaces') both opened MineSurface with a different
+    // section pre-selected, so they are one door now — and MineSurface is the
+    // screen behind it, which is why this suite still owns the assertion.
+    assert.deepEqual(doors, ['Home', 'Market', 'Trade', 'Shop', 'You'], 'the bar is the avenue’s five doors');
   }
   pass('Mine did not grow Hubs, a vault, or an ETA');
 

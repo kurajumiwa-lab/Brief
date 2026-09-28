@@ -75,7 +75,7 @@ async function main() {
 
   {
     const doors = BOTTOM_BAR_ITEMS.filter((i) => i.type === 'destination').map((d) => d.label);
-    check('the bar is Home · Selling · Spaces · You', doors.join('·') === 'Home·Selling·Spaces·You');
+    check('the bar is Home · Market · Trade · Shop · You', doors.join('·') === 'Home·Market·Trade·Shop·You');
     check('no Errands door, no Trust door, no Wallet door',
       !BOTTOM_BAR_ITEMS.some((i) => /errand|trust|wallet/i.test(i.label)));
     check('How Wairo works is the audit tile', SECTION_TITLES.how === 'How Wairo works' && YOU_SECTION_IDS.includes('how'));

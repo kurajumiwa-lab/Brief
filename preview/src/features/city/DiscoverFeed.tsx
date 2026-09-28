@@ -350,6 +350,136 @@ export function FeedSheet({ item, onClose, onOpenFull }: {
 // ---------------------------------------------------------------------------
 // the board
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// The board's directory: the taxonomy with its counts, behind ONE tap. It lives
+// apart from the board because the mixed feed owes the same entry now — the face
+// of discovery kept the rooms in a link at the end of a long list, which is a
+// dead end the moment the feed itself cannot be read. One picker, two doors, one
+// source for every number printed in it: `summary`, from /api/discover/summary.
+// A summary that has not arrived prints no count, never a zero.
+// ---------------------------------------------------------------------------
+export function BoardPicker({ summary, room, onPick, onPostListing, onClose }: {
+  summary: DiscoverSummary | null;
+  room: string;
+  onPick: (key: string) => void;
+  onPostListing?: () => void;
+  onClose: () => void;
+}) {
+  const flows = summary?.flows ?? [];
+  const tiles = summary?.tiles ?? [];
+  const countFor = (key: string) => {
+    if (!summary) return 0;
+    if (key === 'all') return summary.feed.length;
+    if (key === 'errands' || key === 'events' || key === 'circles' || key === 'shops')
+      return tiles.find((t) => t.key === key)?.count ?? 0;
+    return flows.find((f) => f.key === key)?.listings ?? 0;
+  };
+  const unitFor = (key: string) =>
+    isFlowRoom(key as any)
+      ? `${key === 'bulk' ? 'for vendors & shops' : key === 'direct' ? 'source-direct' : key === 'niche' ? 'curated for you' : 'pooled demand'}`
+      : SIDE_ORDER.find((s) => s.key === key)?.unit ?? '';
+
+  return (
+        <div className="fixed inset-0 z-50 flex items-end justify-center" role="dialog" aria-modal="true" aria-label="Browse the board">
+          <button type="button" aria-label="Close the picker" onClick={() => onClose()} className="absolute inset-0 bg-black/45" />
+          <div
+            className="relative w-full max-w-lg rounded-t-3xl p-4 space-y-3 max-h-[80vh] overflow-y-auto"
+            style={{ background: 'var(--color-bg)', boxShadow: 'var(--lift-3)' }}
+          >
+            <div className="flex items-center justify-between">
+              <p className="text-[12px] font-black uppercase tracking-[0.16em]" style={{ color: 'var(--brief-ink)' }}>
+                Browse
+              </p>
+              <button
+                type="button"
+                onClick={() => onClose()}
+                aria-label="Close the picker"
+                className="w-8 h-8 rounded-full grid place-items-center cursor-pointer"
+                style={{ background: 'var(--color-paper)', color: 'var(--brief-ink)' }}
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-1.5">
+              <p className="text-[11px] font-black uppercase tracking-wider" style={{ color: 'var(--color-text-muted)' }}>
+                The flows
+              </p>
+              {FLOW_ORDER.map((f) => {
+                const src = flows.find((x) => x.key === f.key);
+                const empty = countFor(f.key) === 0;
+                const isActive = room === f.key;
+                return (
+                  <button
+                    key={f.key}
+                    type="button"
+                    onClick={() => { soundEngine.play('tap'); onPick(f.key); }}
+                    aria-pressed={isActive}
+                    className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-2xl text-left cursor-pointer"
+                    style={{
+                      background: isActive ? 'var(--color-primary-subtle)' : 'var(--color-paper)',
+                      boxShadow: 'var(--room-light), var(--lift-1), inset 0 0 0 1px var(--brief-line)'
+                    }}
+                  >
+                    <span className="w-8 h-8 rounded-xl grid place-items-center shrink-0" style={{ background: 'var(--color-well)', color: 'var(--color-primary)' }}>
+                      {ICONS[f.icon]}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[14px] font-extrabold" style={{ color: 'var(--brief-ink)' }}>
+                        {src?.label ?? (f.key.charAt(0).toUpperCase() + f.key.slice(1))}
+                      </span>
+                      <StateDot state={empty ? 'unknown' : 'quiet'} label={empty ? 'none here' : src?.sub ?? ''} />
+                    </span>
+                    <span className="shrink-0 font-mono text-[15px] font-extrabold" style={{ color: empty ? 'var(--color-quiet)' : 'var(--brief-ink)' }}>
+                      {countFor(f.key)}
+                    </span>
+                    {empty && onPostListing && (
+                      <span className="shrink-0 text-[11px] font-black" style={{ color: 'var(--color-primary)' }}>
+                        {src?.zeroReason === 'untagged_only' ? 'Tag one' : 'Post one'}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="space-y-1.5">
+              <p className="text-[11px] font-black uppercase tracking-wider" style={{ color: 'var(--color-text-muted)' }}>
+                Other views
+              </p>
+              {SIDE_ORDER.map((t) => {
+                const isActive = room === t.key;
+                return (
+                  <button
+                    key={t.key}
+                    type="button"
+                    onClick={() => { soundEngine.play('tap'); onPick(t.key); }}
+                    aria-pressed={isActive}
+                    className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-2xl text-left cursor-pointer"
+                    style={{
+                      background: isActive ? 'var(--color-primary-subtle)' : 'var(--color-paper)',
+                      boxShadow: 'var(--room-light), var(--lift-1), inset 0 0 0 1px var(--brief-line)'
+                    }}
+                  >
+                    <span className="min-w-0 flex-1 text-[14px] font-extrabold" style={{ color: 'var(--brief-ink)' }}>
+                      {t.label}
+                      <span className="ml-2 text-[12px] font-medium" style={{ color: 'var(--color-text-muted)' }}>
+                        {unitFor(t.key)}
+                      </span>
+                    </span>
+                    <span className="shrink-0 font-mono text-[15px] font-extrabold" style={{ color: 'var(--brief-ink)' }}>
+                      {countFor(t.key)}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+  );
+}
+
 export interface DiscoverFeedProps {
   room?: DiscoverRoom;
   onRoomChange?: (room: DiscoverRoom) => void;
@@ -495,102 +625,13 @@ export function DiscoverFeed({
 
       {/* The picker: the taxonomy with its counts, behind one tap. */}
       {pickerOpen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center" role="dialog" aria-modal="true" aria-label="Browse the board">
-          <button type="button" aria-label="Close the picker" onClick={() => setPickerOpen(false)} className="absolute inset-0 bg-black/45" />
-          <div
-            className="relative w-full max-w-lg rounded-t-3xl p-4 space-y-3 max-h-[80vh] overflow-y-auto"
-            style={{ background: 'var(--color-bg)', boxShadow: 'var(--lift-3)' }}
-          >
-            <div className="flex items-center justify-between">
-              <p className="text-[12px] font-black uppercase tracking-[0.16em]" style={{ color: 'var(--brief-ink)' }}>
-                Browse
-              </p>
-              <button
-                type="button"
-                onClick={() => setPickerOpen(false)}
-                aria-label="Close the picker"
-                className="w-8 h-8 rounded-full grid place-items-center cursor-pointer"
-                style={{ background: 'var(--color-paper)', color: 'var(--brief-ink)' }}
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="space-y-1.5">
-              <p className="text-[11px] font-black uppercase tracking-wider" style={{ color: 'var(--color-text-muted)' }}>
-                The flows
-              </p>
-              {FLOW_ORDER.map((f) => {
-                const src = flows.find((x) => x.key === f.key);
-                const empty = countFor(f.key) === 0;
-                const isActive = room === f.key;
-                return (
-                  <button
-                    key={f.key}
-                    type="button"
-                    onClick={() => { soundEngine.play('tap'); onRoomChange?.(f.key); setPickerOpen(false); }}
-                    aria-pressed={isActive}
-                    className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-2xl text-left cursor-pointer"
-                    style={{
-                      background: isActive ? 'var(--color-primary-subtle)' : 'var(--color-paper)',
-                      boxShadow: 'var(--room-light), var(--lift-1), inset 0 0 0 1px var(--brief-line)'
-                    }}
-                  >
-                    <span className="w-8 h-8 rounded-xl grid place-items-center shrink-0" style={{ background: 'var(--color-well)', color: 'var(--color-primary)' }}>
-                      {ICONS[f.icon]}
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-[14px] font-extrabold" style={{ color: 'var(--brief-ink)' }}>
-                        {src?.label ?? (f.key.charAt(0).toUpperCase() + f.key.slice(1))}
-                      </span>
-                      <StateDot state={empty ? 'unknown' : 'quiet'} label={empty ? 'none here' : src?.sub ?? ''} />
-                    </span>
-                    <span className="shrink-0 font-mono text-[15px] font-extrabold" style={{ color: empty ? 'var(--color-quiet)' : 'var(--brief-ink)' }}>
-                      {countFor(f.key)}
-                    </span>
-                    {empty && onPostListing && (
-                      <span className="shrink-0 text-[11px] font-black" style={{ color: 'var(--color-primary)' }}>
-                        {src?.zeroReason === 'untagged_only' ? 'Tag one' : 'Post one'}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="space-y-1.5">
-              <p className="text-[11px] font-black uppercase tracking-wider" style={{ color: 'var(--color-text-muted)' }}>
-                Other views
-              </p>
-              {SIDE_ORDER.map((t) => {
-                const isActive = room === t.key;
-                return (
-                  <button
-                    key={t.key}
-                    type="button"
-                    onClick={() => { soundEngine.play('tap'); onRoomChange?.(t.key); setPickerOpen(false); }}
-                    aria-pressed={isActive}
-                    className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-2xl text-left cursor-pointer"
-                    style={{
-                      background: isActive ? 'var(--color-primary-subtle)' : 'var(--color-paper)',
-                      boxShadow: 'var(--room-light), var(--lift-1), inset 0 0 0 1px var(--brief-line)'
-                    }}
-                  >
-                    <span className="min-w-0 flex-1 text-[14px] font-extrabold" style={{ color: 'var(--brief-ink)' }}>
-                      {t.label}
-                      <span className="ml-2 text-[12px] font-medium" style={{ color: 'var(--color-text-muted)' }}>
-                        {unitFor(t.key)}
-                      </span>
-                    </span>
-                    <span className="shrink-0 font-mono text-[15px] font-extrabold" style={{ color: 'var(--brief-ink)' }}>
-                      {countFor(t.key)}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
+        <BoardPicker
+          summary={summary}
+          room={room}
+          onClose={() => setPickerOpen(false)}
+          onPostListing={onPostListing}
+          onPick={(key) => { onRoomChange?.(key as DiscoverRoom); setPickerOpen(false); }}
+        />
       )}
 
       {failed && (

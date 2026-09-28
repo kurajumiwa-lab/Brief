@@ -4,9 +4,7 @@ import {
   ArrowRight,
   ArrowUpRight,
   Bell,
-  Briefcase,
   Check,
-  Compass,
   Inbox,
   MessageCircle,
   Package,
@@ -16,8 +14,19 @@ import {
   X
 } from 'lucide-react';
 import * as briefApi from '../../api/briefApi';
-import type { ApiResult, CampaignBanner, Listing, ShopBrief, ShopBriefFlag, Space, SpaceActivity } from '../../api/types';
+import type { MyPosition } from '../../api/briefApi';
+import type { DiscoverFeedItem, DiscoverSummary, GroupBuy } from '../../api/briefApi';
+import type { ApiResult, CampaignBanner, Circle, Listing, ShopBrief, ShopBriefFlag, Space, SpaceActivity } from '../../api/types';
+import { StakesLine } from './StakesLine';
+import { NextMoveCard } from './NextMoveCard';
+import { CirclesStrip } from './CirclesStrip';
+import { EarnStrip } from './EarnStrip';
+import { PlannedWeather } from './PlannedWeather';
+import { ActivityReel } from './ActivityReel';
+import { MallShelf, type MallDoor } from './MallShelf';
+import { soundEngine } from '../../utils/SoundEngine';
 import '../../ui/seller-home.css';
+import '../../ui/mall.css';
 
 export type SpaceWorkspaceTab = 'catalog' | 'pipeline' | 'ledger';
 type ReadStatus = 'loading' | 'ready' | 'error' | 'denied';
@@ -42,6 +51,15 @@ export interface SellerHomeProps {
   onOpenWorkforce: () => void;
   onRequireAuth?: () => void;
   announcements?: CampaignBanner[] | null;
+  /** ── The mall's other wings. Every one is optional: with no shell to ask,
+   *  a door writes the hash the shell resolves, so a door is never a dead end
+   *  and never a button that lies. ── */
+  onOpenMarket?: (room?: string) => void;
+  onOpenTrade?: (section?: string) => void;
+  onOpenGroupBuys?: () => void;
+  onOpenYou?: (section?: string) => void;
+  /** The member's stated area, shown on the floor strip. Never invented. */
+  place?: string | null;
 }
 
 const EAT = 'Africa/Nairobi';
@@ -60,6 +78,22 @@ function nairobiDayKey(now = new Date()): string {
   const parts = TODAY_KEY.formatToParts(now);
   const part = (type: string) => parts.find((p) => p.type === type)?.value ?? '';
   return `${part('year')}-${part('month')}-${part('day')}`;
+}
+
+/** The hour in Nairobi, whatever the device's clock claims. */
+function nairobiHour(now = new Date()): number {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    hour: '2-digit', hour12: false, timeZone: EAT
+  }).formatToParts(now);
+  const hour = Number(parts.find((p) => p.type === 'hour')?.value ?? '');
+  return Number.isFinite(hour) ? hour : now.getHours();
+}
+
+/** A greeting is a greeting, not a claim about the weather. */
+export function greetingFor(hour: number): string {
+  if (hour < 12) return 'Habari ya asubuhi';
+  if (hour < 17) return 'Habari ya mchana';
+  return 'Habari ya jioni';
 }
 
 function plural(count: number, singular: string, pluralForm = `${singular}s`): string {
@@ -183,7 +217,12 @@ export function SellerHome({
   onExplore,
   onOpenWorkforce,
   onRequireAuth,
-  announcements = []
+  announcements = [],
+  onOpenMarket,
+  onOpenTrade,
+  onOpenGroupBuys,
+  onOpenYou,
+  place = null
 }: SellerHomeProps) {
   const [spaces, setSpaces] = useState<Space[] | null>(null);
   const [brief, setBrief] = useState<ShopBrief | null>(null);
@@ -192,6 +231,12 @@ export function SellerHome({
   const [spacesStatus, setSpacesStatus] = useState<ReadStatus>('loading');
   const [briefStatus, setBriefStatus] = useState<ReadStatus>('loading');
   const [listingsStatus, setListingsStatus] = useState<ReadStatus>('loading');
+  // The board's own summary: what is listed, what is on, and the rows themselves.
+  const [board, setBoard] = useState<DiscoverSummary | null>(null);
+  const [lots, setLots] = useState<GroupBuy[] | null>(null);
+  const [circles, setCircles] = useState<Circle[] | null>(null);
+  const [position, setPosition] = useState<MyPosition | null>(null);
+  const [positionDenied, setPositionDenied] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [dismissedAnnouncement, setDismissedAnnouncement] = useState<string | null>(null);
 
@@ -205,8 +250,12 @@ export function SellerHome({
     void Promise.all([
       briefApi.listMySpaces(),
       briefApi.getShopBrief(day),
-      briefApi.getMyListings()
-    ]).then(([spaceResult, briefResult, listingResult]) => {
+      briefApi.getMyListings(),
+      briefApi.getDiscoverSummary(),
+      briefApi.listGroupBuys(),
+      briefApi.getCircles(),
+      briefApi.getMyPosition()
+    ]).then(([spaceResult, briefResult, listingResult, boardResult, lotResult, circleResult, positionResult]) => {
       if (!live) return;
       setSpacesStatus(statusOf(spaceResult));
       setBriefStatus(statusOf(briefResult));
@@ -215,12 +264,23 @@ export function SellerHome({
       setBrief(briefResult.ok ? briefResult.data : null);
       setListings(listingResult.ok ? listingResult.data.listings : null);
       setVendorName(listingResult.ok ? listingResult.data.vendor?.displayName ?? '' : '');
+      // The market's own reads are allowed to fail silently: a board that
+      // cannot be read is an absent shelf, never a shelf of placeholders.
+      setBoard(boardResult.ok ? boardResult.data : null);
+      setLots(lotResult.ok ? lotResult.data : null);
+      setCircles(circleResult.ok ? circleResult.data : null);
+      setPosition(positionResult.ok ? positionResult.data : null);
+      setPositionDenied(!positionResult.ok && positionResult.status === 401);
     }).catch(() => {
       if (!live) return;
       setSpaces(null);
       setBrief(null);
       setListings(null);
       setVendorName('');
+      setBoard(null);
+      setLots(null);
+      setCircles(null);
+      setPosition(null);
       setSpacesStatus('error');
       setBriefStatus('error');
       setListingsStatus('error');
@@ -228,6 +288,24 @@ export function SellerHome({
 
     return () => { live = false; };
   }, [attempt]);
+
+  // ── THE MALL FURNITURE ────────────────────────────────────────────────────
+  const goHash = (hash: string) => {
+    soundEngine.play('tap');
+    if (typeof window !== 'undefined') window.location.hash = hash;
+  };
+  const openMarket = (room?: string) => {
+    if (onOpenMarket) return onOpenMarket(room);
+    goHash(room && room !== 'all' ? `market/${room}` : 'market');
+  };
+  const openTrade = (section?: string) => {
+    if (onOpenTrade) return onOpenTrade(section);
+    goHash(section ? `trade/${section}` : 'trade');
+  };
+  const openYou = (section?: string) => {
+    if (onOpenYou) return onOpenYou(section);
+    goHash(section ? `you/${section}` : 'you');
+  };
 
   const activeSpaces = useMemo(
     () => (spaces ?? []).filter((space) => space.status !== 'archived'),
@@ -321,25 +399,191 @@ export function SellerHome({
       });
     }
 
+    // Demand that matched something you can supply is the one attention item
+    // the operational reads cannot see, because it is not about a Space. It is
+    // the start of the loop, so it is listed with the rest of what is waiting.
+    // Demand the reader is positioned to answer is the one attention item the
+    // operational reads cannot see, because it is not about a Space. It is
+    // derived server-side in domain/position.js from real request rows.
+    const openGaps = position?.open?.total ?? 0;
+    if (openGaps > 0) {
+      items.push({
+        id: 'open-demand',
+        kind: 'record',
+        count: openGaps,
+        title: `${plural(openGaps, 'open request')} the ledger can match to you`,
+        detail: 'Open demand on your position. Quoting is optional; ignoring it is visible to nobody but you.',
+        actionLabel: 'Open the trade desk',
+        onOpen: () => (onOpenTrade ? onOpenTrade('open') : goHash('trade/open'))
+      });
+    }
+
     return items;
-  }, [activeSpaces, agedOrders, brief, briefStatus, draftOffers, inboxCount, onOpenSelling, onOpenSpace, openOrders]);
+  }, [activeSpaces, agedOrders, brief, briefStatus, draftOffers, inboxCount, onOpenSelling, onOpenSpace, onOpenTrade, openOrders, position]);
 
   const announcement = (announcements ?? []).find((item) => item.status === 'active' && item.id !== dismissedAnnouncement);
   const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
 
+  const tileCount = (key: string): number | null => {
+    const tile = board?.tiles?.find((t) => t.key === key);
+    return typeof tile?.count === 'number' ? tile.count : null;
+  };
+  const myCircles = useMemo(() => (circles ?? []).filter((circle) => circle.isMember).length, [circles]);
+  const openLots = lots ? lots.length : null;
+
+  /** The doors of the building. Order = frequency of use for a member, and
+   *  every door is a screen that exists. Nothing here is a count the board did
+   *  not answer with. */
+  const doors = useMemo<MallDoor[]>(() => [
+    {
+      id: 'market',
+      label: 'The market',
+      hint: 'Everything listed nearby — offers, shops, prices',
+      art: 'shops',
+      unit: 'M-01',
+      tag: tileCount('marketplace'),
+      tagIsZero: true,
+      onSelect: () => openMarket('all')
+    },
+    {
+      id: 'trade',
+      label: 'Trade desk',
+      hint: 'Ask, match, quote, work order, reorder',
+      art: 'services',
+      unit: 'M-02',
+      onSelect: () => openTrade()
+    },
+    {
+      id: 'demand',
+      label: 'Open demand',
+      hint: 'What members nearby are asking for',
+      art: 'direct',
+      unit: 'M-03',
+      onSelect: () => openTrade('open')
+    },
+    {
+      id: 'events',
+      label: 'Events & trips',
+      hint: 'Gatherings, parties and runs out of town',
+      art: 'events',
+      unit: 'M-04',
+      tag: tileCount('events'),
+      tagIsZero: true,
+      onSelect: () => goHash('wanderly')
+    },
+    {
+      id: 'circles',
+      label: 'Chamas & groups',
+      hint: 'The rooms people pool money and work in',
+      art: 'groups',
+      unit: 'M-05',
+      tag: tileCount('circles'),
+      tagIsZero: true,
+      onSelect: () => openMarket('circles')
+    },
+    {
+      id: 'errands',
+      label: 'Errands & runs',
+      hint: 'A bike is going that way anyway',
+      art: 'errands',
+      unit: 'M-06',
+      tag: tileCount('errands'),
+      tagIsZero: true,
+      onSelect: () => openMarket('errands')
+    },
+    {
+      id: 'bulk',
+      label: 'Bulk & wholesale',
+      hint: 'Shared lots, declared routes, minimum orders',
+      art: 'groupBuys',
+      unit: 'M-07',
+      onSelect: () => openMarket('bulk')
+    },
+    {
+      id: 'groupbuys',
+      label: 'Group buys',
+      hint: 'Buy better together — put money in a lot',
+      art: 'groupBuys',
+      unit: 'M-08',
+      tag: openLots === null ? null : `${openLots} on the board`,
+      onSelect: () => (onOpenGroupBuys ? onOpenGroupBuys() : goHash('groupbuys'))
+    },
+    {
+      id: 'shops',
+      label: 'Shops',
+      hint: 'Storefronts you can walk into',
+      art: 'shops',
+      unit: 'M-09',
+      tag: tileCount('shops'),
+      tagIsZero: true,
+      onSelect: () => openMarket('shops')
+    },
+    {
+      id: 'work',
+      label: 'Work & roles',
+      hint: 'Your crew, vacancies, the worker register',
+      art: 'care',
+      unit: 'M-10',
+      onSelect: () => onOpenWorkforce()
+    },
+    {
+      id: 'track',
+      label: 'Track an order',
+      hint: 'Where a parcel you are waiting on actually is',
+      art: 'delivery',
+      unit: 'M-11',
+      href: '/track'
+    },
+    {
+      id: 'food',
+      label: 'Food court',
+      hint: 'CloudBites — the kitchen wing, still a preview',
+      art: 'food',
+      unit: 'M-12',
+      href: '/cloudbites'
+    },
+    {
+      id: 'reviews',
+      label: 'Product reviews',
+      hint: 'What buyers said about the goods, unrounded',
+      art: 'other',
+      unit: 'M-13',
+      href: '/reviews'
+    }
+  ], [onOpenGroupBuys, onOpenWorkforce, openMarket, openTrade, board, openLots]);
+
+  const feed: DiscoverFeedItem[] = useMemo(() => board?.feed ?? [], [board]);
+  const openFeedItem = (item: DiscoverFeedItem) => {
+    if (item.kind === 'event') goHash(`wanderly/experience/${encodeURIComponent(item.id)}`);
+    else goHash(`offer/${encodeURIComponent(item.id)}`);
+  };
+
   return (
-    <div className="seller-home" data-testid="seller-home">
-      <header className="seller-home__header">
+    <div className="seller-home mall-atrium" data-testid="seller-home">
+      <header className="mall-signage seller-home__header">
         <div className="seller-home__heading-copy">
-          <p className="seller-home__eyebrow"><span className="seller-home__eyebrow-mark" aria-hidden="true">✳</span> WAIRO <span aria-hidden="true">/</span> BUSINESS WORKSPACE</p>
+          <p className="seller-home__eyebrow"><span className="seller-home__eyebrow-mark" aria-hidden="true">✳</span> WAIRO BLUE AVENUE <span aria-hidden="true">/</span> GROUND FLOOR</p>
+          <p className="mall-signage__greeting">{greetingFor(nairobiHour())} — you are at the front desk.</p>
           <h1>What needs your attention today?</h1>
-          <p className="seller-home__intro">A live read across <strong>{businessName}</strong> and the Spaces your team runs.</p>
+          <p className="seller-home__intro">A live read across <strong>{businessName}</strong> and the Spaces your team runs, and the way into every other wing of the avenue.</p>
         </div>
         <div className="seller-home__date-stamp">
           <span>NAIROBI · TODAY</span>
           <strong>{currentDay}</strong>
           <button type="button" onClick={() => setAttempt((n) => n + 1)} aria-label="Refresh business activity" title="Refresh business activity">
             <RefreshCw size={16} aria-hidden="true" />
+          </button>
+        </div>
+        <div className="mall-floor seller-home__floor">
+          <span className="mall-floor__dot" aria-hidden="true" />
+          <span className="mall-floor__text">{place ? `Area: ${place}` : 'Area not set'}</span>
+          <span className="mall-floor__text" aria-hidden="true">·</span>
+          <span className="mall-floor__text">Open 7 days</span>
+          <button type="button" className="mall-floor__link" onClick={() => openYou('notifications')}>
+            <Bell size={13} aria-hidden="true" /> Notices
+          </button>
+          <button type="button" className="mall-floor__link" onClick={() => openYou('how')}>
+            How this works
           </button>
         </div>
       </header>
@@ -350,8 +594,9 @@ export function SellerHome({
           <button type="button" onClick={onRequireAuth}>Sign in <ArrowRight size={15} aria-hidden="true" /></button>
         </div>
       )}
-      {anyFailure && (
-        <div className="seller-home__status" role="alert">
+
+      {anyFailure && !needsSignIn && (
+        <div className="seller-home__status seller-home__status--error" role="alert">
           <p><strong>{offline ? 'You appear to be offline.' : 'Some activity could not be refreshed.'}</strong> Unavailable counts stay blank; nothing is replaced with sample figures.</p>
           <button type="button" onClick={() => setAttempt((n) => n + 1)}>Try again</button>
         </div>
@@ -385,6 +630,19 @@ export function SellerHome({
           testId="metric-marked-in-value"
         />
       </section>
+
+      {position && (
+        <section className="mall-plate seller-home__standing" aria-label="Where you stand">
+          <StakesLine
+            position={position}
+            spaces={spaces}
+            loading={false}
+            onOpenDiscover={() => openMarket('all')}
+            onPostOffer={onOpenSelling}
+            onOpenHow={() => openYou('how')}
+          />
+        </section>
+      )}
 
       <section className="seller-home__attention" aria-labelledby="seller-attention-title">
         <div className="seller-home__section-heading seller-home__section-heading--attention">
@@ -430,27 +688,46 @@ export function SellerHome({
         )}
       </section>
 
-      <section className="seller-home__quick-actions" aria-labelledby="seller-actions-title">
-        <div className="seller-home__section-heading">
-          <div><p className="seller-home__kicker">MAKE A MOVE</p><h2 id="seller-actions-title">Quick actions</h2></div>
-        </div>
-        <div className="seller-home__action-row">
-          <button type="button" onClick={onOpenSelling}>
-            <span><Package size={17} aria-hidden="true" /></span><strong>Post an offer</strong><ArrowRight size={15} aria-hidden="true" />
-          </button>
-          <button type="button" onClick={onOpenWorkforce}>
-            <span><Briefcase size={17} aria-hidden="true" /></span><strong>People &amp; roles</strong><ArrowRight size={15} aria-hidden="true" />
-          </button>
-          <button type="button" onClick={onExplore}>
-            <span><Compass size={17} aria-hidden="true" /></span><strong>Explore Wairo</strong><ArrowRight size={15} aria-hidden="true" />
-          </button>
-        </div>
-      </section>
+      <NextMoveCard position={position} denied={positionDenied} className="seller-home__next-move" />
+
+      <MallShelf
+        id="doors"
+        kicker="THE FLOOR PLAN"
+        title="Where to next?"
+        note="Every door here is a screen that exists. The plank is the shelf; the tags are the board’s own counts."
+        doors={doors}
+        fit="row"
+        seeAllLabel="Directory"
+        onSeeAll={() => goHash('menu')}
+      />
+
+      <MallShelf
+        id="moving"
+        kicker="FROM THE BOARD"
+        title="What’s moving"
+        note="Offers and gatherings people listed in the last stretch. The board’s own order — nothing ranked for you."
+        doors={[]}
+        fit="row"
+        seeAllLabel="See the board"
+        onSeeAll={() => openMarket('all')}
+        empty={
+          feed.length > 0 ? null : (
+            <p className="seller-home__read-state">
+              {board ? 'The board has nothing listed right now.' : 'The board could not be read just now.'}{' '}
+              <button type="button" className="seller-home__text-action" onClick={() => openMarket('all')}>Open the market</button>
+            </p>
+          )
+        }
+      >
+        {feed.length > 0 && (
+          <ActivityReel items={feed.slice(0, 8)} onOpenItem={openFeedItem} className="seller-home__reel" />
+        )}
+      </MallShelf>
 
       <section className="seller-home__spaces" aria-labelledby="seller-spaces-title">
         <div className="seller-home__section-heading">
           <div>
-            <p className="seller-home__kicker">YOUR BUSINESS, IN CONTEXT</p>
+            <p className="seller-home__kicker">THE SHOPS YOU RUN</p>
             <h2 id="seller-spaces-title">Spaces</h2>
             <p className="seller-home__section-note">Where offers, conversations and community come together.</p>
           </div>
@@ -489,6 +766,27 @@ export function SellerHome({
         )}
       </section>
 
+      {spacesStatus === 'ready' && (
+        <CirclesStrip
+          spaces={activeSpaces.length}
+          circles={myCircles}
+          needsYou={attentionItems.length}
+          onView={() => (spacesStatus === 'ready' && activeSpaces.length > 0 ? onOpenSpaces() : onCreateSpace())}
+        />
+      )}
+
+      <section className="seller-home__shelf-block" aria-labelledby="earn-title">
+        <div className="seller-home__section-heading">
+          <div>
+            <p className="seller-home__kicker">MONEY RAILS YOU ARE ON</p>
+            <h2 id="earn-title">Earning, beyond one shop</h2>
+          </div>
+        </div>
+        <EarnStrip onOpenEarn={() => openYou('earn')} />
+      </section>
+
+      <PlannedWeather />
+
       <section className="seller-home__activity" aria-labelledby="seller-activity-title">
         <div className="seller-home__section-heading">
           <div><p className="seller-home__kicker">REAL ROWS, RECENTLY</p><h2 id="seller-activity-title">Recent activity</h2></div>
@@ -514,7 +812,7 @@ export function SellerHome({
       </section>
 
       {announcement && (
-        <aside className="seller-home__announcement" aria-label="Announcement">
+        <aside className="mall-notice seller-home__announcement" aria-label="Announcement">
           <span className="seller-home__announcement-mark" aria-hidden="true">
             {announcement.imageUrl ? <img src={briefApi.mediaFileUrl(announcement.imageUrl)} alt="" loading="lazy" /> : <Bell size={17} />}
           </span>

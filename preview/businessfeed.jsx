@@ -121,8 +121,35 @@ async function mount(element) {
 (async () => {
   await mount(React.createElement(CityFeedView, {}));
   assert.ok(document.querySelector('[data-testid="business-feed"]'));
-  assert.equal(document.querySelector('[aria-label="Browse the board"]'), null);
-  pass('default discovery is the mixed feed, not duplicated supply shelves');
+  // What this check is really about: the face of discovery is the mixed feed, not
+  // the supply shelves and not the picker wall. It used to pin that by demanding
+  // `[aria-label="Browse the board"]` be ABSENT — i.e. it forbade the entry itself,
+  // which contradicted errandslobby and townhubs (both require that one entry) and
+  // left the rooms reachable only from a link at the end of the feed. Pinned now
+  // on the structure, positively: no tile wall, one entry, and the entry opens the
+  // picker in place rather than navigating away. (A jsdom element is also the last
+  // thing `assert` should be asked to print: formatting it as an error message is
+  // what ate the heap and reported this suite as "Killed".)
+  assert.equal(document.querySelectorAll('button[role="tab"]').length, 0,
+    'no picker wall on the face of the feed');
+  assert.equal(document.querySelectorAll('[aria-label="Browse the board"]').length, 1,
+    'the feed offers exactly one entry into the board');
+  assert.equal(
+    document.querySelector('[role="dialog"][aria-label="Browse the board"]'),
+    null,
+    'the picker is closed until it is asked for'
+  );
+  await click(document.querySelector('button.bf-browse'));
+  assert.ok(
+    document.querySelector('[role="dialog"][aria-label="Browse the board"]'),
+    'the one entry opens the board directory in place'
+  );
+  assert.ok(document.body.textContent.includes('The flows'),
+    'the picker brings the taxonomy with it');
+  await click(document.querySelector('[aria-label="Close the picker"]'));
+  assert.equal(document.querySelector('[role="dialog"][aria-label="Browse the board"]'), null,
+    'closing the picker returns to the feed');
+  pass('default discovery is the mixed feed, one entry, no duplicated shelves');
   await mount(
     React.createElement(BusinessFeed, {
       onBrowse: (r) => (destination = r),

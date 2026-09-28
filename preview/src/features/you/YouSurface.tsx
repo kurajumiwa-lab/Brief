@@ -17,6 +17,7 @@ import { HowBriefWorks } from "./HowBriefWorks";
 import { hrefForDest } from "../../app/surfaces";
 import { GuardianNetwork } from "./GuardianNetwork";
 import { Vault } from "../../components/vault/Vault";
+import { StandingLine } from '../home/StandingLine';
 import { PositionCard } from "../home/PositionCard";
 import { CommitmentsCard } from "../home/CommitmentsCard";
 import { ReciprocityCard } from "../home/ReciprocityCard";
@@ -504,6 +505,15 @@ export function YouSurface({
 
       {section === "standing" && shelf("standing", (
         <div className="space-y-3">
+          {/* One line, before the three cards: where you actually stand, in the
+              counts themselves. The shelf already holds all three reads, so this
+              costs no request — and StandingLine renders nothing at all when a
+              read failed, so a missing row never becomes an invented standing. */}
+          <StandingLine
+            position={position}
+            commitments={commitments}
+            reciprocity={reciprocity}
+          />
           <PositionCard position={position} />
           <CommitmentsCard commitments={commitments} />
           <ReciprocityCard reciprocity={reciprocity} />

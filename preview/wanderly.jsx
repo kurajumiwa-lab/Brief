@@ -258,7 +258,7 @@ const pass = (s) => { passed++; console.log('PASS ' + s); };
     await wait(() => document.querySelector('[data-testid="seller-home"]'), 'home');
     assert.equal(document.querySelectorAll('.compact-work-entry').length, 0);
     await click(await wait(() => document.querySelector('[aria-label="Open all sections"]'), 'menu'));
-    await click(await wait(() => by('wanderly'), 'Wanderly menu entry'));
+    await click(await wait(() => by('menu-tile-wanderly'), 'Wanderly menu entry'));
     await wait(() => document.querySelector('[data-testid="wanderly"]'), 'menu into Wanderly');
     assert.equal(document.querySelector('[data-testid="nav-sheet-panel"]'), null);
     pass('actual shell aliases and drawer open one product, bypass onboarding, and do not leave a modal behind');

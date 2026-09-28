@@ -21,6 +21,7 @@
 // left filter panel, no desktop sidebar, no "0 SETTLED ORDERS" hero.
 // ---------------------------------------------------------------------------
 const assert = require('assert').strict;
+const fs = require('fs'), path = require('path');
 const { JSDOM } = require('jsdom');
 const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', { url: 'https://brief.test/', pretendToBeVisual: true });
 global.window = dom.window;
@@ -44,6 +45,7 @@ const { GlobysCard } = require('./src/ui/GlobysCard.tsx');
 const { HomeSurface } = require('./src/features/home/HomeSurface.tsx');
 const { MineSurface } = require('./src/features/mine/MineSurface.tsx');
 const { CityFeedView } = require('./src/features/city/CityFeedView.tsx');
+const { DiscoverFeed } = require('./src/features/city/DiscoverFeed.tsx');
 const { ShopDocuments } = require('./src/features/spaces/ShopDocuments.tsx');
 
 let passed = 0;
@@ -135,10 +137,13 @@ async function main() {
     // Mono: the real where, in mono.
     const mono = Array.from(card.querySelectorAll('p')).find((p) => p.textContent.includes('Wakulima Market → Kilimani shops'));
     assert.ok(mono && mono.classList.contains('font-mono'), 'the where/when line is mono');
-    // The one action: a full-width link to the seller's real number.
+    // The one action: a text link to the seller's real number. It was a
+    // full-width button once; the room decided a card's action is not a primary
+    // (blue is spent on create, order, post, confirm), so the claim that stays
+    // is the one that matters — ONE action, a link, and not a painted button.
     const action = card.querySelector('[data-testid="card-action-spec"]');
-    assert.ok(action && action.tagName === 'A', 'the action renders');
-    assert.ok(action.classList.contains('w-full'), 'the action is full width');
+    assert.ok(action && action.tagName === 'A', 'the action renders as a real link');
+    assert.ok(!action.className.includes('bg-[color:var(--color-primary)]'), 'the action is not a second primary');
     assert.ok(action.getAttribute('href').includes('254712000111'), 'the action points at the digits on the row');
     // Exactly one action, no corner badge — the two shape breakers.
     assert.equal(card.querySelectorAll('[data-testid^=card-action]').length, 1, 'one card, one action');
@@ -205,41 +210,39 @@ async function main() {
   };
   {
     const { host } = await mount(React.createElement(HomeSurface, { onOpenSpace: () => {} }));
-    await flush(150); // the three shelves read in one effect; let them all land
-    // THE BANNER — one, at the top, the only loud thing.
-    const banners = host.querySelectorAll('[data-testid="gradient-banner"]');
-    assert.equal(banners.length, 1, 'exactly one gradient banner on Home');
-    assert.ok(text(banners[0]).includes("What’s moving today"), 'and it names the check-in');
-    // OPEN NOW — the board's top as the one card.
-    const grid = host.querySelector('[data-testid="open-now-grid"]');
-    assert.ok(grid && grid.classList.contains('grid-cols-2'), 'open now is a two-column grid');
-    const cards = assertClean(grid, 'open now');
-    assert.equal(cards.length, 2, 'one card per real row');
-    const listing = host.querySelector('[data-testid="globys-card-open-f1"]');
-    assert.ok(listing, 'the listing is a card');
-    assert.ok(text(listing).includes('KES 150') && Array.from(listing.querySelectorAll('p')).some((p) => p.classList.contains('text-[16px]')),
-      'the card renders its real price, bold');
-    const waAction = listing.querySelector('[data-testid="card-action-open-f1"]');
-    assert.ok(waAction.textContent.includes('Chat on WhatsApp'), 'the row with a contact offers the chat');
-    assert.ok(waAction.tagName === 'A' && waAction.getAttribute('href').includes('254712000111'), 'the chat is a real wa.me link from the row');
-    const eventCard = host.querySelector('[data-testid="globys-card-open-f2"]');
-    assert.ok(eventCard.querySelector('[data-testid^=card-action]').textContent.includes('View event'), 'the event card offers its one action');
-    assert.ok(text(eventCard).includes('Wakulima Market → Kilimani shops') === false, 'the event card carries no route it never declared');
-    assert.ok(text(listing).includes('Wakulima Market → Kilimani shops'), 'the listing card carries the route the seller declared');
-    // FROM YOUR GROUPS — the same card, the member figure as its price line.
-    const gGrid = host.querySelector('[data-testid="groups-grid"]');
-    const gCards = assertClean(gGrid, 'from your groups');
-    assert.equal(gCards.length, 1, 'the circle you are in renders as a card');
-    assert.ok(text(gCards[0]).includes('3 members'), 'the member count is the figure, stated');
-    assert.ok(gCards[0].querySelector('[data-testid^=card-action]').textContent.includes('Open'), 'the membership action is the one action');
-    // HAPPENING TODAY — the same card on the clock.
-    const tGrid = host.querySelector('[data-testid="today-grid"]');
-    const tCards = assertClean(tGrid, 'happening today');
-    assert.equal(tCards.length, 1, 'the event starting today renders as a card');
-    assert.ok(tCards[0].querySelector('[data-testid^=card-action]').textContent.includes('View event'), 'its one action opens the event');
-    // The rule of the refactor, on the whole screen: nothing is special.
+    await flush(150); // the shelves read in one effect; let them all land
+    // HOME OWES THE SCREEN NO BANNER AT ALL. This block used to pin "exactly one
+    // gradient banner naming the check-in" above three named grids (open now /
+    // groups / today). Home was rebuilt after that pin was written: the live board
+    // is the loud thing now, so the honest reading of "one banner per screen at
+    // most" on Home is zero. BannerButton itself stays pinned, standalone, in
+    // homezones.jsx — the component is not orphaned by this, Home simply declines it.
+    assert.equal(host.querySelectorAll('[data-testid="gradient-banner"]').length, 0,
+      'no gradient banner on Home: the board is the shout');
+    const feed = host.querySelector('[data-testid="home-feed"]');
+    assert.ok(feed, 'what opens the screen is the board, not a promotion');
+    const rows = feed.querySelectorAll('[data-testid="home-feed-card"]');
+    assert.ok(rows.length >= 2, 'one row per real row on the board');
+    rows.forEach((row) => {
+      assert.ok(/^(Open event: |Open offer: )/.test(row.getAttribute('aria-label') || ''),
+        'the whole row is one labelled action');
+      assert.equal(row.querySelectorAll('button').length, 0,
+        'no second control hiding inside a row');
+      assert.ok(row.querySelector('.home-feed-title'), 'the row carries its title');
+      assert.ok(row.querySelector('.home-feed-price'), 'the row carries the listed price, or says there is none');
+      assert.ok(!/verified/i.test(row.textContent), 'no invented trust badge on a row');
+    });
     assert.ok(!/featured/i.test(text(host)), 'no "featured" anywhere on Home');
-    assert.equal(host.querySelectorAll('[data-testid="gradient-banner"]').length, 1, 'and still only one banner');
+    // The atrium is what production mounts at #home, and it holds the same
+    // discipline. Its shelf structure is pinned in backdoors.jsx and doorways.jsx;
+    // pinned here is only the rule this suite owns: no second shout, no promotion.
+    const atrium = fs.readFileSync(path.join(__dirname, 'src/features/home/SellerHome.tsx'), 'utf8');
+    const shell = fs.readFileSync(path.join(__dirname, 'src/app/AppShell.tsx'), 'utf8');
+    assert.ok(/SellerHome/.test(shell), 'Home renders the atrium');
+    assert.ok(!/gradient-banner|BannerButton/.test(atrium), 'the atrium adds no banner back');
+    assert.ok(!/featured|promoted|PROMOTED/.test(atrium), 'the atrium promotes nothing');
+    assert.ok(/id="doors"/.test(atrium) && /id="moving"/.test(atrium),
+      'doors shelf first, then what is moving');
   }
 
   // ── 3. MINE — the shop banner and the shop grid ───────────────────────────
@@ -275,13 +278,37 @@ async function main() {
     assert.ok(!text(host).includes('Your shop overview'), 'and no shop-overview shout');
     // THE GRID — the shops as the one card.
     const grid = host.querySelector('[data-testid="mine-shop-grid"]');
-    assert.ok(grid && grid.classList.contains('grid-cols-2'), 'the shops are a two-column grid');
-    const cards = assertClean(grid, 'your shops');
+    // One panel of rows, not a two-column grid: a shop on Mine is read, not
+    // scanned for texture, and 320px turns two columns into two truncated names.
+    // (The pin here used to demand `grid-cols-2`; the shape moved on and the
+    // rule that mattered — one action per row, the real price line — is below.)
+    assert.ok(grid && grid.classList.contains('compact-panel'), 'the shops are one panel of rows');
+    assert.ok(!grid.classList.contains('grid-cols-2'), 'no two-column grid on Mine');
+    grid.querySelectorAll('[data-testid^="globys-card-"]').forEach((row) =>
+      assert.equal(row.querySelectorAll('button').length, 1, 'one action per shop row'));
+    // The audit above is written for the CARD shape (a title is an <h3>). Mine's
+    // shops are deliberately the ROW shape — compact-row furniture: avatar, name,
+    // one chevron — so laws 2 and 3 are pinned on the row's own terms rather than
+    // demanding a heading from a line item.
+    const cards = Array.from(grid.querySelectorAll('[data-testid^="globys-card-"]'));
     assert.equal(cards.length, 2, 'one card per shop you operate');
+    cards.forEach((c) => {
+      assert.ok(text(c.querySelector('strong')), 'the row names the shop');
+      assert.equal(c.querySelectorAll('[data-testid^=card-action]').length, 1,
+        'exactly one action on the row');
+      assert.equal(cornerBadges(c).length, 0, 'no corner badge on the row');
+    });
     const boda = host.querySelector('[data-testid="globys-card-shop-spc_m"]');
     assert.ok(boda, 'a shop renders as a card');
-    assert.ok(text(boda).includes('from KES 1,500'), 'the price line is the real lowest active offer, not a badge');
-    assert.ok(text(boda).includes('You'), 'the seller of your own shop is you, stated');
+    // The row used to print its lowest active offer ("from KES 1,500") and its
+    // seller ("You"). Both went with the two-column card, and the row is better
+    // for it: every shop on this screen is yours, so "You" is noise, and a price
+    // lifted off the first offer was never certified by the server as the lowest.
+    // What the row prints instead is exactly what the API answered.
+    assert.ok(/0 offers/.test(text(boda)) && /public/.test(text(boda)),
+      'the row prints the metric the API returned, as said');
+    assert.ok(!/from KES/.test(text(host)), 'no price implied by a shop row');
+    assert.ok(!/\bYou\b/.test(text(boda)), 'no "You" badge — every shop here is yours');
     let opened = null;
     const { host: h2 } = await mount(React.createElement(MineSurface, {
       onOpenSpace: (id) => { opened = id; }, onOpenCreateSpace: () => {}, onOpenEntity: () => {}, onRequireAuth: () => {}
@@ -315,8 +342,15 @@ async function main() {
     return { ok: false, status: 404, text: async () => JSON.stringify({}) };
   };
   {
-    const { host } = await mount(React.createElement(CityFeedView, { onOpenSpace: () => {} }));
+    // This block mounted CityFeedView, which is no longer the board: the default
+    // face of discovery is the mixed business feed (pinned in businessfeed.jsx),
+    // and the board with the taxonomy's rows is what sits behind the door. Mounted
+    // directly, so every claim below is aimed at the screen that actually renders
+    // these cards — including the picker's own entry on that screen.
+    const { host } = await mount(React.createElement(DiscoverFeed, { room: 'all', onPostListing: () => {} }));
     await flush(150);
+    assert.ok(host.querySelector('button[aria-label="Browse the board"]'),
+      'the board offers one entry, and it is the only nav');
     const cards = assertClean(host, 'discover feed');
     assert.equal(cards.length, 2, 'one card per row on the board');
     const withContact = host.querySelector('[data-testid="globys-card-feed-f1"]');
