@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { BusinessFeed } from '../discovery/BusinessFeed';
 import { DiscoverFeed } from './DiscoverFeed';
 import type { DiscoverRoom } from './taxonomy';
 import { soundEngine } from '../../utils/SoundEngine';
@@ -33,10 +34,8 @@ import { soundEngine } from '../../utils/SoundEngine';
 
 export interface CityFeedViewProps {
   /**
-   * Which room the board opens on. 'all' is the default: the mixed supply view
-   * with the four flow tiles on top of it, so the marketplace is the first thing
-   * on screen either way. The taxonomy's own note is that All exists for the
-   * person who does not yet know which flow they want.
+   * 'all' opens mixed business discovery. Explicit supply flows and legacy
+   * rooms keep their existing implementations behind the feed's browse links.
    */
   initialSubTab?: DiscoverRoom;
   /** Kept for the shell's contract; a space is opened from Mine now. */
@@ -48,6 +47,8 @@ export interface CityFeedViewProps {
    * half-copied form. The shell bumps the nonce; the board answers once.
    */
   sellingSignal?: number;
+  onSellingHandled?: () => void;
+  onMixedViewChange?: (mixed: boolean) => void;
   /**
    * "Start a run" (kind 'delivery') and "Post an errand" (kind null) from
    * Home's tile or the bar's [+]: both land on the errands board with the
@@ -61,20 +62,25 @@ export interface CityFeedViewProps {
 export const CityFeedView: React.FC<CityFeedViewProps> = ({
   initialSubTab = 'all',
   sellingSignal = 0,
+  onSellingHandled,
+  onMixedViewChange,
   errandSignal = null,
   onOpenSpace,
   className = ''
 }) => {
+  const [legacy, setLegacy] = useState(false);
   const [room, setRoom] = useState<DiscoverRoom>(initialSubTab);
 
   // No second create-form. The counter is where a listing (and the shop it
   // belongs to) is actually written, so "Post an offer" lands on its Selling
   // tab instead of mimicking it with a half-copied form.
+  React.useEffect(() => { onMixedViewChange?.(room === 'all' && !legacy); }, [room, legacy, onMixedViewChange]);
   const [counterSection, setCounterSection] = useState<'browse' | 'orders' | 'selling'>('browse');
   const [counterKey, setCounterKey] = useState(0);
 
   const openSelling = () => {
     soundEngine.play('tap');
+    setLegacy(true);
     setRoom('all');
     setCounterSection('selling');
     setCounterKey((k) => k + 1);
@@ -82,7 +88,7 @@ export const CityFeedView: React.FC<CityFeedViewProps> = ({
 
   // The shell's Create sheet asked for the Selling tab. Answer once per bump.
   React.useEffect(() => {
-    if (sellingSignal > 0) openSelling();
+    if (sellingSignal > 0) { openSelling(); onSellingHandled?.(); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sellingSignal]);
 
@@ -100,14 +106,17 @@ export const CityFeedView: React.FC<CityFeedViewProps> = ({
     }
   }, [errandSignal, initialSubTab]);
 
+  if (room === 'all' && !legacy) return <BusinessFeed onBrowse={r => { if (r === 'all') setLegacy(true); else setRoom(r); }} onPostListing={openSelling} />;
+
   return (
     <div className={`space-y-5 max-w-xl mx-auto ${className}`}>
       {/* No Discover heading. The bar already named the door that opened this
           board; reprinting “What’s happening nearby” is a screen title that
           duplicates the journey, not a fact. Browse the board is the entry. */}
+      <button type="button" className="bf-legacy-back" onClick={() => { setLegacy(false); setRoom('all'); setCounterSection('browse'); window.location.hash = 'city'; }}>← Back to the business feed</button>
       <DiscoverFeed
         room={room}
-        onRoomChange={(r) => setRoom(r)}
+        onRoomChange={(r) => { if (r === 'events') window.location.hash = 'wanderly'; else setRoom(r); }}
         onPostListing={openSelling}
         counterSection={counterSection}
         counterKey={counterKey}

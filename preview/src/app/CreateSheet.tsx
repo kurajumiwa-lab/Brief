@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Package, CalendarPlus, Truck, Bike, X } from 'lucide-react';
+import { Package, CalendarPlus, Truck, Bike, Briefcase, X } from 'lucide-react';
 import { soundEngine } from '../utils/SoundEngine';
 
 // ---------------------------------------------------------------------------
@@ -21,7 +21,7 @@ import { soundEngine } from '../utils/SoundEngine';
 //   Post an errand → the errand board with the composer open
 // ---------------------------------------------------------------------------
 
-export type CreateActionId = 'offer' | 'event' | 'run' | 'errand';
+export type CreateActionId = 'offer' | 'event' | 'run' | 'errand' | 'work';
 
 export interface CreateAction {
   id: CreateActionId;
@@ -31,9 +31,12 @@ export interface CreateAction {
   icon: React.ReactNode;
 }
 
-/** The sheet, as data — asserted in `doorways.jsx`, so the four verbs cannot
-    quietly become five or three. */
+/** The sheet, as data — every verb resolves to its creation surface. */
 export const CREATE_ACTIONS: CreateAction[] = [
+  {
+    id: 'work', label: 'Create work', hint: 'Buy a verified outcome from your distributed team',
+    icon: <Briefcase className="w-4 h-4" />
+  },
   {
     id: 'offer',
     label: 'Post an offer',
@@ -42,8 +45,8 @@ export const CREATE_ACTIONS: CreateAction[] = [
   },
   {
     id: 'event',
-    label: 'Host an event',
-    hint: 'Publishes to the board the moment it is written',
+    label: 'Host a party or trip',
+    hint: 'A plan on Wanderly',
     icon: <CalendarPlus className="w-4 h-4" />
   },
   {

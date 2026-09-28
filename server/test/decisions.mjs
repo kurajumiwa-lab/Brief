@@ -203,18 +203,22 @@ test("D6: GET /api/events ignores featured and sort=popularity, and serves no co
   const srv = app.listen(0);
   const port = srv.address().port;
   const { token } = auth.issueSession(host.id);
-  // /api/events is NOT in index.js PUBLIC_WITHOUT_SESSION, so the session gate
-  // answers before the route — even though routes/events.js calls itself "the
-  // public browsing surface". Same mismatch as /api/table-banking/templates.
-  // Authenticated here so the assertion measures D6, not the gate; the gate is
-  // pinned separately below and flagged for an operator decision.
+  // Wanderly browse exposes the public listing projection, never attendance.
   const get = async (q) => {
     const r = await fetch(`http://127.0.0.1:${port}/api/events${q}`, { headers: { authorization: `Bearer ${token}` } });
     return { status: r.status, body: await r.json().catch(() => null) };
   };
   try {
     const anon = await fetch(`http://127.0.0.1:${port}/api/events`);
-    assert.equal(anon.status, 401, "the events hub is behind the session gate today (pinning reality)");
+    assert.equal(anon.status, 200, "Wanderly browse is public");
+    const anonymous = await anon.json();
+    for (const row of anonymous.events ?? []) {
+      for (const key of ['ownerId', 'attendees', 'registrations', 'ticketCode', 'popularity', 'featured']) assert.equal(key in row, false);
+    }
+    const categories = await fetch(`http://127.0.0.1:${port}/api/events/categories`);
+    assert.equal(categories.status, 200);
+    const write = await fetch(`http://127.0.0.1:${port}/api/events`, { method: 'POST' });
+    assert.equal(write.status, 401, 'the public exception is GET-only');
     const plain = await get("");
     assert.equal(plain.status, 200);
     const featured = await get("?featured=1");
@@ -313,6 +317,28 @@ test("D6: the market routes 404, while the ticket routes stay live", async () =>
   } finally {
     srv.close();
   }
+});
+
+test("Wanderly: unlisted plans stay out of all public discovery contexts", () => {
+  const hidden = publish('Unlisted gathering', iso(4), 10);
+  store.update('campaigns', hidden.id, { unlisted: true, seriesId: 'shared-series' });
+  store.update('campaigns', sooner.id, { seriesId: 'shared-series' });
+  for (const rows of [events.browseEvents({}).events, events.relatedEvents(sooner), events.hostEvents(host.id, sooner.id), events.seriesOccurrences('shared-series', sooner.id)]) {
+    assert.ok(!rows.some(row => row.slug === hidden.publicSlug));
+  }
+  assert.ok(campaigns.getPublicBySlug(hidden.publicSlug), 'the direct unlisted link still works');
+});
+
+test("Wanderly: free account reservations issue one ticket without any ledger event", () => {
+  const c = publish('Free account admission', iso(5), 10);
+  const before = store.all('ledgerTransactions').length;
+  const registration = campaigns.register(c, { attendeeRef: 'wanderly-free-ref', userId: r1.id });
+  campaigns.register(c, { attendeeRef: 'wanderly-free-ref', userId: r1.id });
+  const tickets = store.filter('tickets', t => t.registrationId === registration.id);
+  assert.equal(tickets.length, 1);
+  assert.equal(tickets[0].ownerUserId, r1.id);
+  assert.equal(tickets[0].codeVersion, 1);
+  assert.equal(store.all('ledgerTransactions').length, before);
 });
 
 await run();

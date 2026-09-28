@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { X, Repeat } from 'lucide-react';
 import * as briefApi from '../../api/briefApi';
 import type { EventRecurrence, Festival } from '../../api/types';
@@ -20,7 +20,8 @@ export interface HostEventSheetProps {
   open: boolean;
   onClose: () => void;
   /** Called after the row exists AND is published, with its title. */
-  onPublished?: (title: string) => void;
+  onPublished?: (title: string, slug?: string) => void;
+  embedded?: boolean;
 }
 
 const CATEGORIES: Array<{ id: string; label: string }> = [
@@ -31,7 +32,9 @@ const CATEGORIES: Array<{ id: string; label: string }> = [
   { id: 'contribution', label: 'Causes & pots' }
 ];
 
-export function HostEventSheet({ open, onClose, onPublished }: HostEventSheetProps) {
+export function HostEventSheet({ open, onClose, onPublished, embedded = false }: HostEventSheetProps) {
+  const mounted = useRef(true);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   const [draft, setDraft] = useState({
     title: '',
     description: '',
@@ -39,6 +42,7 @@ export function HostEventSheet({ open, onClose, onPublished }: HostEventSheetPro
     startsAt: '',
     endsAt: '',
     price: '',
+    currency: 'KES',
     capacity: '',
     unlisted: false,
     category: 'event',
@@ -48,6 +52,7 @@ export function HostEventSheet({ open, onClose, onPublished }: HostEventSheetPro
     isIndefinite: true,
     untilDate: ''
   });
+  const [savedId, setSavedId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Festival details (lineup, zones, tiers, schedule, ...) — all owner-stated.
@@ -63,6 +68,7 @@ export function HostEventSheet({ open, onClose, onPublished }: HostEventSheetPro
       startsAt: '',
       endsAt: '',
       price: '',
+    currency: 'KES',
       capacity: '',
       unlisted: false,
       category: 'event',
@@ -73,6 +79,7 @@ export function HostEventSheet({ open, onClose, onPublished }: HostEventSheetPro
       untilDate: ''
     });
     setError(null);
+    setSavedId(null);
     setBusy(false);
     setFestival(null);
     onClose();
@@ -80,6 +87,9 @@ export function HostEventSheet({ open, onClose, onPublished }: HostEventSheetPro
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (busy) return;
+    if (draft.endsAt && draft.startsAt && Date.parse(draft.endsAt) <= Date.parse(draft.startsAt)) { setError('End time must be after the start.'); return; }
+    if (draft.price && (!Number.isFinite(Number(draft.price)) || Number(draft.price) < 0)) { setError('Enter a valid price.'); return; }
     if (!draft.title.trim()) { setError('Give your event a title.'); return; }
     setBusy(true);
     setError(null);
@@ -100,48 +110,53 @@ export function HostEventSheet({ open, onClose, onPublished }: HostEventSheetPro
       };
     }
 
-    const created = await briefApi.createCampaign({
+    const body = {
       title: draft.title.trim(),
       type: (draft.category || 'event') as any,
       description: draft.description.trim() || undefined,
       location: draft.location.trim() || null,
-      startsAt: draft.startsAt || null,
-      endsAt: draft.endsAt || null,
+      startsAt: draft.startsAt ? new Date(draft.startsAt).toISOString() : null,
+      endsAt: draft.endsAt ? new Date(draft.endsAt).toISOString() : null,
       price: draft.price.trim() === '' ? 0 : Number(draft.price),
+      currency: draft.currency,
       capacity: draft.capacity.trim() === '' ? null : Number(draft.capacity),
       unlisted: draft.unlisted,
       metadata: recurrence ? { recurrence } : undefined,
-      recurrence: recurrence ?? undefined,
+      recurrence,
       festival: assembleFestival(festival)
-    });
+    };
+    const created = savedId ? await briefApi.updateCampaign(savedId, body) : await briefApi.createCampaign(body);
     if (!created.ok) {
       setBusy(false);
       setError(created.error ?? 'Could not create the event.');
       return;
     }
+    setSavedId(created.data.id);
     const published = await briefApi.campaignAction(created.data.id, 'publish');
+    if (!mounted.current) return;
     setBusy(false);
     if (!published.ok) {
       setError(`Event saved as a draft, but publishing failed: ${published.error ?? 'unknown'}`);
       return;
     }
-    onPublished?.(created.data.title);
     close();
+    onPublished?.(published.data.title, published.data.publicSlug);
   };
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center p-4 overflow-y-auto" style={{ background: 'rgba(13,27,42,0.65)' }} role="dialog" aria-modal="true" aria-label="Host an event">
-      <div className="w-full max-w-lg bg-[color:var(--color-paper)] rounded-3xl overflow-hidden p-6 space-y-4 brief-lift-3 my-auto max-h-[90vh] overflow-y-auto">
+    <div className={embedded ? "" : "fixed inset-0 z-[70] flex items-end sm:items-center justify-center p-4 overflow-y-auto"} style={embedded ? undefined : { background: "rgba(13,27,42,0.65)" }} role={embedded ? "region" : "dialog"} aria-modal={embedded ? undefined : true} aria-label="Host an event">
+      <div className={embedded ? "wl-booking bg-white rounded-xl p-5 space-y-4" : "w-full max-w-lg bg-[color:var(--color-paper)] rounded-3xl overflow-hidden p-6 space-y-4 brief-lift-3 my-auto max-h-[90vh] overflow-y-auto"}>
         <div className="flex items-center justify-between">
           <div>
             <span className="text-[11px] font-black uppercase tracking-wider" style={{ color: 'var(--color-primary)' }}>
               Host an event or trip
             </span>
-            <h3 className="text-base font-black mt-1" style={{ color: 'var(--brief-ink)' }}>Put your event on the board</h3>
+            <h3 className="text-base font-black mt-1" style={{ color: 'var(--brief-ink)' }}>A party, a trip, your people.</h3>
           </div>
           <button
             type="button"
             onClick={close}
+            disabled={busy}
             aria-label="Close the event form"
             className="p-2 rounded-full cursor-pointer"
             style={{ background: 'var(--color-well)', color: 'var(--brief-muted)' }}
@@ -151,7 +166,7 @@ export function HostEventSheet({ open, onClose, onPublished }: HostEventSheetPro
         </div>
 
         <p className="text-xs" style={{ color: 'var(--brief-muted)' }}>
-          No photo required. It publishes immediately to the board. Stated dates, locations and prices only — no seeded numbers.
+          Set the place, dates and price. Multi-day plans appear under trips. Times use your device’s timezone.
         </p>
 
         {error && <p role="alert" className="text-xs font-bold" style={{ color: 'var(--color-danger)' }}>{error}</p>}
@@ -161,7 +176,7 @@ export function HostEventSheet({ open, onClose, onPublished }: HostEventSheetPro
             Event title
             <input
               type="text"
-              placeholder="e.g. Kilimani Street Market, Saturday Chama Meetup"
+              placeholder="e.g. Nairobi rooftop night, Naivasha weekend"
               aria-label="Event title"
               value={draft.title}
               onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
@@ -310,7 +325,7 @@ export function HostEventSheet({ open, onClose, onPublished }: HostEventSheetPro
           </label>
 
           <label className="block text-[12px] font-bold" style={{ color: 'var(--brief-ink)' }}>
-            Entry price (KES, per person)
+            Entry price (per person)
             <input
               type="number"
               min={0}
@@ -323,8 +338,14 @@ export function HostEventSheet({ open, onClose, onPublished }: HostEventSheetPro
             />
           </label>
 
+          <label className="block text-[12px] font-bold">Currency
+            <select aria-label="Currency" value={draft.currency} onChange={e => setDraft(d => ({ ...d, currency: e.target.value }))} className="mt-1 w-full px-3.5 py-2.5 rounded-xl border">
+              {['KES', 'UGX', 'TZS', 'RWF', 'USD'].map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </label>
+
           <label className="block text-[12px] font-bold" style={{ color: 'var(--brief-ink)' }}>
-            Team size (max people)
+            Capacity (optional)
             <input
               type="number"
               min={1}
@@ -350,8 +371,7 @@ export function HostEventSheet({ open, onClose, onPublished }: HostEventSheetPro
             <span className="text-[12px]" style={{ color: 'var(--brief-ink)' }}>
               <strong>Keep unlisted — share by link only.</strong>{' '}
               <span style={{ color: 'var(--color-text-muted)' }}>
-                Available to anyone with the link, but not posted to the public board.
-                Good for invite-only group experiences like a safari team or rally.
+                Anyone with the link can view it. Hidden from browsing.
               </span>
             </span>
           </label>
@@ -361,11 +381,11 @@ export function HostEventSheet({ open, onClose, onPublished }: HostEventSheetPro
               schedule, music, sponsors, FAQ). Only what you fill in shows. */}
           <details className="rounded-xl border" style={{ borderColor: 'var(--brief-line)' }}>
             <summary className="px-4 py-3 text-[13px] font-black cursor-pointer select-none" style={{ color: 'var(--brief-ink)' }}>
-              Festival details (lineup, map, tickets, FAQ)
+              Add a line-up, itinerary or FAQ
             </summary>
             <div className="px-4 pb-4 pt-1">
               <p className="text-[11px] mb-3" style={{ color: 'var(--brief-muted)' }}>
-                Everything you add is your own wording. A section you leave empty won&apos;t appear on the event page.
+                Only filled sections appear on your plan.
               </p>
               <FestivalBuilder value={festival} onChange={setFestival} />
             </div>
@@ -377,7 +397,7 @@ export function HostEventSheet({ open, onClose, onPublished }: HostEventSheetPro
             className="w-full py-3 rounded-2xl text-xs font-black cursor-pointer disabled:opacity-50"
             style={{ background: 'var(--color-primary)', color: 'var(--accent-ink)' }}
           >
-            {busy ? 'Publishing…' : 'Publish event'}
+            {busy ? 'Publishing…' : savedId ? 'Retry publishing' : 'Publish plan'}
           </button>
         </form>
       </div>

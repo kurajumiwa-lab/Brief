@@ -1,4 +1,4 @@
-/* BRIEF SERVICE WORKER — the offline shell.
+/* WAIRO SERVICE WORKER — the offline shell.
  *
  * Rules, honestly stated:
  *   1. Hashed build assets (/assets/*): cache-first. The filenames change on
@@ -11,8 +11,8 @@
  *      (src/api/offlineQueue.ts) with server-side idempotency keys.
  *   4. Cross-origin (fonts, Telegram SDK): pass through untouched.
  */
-const SHELL_CACHE = 'brief-shell-v2';
-const ASSET_CACHE = 'brief-assets-v2';
+const SHELL_CACHE = 'wairo-shell-v3';
+const ASSET_CACHE = 'wairo-assets-v3';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -33,7 +33,7 @@ self.addEventListener('fetch', (event) => {
   const req = event.request;
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return; // rule 4
-  if (url.pathname.startsWith('/ingest')) return;  // rule 3: never the API
+  if (url.pathname.startsWith('/ingest') || url.pathname.startsWith('/api/')) return;  // rule 3: never the API
 
   if (req.method !== 'GET') return; // writes are the queue's job, not ours
 

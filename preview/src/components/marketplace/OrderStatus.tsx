@@ -78,6 +78,10 @@ export function OrderStatus({
         </span>
       </div>
 
+      <a href={`/track?order=${encodeURIComponent(order.id)}`} className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 underline underline-offset-2">Track order →</a>
+
+      <a href={`/reviews/${encodeURIComponent(order.listingId)}`} className="inline-flex ml-3 text-[11px] font-bold text-emerald-700 underline underline-offset-2">Product reviews →</a>
+
       {/* The server's total, not a recomputation. */}
       <p className="text-sm font-extrabold text-[var(--brief-ink)]">
         {money(order.total, order.currency)}

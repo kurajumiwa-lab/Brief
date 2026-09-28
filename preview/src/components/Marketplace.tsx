@@ -83,6 +83,7 @@ export function Marketplace({ initialSection = 'browse', hideBrowse = false }: M
   const [fresh, setFresh] = React.useState<Record<string, Order | 'loading' | 'error'>>({});
 
   const [quantity, setQuantity] = React.useState(1);
+  const [delivery, setDelivery] = React.useState({email:'',address:'',instructions:''});
   const [busyId, setBusyId] = React.useState<string | null>(null);
   // Survives re-renders without causing one: the key must stay stable across
   // a retry, and changing it must never trigger a refetch.
@@ -171,6 +172,7 @@ export function Marketplace({ initialSection = 'browse', hideBrowse = false }: M
   // --- actions -------------------------------------------------------------
 
   const openListing = async (id: string) => {
+    setDelivery({email:'',address:'',instructions:''});
     setQuantity(1);
     setNotice(null);
     orderKeyRef.current = null;
@@ -202,9 +204,9 @@ export function Marketplace({ initialSection = 'browse', hideBrowse = false }: M
     const key = orderKeyRef.current ?? (orderKeyRef.current = `${detail.id}:${quantity}:${Date.now()}`);
     const ok = await run(
       detail.id,
-      // Only listingId, quantity and the key are sent. There is no price
+      // Only order inputs and optional delivery details are sent. There is no price
       // field: the server derives the money from the listing row.
-      () => briefApi.createOrder({ listingId: detail.id, quantity, idempotencyKey: key }),
+      () => briefApi.createOrder({ listingId: detail.id, quantity, delivery, idempotencyKey: key }),
       async () => {
         await loadBrowse();
         await loadOrders();
@@ -214,6 +216,7 @@ export function Marketplace({ initialSection = 'browse', hideBrowse = false }: M
     );
     if (ok) {
       orderKeyRef.current = null;
+      setDelivery({email:'',address:'',instructions:''});
       setNotice('Order placed. It is not paid yet - arrange payment with the seller.');
       setSection('orders');
       setView({ kind: 'list' });
@@ -335,6 +338,8 @@ export function Marketplace({ initialSection = 'browse', hideBrowse = false }: M
           listing={detail}
           quantity={quantity}
           onQuantityChange={(q) => { orderKeyRef.current = null; setQuantity(q); }}
+          delivery={delivery}
+          onDeliveryChange={setDelivery}
           onOrder={placeOrder}
           onBack={() => setView({ kind: 'list' })}
           onViewVendor={openVendor}

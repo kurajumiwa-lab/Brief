@@ -1,0 +1,57 @@
+/* Wanderly's existing editorial language, now shared by browse, host & events. */
+.wanderly { --color-primary:#0d9488; --accent-ink:#fff; --color-primary-subtle:#f0fdfa; --color-bg:#f9fafb; --color-paper:#fff; --color-surface:#fff; --color-well:#f0fdfa; --color-text:#134e4a; --brief-ink:#134e4a; --brief-muted:#52646a; --color-text-muted:#52646a; --divider:#dce8e5; --brief-line:#dce8e5; --color-border:#dce8e5; --color-danger:#b42318; background:#f9fafb; color:#134e4a; min-height:100vh; font-family:Inter,system-ui,sans-serif; }
+.wanderly * { box-sizing:border-box; }
+.wanderly :is(button,a,input,select,textarea):focus-visible { outline:2px solid #0d9488; outline-offset:3px; }
+.wanderly button { cursor:pointer; }
+.wanderly button:disabled { opacity:.5; cursor:default; }
+.wanderly h1,.wanderly h2,.wanderly .wl-brand { font-family:'DM Serif Display',Georgia,serif; font-weight:400; letter-spacing:-.035em; }
+.wl-header { position:sticky; top:0; z-index:40; border-bottom:1px solid #dce8e5; background:rgba(255,255,255,.97); }
+.wl-bar { max-width:1120px; margin:auto; padding:14px 24px; display:flex; align-items:center; justify-content:space-between; gap:16px; }
+.wl-brand { display:flex; align-items:center; gap:10px; font-size:25px; text-decoration:none; color:#134e4a; }
+.wl-brand svg { background:#0d9488; color:white; border-radius:10px; padding:7px; width:36px; height:36px; }
+.wl-brand small { display:block; font:10px Inter,system-ui,sans-serif; letter-spacing:.1em; text-transform:uppercase; color:#52646a; }
+.wl-nav { display:flex; gap:6px; overflow-x:auto; }
+.wl-nav a,.wl-nav button { padding:9px 13px; font-size:13px; font-weight:600; border-radius:20px; white-space:nowrap; }
+.wl-nav [aria-current=page] { background:#f0fdfa; color:#0d766c; }
+.wl-main { max-width:1120px; padding:24px; margin:auto; }
+.wl-hero { border-radius:16px; overflow:hidden; background:#134e4a; color:white; position:relative; padding:36px; min-height:220px; display:flex; align-items:end; }
+.wl-hero img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+.wl-hero::after { content:''; position:absolute; inset:0; background:linear-gradient(90deg,rgba(19,78,74,.96),rgba(19,78,74,.35)); }
+.wl-hero > div { position:relative; z-index:1; max-width:580px; }
+.wl-hero h1 { font-size:clamp(34px,5vw,56px); line-height:1.05; margin:8px 0 12px; }
+.wl-hero p { font-size:14px; line-height:1.6; color:#e4f6f0; }
+.wl-eyebrow { font:600 10px/1.5 Inter,system-ui,sans-serif; text-transform:uppercase; letter-spacing:.15em; }
+.wl-layout { display:grid; grid-template-columns:210px minmax(0,1fr); gap:28px; margin-top:28px; }
+.wl-filters { align-self:start; position:sticky; top:95px; background:white; border:1px solid #dce8e5; border-radius:12px; padding:16px; }
+.wl-filters summary { font-weight:650; cursor:pointer; font-size:13px; }
+.wl-filters label { display:block; font-size:12px; margin:16px 0; }
+.wanderly :is(.wl-filters input,.wl-filters select) { border:1px solid #dce8e5; background:#fff; width:100%; padding:9px; margin-top:6px; border-radius:8px; }
+.wl-filter-tabs { display:flex; gap:8px; align-items:center; margin-bottom:18px; flex-wrap:wrap; }
+.wl-filter-tabs button { padding:8px 13px; border:1px solid #dce8e5; border-radius:20px; font-size:12px; background:#fff; }
+.wl-filter-tabs [aria-pressed=true] { color:white; background:#134e4a; border-color:#134e4a; }
+.wl-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; }
+.wl-card { border:1px solid #dce8e5; border-radius:12px; background:#fff; overflow:hidden; }
+.wl-card-image { height:170px; background:#e3f3ed; display:flex; align-items:center; justify-content:center; color:#0d766c; }
+.wl-card-image img { width:100%; height:100%; object-fit:cover; }
+.wl-card-body { padding:16px; }
+.wl-card h2 { overflow-wrap:anywhere; font-size:24px; line-height:1.2; margin:8px 0; }
+.wl-meta { font-size:12px; color:#52646a; display:flex; align-items:center; gap:6px; margin-top:7px; }
+.wl-card-footer { display:flex; align-items:center; justify-content:space-between; margin-top:16px; font-size:13px; gap:8px; }
+.wl-button { display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:10px 16px; border-radius:24px; font:600 12px Inter,system-ui,sans-serif; background:#0d766c; color:white; border:1px solid transparent; }
+.wl-button.quiet { background:white; border-color:#dce8e5; color:#134e4a; }
+.wl-empty { border:1px dashed #b8ccc6; padding:28px; border-radius:12px; font-size:14px; background:#fff; }
+.wl-section-head { display:flex; align-items:center; justify-content:space-between; gap:16px; margin:20px 0; }
+.wl-section-head h1,.wl-section-head h2 { font-size:30px; }
+.wl-note { font-size:12px; color:#52646a; line-height:1.5; }
+.wl-places { margin-top:28px; border-top:1px solid #dce8e5; padding-top:16px; }
+.wl-places summary { cursor:pointer; font-size:14px; font-weight:600; }
+.wl-places .wl-grid { margin-top:16px; grid-template-columns:repeat(3,minmax(0,1fr)); }
+.wl-place { background:#f0fdfa; border-radius:12px; padding:18px; }
+.wl-place h3 { font-family:Georgia,serif; font-size:21px; margin:6px 0; }
+.wl-footer { max-width:1120px; margin:auto; padding:22px 24px; border-top:1px solid #dce8e5; font-size:12px; color:#52646a; display:flex; justify-content:space-between; gap:16px; }
+.wl-experience h2 { text-align:left; font-size:28px; }
+.wl-experience section { scroll-margin-top:80px; }
+.wl-experience .wl-booking { background:white; border:1px solid #dce8e5; border-radius:12px; padding:24px; }
+@media(max-width:700px) { .wl-experience section{scroll-margin-top:130px} .wl-bar{padding:12px 16px;flex-wrap:wrap;gap:10px}.wl-bar .wl-nav{width:100%;order:3}.wl-main{padding:16px}.wl-hero{padding:24px;min-height:190px}.wl-layout{grid-template-columns:1fr;gap:16px;margin-top:20px}.wl-filters{position:static}.wl-grid{gap:12px}.wl-card-image{height:130px}.wl-card-body{padding:12px}.wl-card h2{font-size:21px}.wl-places .wl-grid{grid-template-columns:1fr}.wl-card-footer{flex-wrap:wrap} }
+@media(max-width:420px) { .wl-grid{grid-template-columns:1fr}.wl-card{display:grid;grid-template-columns:100px minmax(0,1fr)}.wl-card-image{height:100%;min-height:175px}.wl-card h2{font-size:23px} }
+@media(prefers-reduced-motion:reduce){.wanderly *{scroll-behavior:auto!important}}

@@ -40,6 +40,7 @@ import { createTransaction, transitionTransaction } from './ledger.js';
 import { isoWeekOf } from './fieldAgent.js';
 import { getTemplate, templateMode, templateView, TEMPLATE_KEYS } from './workTemplates.js';
 import * as wf from './workforce.js';
+import { getRequest } from './requests.js';
 
 const { fail } = wf;
 
@@ -144,10 +145,15 @@ export function createProgram(workforceId, actorId, input = {}) {
     if (!Object.keys(territoryTargets).length) territoryTargets = null;
   }
 
+  // Provenance only: workforce execution must not complete a procurement
+  // request or fabricate its quote/work-order/payment chain.
+  const sourceRequestId = clean(input.sourceRequestId, 100);
+  if (sourceRequestId) getRequest(actorId, sourceRequestId); // owner-scoped, including private requests
   const now = nowIso();
   return store.insert('workPrograms', {
     id: newId('wpg'),
     workforceId: workforce.id,
+    sourceRequestId,
     ownerId: workforce.ownerId,
     title,
     objective,
@@ -322,7 +328,7 @@ function releaseRow(task, { action, note, actorId = null }) {
     store.update('workUnits', task.unitId, { status: 'abandoned', closedReason: note, decidedAt: now });
   } else {
     store.update('workTasks', task.id, {
-      status: 'open', workerId: null, assignedAt: null, dueAt: null,
+      status: 'open', workerId: null, assignedAt: null, dueAt: null, execution: null,
       history: pushHistory(task, { actorId, action, note })
     });
   }
@@ -498,6 +504,41 @@ function validateFields(step, raw = {}) {
   return out;
 }
 
+// A device-reported start is an audit fact, not proof of physical presence.
+// Optional for legacy API clients; the task runner records it before execution.
+function readLocation(input) {
+  if (input == null) return null;
+  const validNumber = (v) => typeof v === 'number' && Number.isFinite(v);
+  if (!validNumber(input.lat) || !validNumber(input.lng) || Math.abs(input.lat) > 90 || Math.abs(input.lng) > 180) {
+    fail('the location is not valid', 400, 'invalid_location');
+  }
+  if (input.accuracyM != null && (!validNumber(input.accuracyM) || input.accuracyM < 0)) {
+    fail('location accuracy must be a non-negative number', 400, 'invalid_location');
+  }
+  return { lat: input.lat, lng: input.lng, accuracyM: input.accuracyM == null ? null : Math.round(input.accuracyM) };
+}
+
+export function startTask(userId, taskId, { location = null } = {}) {
+  const task = getTask(taskId);
+  if (!task || task.workerId !== userId) fail('task not found', 404, 'not_found');
+  if (task.status !== 'assigned') fail('only an assigned task can be started', 409, 'invalid_state');
+  if (task.dueAt && Date.parse(task.dueAt) < Date.now()) {
+    sweepExpired();
+    fail('the time window has passed; this task returned to the pool', 409, 'expired');
+  }
+  // Retry does not change the original timestamp or device location.
+  if (task.execution) return task;
+  const program = getProgram(task.programId);
+  const step = getTemplate(program.templateKey).steps[task.stepIndex];
+  const point = readLocation(location);
+  if (step.gps && !point) fail('check in with your location when you arrive', 400, 'location_required');
+  const execution = { startedAt: nowIso(), location: step.gps ? point : null };
+  return store.update('workTasks', task.id, {
+    execution,
+    history: pushHistory(task, { actorId: userId, action: step.gps ? 'checked_in' : 'started', note: 'Device-reported start; subject to proof review' })
+  });
+}
+
 export function submitProof(userId, taskId, input = {}) {
   const task = store.find('workTasks', (t) => t.id === taskId);
   if (!task || task.workerId !== userId) fail('task not found', 404, 'not_found');
@@ -525,13 +566,7 @@ export function submitProof(userId, taskId, input = {}) {
     if (reused) fail('this photo was already submitted for different work', 409, 'photo_reused');
   }
 
-  let location = null;
-  if (input.location && input.location.lat !== undefined && input.location.lng !== undefined) {
-    const lat = Number(input.location.lat), lng = Number(input.location.lng);
-    if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) fail('the location is not valid', 400, 'invalid_location');
-    const acc = Number(input.location.accuracyM);
-    location = { lat, lng, accuracyM: Number.isFinite(acc) && acc >= 0 ? Math.round(acc) : null };
-  }
+  const location = readLocation(input.location);
   if (step.gps && !location) fail('this step needs your location, captured while you are there', 400, 'location_required');
 
   let consent = null;
@@ -600,6 +635,8 @@ export function submitProof(userId, taskId, input = {}) {
       note: clean(input.note, 600),
       checks,
       flags: checks.filter((c) => c.status === 'flag').length,
+      startedAt: task.execution?.startedAt ?? null,
+      checkIn: task.execution?.location ?? null,
       submittedAt: now,
       review: null
     });
@@ -923,6 +960,7 @@ export function programDashboard(programId, viewerId) {
   const committedKes = p.target * p.unitPriceKes;
   const verifiedKes = approved * p.unitPriceKes;
   return {
+    sourceRequestId: viewerId === p.ownerId ? p.sourceRequestId ?? null : null,
     program: programHeadline(p),
     counts: {
       target: p.target,
@@ -995,6 +1033,7 @@ export function taskView(task, viewerId) {
     // The subject's details (phone, owner) only for the person doing the
     // step and the managers — not for everyone browsing open work.
     subject: assignedToViewer || manager ? unit.subject : null,
+    execution: assignedToViewer || manager ? task.execution ?? null : null,
     assignedAt: task.assignedAt,
     dueAt: task.dueAt,
     returns: task.returns,
@@ -1039,6 +1078,20 @@ function visiblePrograms(userId) {
   const memberWorkforces = new Set(store.filter('workforceMembers', (m) => m.userId === userId && m.status !== 'offboarded').map((m) => m.workforceId));
   return store.filter('workPrograms', (p) => p.status === 'open' && p.ownerId !== userId &&
     (p.audience === 'network' || memberWorkforces.has(p.workforceId)));
+}
+
+/** Read-only discovery projection. Same visibility and eligibility as My work;
+ * no expiration sweep, task assignment, claim, payment or new authority. */
+export function discoveryPrograms(userId) {
+  if (!userId) return [];
+  return visiblePrograms(userId)
+    .filter(p => Date.parse(`${p.deadline}T23:59:59.999+03:00`) >= Date.now())
+    .map(p => {
+      const template = getTemplate(p.templateKey);
+      return { program: programHeadline(p), createdAt: p.createdAt,
+        remaining: remainingCapacity(p), eligibility: eligibility(userId, p, 0),
+        firstStep: { label: template.steps[0].label, mode: template.steps[0].mode, feeKes: p.rateCard.steps[0].feeKes } };
+    }).filter(p => p.remaining > 0);
 }
 
 /** The worker's home: available work, next steps, held tasks, today, money. */

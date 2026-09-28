@@ -336,6 +336,7 @@ app.post('/api/orders', (req, res) => {
     // money from the listing row. A body carrying {price:1,total:1} against a
     // KES 500 listing produces an order for the real amount.
     const order = orders.createOrder({
+      delivery: req.body?.delivery,
       listingId: req.body?.listingId,
       buyerId: callerId(req),
       quantity: req.body?.quantity ?? 1,

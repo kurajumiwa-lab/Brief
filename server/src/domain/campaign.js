@@ -918,6 +918,11 @@ export function register(campaign, { attendeeRef, name = null, contact = null, u
     updatedAt: now
   });
 
+  // A free, account-bound reservation is already registered. Issue its
+  // admission ticket now, just as settled paid registrations are issued later.
+  // This is idempotent, writes no ledger row, and does not enable resale (D6).
+  if (row.status === 'registered') ticketMarket.issueForRegistration(row);
+
   emitSignal({
     type: campaign.price > 0 ? 'campaign_registration_started' : 'campaign_registered',
     circleId: campaign.circleId,

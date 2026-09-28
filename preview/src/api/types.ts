@@ -1266,6 +1266,7 @@ export interface Order {
  * the arithmetic, so a forged total cannot even be expressed here.
  */
 export interface OrderCreate {
+  delivery?: {email:string;address:string;instructions:string};
   listingId: string;
   quantity?: number;
   note?: string;
@@ -2332,9 +2333,13 @@ export interface SpaceMoneySummary {
   unattached?: { orders: number; revenueKes: number };
 }
 
-export type SpaceDispatchStatus = 'staged' | 'in_transit' | 'ready_at_stage' | 'collected' | 'cancelled';
+export type SpaceDispatchStatus = 'staged' | 'in_transit' | 'ready_at_stage' | 'collected' | 'cancelled' | 'out_for_delivery' | 'delivered';
 
 export interface SpaceDispatch {
+  deliveryMode?: 'stage' | 'door';
+  estimatedDelivery?: string | null;
+  quantity?: number | null;
+  history?: {status:SpaceDispatchStatus;at:string;location:string|null}[];
   id: string;
   spaceId: string;
   orderId?: string | null;
@@ -2353,6 +2358,9 @@ export interface SpaceDispatch {
 }
 
 export interface SpaceDispatchCreate {
+  deliveryMode?: 'stage' | 'door';
+  estimatedDelivery?: string | null;
+  quantity?: number | null;
   orderId?: string | null;
   destinationCounty: string;
   destinationTown: string;

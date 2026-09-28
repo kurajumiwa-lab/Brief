@@ -38,6 +38,12 @@ function mount(el) {
   document.body.appendChild(c);
   const root = createRoot(c);
   act(() => root.render(el));
+  // These contracts cover the preserved supply board, now reached from the
+  // business feed rather than replacing its default mixed discovery view.
+  if (el.type === CityFeedView) {
+    const supply = [...c.querySelectorAll('button')].find(b => b.textContent === 'Supply routes');
+    if (supply) act(() => supply.click());
+  }
   return c;
 }
 const text = (el) => (el.textContent || '').replace(/\s+/g, ' ').trim();
@@ -197,9 +203,9 @@ async function main() {
     const { HostEventSheet } = require('./src/features/city/HostEventSheet.tsx');
     const c = mount(React.createElement(HostEventSheet, { open: true, onClose: () => {} }));
     await flush();
-    assert.ok(text(c).includes('Put your event on the board'), 'the host-event form opens');
+    assert.ok(text(c).includes('A party, a trip, your people.'), 'the host-event form opens');
     assert.ok(c.querySelector('input[aria-label="Event title"]'), 'the form has a title input');
-    assert.ok(text(c).includes('Publish event'), 'and it publishes, not drafts');
+    assert.ok(text(c).includes('Publish plan'), 'and it publishes, not drafts');
   }
   pass('Host an event is a real createCampaign form, opened from the sheet');
 
@@ -233,8 +239,7 @@ async function main() {
     const evTile = Array.from(c.querySelectorAll('[role="dialog"][aria-label="Browse the board"] button')).find((b) => /^Events/.test(text(b)));
     act(() => { evTile.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
     await flush();
-    assert.ok(!/The counter/.test(text(c)), 'the Events room holds no market furniture');
-    assert.ok(text(c).includes("What's on — published events"), 'it holds the published events instead, named plainly');
+    assert.equal(window.location.hash, '#wanderly', 'Events opens the canonical Wanderly route instead of another event gallery');
     assert.ok(!/The case/.test(text(c)), 'and the marketing word is gone from the surface');
     assert.ok(!/WAIRO/.test(t), 'the rider card belongs to errands, not the gallery');
     assert.ok(!/What's moving/.test(t), 'the signal line is Home’s job, not a browse header');
@@ -287,7 +292,7 @@ async function main() {
     const c2 = mount(React.createElement(SpacesLanding, { onOpenSpace: () => {}, onOpenPublicSpace: () => {} }));
     await flush();
     const t2 = text(c2);
-    assert.ok(t2.includes('Your shopfronts'), 'Spaces is shops only');
+    assert.ok(t2.includes('Your spaces'), 'Spaces is shops only');
     assert.ok(!/Vaults/.test(t2) && !/Groups/.test(t2), 'with no cabinet and no neighbourhood inside it');
   }
   pass('Belonging went to Discover, filing went to You, Spaces kept only shops');

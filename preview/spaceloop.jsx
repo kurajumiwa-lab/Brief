@@ -121,24 +121,15 @@ async function runTests() {
   check('Home does not greet', !/Hi Amina/.test(text1) && !/Hi there/.test(text1));
   check('Home does not reprint offers-live or standing',
     !/offers live/.test(text1) && !/Nothing pending on your ledger/.test(text1));
-  // The three zones the reformation requires, in order.
-  // Zone 1 is the banner: one dark-gradient line naming the check-in.
-  check('zone 1: what the world is doing (the banner)', text1.includes('What’s moving'));
-  check('zone 2: what I should do next (one decision)', text1.includes('Your next step'));
-  // Zone 3 became the landing: the mode tiles (Shops, Events, Groups, Errands,
-  // Runs, Group Buys) and the "What's moving today" hero — the "What's out
-  // there" shelf was the browse, and the browse is the board.
-  check('zone 3: the mode tiles are the doors of the board',
-    text1.includes('Shops') && text1.includes('Events') && text1.includes('Groups') && text1.includes('Errands') && text1.includes('Runs') && text1.includes('Group Buys'));
-  check('the hero card is the day, named plainly', text1.includes('What’s moving today'));
-  check('no invented standing: no position number, sector, tier or queue',
-    !/Position #\d/.test(text1) && !/Sector \d/i.test(text1) && !/tier/i.test(text1));
-  // Management is behind a tap, but the honest empty state is still reachable.
-  const manageBtn = Array.from(host1.querySelectorAll('button')).find((b) => (b.textContent || '').includes('Run your spaces'));
-  check('space management is collapsed behind one tap', Boolean(manageBtn));
-  if (manageBtn) await act(async () => { manageBtn.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
+  check('compact home names the network', text1.includes('Make things happen.'));
+  check('work is reachable in one tap', Boolean(host1.querySelector('[data-testid="home-work"]')));
+  check('three compact doorways', host1.querySelectorAll('nav[aria-label="Quick actions"] button').length === 3);
+  check('secondary discovery is collapsed', host1.querySelector('details')?.open === false);
+  check('no invented standing', !/Position #\d|Sector \d|Trust Score/i.test(text1));
+  check('no oversized home hero', !host1.querySelector('.shop-brand-cover'));
+  const createBtn = host1.querySelector('button[aria-label="Create a space"]');
+  check('space creation stays reachable', Boolean(createBtn));
   const text1b = host1.textContent;
-  check('shows the honest create-your-first-space empty state (no mock queue)', text1b.includes("You don’t have a space yet") && text1b.includes('Create your first space'));
   check('no fabricated Today queue', !text1b.includes('Mary asked for a birthday cake') && !text1b.includes('Action Queue'));
   // Commerce is no longer mounted on Home.
   check('marketplace is off Home', !/Community Marketplace/i.test(text1b));
@@ -477,7 +468,7 @@ async function runTests() {
 
   const text12 = host12.textContent;
   check('renders AppShell Home tab by default',
-    Boolean(host12.querySelector('[data-testid="mode-tiles"]')) || /What’s moving/.test(text12));
+    Boolean(host12.querySelector('[data-testid="compact-home"]')) || /What’s moving/.test(text12));
 
   await act(async () => { root12.unmount(); host12.remove(); });
 

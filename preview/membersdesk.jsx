@@ -43,6 +43,10 @@ global.fetch = async (url, init = {}) => {
   const send = (b, s = 200) => ({ ok: s < 400, status: s, text: async () => JSON.stringify(b), json: async () => b });
   if (!CAPS.includes('admin') && p.includes('/api/ops/')) return send({ error: 'this desk needs the admin capability' }, 403);
   if (p.includes('/api/ops/onboarding')) return send(FUNNEL);
+  if (p.includes('/api/ops/members/') && (init.method ?? 'GET') === 'GET') {
+    const member = MEMBERS.find((m) => p.endsWith('/' + m.id));
+    return send({ profile: { member, account: { email: null, authProvider: 'password' }, spaces: [], businesses: [], worker: null, memberships: [], ownedWorkforces: [], record: { byTemplate: [], note: '', userId: member.id, lastActiveAt: null } } });
+  }
   if (p.includes('/api/ops/members/')) {
     STATUS_CALLS.push(JSON.parse(init.body));
     const m = MEMBERS.find((x) => x.id === 'usr_1');

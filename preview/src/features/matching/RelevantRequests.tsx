@@ -32,6 +32,10 @@ export function RelevantRequests() {
       live = false;
     };
   }, [reload]);
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.hash.split('?')[1] || '').get('match');
+    if (id && !loading) document.getElementById(`match-${id}`)?.scrollIntoView({block:'center'});
+  }, [rows, loading]);
   return (
     <section className="supply-section matching-workspace">
       <span className="request-eyebrow">
@@ -73,6 +77,7 @@ export function RelevantRequests() {
         rows.map((r) => (
           <article
             key={r.matchId}
+            id={`match-${r.matchId}`}
             className="match-option"
             data-testid="relevant-request"
           >

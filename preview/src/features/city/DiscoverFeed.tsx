@@ -420,7 +420,7 @@ export function DiscoverFeed({
 
   const openFull = (item: DiscoverFeedItem) => {
     if (typeof window === 'undefined') return;
-    if (item.kind === 'event') window.open(`/c/${item.id}`, '_self');
+    if (item.kind === 'event') (window.location.hash = `wanderly/experience/${encodeURIComponent(item.id)}`);
     else window.location.hash = `offer/${encodeURIComponent(item.id)}`;
   };
 
@@ -704,7 +704,7 @@ export function DiscoverFeed({
                       else if (item.orderable && !wa) openFull(item);
                       else setOpen(item);
                     }}
-                    onOpen={() => { soundEngine.play('tap'); setOpen(item); }}
+                    onOpen={() => { soundEngine.play('tap'); if (item.kind === 'event') openFull(item); else setOpen(item); }}
                   />
                 );
               })}

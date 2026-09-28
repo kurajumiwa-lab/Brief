@@ -4,26 +4,20 @@
     <meta charset="UTF-8" />
     <meta name="theme-color" content="#F7F8FA" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- CRITICAL SHELL STYLE — the light background is guaranteed at first paint,
-         before any stylesheet loads, so no surface (events, share pages, or a
-         half-loaded shell) can ever flash an unstyled background. This is the
-         single source of truth for the page background; the design tokens below
-         inherit it.
-         The one deliberate exception is #boot-splash: a branded black loading
-         moment (knot + wordmark + progress bar) that covers the viewport while
-         the bundle parses and is removed by React on first commit. A designed
-         moment, not a flash. -->
+    <!-- First paint matches the app and React loader: one Wairo identity,
+         never a black interstitial or an earlier Brief splash. -->
     <style>
-      html, body, #root { background: #F7F8FA !important; color: #0D1117; margin: 0; }
-      #boot-splash { position: fixed; inset: 0; z-index: 9999; background: #0a0a0a; display: grid; place-items: center; }
-      #boot-splash .inner { display: flex; flex-direction: column; align-items: center; gap: 10px; }
-      #boot-splash .word { color: #ffffff; font-family: 'Arial Narrow', Arial, sans-serif; font-weight: 800; font-size: 28px; letter-spacing: 0.08em; line-height: 1; }
-      #boot-splash .avenue { color: #EAB308; font-family: 'Arial Narrow', Arial, sans-serif; font-weight: 800; font-size: 13px; letter-spacing: 0.32em; line-height: 1; }
-      #boot-splash .bar { width: 120px; height: 3px; margin-top: 8px; background: rgba(255,255,255,0.15); overflow: hidden; border-radius: 999px; }
-      #boot-splash .bar i { display: block; height: 100%; width: 40%; background: #EAB308; animation: boot-slide 1.1s ease-in-out infinite; }
-      @keyframes boot-slide { 0% { transform: translateX(-110%); } 100% { transform: translateX(310%); } }
+      html, body, #root { background: #F7F8FA !important; color: #0A0E14; margin: 0; }
+      #boot-splash { position:fixed; inset:0; z-index:9999; background:#F7F8FA; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:20px; font-family:Inter,system-ui,sans-serif; }
+      #boot-splash .inner { display:flex; flex-direction:column; align-items:center; gap:10px; }
+      #boot-splash .word { color:#0A0E14; font-weight:800; font-size:32px; letter-spacing:-.06em; line-height:1; }
+      #boot-splash .avenue { color:#52646a; font-weight:650; font-size:11px; text-transform:uppercase; letter-spacing:.23em; }
+      #boot-splash p { font-size:12px; color:#5a6472; margin:0; }
+      #boot-recovery { text-align:center; padding:20px; font-size:13px; }
+      #boot-recovery a { display:inline-block; margin:12px; color:#2d6a4f; }
     </style>
-    <title>Wairo</title>
+    <title>Wairo Blue Avenue</title>
+    <meta name="description" content="Your space. Your people. Your next plan. Discover shops, work, community, parties and trips on Wairo Blue Avenue." />
     <!-- The offline shell: installable, and it paints from cache when the
          signal dies. Writes survive via the offline queue (idempotent,
          server-deduped) — the API itself is never cached. -->
@@ -38,9 +32,8 @@
          whenever window.Telegram is absent, so the Mini App sign-in path simply
          stops running. To bring Telegram back: restore this tag AND set the bot
          credentials, since /api/telegram/init answers closed without them. -->
-    <!-- Favicon: the brand mark as a self-contained SVG (no network fetch, so it
-         can never 404 or block paint). Mirrors the BrandMark green circle. -->
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23FFFFFF'/%3E%3Ccircle cx='16' cy='16' r='10' fill='%23111111' opacity='0.18'/%3E%3Ccircle cx='16' cy='16' r='5' fill='%23111111'/%3E%3C/svg%3E" />
+    <link rel="icon" type="image/svg+xml" href="/wairo-mark.svg" />
+    <link rel="apple-touch-icon" href="/wairo-icon-192.png" />
     <!-- Design system type (§3): Fraunces + IBM Plex, loaded NON-BLOCKING so a
          slow or blocked Google Fonts request can never blank the first paint.
          The page renders instantly on the system-font fallback and upgrades to
@@ -48,40 +41,37 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap"
+      href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap"
       rel="stylesheet"
       media="print"
       onload="this.media='all'"
     />
     <noscript>
       <link
-        href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap"
+        href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap"
         rel="stylesheet"
       />
     </noscript>
   </head>
   <body>
-    <div id="boot-splash" role="status" aria-label="Opening Wairo">
+    <div id="boot-splash" role="status" aria-label="Opening Wairo Blue Avenue">
       <div class="inner">
-        <svg width="52" height="52" viewBox="0 0 48 48" fill="none" aria-hidden="true">
-          <defs>
-            <linearGradient id="boot-g" x1="6" y1="42" x2="42" y2="6" gradientUnits="userSpaceOnUse">
-              <stop offset="0" stop-color="#EAB308" />
-              <stop offset="1" stop-color="#F59E0B" />
-            </linearGradient>
-          </defs>
+        <svg width="54" height="54" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+          <defs><linearGradient id="boot-g" x1="6" y1="42" x2="42" y2="6" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#2563EB" /><stop offset="1" stop-color="#10B981" /></linearGradient></defs>
           <g stroke="url(#boot-g)" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="7" y="7" width="22" height="22" rx="7" />
-            <rect x="19" y="7" width="22" height="22" rx="7" />
-            <rect x="7" y="19" width="22" height="22" rx="7" />
-            <rect x="19" y="19" width="22" height="22" rx="7" />
+            <rect x="7" y="7" width="22" height="22" rx="7" /><rect x="19" y="7" width="22" height="22" rx="7" /><rect x="7" y="19" width="22" height="22" rx="7" /><rect x="19" y="19" width="22" height="22" rx="7" />
           </g>
         </svg>
-        <div class="word">WAIRO</div>
-        <div class="avenue">BLUE AVENUE</div>
-        <div class="bar"><i></i></div>
+        <div class="word">Wairo</div><div class="avenue">Blue Avenue</div>
       </div>
+      <p>Opening your avenue…</p>
+      <div id="boot-recovery" hidden><p>Taking longer than expected. Check your connection.</p><a href="" onclick="window.location.reload(); return false">Try again</a></div>
+      <noscript><p>Enable JavaScript to open Wairo Blue Avenue.</p></noscript>
     </div>
+    <script>
+      // Still useful if the main bundle fails to download or execute.
+      window.setTimeout(function () { var el = document.getElementById('boot-recovery'); if (el) el.hidden = false; }, 12000);
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
       <script>

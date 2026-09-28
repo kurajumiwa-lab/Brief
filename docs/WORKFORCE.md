@@ -228,3 +228,58 @@ committed/verified/remaining KES, and the fee are all derived from rows.
 
 Identity always comes from the session: an owner or worker id in a request
 body is ignored. Non-members get 404 for another workforce's ids, not 403.
+
+## 10. Compact work network and execution trace (September 2026)
+
+This iteration extends the existing engine, not a second workforce economy:
+
+- **Home → Work**, **drawer → Work**, **Create → Create work**, and
+  **Spaces → Run your workforce** enter the same worker/organisation desk.
+  Signed-out people can sign in or register there using the existing session.
+- Workers have separate Available, My work, Review, Completed, Earnings and
+  Onboarding views. Available work filters by Home / Field / Hybrid. Counts
+  and earnings still come exclusively from the workforce projections.
+- `POST /api/work-tasks/:id/start` records a server timestamp and, for GPS
+  steps, a device-reported location. It is assignee-only, refuses expired or
+  non-assigned work, and retries preserve the first start. Remote starts do
+  not need or retain GPS. Null/blank coordinates are rejected; unknown accuracy
+  remains null, never zero. Releasing a hybrid step clears its check-in before
+  another worker accepts it.
+- The runner asks workers to start/check in before submitting. Proof snapshots
+  `startedAt` and `checkIn`; review shows both alongside the submission time.
+  A check-in is **not** verified physical presence and does not create money.
+  Legacy API clients can still submit without a start; their start is null,
+  not fabricated. The existing photos, consent, geography and review rules
+  remain authoritative.
+- Programs may reference an existing `sourceRequestId`, validated against the
+  owner's private Requests. The optional selector lists only their requests.
+  The reference is visible only to the owner in the program dashboard, not
+  network workers or supervisors. It does **not** change Request status,
+  duplicate a quote or Work Order, or create a second settlement event.
+- Home uses one discovery projection and at most five activity rows. Spaces
+  (the Mine door) uses compact shop rows. Orders, escrow, follows, shared
+  spaces, public-page controls and insights are expandable rather than tall
+  always-open sections. Existing public storefronts and marketplace browsing
+  remain separate and reachable.
+
+### Verification
+
+- `npm run test:workforce`: 33 domain/HTTP scenarios, including private request
+  provenance, start/check-in authorization, retries, expiry and ledger isolation.
+- `bash run-suites.sh compacthome workforcedesk spaceloop backdoors spaceshell spacestorefront doorways mine`:
+  125 checks, including the real-server hybrid flow (call → correction → field
+  check-in → photo proof → approval → exact outcome-based earnings).
+- `npm run test:typecheck` and `npm run build:client`.
+
+The wider repository suites are not all green on the starting commit. The
+server aggregate stops in `server/test/notifications.mjs` (`det` is undefined).
+The existing You/room/appbelt/cards/tiles/moderation UI suites also crash on an
+isolated checkout of the starting commit. They are not masked or disabled by
+this change. Browser screenshots were not verified: the Playwright Chromium
+binary download was unavailable in this environment.
+
+**Still deliberate limits:** finance-confirmed manual settlements, no automated
+client collection or payroll, code-reviewed templates, and the provisional
+20% Brief fee described in §8. There is no universal trust score, worker wallet,
+attendance tracking or claim that accepting independent-work terms determines
+someone's legal employment status.

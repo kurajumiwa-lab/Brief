@@ -338,9 +338,14 @@ export function register(app) {
   });
 
   // --- Get space by ID ---
-  app.get('/api/spaces/:id', (req, res) => {
+  app.get('/api/spaces/:id', requireAuthMw, (req, res) => {
     try {
       const me = callerId(req);
+      res.setHeader('Cache-Control', 'no-store');
+      // This is the full owner workspace (conversations, activity and money),
+      // not a public profile. Staff use /team; visitors use /public/spaces.
+      const raw = spaces.getRawSpace(req.params.id);
+      if (!raw || raw.ownerId !== me) return res.status(404).json({ error: 'space not found' });
       const space = spaces.getSpace(req.params.id, { callerId: me });
       if (!space) {
         return res.status(404).json({ error: 'space not found' });
@@ -793,7 +798,7 @@ export function register(app) {
         receiverPhone,
         conductorContact,
         stageFeeKes,
-        notes
+        notes, deliveryMode, estimatedDelivery, quantity
       } = req.body || {};
 
       const dispatch = spaces.createSpaceDispatch({
@@ -807,7 +812,7 @@ export function register(app) {
         receiverPhone,
         conductorContact,
         stageFeeKes,
-        notes,
+        notes, deliveryMode, estimatedDelivery, quantity,
         callerId: me
       });
 
@@ -821,6 +826,8 @@ export function register(app) {
   // --- List Space Dispatches ---
   app.get('/api/spaces/:id/dispatches', requireAuthMw, (req, res) => {
     try {
+      const space = store.find('spaces', s => s.id === req.params.id && s.ownerId === callerId(req));
+      if (!space) return res.status(404).json({ error: 'Space not found' });
       const dispatches = spaces.getSpaceDispatches(req.params.id);
       res.json({ dispatches });
     } catch (err) {
@@ -833,13 +840,13 @@ export function register(app) {
   app.patch('/api/spaces/:id/dispatches/:dispatchId', requireAuthMw, (req, res) => {
     try {
       const me = callerId(req);
-      const { status, conductorContact } = req.body || {};
+      const { status, conductorContact, location, estimatedDelivery } = req.body || {};
 
       const updated = spaces.updateDispatchStatus({
         spaceId: req.params.id,
         dispatchId: req.params.dispatchId,
         status,
-        conductorContact,
+        conductorContact, location, estimatedDelivery,
         callerId: me
       });
 

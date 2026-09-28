@@ -188,8 +188,8 @@ async function main() {
   // --- 4. Mine kept-list is a belt of real follows, not a trapped overlay ---
   {
     const mine = codeLines(srcOf('src/features/mine/MineSurface.tsx'));
-    assert.match(mine, /getMyFollows/, 'Mine reads the follows that exist');
-    assert.match(mine, /follow-belt/, 'and paints them as a belt, not a sheet');
+    assert.ok(!/getMyFollows|follow-belt/.test(mine), 'Spaces no longer duplicates You’s follows');
+    assert.match(codeLines(srcOf('src/features/you/YouSurface.tsx')), /getMyFollows/, 'Following remains available in You');
     assert.ok(!/FollowingSurface/.test(mine), 'the trapped overlay is not mounted here');
     assert.ok(!/onClose=\{\(\) => \{\}\}/.test(mine), 'and no no-op close');
     assert.ok(!/onOpenObject=\{\(\) => \{\}\}/.test(mine),
@@ -341,7 +341,7 @@ async function main() {
     const { host } = await mount(React.createElement(AppShell, {}));
     await flush(); await flush();
     const t = text(host);
-    assert.ok(host.querySelector('[data-testid="mode-tiles"]'),
+    assert.ok(host.querySelector('[data-testid="compact-home"]'),
       'a cold load with no hash is Home — the six doors, not the board');
     assert.ok(!/What's happening nearby/.test(t) && !/What.s happening nearby/.test(t),
       `Discover's heading is not on Home: ${t.slice(0, 180)}`);
@@ -349,14 +349,14 @@ async function main() {
     window.location.hash = 'city';
     await flush(); await flush();
     assert.ok(document.querySelector('[aria-label="Browse the board"]'), 'the board is still a real screen, when asked for');
-    assert.ok(!host.querySelector('[data-testid="mode-tiles"]'), 'and Home is not sitting under it');
+    assert.ok(!host.querySelector('[data-testid="compact-home"]'), 'and Home is not sitting under it');
 
     const homeDoor = Array.from(document.querySelectorAll('button')).find((b) => /^Home$/.test(text(b)));
     assert.ok(homeDoor, 'the bar still has a Home door');
     await click(homeDoor);
     await flush(); await flush();
     assert.equal(window.location.hash, '#home', 'Home writes #home, not an empty hash that used to mean Discover');
-    assert.ok(document.querySelector('[data-testid="mode-tiles"]'), 'and the tiles are what you land on');
+    assert.ok(document.querySelector('[data-testid="compact-home"]'), 'and the tiles are what you land on');
     assert.ok(!/happening nearby/i.test(text(document.body)), 'Discover did not come along');
     assert.ok(!document.querySelector('[aria-label^="Back to"]'),
       'Home is a root screen: no Back toggle');
@@ -376,9 +376,10 @@ async function main() {
     window.location.hash = '#home';
     const { host } = await mount(React.createElement(AppShell, {}));
     await flush(); await flush();
-    const tiles = host.querySelector('[data-testid="mode-tiles"]');
+    const tiles = host.querySelector('[data-testid="compact-home"]');
     assert.ok(tiles, 'Home still has the six doors');
-    const events = Array.from(tiles.querySelectorAll('button')).find((b) => /Events/.test(text(b)));
+    await click(tiles.querySelector('details summary'));
+    const events = Array.from(tiles.querySelectorAll('nav[aria-label="Quick actions"] button')).find((b) => /Wanderly/.test(text(b)));
     const circles = Array.from(tiles.querySelectorAll('button')).find((b) => /Groups/.test(text(b)));
     assert.ok(events && circles, 'Events and Groups are tiles');
 
@@ -387,12 +388,12 @@ async function main() {
     assert.equal(window.location.hash, '#city/events', 'Events writes its own room, not #city as errands');
     assert.ok(!/You cannot take errands yet/.test(text(document.body)),
       'Events did not land on the errands empty state');
-    assert.ok(document.querySelector('[aria-label="Browse the board"]') || /published events/i.test(text(document.body)),
-      'Events opened the board on the events room');
+    assert.ok(document.querySelector('[data-testid="wanderly"]'), 'Events opens the unified Wanderly product');
 
     window.location.hash = '#home';
     await flush(); await flush();
-    const tiles2 = document.querySelector('[data-testid="mode-tiles"]');
+    const tiles2 = document.querySelector('[data-testid="compact-home"]');
+    await click(tiles2.querySelector('details summary'));
     const circles2 = Array.from(tiles2.querySelectorAll('button')).find((b) => /Groups/.test(text(b)));
     await click(circles2);
     await flush(); await flush();

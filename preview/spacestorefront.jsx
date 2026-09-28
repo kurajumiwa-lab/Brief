@@ -130,6 +130,8 @@ async function main() {
     assert.ok(!/sector avg/i.test(t), 'no sector average is printed');
     assert.ok(!/people viewed your Space/i.test(t), 'no marketing sentence about the audience');
     assert.ok(!/\b\d+% of \d+/.test(t), 'no invented denominator phrasing');
+    assert.equal(container.querySelector('details').open, false, 'insights are collapsed');
+    assert.equal(container.querySelector('.shop-brand-cover'), null, 'no oversized decorative cover');
     assert.ok(btn('Add offer'), 'the owner gets the doing-buttons');
     assert.ok(btn('Inbox'), 'with the real inquiry count on the inbox');
     assert.ok(!btn('Follow'), 'a vendor does not follow their own shop from here');
@@ -339,7 +341,7 @@ async function main() {
     const { container } = mount(React.createElement(SpacesLanding, { onOpenSpace: () => {}, onOpenPublicSpace: () => {} }));
     await flush();
     const t = text(container);
-    assert.ok(t.includes('Your shopfronts'), 'the screen is a street of businesses');
+    assert.ok(t.includes('Spaces'), 'the screen is a street of businesses');
     assert.ok(t.includes('Jj Cakes') && /fresh/i.test(t), 'with the real state of each file');
     assert.ok(t.includes('2 to answer'), 'and the open items in it, in words a person acts on');
     assert.ok(!/\b2 open\b/.test(t), 'the bare "2 open" code is gone — it read like a fault, not a to-do');

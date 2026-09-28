@@ -14,6 +14,7 @@ import { requireFeature } from '../features.js';
 import { store } from '../store.js';
 import * as media from '../domain/media.js';
 import * as upload from '../domain/upload.js';
+import { canReadReviewMedia } from '../domain/productReviews.js';
 import * as publicFeed from '../domain/publicFeed.js';
 import * as telegram from '../connectors/telegram.js';
 
@@ -190,6 +191,11 @@ export function register(app) {
    */
   app.get('/api/media/file/:id', (req, res) => {
     const row = upload.getUpload(req.params.id);
+    const reviewMedia = row?.purpose === 'review_media';
+    if (reviewMedia && !canReadReviewMedia(row, req.auth?.userId)) {
+      res.setHeader('Cache-Control', 'no-store');
+      return res.status(404).json({error:'Media not found'});
+    }
     const privateEvidence = row?.purpose === 'private_evidence' || row?.purpose === 'private_request' || row?.purpose === 'private_quote' || row?.purpose === 'private_work';
     if (privateEvidence && (!req.auth?.userId || (row.ownerId !== req.auth.userId && !(row.purpose === 'private_evidence' && hasCapability(req.auth.userId,'moderate')) && !(row.purpose === 'private_quote' && canReadQuoteEvidence(req.auth.userId,row.id)) && !(row.purpose === 'private_work' && (canReadWorkEvidence(req.auth.userId,row.id) || canReadWorkforceEvidence(req.auth.userId,row.id)))))) {
       res.setHeader('Cache-Control','no-store');
@@ -203,13 +209,14 @@ export function register(app) {
     res.setHeader('content-type', result.row.mimeType);
     res.setHeader('content-length', String(result.size));
     // Public bytes are immutable. Private evidence is never publicly cached.
-    res.setHeader('cache-control', privateEvidence ? 'private, no-store' : 'public, max-age=31536000, immutable');
+    res.setHeader('cache-control', (privateEvidence || reviewMedia) ? 'private, no-store' : 'public, max-age=31536000, immutable');
     if (privateEvidence) res.setHeader('vary', 'Authorization, Cookie');
     // An image is served as an image: never sniffed into something else, and
     // never allowed to run anything.
     res.setHeader('x-content-type-options', 'nosniff');
     res.setHeader('content-security-policy', "default-src 'none'; sandbox");
     res.setHeader('content-disposition', `inline; filename="brief-${result.row.id}.${ext}"`);
+    if (reviewMedia && result.row.mimeType.startsWith('video/')) return res.sendFile(result.file, {cacheControl:false,acceptRanges:true});
     const stream = fs.createReadStream(result.file);
     stream.on('error', () => {
       // Headers are already sent, so the honest answer is to end the response

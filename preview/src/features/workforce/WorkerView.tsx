@@ -3,6 +3,7 @@
 // workforce with a code, follow the onboarding checklist, read briefings, take
 // work that explains why it is shown, submit proof, and see earnings that are
 // derived from reviewed rows — never a counter.
+import { SessionSignIn } from '../../components/SessionSignIn';
 import React, { useEffect, useMemo, useState } from 'react';
 import * as api from '../../api/briefApi';
 import { TaskRunner } from './TaskRunner';
@@ -139,7 +140,7 @@ function AvailableCard({ a, onClaimed, onBrief }: { a: api.WorkAvailable; onClai
     <Card testId="available-work">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h3 className="text-base font-black" style={strong}>{a.program.title}</h3>
+          <h3 id={`program-${a.program.id}`} tabIndex={-1} className="text-base font-black" style={strong}>{a.program.title}</h3>
           <p className="text-xs" style={muted}>{a.program.workforceName} · {a.program.templateLabel} · {modeLabel(a.program.mode)} · due {a.program.deadline}</p>
         </div>
         <div className="text-right">
@@ -207,6 +208,8 @@ export function WorkerView() {
   const [briefing, setBriefing] = useState<string | null>(null);
   const [editProfile, setEditProfile] = useState(false);
   const [code, setCode] = useState('');
+  const [tab, setTab] = useState<'available' | 'tasks' | 'review' | 'completed' | 'earnings' | 'setup'>('available');
+  const [mode, setMode] = useState<'all' | 'home' | 'field' | 'hybrid'>('all');
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
 
@@ -218,20 +221,27 @@ export function WorkerView() {
   };
   useEffect(() => { void load(); }, []);
 
+  useEffect(() => {
+    if (state.kind !== 'ready') return;
+    const id = window.location.hash.startsWith('#workforce/program/') ? window.location.hash.slice('#workforce/program/'.length) : '';
+    if (id) document.getElementById(`program-${id}`)?.scrollIntoView({ block: 'center' });
+  }, [state]);
+
   if (state.kind === 'loading') return <p className="text-sm mt-6" style={muted}>Reading your work…</p>;
   if (state.kind === 'error') {
-    return <Empty>{state.status === 401 ? 'Sign in to see your work.' : state.message}</Empty>;
+    return state.status === 401 ? <SessionSignIn title="Sign in to see your work" onSignedIn={() => void load()} /> : <Empty>{state.message} <Btn kind="quiet" onClick={() => void load()}>Retry</Btn></Empty>;
   }
   const h = state.home;
   const profile = h.profile;
   const termsOk = profile?.termsAcceptedVersion === h.terms.version;
   const briefed = new Set((profile?.briefings ?? []).map((b) => b.templateKey));
   const done = (m: string) => { setMsg(m); setErr(''); setRunning(null); void load(); };
-  const ready = h.available.filter((a) => a.eligible);
-  const blocked = h.available.filter((a) => !a.eligible);
+  const filtered = h.available.filter((a) => mode === 'all' || a.program.mode === mode);
+  const ready = filtered.filter((a) => a.eligible);
+  const blocked = filtered.filter((a) => !a.eligible);
   const tpl = templates.find((t) => t.key === briefing);
 
-  if (running) return <div className="mt-4"><TaskRunner task={running} onDone={done} onClose={() => setRunning(null)} /></div>;
+  if (running) return <div className="mt-4"><TaskRunner task={running} onDone={done} onClose={() => { setRunning(null); void load(); }} /></div>;
 
   return (
     <div data-testid="worker-view">
@@ -257,15 +267,17 @@ export function WorkerView() {
         </Card>
       )}
 
-      {h.held.length > 0 && (
-        <Section title="Your tasks" hint={`You can hold up to ${h.limits.maxHeld} at once. Unsubmitted tasks return to the pool when their window ends.`}>
-          {h.held.map((t) => <TaskLine key={t.id} t={t} action={<Btn testId="open-task" onClick={() => setRunning(t)}>{t.returns ? 'Correct' : 'Start'}</Btn>} />)}
-        </Section>
-      )}
-
-      {h.openSteps.length > 0 && (
+      <div className="compact-tabs mt-4" aria-label="My work sections">
+        {([['available', 'Available'], ['tasks', `My work (${h.held.length})`], ['review', `Review (${h.inReview.length})`], ['completed', 'Completed'], ['earnings', 'Earnings'], ['setup', 'Onboarding']] as const).map(([key, label]) => <button type="button" key={key} aria-pressed={tab === key} onClick={() => setTab(key)}>{label}</button>)}
+      </div>
+      {tab === 'tasks' && <Section title="My work" hint={`You can hold up to ${h.limits.maxHeld} tasks. Unsubmitted tasks return to the pool when their window ends.`}>
+        {h.held.length ? h.held.map((t) => <TaskLine key={t.id} t={t} action={<Btn testId="open-task" onClick={() => setRunning(t)}>{t.returns ? 'Correct' : t.execution ? 'Continue' : 'Start'}</Btn>} />) : <Empty>No tasks in progress. Accept an available task to start.</Empty>}
+      </Section>}
+      {tab === 'available' && <>
+        <div className="compact-tabs" aria-label="Work mode">{(['all', 'home', 'field', 'hybrid'] as const).map((key) => <button key={key} type="button" aria-pressed={mode === key} onClick={() => setMode(key)}>{key === 'all' ? 'All modes' : key === 'home' ? 'Home' : key === 'field' ? 'Field' : 'Hybrid'}</button>)}</div>
+      {h.openSteps.filter((t) => mode === 'all' || (mode === 'hybrid' ? t.stepCount > 1 : t.step.mode === mode)).length > 0 && (
         <Section title="Next steps near you" hint="The earlier step was approved; this one is waiting for someone.">
-          {h.openSteps.map((t) => (
+          {h.openSteps.filter((t) => mode === 'all' || (mode === 'hybrid' ? t.stepCount > 1 : t.step.mode === mode)).map((t) => (
             <TaskLine key={t.id} t={t} action={<Btn onClick={async () => { const r = await api.acceptWorkTask(t.id); if (r.ok) setRunning(r.data); else setErr(r.error); }}>Accept</Btn>} />
           ))}
         </Section>
@@ -281,6 +293,9 @@ export function WorkerView() {
         </Section>
       )}
 
+      </>}
+
+      {tab === 'setup' && <>
       <Section title="Your workforces">
         {h.memberships.map((m) => (
           <Card key={m.id} testId="membership">
@@ -323,9 +338,12 @@ export function WorkerView() {
         </Section>
       )}
 
-      {h.inReview.length > 0 && <Section title="Waiting for review">{h.inReview.map((t) => <TaskLine key={t.id} t={t} />)}</Section>}
-      {h.recent.length > 0 && <Section title="Recently decided">{h.recent.map((t) => <TaskLine key={t.id} t={t} />)}</Section>}
+      </>}
+      {tab === 'review' && <Section title="Waiting for review">{h.inReview.length ? h.inReview.map((t) => <TaskLine key={t.id} t={t} />) : <Empty>No submissions awaiting review.</Empty>}</Section>}
+      {tab === 'completed' && <Section title="Recently decided">{h.recent.length ? h.recent.map((t) => <TaskLine key={t.id} t={t} />) : <Empty>No reviewed tasks yet.</Empty>}</Section>}
 
+
+      {tab === 'earnings' && <>
       <Section title="Earnings" hint={h.earnings.note}>
         <Card>
           <div className="grid grid-cols-3 gap-2">
@@ -351,13 +369,17 @@ export function WorkerView() {
         </Card>
       </Section>
 
-      <Section title="Your record" hint={h.record.note}>
+      </>}
+
+      {tab === 'completed' && <Section title="Your record" hint={h.record.note}>
         {h.record.byTemplate.length ? h.record.byTemplate.map((r) => (
           <Card key={r.templateKey}><p className="text-sm font-black" style={strong}>{r.templateLabel}</p><p className="text-xs" style={muted}>{r.statement}</p></Card>
         )) : <Empty>No reviewed work yet. Your record starts with your first submission.</Empty>}
       </Section>
 
-      {profile && !editProfile && <div className="mt-6"><Btn kind="quiet" onClick={() => setEditProfile(true)}>Edit worker profile</Btn></div>}
+      }
+
+      {tab === 'setup' && profile && !editProfile && <div className="mt-6"><Btn kind="quiet" onClick={() => setEditProfile(true)}>Edit worker profile</Btn></div>}
     </div>
   );
 }

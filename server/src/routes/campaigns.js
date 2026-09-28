@@ -436,8 +436,9 @@ app.post('/api/public/campaigns/:slug/register', (req, res) => {
     // the attendee's own gate credential, so it is returned to THEM (and only
     // to them) here — a code is the thing they show at the gate, not a roster
     // leak.
+    const ownedTicket = req.auth?.userId ? store.find('tickets', t => t.registrationId === reg.id && t.ownerUserId === req.auth.userId) : null;
     res.status(201).json({
-      registration: { id: reg.id, status: reg.status, createdAt: reg.createdAt, ticketCode: reg.ticketCode ?? null },
+      registration: { id: reg.id, status: reg.status, createdAt: reg.createdAt, ticketCode: ownedTicket ? ticketMarket.ticketOwnerView(ownedTicket).scanCode : reg.ticketCode ?? null },
       campaign: campaigns.publicView(campaigns.getPublicBySlug(req.params.slug) ?? c, req.auth?.userId ?? null)
     });
   } catch (e) {

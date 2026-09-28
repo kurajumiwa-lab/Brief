@@ -213,6 +213,7 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR
     await waitFor(() => page().includes('Hello, Wanjiku') && byTestId('work-terms'), 'terms after profile');
     await click(byTestId('accept-terms'), 'accept terms');
     await waitFor(() => page().includes('Terms accepted'), 'terms accepted');
+    await click(button('Onboarding'), 'onboarding section');
     await type(document.querySelector('input[aria-label="Workforce code"]'), code.toLowerCase());
     await click(byTestId('join-workforce'), 'join');
     const membership = await waitFor(() => byTestId('membership'), 'membership card');
@@ -225,6 +226,7 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR
     await click(byTestId('ack-briefing'), 'acknowledge briefing');
     await waitFor(() => page().includes('Briefed on merchant onboarding'), 'briefed');
     // Not active yet: the program is listed under "needs a step first" with the exact reason.
+    await click(button('Available'), 'available section');
     await waitFor(() => page().includes('Needs a step first'), 'blocked section');
     assert.ok(!byTestId('claim-work'), 'cannot claim before activation');
     pass('worker: profile, terms, join by code (any case), briefing — and is told exactly why they cannot take work yet');
@@ -252,8 +254,12 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR
     assert.ok(text(avail).includes('Sign up 5 shops in Westlands'));
     assert.ok(text(avail).includes('KES 60'), 'first step pays its stated share: ' + text(avail));
     await click(byTestId('claim-work'), 'claim');
+    await click(button('My work ('), 'my tasks section');
     await click(await waitFor(() => byTestId('open-task'), 'held task'), 'start task');
     let runner = await waitFor(() => byTestId('task-runner'), 'task runner');
+    assert.ok(byTestId('submit-proof').disabled, 'start required in the task runner');
+    await click(byTestId('start-work-task'), 'record remote start');
+    await waitFor(() => !byTestId('submit-proof').disabled, 'remote start recorded');
     // Fill every answer: yes/no pills get "Yes", text gets a value, phone a number.
     const fillStep = async (scope) => {
       for (const l of all('label', scope)) {
@@ -286,6 +292,7 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR
     // ── worker: sees the reason and corrects ──
     as(worker);
     mount('#workforce');
+    await click(await waitFor(() => button('My work ('), 'my tasks section'));
     await click(await waitFor(() => all('[data-testid="open-task"]').find((b) => text(b) === 'Correct'), 'Correct button'), 'correct');
     runner = await waitFor(() => byTestId('task-runner'), 'runner');
     assert.ok(text(runner).includes('Returned for correction'));
@@ -308,6 +315,7 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR
     // ── worker: the field step with real photo uploads, location and consent ──
     as(worker);
     mount('#workforce');
+    await click(await waitFor(() => button('Earnings'), 'earnings section'));
     await waitFor(() => page().includes('KES 60') && page().includes('waiting for the outcome'), 'earnings: step 1 awaiting outcome');
     {
       // Stat cards read "value label": check the value right before each label, and the rows.
@@ -318,10 +326,15 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR
       const mid = (await http('/api/me/work', worker.token)).body.earnings;
       assert.deepEqual([mid.payableKes, mid.awaitingOutcomeKes], [0, 60]);
     }
+    await click(button('Available'), 'available section');
     await waitFor(() => page().includes('Next steps near you'), 'next step');
     await click(all('button').find((b) => text(b) === 'Accept'), 'accept visit');
     runner = await waitFor(() => byTestId('task-runner'), 'visit runner');
     assert.ok(text(runner).includes('Photos — at least 2'));
+    await click(button('Capture GPS', runner));
+    await waitFor(() => !byTestId('start-work-task').disabled, 'GPS captured');
+    await click(byTestId('start-work-task'), 'check in');
+    await waitFor(() => !byTestId('submit-proof').disabled, 'check-in recorded');
     // Submitting without the evidence is refused by the server, and said plainly.
     await click(byTestId('submit-proof'), 'submit empty');
     await waitFor(() => text(byTestId('task-runner')).match(/photo/i) && !page().includes('Submitted'), 'refusal shown');
@@ -330,13 +343,13 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR
     Object.defineProperty(fileInput, 'files', { configurable: true, value: files });
     await act(async () => { fileInput.dispatchEvent(new dom.window.Event('change', { bubbles: true })); });
     await waitFor(() => all('button[aria-label="Remove photo"]', byTestId('task-runner')).length === 2, 'two photos uploaded');
-    await click(button('Capture location', byTestId('task-runner')), 'capture location');
+    await click(button('Capture again', byTestId('task-runner')), 'capture location');
     await waitFor(() => text(byTestId('task-runner')).includes('-1.26800, 36.81100'), 'location shown');
     await fillStep(byTestId('task-runner'));
     await type(all('input', byTestId('task-runner')).find((i) => i.placeholder === 'Name of the person consenting'), 'Njeri Wambui');
     await act(async () => { checkbox('They agreed', byTestId('task-runner')).click(); });
     await click(byTestId('submit-proof'), 'submit visit');
-    await waitFor(() => page().includes('All automatic checks passed'), 'clean submission');
+    await waitFor(() => page().includes('No automatic flags'), 'clean submission');
     pass('worker: uploads two private photos, captures location inside the territory, records consent — all checks pass');
 
     // ── owner: reviews the visit with photos and checks, approves ──
@@ -357,6 +370,7 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR
     // ── worker: now it is payable, and exactly the stated fees ──
     as(worker);
     mount('#workforce');
+    await click(await waitFor(() => button('Earnings'), 'earnings section'));
     await waitFor(() => page().includes('KES 240'), 'payable 240');
     const home = await http('/api/me/work', worker.token);
     assert.equal(home.body.earnings.payableKes, 240);

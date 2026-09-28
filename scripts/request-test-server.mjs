@@ -5,7 +5,7 @@ import path from "node:path";
 process.env.NODE_ENV = "test";
 process.env.BRIEF_DEV_AUTH = "0";
 // Test-only reviewer handles; never set in the live app or production preview.
-process.env.BRIEF_REVIEWERS = "supply_review_desktop,supply_review_mobile";
+process.env.BRIEF_REVIEWERS = "supply_review_desktop,supply_review_mobile,product_review_desktop,product_review_mobile";
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "brief-request-browser-"));
 process.env.BRIEF_DATA_DIR = dir;
 const { default: app } = await import("../server/src/index.js");

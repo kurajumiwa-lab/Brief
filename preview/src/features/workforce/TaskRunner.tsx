@@ -15,6 +15,7 @@ export function TaskRunner({ task, onDone, onClose }: { task: api.WorkTaskView; 
   const [photos, setPhotos] = useState<Array<{ id: string; preview: string }>>([]);
   const [uploading, setUploading] = useState(false);
   const [loc, setLoc] = useState<Loc | null>(null);
+  const [execution, setExecution] = useState(task.execution ?? null);
   const [locMsg, setLocMsg] = useState('');
   const [consentName, setConsentName] = useState('');
   const [consentWords, setConsentWords] = useState('');
@@ -24,7 +25,8 @@ export function TaskRunner({ task, onDone, onClose }: { task: api.WorkTaskView; 
   const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => () => photos.forEach((p) => URL.revokeObjectURL(p.preview)), []); // eslint-disable-line react-hooks/exhaustive-deps
+  const photoUrls = useRef<string[]>([]);
+  useEffect(() => () => photoUrls.current.forEach((url) => URL.revokeObjectURL(url)), []);
 
   const set = (k: string, v: string) => setValues((prev) => ({ ...prev, [k]: v }));
 
@@ -34,7 +36,11 @@ export function TaskRunner({ task, onDone, onClose }: { task: api.WorkTaskView; 
     setError('');
     for (const file of Array.from(files).slice(0, 8 - photos.length)) {
       const r = await api.uploadMediaFile(file, { purpose: 'private_work', alt: `${task.program.title} — ${step.label}` });
-      if (r.ok) setPhotos((prev) => (prev.some((p) => p.id === r.data.upload.id) ? prev : [...prev, { id: r.data.upload.id, preview: URL.createObjectURL(file) }]));
+      if (r.ok) {
+        const preview = URL.createObjectURL(file);
+        photoUrls.current.push(preview);
+        setPhotos((prev) => (prev.some((p) => p.id === r.data.upload.id) ? prev : [...prev, { id: r.data.upload.id, preview }]));
+      }
       else setError(r.error);
     }
     setUploading(false);
@@ -54,6 +60,15 @@ export function TaskRunner({ task, onDone, onClose }: { task: api.WorkTaskView; 
     );
   };
 
+  const start = async () => {
+    setBusy(true); setError('');
+    try {
+      const r = await api.startWorkTask(task.id, step.gps ? loc : null);
+      if (r.ok) setExecution(r.data.execution ?? null);
+      else setError(r.error);
+    } finally { setBusy(false); }
+  };
+
   const submit = async () => {
     setBusy(true);
     setError('');
@@ -67,7 +82,7 @@ export function TaskRunner({ task, onDone, onClose }: { task: api.WorkTaskView; 
     setBusy(false);
     if (!r.ok) { setError(r.error); return; }
     const flags = r.data.proof.flags;
-    onDone(flags ? `Submitted — ${flags} thing${flags === 1 ? '' : 's'} flagged for the reviewer to look at.` : 'Submitted. All automatic checks passed; a reviewer will decide.');
+    onDone(flags ? `Submitted — ${flags} thing${flags === 1 ? '' : 's'} flagged for the reviewer to look at.` : 'Submitted. No automatic flags; a reviewer will decide.');
   };
 
   const release = async () => {
@@ -95,6 +110,19 @@ export function TaskRunner({ task, onDone, onClose }: { task: api.WorkTaskView; 
         {task.dueAt ? ` Submit before ${new Date(task.dueAt).toLocaleString()}.` : ''}
         {task.territory?.name ? ` Territory: ${task.territory.name}.` : ''}
       </p>
+
+      <div className="mt-3 rounded-xl p-3" style={{ background: 'var(--color-surface-elevated)' }}>
+        <p className="text-xs font-bold" style={muted}>Accept → {step.gps ? 'Check in' : 'Start'} → Submit proof → Review → Outcome</p>
+        {execution ? <p className="text-xs mt-2" style={strong}>Started {new Date(execution.startedAt).toLocaleString()}. {step.gps ? 'Device location recorded; the reviewer verifies your proof.' : 'Start recorded. Complete the answers below.'}</p> : <>
+          <p className="text-xs mt-2" style={muted}>{step.gps ? 'At the location? Capture GPS, then check in. This records your arrival claim, not a verified visit.' : 'Record your start when you are ready. No GPS is needed for home work.'}</p>
+          <div className="flex flex-wrap items-center gap-2 mt-2">
+            {step.gps && <Btn kind="quiet" onClick={captureLocation}>Capture GPS</Btn>}
+            <Btn testId="start-work-task" disabled={busy || (step.gps && !loc)} onClick={() => void start()}>{step.gps ? 'Check in & start' : 'Start task'}</Btn>
+            {step.gps && task.territory?.name && <a className="text-xs underline" href={`https://www.openstreetmap.org/search?query=${encodeURIComponent(task.territory.name)}`} target="_blank" rel="noreferrer">Find territory on map</a>}
+          </div>
+          {step.gps && loc && <p className="text-xs mt-2" style={muted}>GPS captured: {loc.lat.toFixed(5)}, {loc.lng.toFixed(5)}</p>}
+        </>}
+      </div>
 
       {task.lastReview?.decision === 'return' && (
         <div className="mt-3 rounded-xl p-3" style={{ background: 'var(--color-surface-elevated)' }}>
@@ -186,7 +214,7 @@ export function TaskRunner({ task, onDone, onClose }: { task: api.WorkTaskView; 
 
       <Notice text={error} />
       <div className="flex flex-wrap gap-2 mt-4">
-        <Btn testId="submit-proof" onClick={() => void submit()} disabled={busy || uploading}>{busy ? 'Submitting…' : 'Submit for review'}</Btn>
+        <Btn testId="submit-proof" onClick={() => void submit()} disabled={busy || uploading || !execution}>{busy ? 'Submitting…' : 'Submit for review'}</Btn>
         <Btn kind="quiet" onClick={() => void release()} disabled={busy}>Release task</Btn>
         {step.gate && <Pill>{`If "${step.gate.equals}" is not the answer, the ${task.program.unitNoun} closes honestly as not converted`}</Pill>}
       </div>

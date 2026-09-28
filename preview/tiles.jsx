@@ -286,17 +286,17 @@ async function main() {
     scrollY = 220;
     const { root } = mount(React.createElement(HomeSurface, { onOpenSpace: () => {} }));
     await flush(160);
-    const grid = document.querySelector('[data-testid="open-now-grid"]');
-    check('Open now is a two-column grid', Boolean(grid) && grid.classList.contains('grid-cols-2'));
-    const orderBefore = Array.from(grid.querySelectorAll('article')).map((a) => a.getAttribute('data-testid')).join(',');
-    const card = document.querySelector('[data-testid="globys-card-open-f1"]');
+    const grid = document.querySelector('section[aria-label="Latest activity"] .compact-list');
+    check('Home activity is a compact list', Boolean(grid));
+    const orderBefore = Array.from(grid.querySelectorAll('li, article')).map((a) => a.getAttribute('data-testid')).join(',');
+    const card = document.querySelector('section[aria-label="Latest activity"] .compact-row');
     click(card);
     await flush(40);
     const sheet = document.querySelector('[data-testid="sheet"]');
     check('tapping an Open now card raises the shared sheet', Boolean(sheet));
     check('the Open now sheet is not inside the grid', !grid.querySelector('[data-testid="sheet"]'));
     check('Open now grid order is unchanged',
-      orderBefore === Array.from(grid.querySelectorAll('article')).map((a) => a.getAttribute('data-testid')).join(','));
+      orderBefore === Array.from(grid.querySelectorAll('li, article')).map((a) => a.getAttribute('data-testid')).join(','));
     check('Open now selection does not write scrollY', scrollY === 220);
     click(document.querySelector('[data-testid="sheet-scrim"]'));
     await flush(20);
@@ -336,15 +336,15 @@ async function main() {
     await flush(160);
     const grid = document.querySelector('[data-testid="mine-shop-grid"]');
     check('Mine shops is a two-column grid', Boolean(grid));
-    const orderBefore = Array.from(grid.querySelectorAll('article')).map((a) => a.getAttribute('data-testid')).join(',');
-    click(document.querySelector('[data-testid="globys-card-shop-spc_m"]'));
+    const orderBefore = Array.from(grid.querySelectorAll('li, article')).map((a) => a.getAttribute('data-testid')).join(',');
+    click(document.querySelector('[data-testid="globys-card-shop-spc_m"] button'));
     await flush(40);
     const sheet = document.querySelector('[data-testid="sheet"]');
     check('tapping a Mine shop card raises a sheet titled with the shop name',
       Boolean(sheet) && text(document.querySelector('[data-testid="sheet-title"]')) === 'Nairobi Boda');
     check('the Mine shop sheet is not inside the grid', !grid.querySelector('[data-testid="sheet"]'));
     check('Mine grid order is unchanged',
-      orderBefore === Array.from(grid.querySelectorAll('article')).map((a) => a.getAttribute('data-testid')).join(','));
+      orderBefore === Array.from(grid.querySelectorAll('li, article')).map((a) => a.getAttribute('data-testid')).join(','));
     check('Mine selection does not write scrollY', scrollY === 90);
     check('the shop sheet shows the real lowest offer, not an invented one',
       /from KES 1,500/.test(text(document.querySelector('[data-testid="mine-shop-sheet-body"]'))));

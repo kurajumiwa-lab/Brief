@@ -2,9 +2,13 @@ import './index.css';
 import './ui/theme.css';
 import React, { lazy, Suspense } from 'react';
 import ReactDOM from 'react-dom/client';
+import { LaunchExperience } from './features/launch/LaunchExperience';
+import { BrandLoading } from './features/launch/BrandLoading';
 // Independent public entry points do not mount private shell effects.
 // The legacy App.tsx remains a test harness, not the production shell.
-const EventShowcase = lazy(() => import('./features/events/EventShowcase').then(m => ({ default: m.EventShowcase })));
+const ReviewsPage = lazy(() => import('./features/reviews/ReviewsPage'));
+const OrderTrackingPage = lazy(() => import('./features/tracking/OrderTrackingPage'));
+const WanderlyPage = lazy(() => import('./features/wanderly/WanderlyPage'));
 const AppShell = lazy(() => import('./app/AppShell.tsx').then(m => ({ default: m.AppShell })));
 const PublicGroupsPage = lazy(() => import('./components/PublicGroupsPage').then(m => ({ default: m.PublicGroupsPage })));
 import { flushOfflineQueue } from './api/briefApi.ts';
@@ -52,19 +56,24 @@ function installOfflineFlush() {
 installOfflineFlush();
 
 function Root() {
-  React.useEffect(() => {
-    // Boot-splash handoff: React has committed, so the brand moment is over.
-    // The Suspense fallback below keeps the screen black until the first
-    // lazy chunk lands, so the handoff never flashes light mid-load.
-    document.getElementById('boot-splash')?.remove();
-  }, []);
+  if (/^\/reviews(?:\/[A-Za-z0-9_-]+)?\/?$/.test(window.location.pathname)) return <ReviewsPage />;
+  if (/^\/track\/?$/.test(window.location.pathname)) return <OrderTrackingPage />;
   if (/^\/groups\/?$/.test(window.location.pathname)) return <PublicGroupsPage />;
-  if (slug) return <EventShowcase slug={slug} />;
+  if (slug) return <WanderlyPage initialSlug={slug} />;
   return <AppShell />;
+}
+
+// A failed lazy chunk must offer recovery rather than an endless splash.
+class StartupBoundary extends React.Component {
+  state = { failed: false };
+  static getDerivedStateFromError() { return { failed: true }; }
+  render() {
+    return this.state.failed ? <div className="wairo-loading" role="alert"><h1>Wairo Blue Avenue</h1><p>We couldn’t open the app. Check your connection and try again.</p><button className="wairo-intro-next" onClick={() => window.location.reload()}>Try again →</button></div> : this.props.children;
+  }
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <Suspense fallback={<div style={{ background: '#0a0a0a', minHeight: '100dvh', display: 'grid', placeItems: 'center' }}><p role="status" style={{ color: '#EAB308', fontWeight: 800 }}>Opening Wairo…</p></div>}><Root /></Suspense>
+    <LaunchExperience><StartupBoundary><Suspense fallback={<BrandLoading />}><Root /></Suspense></StartupBoundary></LaunchExperience>
   </React.StrictMode>
 );

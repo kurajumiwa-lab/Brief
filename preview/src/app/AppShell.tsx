@@ -7,8 +7,8 @@ import { AppBelt, readPlace, PLACE_KEY } from './AppBelt';
 import { NavSheet, type SheetTarget } from './NavSheet';
 import { TAB_HASH, backLabel, shopHref, shopIdFromHash, surfaceFromHash } from './surfaces';
 import { CreateSheet, type CreateActionId } from './CreateSheet';
-import { HostEventSheet } from '../features/city/HostEventSheet';
 const GroupBuyPortal = React.lazy(() => import('../components/GroupBuyPortal').then(m => ({ default: m.GroupBuyPortal })));
+const AdminWorkspace = React.lazy(() => import('../features/admin/AdminWorkspace').then(m => ({ default: m.AdminWorkspace })));
 const SpaceModerationPanel = React.lazy(() => import('../components/SpaceModerationPanel').then(m => ({ default: m.SpaceModerationPanel })));
 const SearchResults = React.lazy(() => import('../components/SearchResults').then(m => ({ default: m.SearchResults })));
 const HomeSurface = React.lazy(() => import('../features/home/HomeSurface').then(m => ({ default: m.HomeSurface })));
@@ -20,7 +20,8 @@ import type { DiscoverRoom } from '../features/city/taxonomy';
 
 const PublicSpacePage = React.lazy(() => import('../features/spaces/PublicSpacePage').then(m => ({ default: m.PublicSpacePage })));
 const MarketStorefront = React.lazy(() => import('../features/market/MarketStorefront').then(m => ({ default: m.MarketStorefront })));
-const TokyoGuide = React.lazy(() => import('../features/wanderly/TokyoGuide').then(m => ({ default: m.TokyoGuide })));
+import { wanderlyRoute } from '../features/wanderly/routes';
+const WanderlyPage = React.lazy(() => import('../features/wanderly/WanderlyPage'));
 const ElevateHub = React.lazy(() => import('../features/wairo/ElevateHub').then(m => ({ default: m.ElevateHub })));
 const WairoElevateMarket = React.lazy(() => import('../features/wairo/ElevateMarket').then(m => ({ default: m.WairoElevateMarket })));
 const WairoElevateLedger = React.lazy(() => import('../features/wairo/ElevateLedger').then(m => ({ default: m.WairoElevateLedger })));
@@ -56,7 +57,13 @@ export const AppShell: React.FC<AppShellProps> = ({
   onNavigateLegacyTab,
   className = ''
 }) => {
+  const [adminRoute, setAdminRoute] = useState<{ memberId: string | null } | null>(null);
+  const [canAdmin, setCanAdmin] = useState(false);
   const [canModerate, setCanModerate] = useState(false);
+  const handleAdminSession = React.useCallback((me: briefApi.AuthedUser | null) => {
+    setCanAdmin(Boolean(me?.capabilities?.includes('admin')));
+    setCanModerate(Boolean(me?.capabilities?.includes('moderate')));
+  }, []);
   const [moderationOpen, setModerationOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<BriefNavigationTab>(initialTab);
   const [supplyRoute, setSupplyRoute] = useState(() => window.location.hash.replace(/^#\/?supply\/?/, ''));
@@ -87,6 +94,7 @@ export const AppShell: React.FC<AppShellProps> = ({
   // world's numbers; the rest are the browse surfaces).
   // One room per deep link, and the type comes from the taxonomy module so the
   // shell can never name a room the board does not have.
+  const [businessFeedActive, setBusinessFeedActive] = useState(true);
   const [discoverSubTab, setDiscoverSubTab] = useState<DiscoverRoom>('all');
   // The belt's two owned pieces of state: the sheet (the long list of
   // destinations, which is why the band above can stay short) and the search
@@ -101,9 +109,9 @@ export const AppShell: React.FC<AppShellProps> = ({
   // overlay). The Selling tab and the errand composer are answered by nonce,
   // because they are signals to surfaces that already exist, not new screens.
   const [createOpen, setCreateOpen] = useState<boolean>(false);
-  const [hostSheetOpen, setHostSheetOpen] = useState<boolean>(false);
   const [groupBuysOpen, setGroupBuysOpen] = useState<boolean>(false);
   const [sellingNonce, setSellingNonce] = useState<number>(0);
+  const [mineSection, setMineSection] = useState<'spaces' | 'orders' | 'selling' | 'team'>('spaces');
   const [mineSellingNonce, setMineSellingNonce] = useState<number>(0);
   const [briefOpen, setBriefOpen] = useState<boolean>(false);
   const [errandSignal, setErrandSignal] = useState<{ nonce: number; kind: string | null } | null>(null);
@@ -131,13 +139,16 @@ export const AppShell: React.FC<AppShellProps> = ({
   const goSheetTarget = (target: SheetTarget) => {
     if (target.kind === 'storefront') { window.location.hash = 'home'; setActiveTab('home'); setStorefrontOpen(false); return; }
     if (target.kind === 'elevate') { const page = target.page; window.location.hash = `elevate/${page}`; setElevatePage(page); return; }
-    if (target.kind === 'wanderly') { window.location.hash = 'destinations/tokyo'; setWanderlyOpen(true); return; }
+    if (target.kind === 'wanderly') { window.location.hash = 'wanderly'; setWanderlyOpen(true); return; }
+    if (target.kind === 'admin') { window.location.hash = 'admin/members'; return; }
     if (target.kind === 'moderation') { window.location.hash = 'moderation'; setModerationOpen(true); return; }
     if (target.kind === 'signout') {
       void (async () => {
         await briefApi.logout();
         setAuthed(false);
         setCanModerate(false);
+        setCanAdmin(false);
+        setAdminRoute(null);
         setModerationOpen(false);
         setYouSection(null);
         setActiveTab('home');
@@ -172,12 +183,15 @@ export const AppShell: React.FC<AppShellProps> = ({
     setCreateOpen(false);
     const nextNonce = signalCounter + 1;
     setSignalCounter(nextNonce);
-    if (id === 'offer') {
+    if (id === 'work') {
+      setActiveTab('workforce');
+      window.location.hash = 'workforce/org';
+    } else if (id === 'offer') {
       setMineSellingNonce(nextNonce);
       setActiveTab('mine');
-      window.location.hash = 'mine';
+      window.location.hash = 'spaces/selling';
     } else if (id === 'event') {
-      setHostSheetOpen(true);
+      window.location.hash = 'wanderly/host';
     } else if (id === 'run' || id === 'errand') {
       setDiscoverSubTab('errands');
       setErrandSignal({ nonce: nextNonce, kind: id === 'run' ? 'delivery' : null });
@@ -212,7 +226,6 @@ export const AppShell: React.FC<AppShellProps> = ({
   const surfaceState = () => {
     if (manualOrderOpen) return 'manual-order';
     if (createFlowOpen) return 'new-space';
-    if (hostSheetOpen) return 'host';
     if (createOpen) return 'create';
     if (groupBuysOpen) return 'groupbuys';
     if (sheetOpen) return 'menu';
@@ -220,6 +233,7 @@ export const AppShell: React.FC<AppShellProps> = ({
   };
 
   useEffect(() => {
+    if (wanderlyRoute(window.location.hash)) return;
     const named = surfaceFromHash(window.location.hash);
     const want = surfaceState();
     if (want && want !== named) {
@@ -231,7 +245,7 @@ export const AppShell: React.FC<AppShellProps> = ({
       if (back) window.location.hash = back;
       else window.history.replaceState(null, '', window.location.pathname + window.location.search);
     }
-  }, [createOpen, hostSheetOpen, groupBuysOpen, sheetOpen, createFlowOpen, manualOrderOpen]);
+  }, [createOpen, groupBuysOpen, sheetOpen, createFlowOpen, manualOrderOpen]);
 
   /** Open one space's workspace, and name it in the URL so back leaves it. */
   const openSpace = (id: string) => {
@@ -265,7 +279,7 @@ export const AppShell: React.FC<AppShellProps> = ({
    * hash here on purpose: whether the control exists is decided by the same
    * state that decides what is on screen, so the two can never disagree.
    */
-  const anySurfaceOpen = createOpen || hostSheetOpen || groupBuysOpen
+  const anySurfaceOpen = createOpen || groupBuysOpen
     || sheetOpen || createFlowOpen || manualOrderOpen || Boolean(elevatePage);
   // Back is for a second screen. A space held in memory while Home is showing
   // is not a second screen — that is how a Back toggle appeared on Home.
@@ -281,7 +295,6 @@ export const AppShell: React.FC<AppShellProps> = ({
           const back = tabHashRef.current || TAB_HASH[activeTab] || 'home';
           if (window.location.hash.replace(/^#/, '') === back) {
             setCreateOpen(false);
-            setHostSheetOpen(false);
             setGroupBuysOpen(false);
             setSheetOpen(false);
             setCreateFlowOpen(false);
@@ -321,17 +334,32 @@ export const AppShell: React.FC<AppShellProps> = ({
     }
   };
 
+  // Refresh privileged navigation after sign-in and whenever the drawer opens.
+  // A revoked/expired session removes the entry; every API still checks again.
+  useEffect(() => {
+    let live = true, generation = 0;
+    const refresh = () => {
+      const n = ++generation;
+      handleAdminSession(null);
+      void briefApi.whoAmI().then((r) => { if (live && n === generation) handleAdminSession(r.ok ? r.data : null); });
+    };
+    refresh();
+    window.addEventListener('brief:session-changed', refresh);
+    window.addEventListener('focus', refresh);
+    return () => { live = false; window.removeEventListener('brief:session-changed', refresh); window.removeEventListener('focus', refresh); };
+  }, [sheetOpen, handleAdminSession]);
+
   // Deep link detection on mount / URL change
   useEffect(() => {
     loadSpaces();
     briefApi.whoAmI().then(async (res) => {
       setAuthed(res.ok);
-      setCanModerate(res.ok && Boolean(res.data?.capabilities?.includes('moderate')));
+
       // First-run onboarding: a signed-in member with NO table-banking group
       // yet gets a guided checklist instead of a passive dashboard. Derived
       // from real rows (getMyTableBanking), dismissible once, never re-shown
       // after they dismiss it or once a group exists.
-      if (res.ok && !firstRunChecked && typeof window !== 'undefined' && !window.localStorage.getItem('brief.firstRunDismissed')) {
+      if (res.ok && !res.data.capabilities?.includes('ops.read') && !res.data.capabilities?.includes('admin') && !firstRunChecked && typeof window !== 'undefined' && !window.localStorage.getItem('brief.firstRunDismissed')) {
         setFirstRunChecked(true);
         const tb = await briefApi.getMyTableBanking();
         if (tb.ok && tb.data.length === 0) setFirstRun(true);
@@ -340,10 +368,20 @@ export const AppShell: React.FC<AppShellProps> = ({
 
     const navigate = () => {
       const hash = window.location.hash.slice(1);
-      // Wanderly Tokyo guide — standalone editorial + planning surface.
-      // Hashes: #tokyo, #wanderly, #wanderly/tokyo, #destinations/tokyo, #destinations/asia/tokyo, #asia/tokyo
-      const isWanderly = hash==='tokyo' || hash==='wanderly' || hash.startsWith('wanderly/') || hash.startsWith('destinations/') || hash==='asia/tokyo';
-      if (isWanderly) { setWanderlyOpen(true); return; }
+      const admin = /^admin(?:\/members(?:\/([^/]+))?)?$/.exec(hash);
+      if (admin) {
+        let memberId = null;
+        try { memberId = admin[1] ? decodeURIComponent(admin[1]) : null; } catch { memberId = 'invalid'; }
+        setAdminRoute({ memberId });
+        setSheetOpen(false);
+        setModerationOpen(false);
+        return;
+      }
+      setAdminRoute(null);
+      if (hash === 'you/orders' || hash === 'you/selling') { window.location.replace(`#spaces/${hash.slice(4)}`); return; }
+      // Wanderly owns Events and legacy Tokyo/destination entry points.
+      const isWanderly = wanderlyRoute(hash) !== null;
+      if (isWanderly) { setWanderlyOpen(true); setSheetOpen(false); setCreateOpen(false); setCreateFlowOpen(false); setGroupBuysOpen(false); setManualOrderOpen(false); return; }
       setWanderlyOpen(false);
       setModerationOpen(hash === 'moderation');
       if (hash === 'moderation') return;
@@ -352,7 +390,6 @@ export const AppShell: React.FC<AppShellProps> = ({
       const surface = surfaceFromHash(hash);
       if (surface) {
         setCreateOpen(surface === 'create');
-        setHostSheetOpen(surface === 'host');
         setGroupBuysOpen(surface === 'groupbuys');
         setSheetOpen(surface === 'menu');
         setCreateFlowOpen(surface === 'new-space');
@@ -376,7 +413,6 @@ export const AppShell: React.FC<AppShellProps> = ({
       // closes a shop when the back gesture steps off `#shop/<id>`: the URL and
       // the screen are never allowed to disagree about which one is showing.
       setCreateOpen(false);
-      setHostSheetOpen(false);
       setGroupBuysOpen(false);
       setSheetOpen(false);
       setCreateFlowOpen(false);
@@ -432,15 +468,17 @@ export const AppShell: React.FC<AppShellProps> = ({
         }
         setYouSection((YOU_SECTION_IDS as string[]).includes(rest) ? rest : null);
         setBriefOpen(false);
-      } else if (hash === 'spaces' || hash === 'shopbrief') {
+      } else if (hash === 'spaces' || hash.startsWith('spaces/') || hash === 'shopbrief' || hash === 'mine') {
+        const nextSection = hash.slice(7);
+        setMineSection(['orders', 'selling', 'team'].includes(nextSection) ? nextSection as 'orders' | 'selling' | 'team' : 'spaces');
         // The morning brief is a notification, not a Mine shelf. Tapping it
         // opens the read once; closing returns to Mine.
         setJoinCode('');
         setSearchQuery('');
         setEntityId(null);
         setActiveTab('mine');
-        tabHashRef.current = 'mine';
-        setBriefOpen(true);
+        tabHashRef.current = hash === 'shopbrief' ? 'spaces' : hash;
+        setBriefOpen(hash === 'shopbrief');
       } else if (hash === 'city' || hash.startsWith('city/') || hash === 'discover' || hash === 'events') {
         // Events and Circles are rooms of the board, not aliases of Errands.
         // `#city/events` and `#city/circles` are the hashes Home's tiles write.
@@ -468,7 +506,8 @@ export const AppShell: React.FC<AppShellProps> = ({
         // drawer's check-in, so the legacy hash resolves there. 'mine' and
         // 'pulse' are the new bar's doors and the drawer's check-in.
         const tabs: Record<string, BriefNavigationTab> = { home: 'home', spaces: 'mine', pipeline: 'pipeline', catalog: 'catalog', activity: 'pulse', mine: 'mine', pulse: 'pulse', ledger: 'ledger', partners: 'partners', workforce: 'workforce', 'workforce/org': 'workforce', you: 'you' };
-        if (tabs[hash]) { setEntityId(null); setActiveTab(tabs[hash]); tabHashRef.current = hash; setBriefOpen(false); }
+        if (hash.startsWith('workforce/program/')) { setEntityId(null); setActiveTab('workforce'); tabHashRef.current = hash; setBriefOpen(false); }
+        else if (tabs[hash]) { setEntityId(null); setActiveTab(tabs[hash]); tabHashRef.current = hash; setBriefOpen(false); }
         else if (!hash) {
           // Empty hash IS home. Mapping it to `initialTab` (once 'city') made
           // the Home door — which writes hash '' — open Discover. A person
@@ -577,7 +616,9 @@ export const AppShell: React.FC<AppShellProps> = ({
   // by a guided checklist (the "dedicated onboarding state" similar apps use).
   // "Start your group" drops them into the You tab, where the group flow lives;
   // "Skip for now" is remembered so they are never nagged again.
-  if (firstRun) {
+  // A group checklist is a Home invitation, not a gate on discovery,
+  // shared offers, requests or execution deep links.
+  if (firstRun && !adminRoute && !wanderlyOpen && (!window.location.hash || window.location.hash === '#home')) {
     return (
       <div className="min-h-screen w-full bg-[color:var(--color-bg)] text-[color:var(--color-text)] font-sans flex items-center justify-center px-4">
         <div className="w-full max-w-md">
@@ -598,12 +639,11 @@ export const AppShell: React.FC<AppShellProps> = ({
     );
   }
 
-  // Wanderly Tokyo guide — editorial magazine + planning tools.
-  // Standalone full-page, not a Brief tab: it has its own nav, hero, sidebar, and footer.
+  // Wanderly owns browse, public detail, tickets and hosting; no duplicate shell.
   if (wanderlyOpen) {
     return (
-      <React.Suspense fallback={<p role="status" className="p-6">Opening Tokyo…</p>}>
-        <TokyoGuide />
+      <React.Suspense fallback={<p role="status" className="p-6">Opening Wanderly…</p>}>
+        <WanderlyPage />
       </React.Suspense>
     );
   }
@@ -638,6 +678,7 @@ export const AppShell: React.FC<AppShellProps> = ({
             the long list, and a message slot. It lives inside the scroll
             column so it behaves the same on a phone and on a desktop. */}
         <AppBelt
+          minimal={(activeTab === 'city' || activeTab === 'discover') && businessFeedActive}
           backTo={backTo}
           onOpenSheet={() => setSheetOpen(true)}
           onHome={() => { window.location.hash = 'home'; setActiveTab('home'); }}
@@ -695,6 +736,7 @@ export const AppShell: React.FC<AppShellProps> = ({
         {activeTab === 'home' ? (
           <HomeSurface
             userName="there"
+            onOpenWork={() => { setActiveTab('workforce'); window.location.hash = 'workforce'; }}
             onOpenSpace={openSpace}
             onExploreDiscover={(sub, startRun) => {
               const room = sub ?? 'all';
@@ -723,6 +765,8 @@ export const AppShell: React.FC<AppShellProps> = ({
               <CityFeedView
                 key={discoverSubTab}
                 initialSubTab={discoverSubTab}
+                onMixedViewChange={setBusinessFeedActive}
+                onSellingHandled={() => setSellingNonce(0)}
                 sellingSignal={sellingNonce}
                 errandSignal={errandSignal}
                 onOpenSpace={(id) => openSpace(id)}
@@ -756,6 +800,7 @@ export const AppShell: React.FC<AppShellProps> = ({
                 onOpenEntity={(id) => { setEntityId(id); setActiveTab('you'); window.location.hash = `entity/${id}`; }}
                 onRequireAuth={() => showToast('Sign in to continue.')}
                 sellingSignal={mineSellingNonce}
+                initialSection={mineSection}
               />
             )}
 
@@ -931,11 +976,7 @@ export const AppShell: React.FC<AppShellProps> = ({
 
       {/* "Host an event": the real createCampaign → publish loop, owned by the
           sheet that opened it rather than by the one screen it used to float on. */}
-      <HostEventSheet
-        open={hostSheetOpen}
-        onClose={() => setHostSheetOpen(false)}
-        onPublished={(title) => showToast(`"${title}" is published and on the board.`)}
-      />
+
 
       {/* "Group buys": the portal overlay, openable from Home's tile and the
           drawer, closed from inside. */}
@@ -949,7 +990,9 @@ export const AppShell: React.FC<AppShellProps> = ({
           stays short and the screens below stay uncluttered. */}
       {moderationOpen && <OverlayScreen title="Page moderation" onBack={() => { setModerationOpen(false); window.location.hash = activeTab; }}>{canModerate ? <SpaceModerationPanel /> : <p>This page requires the moderate capability. Sign in as an authorized reviewer.</p>}</OverlayScreen>}
 
+      {adminRoute && <AdminWorkspace memberId={adminRoute.memberId} onSession={handleAdminSession} onClose={() => { setAdminRoute(null); window.location.hash = tabHashRef.current || 'home'; }} />}
       <NavSheet
+        canAdmin={canAdmin}
         canModerate={canModerate}
         open={sheetOpen}
         onClose={() => setSheetOpen(false)}

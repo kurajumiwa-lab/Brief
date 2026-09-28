@@ -14,6 +14,8 @@ import { money } from './ListingCard';
  */
 
 export interface ListingDetailProps {
+  delivery?: {email:string;address:string;instructions:string};
+  onDeliveryChange?: (value:{email:string;address:string;instructions:string}) => void;
   listing: Listing;
   quantity: number;
   onQuantityChange: (q: number) => void;
@@ -25,6 +27,7 @@ export interface ListingDetailProps {
 }
 
 export function ListingDetail({
+  delivery, onDeliveryChange,
   listing,
   quantity,
   onQuantityChange,
@@ -80,6 +83,8 @@ export function ListingDetail({
         )}
       </div>
 
+      <a href={`/reviews/${encodeURIComponent(listing.id)}`} className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 underline underline-offset-2">Customer reviews →</a>
+
       {listing.orderable ? (
         <div className="bg-[color:var(--color-paper)] border border-[var(--brief-line)] rounded-2xl p-4 space-y-3">
           <div className="flex items-center gap-2">
@@ -106,6 +111,13 @@ export function ListingDetail({
             you order
           </p>
 
+          {delivery && onDeliveryChange && <details className="text-xs space-y-2">
+            <summary className="cursor-pointer font-bold">Delivery & guest tracking (optional)</summary>
+            <p className="text-[var(--ink-60)]">Track without signing in using this email and your order number. Keep your order number private.</p>
+            <label className="block">Tracking email<input type="email" maxLength={254} value={delivery.email} onChange={e=>onDeliveryChange({...delivery,email:e.target.value})} className="block w-full rounded-lg border p-2 mt-1" placeholder="Uses your account email if available" /></label>
+            <label className="block">Delivery address<textarea maxLength={500} value={delivery.address} onChange={e=>onDeliveryChange({...delivery,address:e.target.value})} className="block w-full rounded-lg border p-2 mt-1" /></label>
+            <label className="block">Delivery instructions<textarea maxLength={500} value={delivery.instructions} onChange={e=>onDeliveryChange({...delivery,instructions:e.target.value})} className="block w-full rounded-lg border p-2 mt-1" /></label>
+          </details>}
           <button
             onClick={onOrder}
             disabled={busy}
