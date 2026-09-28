@@ -825,7 +825,7 @@ export function MyLayerScreen(props: MyLayerScreenProps) {
                       </button>
                       <button
                         onClick={() => {
-                          if (window.confirm('Cancel and remove this event?')) {
+                          if (window.confirm('Withdraw or remove this event? People holding a place are released and anyone who paid is refunded.')) {
                             void handleRemoveCampaign(c.id);
                           }
                         }}
@@ -881,7 +881,7 @@ export function MyLayerScreen(props: MyLayerScreenProps) {
                       </button>
                       <button
                         onClick={() => {
-                          if (window.confirm('Cancel and remove this draft?')) {
+                          if (window.confirm('Remove this draft? Nothing has happened on it yet, so nothing is lost.')) {
                             void handleRemoveCampaign(c.id);
                           }
                         }}
@@ -915,7 +915,7 @@ export function MyLayerScreen(props: MyLayerScreenProps) {
                       </button>
                       <button
                         onClick={() => {
-                          if (window.confirm('Remove this finished event?')) {
+                          if (window.confirm('Remove this finished event from your dashboard? The record and its history stay.')) {
                             void handleRemoveCampaign(c.id);
                           }
                         }}

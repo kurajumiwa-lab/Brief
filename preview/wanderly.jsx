@@ -161,6 +161,85 @@ const pass = (s) => { passed++; console.log('PASS ' + s); };
     assert.equal(window.location.hash, '#wanderly/experience/' + row.publicSlug);
     pass('host publishes from the same product; failed publish retries reuse the draft and preserve currency/dates');
 
+    // ---------------------------------------------------------------------
+    // EDIT + WITHDRAW. An offer can be edited after publication and withdrawn
+    // at any time — but a withdrawal is a state, not a delete, so the people
+    // and the money it touched keep their records.
+    // ---------------------------------------------------------------------
+    await mount('wanderly/hosting', host.token);
+    await wait(() => by(`edit-${trip.id}`), 'hosting list with actions');
+    await click(by(`edit-${trip.id}`));
+    await wait(() => text().includes('Edit this plan'), 'edit sheet opens');
+    assert.ok(await wait(() => document.querySelector('[aria-label="Event title"]'), 'prefilled title'),
+      'the form opens on the row, not blank');
+    assert.equal(document.querySelector('[aria-label="Event title"]').value, 'Naivasha weekend',
+      'with the real title in it');
+    assert.ok(document.querySelector('[aria-label="Team size"]').disabled,
+      'and the capacity is locked, because publication already locked it');
+    await type(document.querySelector('[aria-label="Event title"]'), 'Naivasha weekend (moved)');
+    await click(button('Save changes'));
+    await wait(() => by(`receipt-${trip.id}`) === null && text().includes('Naivasha weekend (moved)'), 'edit saved');
+    assert.ok(!text().includes('Publish plan'), 'saving an edit does not republish it');
+    const edits = await call(`/api/campaigns/${trip.id}/revisions`, host.token);
+    assert.equal(edits.revisions.length, 1, 'the edit is on the record');
+    assert.deepEqual(edits.revisions[0].fields, ['title']);
+    assert.equal(edits.revisions[0].before.title, 'Naivasha weekend');
+    const toldGuest = await call('/api/notifications', guest.token);
+    assert.ok(toldGuest.notifications.some(n => n.type === 'event_changed'),
+      'and the person holding a place is told the terms moved');
+
+    // An edit form only writes what it can faithfully round-trip: the party has
+    // a line-up and FAQ built by another form, and renaming it must leave every
+    // one of those exactly as it was.
+    await click(by(`edit-${party.id}`));
+    await wait(() => text().includes('Edit this plan'), 'edit the festival plan');
+    await type(document.querySelector('[aria-label="Event title"]'), 'Nairobi community night II');
+    await click(button('Save changes'));
+    await wait(() => text().includes('Nairobi community night II') && !text().includes('Save changes'), 'party renamed');
+    const afterEdit = (await call(`/api/campaigns/${party.id}`, host.token)).campaign;
+    assert.equal(afterEdit.festival.priceTiers[0].name, 'Door option', 'the line-up survived an unrelated edit');
+    assert.equal(afterEdit.festival.faqs[0].q, 'What should I bring?', 'and so did the FAQ');
+    assert.equal(afterEdit.startsAt, party.startsAt,
+      'the start time is byte-for-byte what it was: an untouched field is not rewritten to the minute');
+    const partyEdits = await call(`/api/campaigns/${party.id}/revisions`, host.token);
+    assert.deepEqual(partyEdits.revisions[0].fields, ['title'], 'and only the field the host actually changed is recorded');
+
+    await click(by(`withdraw-${trip.id}`));
+    await wait(() => text().includes('Withdraw “Naivasha weekend (moved)”?'), 'withdraw confirmation');
+    assert.ok(text().includes('1 held or registered place released'), 'the consequences are counted, not gestured at');
+    assert.ok(text().includes('No money has been taken, so there is nothing to refund'),
+      'and an unsettled reservation is not described as money coming back');
+    assert.ok(text().includes('1 person is told'));
+    await click(button('Withdraw this plan'));
+    await wait(() => by(`receipt-${trip.id}`), 'receipt after withdrawing');
+    assert.ok(text().includes('The record stays.'));
+    const afterWithdrawal = await call(`/api/campaigns/${trip.id}/withdrawal`, host.token);
+    assert.equal(afterWithdrawal.withdrawal.receipt.registrationsCancelled, 1, 'the seat was released');
+    assert.equal(afterWithdrawal.withdrawal.receipt.owed.length, 0, 'nothing is owed');
+    assert.equal((await call('/api/events?limit=100', null)).events.some(e => e.slug === trip.publicSlug), false,
+      'and the withdrawn plan is gone from the public feed');
+    const withdrawnGuest = await call('/api/notifications', guest.token);
+    assert.ok(withdrawnGuest.notifications.some(n => n.type === 'event_withdrawn'),
+      'the person who held a place was told it was withdrawn');
+
+    // Delete is offered, but the server refuses it while records depend on the
+    // row — and the surface repeats the reasons instead of hiding the failure.
+    await click(by(`delete-${trip.id}`));
+    await wait(() => text().includes('withdrawing it instead keeps those records'), 'refused delete is explained');
+    assert.ok(text().includes('2 registrations') || text().includes('1 registration'),
+      'and names what is actually in the way');
+    assert.ok((await call('/api/campaigns', host.token)).campaigns.some(c => c.id === trip.id),
+      'the row is still there after the refusal');
+
+    // A draft nothing happened to can simply go.
+    const throwaway = await call('/api/campaigns', host.token, 'POST', { title: 'Nothing happened yet', type: 'event', startsAt: future(30) });
+    await click(button('Retry'));
+    await wait(() => by(`delete-${throwaway.campaign.id}`), 'refreshed list');
+    await click(by(`delete-${throwaway.campaign.id}`));
+    await wait(() => by(`delete-${throwaway.campaign.id}`) === null, 'draft deleted');
+    assert.equal((await call('/api/campaigns', host.token)).campaigns.some(c => c.id === throwaway.campaign.id), false);
+    pass('an offer can be edited and withdrawn; a row with a history cannot be deleted, and says why');
+
     await mount('wanderly/tickets', guest.token);
     await wait(() => text().includes('Nairobi community night'), 'issued ticket in account');
     await act(async () => { api.setSessionToken(null); });

@@ -1361,6 +1361,100 @@ async function main() {
   ok(attachPatch && !('ownsObject' in attachPatch) && !('ownerId' in attachPatch),
     'attaching sends no ownership fields');
 
+  // =========================================================================
+  console.log('=== REMOVING AN EVENT WITH HISTORY WITHDRAWS IT ===');
+  // =========================================================================
+  // The dashboard button used to cancel-then-DELETE, which is exactly what made
+  // the state machine skippable from the UI: a cancelled event whose tickets
+  // still worked, whose money was never refunded, and whose holders were never
+  // told. It now asks the server what is really at stake and, when records
+  // depend on the row, takes the same withdraw path the host's own button does.
+  // A DELETE here would be the bug, so the assertions are as much about what was
+  // NOT called as about what was.
+  const receipt = {
+    campaignId: 'cmp_1',
+    actorId: 'usr_local',
+    reason: 'withdrawn from the campaign dashboard',
+    at: '2026-09-20T10:00:00.000Z',
+    before: { status: 'live' },
+    receipt: {
+      registrationsCancelled: 2,
+      registrationsLeftAlone: 0,
+      ticketsVoided: 2,
+      resaleListingsPulled: 0,
+      ticketsStuckOnOpenOrder: [],
+      refunded: [{ transactionId: 'txn_1', amount: 1500, currency: 'KES' }],
+      owed: [],
+      attemptsClosed: 0,
+      holdersNotified: 2
+    }
+  };
+  const previewWithHistory = {
+    campaignId: 'cmp_1', status: 'live', canWithdraw: true, canDelete: false,
+    blockers: ['2 registrations', '2 issued tickets', '1 ledger row'],
+    registrations: { total: 2, byStatus: { registered: 2 }, toCancel: 2, leftAlone: 0 },
+    tickets: { issued: 2, live: 2, resaleListings: 0 },
+    money: { transactions: 1, refundable: 1, refundableKes: 1500, attemptsToClose: 0, settledKes: 1500 },
+    holders: { count: 2 }
+  };
+  calls = [];
+  let withdrawBody = null;
+  stubFetch([
+    [{ path: '/api/campaigns/cmp_1/withdrawal' }, async () => ({ status: 200, body: { preview: previewWithHistory, withdrawal: null } })],
+    [{ path: '/api/campaigns/cmp_1/withdraw', method: 'POST' }, async (init) => {
+      withdrawBody = init && init.body ? JSON.parse(init.body) : null;
+      return { status: 200, body: { campaign: campaign({ status: 'cancelled' }), withdrawal: receipt, alreadyWithdrawn: false } };
+    }],
+    [{ path: '/api/campaigns' }, async () => ({ status: 200, body: { campaigns: [campaign({ status: 'live' })] } })]
+  ]);
+  dom.window.confirm = () => true;
+  root = await mount(React.createElement(App));
+  await openCampaignsTab();
+  await click(btn('Load my campaigns'));
+  await act(async () => {
+    btn('Remove').dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true, cancelable: true }));
+    await new Promise((r) => setTimeout(r, 0));
+  });
+  ok(calls.some((c) => c === 'GET /ingest/api/campaigns/cmp_1/withdrawal'),
+    'the surface asks what is at stake before offering to remove anything');
+  ok(calls.some((c) => c === 'POST /ingest/api/campaigns/cmp_1/withdraw'),
+    'a row other people depend on is withdrawn');
+  ok(!calls.some((c) => c.startsWith('DELETE ')),
+    'and never deleted: erasing it would leave their records describing nothing');
+  ok(withdrawBody && withdrawBody.reason === 'withdrawn from the campaign dashboard',
+    'the reason is recorded, not left blank');
+  ok(body().includes('2 tickets stopped') && body().includes('2 places released'),
+    'the numbers reported are the server receipt, not a guess');
+  ok(body().includes('1 refund recorded') && body().includes('2 told'), 'including the money and who was told');
+  ok(body().includes('The record stays.'), 'and it says plainly that the history is kept');
+
+  // A draft nothing depends on still simply goes: withdrawing it would leave a
+  // tombstone nobody needs, and delete is the honest verb when the row is alone.
+  calls = [];
+  stubFetch([
+    [{ path: '/api/campaigns/cmp_1/withdrawal' }, async () => ({ status: 200, body: { preview: {
+      ...previewWithHistory, status: 'draft', canDelete: true, blockers: [],
+      registrations: { total: 0, byStatus: {}, toCancel: 0, leftAlone: 0 },
+      tickets: { issued: 0, live: 0, resaleListings: 0 },
+      money: { transactions: 0, refundable: 0, refundableKes: 0, attemptsToClose: 0, settledKes: 0 },
+      holders: { count: 0 }
+    }, withdrawal: null } })],
+    [{ path: '/api/campaigns/cmp_1', method: 'DELETE' }, async () => ({ status: 200, body: { ok: true } })],
+    [{ path: '/api/objects' }, async () => ({ status: 200, body: { objects: [] } })],
+    [{ path: '/api/campaigns' }, async () => ({ status: 200, body: { campaigns: [campaign({ status: 'draft' })] } })]
+  ]);
+  root = await mount(React.createElement(App));
+  await openCampaignsTab();
+  await click(btn('Load my campaigns'));
+  await act(async () => {
+    btn('Remove').dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true, cancelable: true }));
+    await new Promise((r) => setTimeout(r, 0));
+  });
+  ok(calls.some((c) => c === 'DELETE /ingest/api/campaigns/cmp_1'),
+    'a row nothing depends on is deleted, because there is no history to keep');
+  ok(!calls.some((c) => c === 'POST /ingest/api/campaigns/cmp_1/withdraw'),
+    'and is not withdrawn: no tombstone for a draft');
+
   console.log('');
   console.log('pass ' + pass + ' fail ' + fail);
   // showToast leaves a 3s timer behind, and jsdom keeps the loop alive.
