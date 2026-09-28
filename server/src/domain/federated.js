@@ -1,55 +1,13 @@
 // ---------------------------------------------------------------------------
-// FEDERATED IDENTITY — Google Sign-In and signed email links.
-//
-// WHY THIS EXISTS.
-//
-// Onboarding starts with identity. Typing a handle and a password is the
-// slowest possible first screen, so the first-run flow leads with "Continue
-// with Google" and keeps the password path as the fallback. Telegram is NOT
-// required to be a member: `/api/telegram/init` remains available for people
-// who arrive inside the Mini App, but it is one door among several, never the
-// gate.
-//
-// WHAT IS REAL HERE.
-//
-//   * Google ID tokens are VERIFIED, not trusted. The token's RS256 signature
-//     is checked against Google's published JWKS, then issuer, audience,
-//     expiry and `email_verified` are all checked. A token that fails any of
-//     those is refused.
-//   * When GOOGLE_CLIENT_ID is absent the route refuses with 503 and a stated
-//     reason. It never mints a session from an unverifiable claim — that is
-//     precisely the fabricated-success this codebase forbids.
-//   * Email links are HMAC-signed by THIS server. A raw `?email=` in a URL is
-//     not an identity and is never accepted; only a token this server minted
-//     (and that has not expired) resolves to an account.
-//
-// WHAT AN "IN-APP BROWSER" CAN AND CANNOT DO.
-//
-// A TikTok / Instagram in-app browser cannot read the device's Google account
-// by itself — no browser exposes that, and any code claiming to would be
-// lying. What genuinely works, and is what this module supports, is:
-//
-//   1. the share link carries a Brief-signed `bt=` token holding the email the
-//      link was minted for -> one tap, no typing (mintEmailLinkToken /
-//      redeemEmailLinkToken);
-//   2. the in-app browser already holds a Brief session cookie/token from a
-//      previous visit -> resumed silently;
-//   3. Google Identity Services returns a real ID token in that webview ->
-//      verified here.
-//
-// Anything else falls through to the ordinary sign-in screen. That is the
-// honest boundary.
-// ---------------------------------------------------------------------------
+// FEDERATED IDENTITY — Google token verification. Legacy signed email
+// recognition links were unsafe: a signature did not prove mailbox ownership.
+// Their mint and redemption functions are intentionally retired.
 
 import crypto from 'node:crypto';
-import { store, newId } from '../store.js';
+import { deliveryConfigured } from './emailAuth.js';
 
 const GOOGLE_JWKS_URL = 'https://www.googleapis.com/oauth2/v3/certs';
 const GOOGLE_ISSUERS = ['accounts.google.com', 'https://accounts.google.com'];
-
-/** Link tokens are short-lived: a link forwarded to a group chat months later
- *  must not still log someone in as the person it was minted for. */
-export const EMAIL_LINK_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 // --- configuration ---------------------------------------------------------
 
@@ -59,25 +17,6 @@ export function googleClientId() {
 
 export function googleConfigured() {
   return Boolean(googleClientId());
-}
-
-/**
- * The secret that signs email links.
- *
- * Prefer an operator-provided secret. Failing that, generate one ONCE and
- * persist it, so links survive a restart. It never leaves the server.
- */
-export function linkSecret() {
-  if (process.env.BRIEF_LINK_SECRET) return String(process.env.BRIEF_LINK_SECRET);
-  const existing = store.find('appSecrets', (s) => s.name === 'email_link');
-  if (existing) return existing.value;
-  const created = store.insert('appSecrets', {
-    id: newId('sec'),
-    name: 'email_link',
-    value: crypto.randomBytes(32).toString('base64url'),
-    createdAt: new Date().toISOString()
-  });
-  return created.value;
 }
 
 /** What the client may show as a sign-in option. Honest, derived, no flags. */
@@ -98,7 +37,7 @@ export function providerStatus() {
       label: 'Telegram Mini App',
       reason: process.env.TELEGRAM_BOT_TOKEN ? null : 'TELEGRAM_BOT_TOKEN is not set on the server'
     },
-    emailLink: { configured: true, label: 'Signed email link' }
+    emailLink: { configured: deliveryConfigured(), label: 'Email sign-in', reason: deliveryConfigured() ? null : 'Verified email delivery is not configured' }
   };
 }
 
@@ -199,44 +138,7 @@ export async function verifyGoogleIdToken(idToken, { fetchImpl = fetch, now = Da
   };
 }
 
-// --- signed email links ----------------------------------------------------
-
-function sign(payloadB64) {
-  return crypto.createHmac('sha256', linkSecret()).update(payloadB64).digest('base64url');
-}
-
-/**
- * Mint a token that logs the named email in with one tap.
- *
- * This is what makes "found Brief through a TikTok link and was already
- * recognised" real: the link the creator shared to that person carries a token
- * THIS server signed. No token, no identity.
- */
-export function mintEmailLinkToken(email, { ttlMs = EMAIL_LINK_TTL_MS, now = Date.now(), source = null } = {}) {
-  const normalised = String(email ?? '').trim().toLowerCase();
-  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(normalised)) throw new Error('a valid email is required');
-  const payload = { email: normalised, exp: now + ttlMs, src: source };
-  const body = Buffer.from(JSON.stringify(payload), 'utf8').toString('base64url');
-  return `${body}.${sign(body)}`;
-}
-
-/** Verify and unpack a link token. Returns `{ ok, email, source }` or a reason. */
-export function redeemEmailLinkToken(token, { now = Date.now() } = {}) {
-  if (typeof token !== 'string' || !token.includes('.')) return { ok: false, reason: 'malformed_token' };
-  const [body, signature] = token.split('.');
-  const expected = sign(body);
-  const a = Buffer.from(String(signature));
-  const b = Buffer.from(expected);
-  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
-    return { ok: false, reason: 'bad_signature' };
-  }
-  let payload;
-  try {
-    payload = JSON.parse(Buffer.from(body, 'base64url').toString('utf8'));
-  } catch {
-    return { ok: false, reason: 'malformed_token' };
-  }
-  if (!payload?.email) return { ok: false, reason: 'no_email' };
-  if (!payload.exp || Number(payload.exp) <= now) return { ok: false, reason: 'expired' };
-  return { ok: true, email: String(payload.email), source: payload.src ?? null };
-}
+// Retain explicit refusals for legacy direct callers; neither an HMAC nor
+// knowledge of an address is proof of its owner's consent.
+export function mintEmailLinkToken() { throw new Error('legacy email links are disabled'); }
+export function redeemEmailLinkToken() { return { ok: false, reason: 'legacy_link_revoked' }; }

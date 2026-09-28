@@ -11,6 +11,9 @@ const OrderTrackingPage = lazy(() => import('./features/tracking/OrderTrackingPa
 const WanderlyPage = lazy(() => import('./features/wanderly/WanderlyPage'));
 const AppShell = lazy(() => import('./app/AppShell.tsx').then(m => ({ default: m.AppShell })));
 const PublicGroupsPage = lazy(() => import('./components/PublicGroupsPage').then(m => ({ default: m.PublicGroupsPage })));
+const EmailLinkLanding = lazy(() => import('./components/EmailLinkLanding').then(m => ({ default: m.EmailLinkLanding })));
+const CollectionPage = lazy(() => import('./components/CollectionPage').then(m => ({ default: m.CollectionPage })));
+const CloudBitesPage = lazy(() => import('./features/cloudbites/CloudBitesPage'));
 import { flushOfflineQueue } from './api/briefApi.ts';
 import { captureAcquisitionFromUrl } from './api/acquisition.ts';
 
@@ -56,6 +59,15 @@ function installOfflineFlush() {
 installOfflineFlush();
 
 function Root() {
+  // The only link that can sign in is a one-time proof delivered to this inbox.
+  // A legacy signed ?bt= token has no corresponding challenge and is refused.
+  const proof = new URLSearchParams(window.location.search).get('bt');
+  if (proof) return <EmailLinkLanding token={proof} />;
+  const collection = /^\/collections\/([A-Za-z0-9_-]+)\/?$/.exec(window.location.pathname)?.[1];
+  if (collection) return <CollectionPage collectionId={collection} mode="public"
+    onClose={() => window.location.assign('/#home')}
+    onOpenObject={(object) => { window.location.assign(`/#entity/${encodeURIComponent(object.id)}`); }} />;
+  if (/^\/cloudbites\/?$/.test(window.location.pathname)) return <CloudBitesPage />;
   if (/^\/reviews(?:\/[A-Za-z0-9_-]+)?\/?$/.test(window.location.pathname)) return <ReviewsPage />;
   if (/^\/track\/?$/.test(window.location.pathname)) return <OrderTrackingPage />;
   if (/^\/groups\/?$/.test(window.location.pathname)) return <PublicGroupsPage />;

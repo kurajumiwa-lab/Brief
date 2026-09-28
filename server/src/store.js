@@ -13,6 +13,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { prepareStoreFile } from './ops.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = process.env.BRIEF_DATA_DIR || path.join(HERE, '..', 'data');
@@ -45,6 +46,7 @@ const EMPTY = {
   workPaymentIntents: [], // Work Order payments: the record of a payment attempt (Phase 8).
   workSettlements: [], // Settlement state: payment -> ledger transaction -> payee.
   sessions: [],
+  emailChallenges: [], // Hashed, single-use mailbox proofs (legacy signed links are never accepted).
   // Server-held secrets that must survive a restart but must never reach a
   // client (currently: the HMAC key that signs one-tap email links).
   appSecrets: [],
@@ -664,15 +666,13 @@ function load() {
     return result.db;
   } catch (e) {
     if (/^migration /.test(String(e.message))) throw e; // never silently continue
-    // A corrupt file must not take the server down. Move it aside and start
-    // clean; the operator still has the bad copy to inspect.
-    fs.renameSync(DB_FILE, `${DB_FILE}.corrupt-${Date.now()}`);
-    const fresh = structuredClone(EMPTY);
-    fresh.__schemaVersion = SCHEMA_VERSION;
-    return fresh;
+    // A corrupt file must never silently start an empty live database.
+    throw new Error(`database load failed: ${e.message}`);
   }
 }
 
+// No domain module can observe the store until recovery completes.
+export const recoveryStatus = prepareStoreFile(DB_FILE);
 let db = load();
 
 let transactionDepth = 0;
@@ -767,10 +767,10 @@ export const store = {
   },
   remove(collection, id) {
     touched(collection);
-    const before = db[collection].length;
-    db[collection] = db[collection].filter((r) => r.id !== id);
-    persist();
-    return db[collection].length < before;
+    const previous = db[collection];
+    db[collection] = previous.filter((r) => r.id !== id);
+    try { persist(); } catch (error) { db[collection] = previous; touched(collection); throw error; }
+    return db[collection].length < previous.length;
   },
   /** Test helper: wipes everything. Never called by a route. */
   _reset() {
@@ -780,6 +780,14 @@ export const store = {
     persist();
   },
   schemaVersion() { return db.__schemaVersion ?? 0; },
+  recovery: recoveryStatus,
+  reloadFromDisk() {
+    if (transactionDepth) throw new Error('cannot reload during a transaction');
+    const next = load();
+    db = next;
+    invalidateIndexes();
+    this.recovery = { restored: true, reason: 'explicit reload after restore' };
+  },
   _file: DB_FILE
 };
 

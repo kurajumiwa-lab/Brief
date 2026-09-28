@@ -38,6 +38,9 @@ export function WorkforceDesk() {
           </button>
         ))}
       </div>
+      <a href="/cloudbites" className="mt-4 flex items-center justify-between gap-3 rounded-xl px-4 py-3 text-sm font-bold" style={{ background: '#fff0e7', color: '#9c3e1c' }}>
+        <span>Lunch between shifts? Explore the CloudBites concept</span><span aria-hidden="true">↗</span>
+      </a>
       {view === 'worker' ? <WorkerView /> : <OrgView />}
     </div>
   );

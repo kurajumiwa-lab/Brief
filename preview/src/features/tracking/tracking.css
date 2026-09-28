@@ -1144,3 +1144,28 @@
     overflow-wrap: anywhere;
   }
 }
+
+/* Readable mobile status, audit history and actions. Tiny decorative dots
+   and artwork labels retain their sizing; real information never needs 9px. */
+@media (max-width: 700px) {
+  .wairo-tracking small,
+  .track-status p,
+  .track-history li,
+  .track-history time,
+  .track-history small,
+  .track-refresh,
+  .track-refresh small,
+  .track-requests small,
+  .track-pill,
+  .track-details-form summary,
+  .track-response button,
+  .track-shipments button,
+  .track-faq summary,
+  .track-footer,
+  .track-back {
+    font-size: max(12px, 0.75rem);
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+  .track-requests li > p { overflow-wrap: anywhere; }
+}

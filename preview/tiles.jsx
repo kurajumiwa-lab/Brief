@@ -263,7 +263,7 @@ async function main() {
     root.unmount();
   }
 
-  // ── 2. Home Open now — body tap raises the shared sheet ────────────────
+  // ── 2. Home activity — cards in document flow, offer in a sheet ────────
   fetchHandler = async (url) => {
     const ok = (b) => ({ ok: true, status: 200, text: async () => JSON.stringify(b) });
     if (String(url).includes('/api/discover/summary')) return ok({
@@ -286,27 +286,20 @@ async function main() {
     scrollY = 220;
     const { root } = mount(React.createElement(HomeSurface, { onOpenSpace: () => {} }));
     await flush(160);
-    const deck = document.querySelector('section[aria-label="Latest activity"] .reel-deck');
-    check('Home activity is a reel of cards', Boolean(deck));
-    const orderBefore = Array.from(deck.querySelectorAll('[data-slot]')).map((a) => a.getAttribute('data-slot')).join(',');
-    // The reel is a deck, not a list: the card is selected first (a tap opens
-    // its detail), and the offer's own sheet stays the thing that opens the
-    // offer. Selection is still not a scroll, and the deck does not move.
-    click(document.querySelector('section[aria-label="Latest activity"] [data-testid="reel-card"]'));
-    await flush(40);
-    check('tapping an Open now card opens its detail in place',
-      Boolean(document.querySelector('[data-testid="reel-detail"]')) && !document.querySelector('[data-testid="reel-detail"]').hidden);
-    click([...document.querySelectorAll('[data-testid="reel-detail"] button')].find((b) => b.textContent.trim() === 'Open offer'));
+    const feed = document.querySelector('[data-testid="home-feed"]');
+    check('Home activity is a feed in page flow', Boolean(feed) && !feed.closest('.reel-stage'));
+    const orderBefore = Array.from(feed.querySelectorAll('[data-testid="home-feed-card"]')).map(text).join(',');
+    click(feed.querySelector('[data-testid="home-feed-card"]'));
     await flush(40);
     const sheet = document.querySelector('[data-testid="sheet"]');
     check('opening an offer raises the shared sheet', Boolean(sheet));
-    check('the offer sheet is not inside the deck', !deck.querySelector('[data-testid="sheet"]'));
-    check('Home deck order is unchanged',
-      orderBefore === Array.from(deck.querySelectorAll('[data-slot]')).map((a) => a.getAttribute('data-slot')).join(','));
-    check('Open now selection does not write scrollY', scrollY === 220);
+    check('the offer sheet is not inside the feed', !feed.querySelector('[data-testid="sheet"]'));
+    check('Home feed order is unchanged',
+      orderBefore === Array.from(feed.querySelectorAll('[data-testid="home-feed-card"]')).map(text).join(','));
+    check('offer selection does not write scrollY', scrollY === 220);
     click(document.querySelector('[data-testid="sheet-scrim"]'));
     await flush(20);
-    check('Open now scrim dismisses the sheet', !document.querySelector('[data-testid="sheet"]'));
+    check('offer scrim dismisses the sheet', !document.querySelector('[data-testid="sheet"]'));
     root.unmount();
   }
 

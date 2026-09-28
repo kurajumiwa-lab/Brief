@@ -9,6 +9,11 @@ declare module 'lucide-react' {
   export const Search: LucideIcon;
   export const ShieldAlert: LucideIcon;
   export const UtensilsCrossed: LucideIcon;
+  export const ChefHat: LucideIcon;
+  export const CircleHelp: LucideIcon;
+  export const Leaf: LucideIcon;
+  export const Minus: LucideIcon;
+  export const PackageCheck: LucideIcon;
   export const HeartHandshake: LucideIcon;
   export const Shapes: LucideIcon;
   export const ShieldQuestion: LucideIcon;

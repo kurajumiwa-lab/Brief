@@ -76,6 +76,9 @@ const check = (n, c, d = '') => { if (c) { pass++; console.log('  PASS  ' + n); 
 (async () => {
   const { WhatsAppShopBuilder } = await import('./src/components/WhatsAppShopBuilder.tsx');
   const briefApi = await import('./src/api/briefApi.ts');
+  // Queue writes only after the server has confirmed which account owns the
+  // installed session; a token alone is not an account identity.
+  await briefApi.whoAmI();
   const root = createRoot(document.getElementById('root'));
   await act(async () => { root.render(React.createElement(WhatsAppShopBuilder, { onOpenFees: () => {} })); });
   await act(async () => { await new Promise((r) => setTimeout(r, 20)); });

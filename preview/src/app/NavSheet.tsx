@@ -1,5 +1,6 @@
 // Secondary destinations only. Profile/settings live in You; commerce lives in Spaces.
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { useDialogFocus } from '../ui/useDialogFocus';
 import { ChevronRight, X } from 'lucide-react';
 import { SectionHeader } from '../ui/MenuTile';
 
@@ -71,12 +72,8 @@ export const NavSheet: React.FC<NavSheetProps> = ({ open, onClose, onGo, place, 
   const [draft, setDraft] = useState(place);
   useEffect(() => { if (open) setDraft(place); }, [open, place]);
 
-  useEffect(() => {
-    if (!open) return undefined;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    if (typeof window !== 'undefined') window.addEventListener('keydown', onKey);
-    return () => { if (typeof window !== 'undefined') window.removeEventListener('keydown', onKey); };
-  }, [open, onClose]);
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  useDialogFocus(open, panelRef, onClose);
 
   if (!open) return null;
 
@@ -95,6 +92,8 @@ export const NavSheet: React.FC<NavSheetProps> = ({ open, onClose, onGo, place, 
           geometric claim in a test that has no layout engine. */}
       <div
         data-testid="nav-sheet-panel"
+        ref={panelRef}
+        tabIndex={-1}
         className="absolute top-0 bottom-14 md:bottom-0 left-0 w-[min(86vw,20rem)] overflow-y-auto p-4 space-y-5"
         style={{ background: 'var(--color-bg)', boxShadow: 'var(--lift-3)' }}
       >

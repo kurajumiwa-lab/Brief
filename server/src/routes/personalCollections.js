@@ -122,9 +122,16 @@ export function register(app) {
     const c = collections.collectionForOwner(me, req.params.id);
     if (!c) return res.status(404).json({ error: 'collection not found' });
     if (c.visibility !== 'public') return res.status(400).json({ error: 'collection is not public' });
+    let origin;
+    try {
+      const url = new URL(process.env.BRIEF_PUBLIC_ORIGIN);
+      if (url.protocol !== 'https:') throw new Error('https required');
+      origin = url.origin;
+    } catch {
+      return res.status(503).json({ error: 'Public sharing requires BRIEF_PUBLIC_ORIGIN to be configured as HTTPS.' });
+    }
     emitSignal({ type: 'collection_shared', actorId: me, metadata: { collectionId: c.id } });
-    const origin = (process.env.PUBLIC_ORIGIN ?? '').replace(/\/+$/, '');
-    json(res, { ok: true, url: origin ? `${origin}/collections/${encodeURIComponent(c.id)}` : null });
+    json(res, { ok: true, url: `${origin}/collections/${encodeURIComponent(c.id)}` });
   });
 
   /** PUBLIC shareable page — 404 for unknown OR private ids.

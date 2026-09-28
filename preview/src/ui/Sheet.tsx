@@ -1,4 +1,5 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { isTopDialog, useDialogFocus } from './useDialogFocus';
 
 // ---------------------------------------------------------------------------
 // SHEET — the one lower-segment primitive.
@@ -54,6 +55,8 @@ export function Sheet({
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
 
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  useDialogFocus(open, panelRef, () => onCloseRef.current());
   const bodyRef = useRef<HTMLDivElement | null>(null);
   const dragging = useRef(false);
   const startY = useRef(0);
@@ -90,20 +93,12 @@ export function Sheet({
     const prevOverflow = html.style.overflow;
     html.style.overflow = 'hidden';
 
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        close();
-      }
-    };
     const onPop = () => {
-      close();
+      if (isTopDialog(panelRef.current)) close();
     };
-    window.addEventListener('keydown', onKey);
     window.addEventListener('popstate', onPop);
     return () => {
       html.style.overflow = prevOverflow;
-      window.removeEventListener('keydown', onKey);
       window.removeEventListener('popstate', onPop);
     };
   }, [open]);
@@ -171,6 +166,8 @@ export function Sheet({
       />
       <div
         data-testid="sheet-panel"
+        ref={panelRef}
+        tabIndex={-1}
         data-detent={detent}
         className="relative w-full max-w-lg flex flex-col rounded-t-3xl brief-sheet-up"
         style={{

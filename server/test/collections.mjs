@@ -35,7 +35,7 @@ const check = (name, cond, detail = '') => {
     process.exitCode = 1; return;
   }
   if (cond) { pass++; console.log(`  PASS  ${name}`); }
-  else { fail++; console.log(`  FAIL  ${name}${det}`); process.exitCode = 1; }
+  else { fail++; console.log(`  FAIL  ${name}${detail ? ' -> ' + detail : ''}`); process.exitCode = 1; }
 };
 
 const now = new Date();
@@ -285,7 +285,7 @@ console.log('\n=== DOMAIN: PERSONAL BRIEF (weak save signal) ===');
 console.log('\n=== ROUTE CONTRACT (HTTP) ===');
 {
   process.env.BRIEF_DEV_AUTH = '0';
-  process.env.PUBLIC_ORIGIN = 'https://brief.example';
+  process.env.BRIEF_PUBLIC_ORIGIN = 'https://brief.example';
   const { default: app } = await import('../src/index.js');
   const srv = app.listen(0);
   const port = srv.address().port;

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import * as api from "../api/briefApi";
 /** Uses the existing authentication API/token storage, not a second identity. */
 export function SessionSignIn({
@@ -15,6 +15,14 @@ export function SessionSignIn({
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [emailAvailable, setEmailAvailable] = useState(false);
+  const [email, setEmail] = useState("");
+  const [emailMessage, setEmailMessage] = useState("");
+  useEffect(() => {
+    let live = true;
+    void api.getAuthProviders().then(r => { if (live) setEmailAvailable(Boolean(r.ok && r.data.emailLink?.configured)); });
+    return () => { live = false; };
+  }, []);
   return (
     <section className="request-panel request-auth">
       <span className="request-eyebrow">Your private workspace</span>
@@ -79,6 +87,18 @@ export function SessionSignIn({
             : "New here? Create an account"}
         </button>
       </form>
+      {emailAvailable && <form onSubmit={async e => {
+        e.preventDefault(); setBusy(true); setEmailMessage("");
+        const result = await api.requestEmailSignIn(email);
+        setBusy(false);
+        setEmailMessage(result.ok ? result.data.message : result.error);
+      }}>
+        <label>Email sign-in link (sent only to your inbox)
+          <input type="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} required maxLength={254} />
+        </label>
+        <button type="submit" disabled={busy} className="request-primary">Email me a sign-in link</button>
+        {emailMessage && <p role="status">{emailMessage}</p>}
+      </form>}
     </section>
   );
 }
