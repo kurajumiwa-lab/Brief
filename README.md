@@ -258,3 +258,25 @@ Search registrations, paginate the directory, and open each member's Account,
 Business profiles and Worker profile. Direct entry: `/#admin/members`.
 For first-admin provisioning (`BRIEF_ADMINS`), permission boundaries and tests,
 see [Admin members guide](docs/ADMIN-MEMBERS.md). No account is auto-promoted.
+
+## Production entry and safety checks
+
+The shipped browser entry is `preview/src/main.jsx` → `preview/src/app/AppShell.tsx`.
+`preview/src/App.tsx` is a legacy **test harness**, not the shipped application.
+Standalone public `/collections/:id`, `/groups`, `/track` and `/reviews` routes
+are selected in `main.jsx`; do not infer production coverage from a harness-only
+component. Use `bash run-suites.sh compacthome doorways spaceloop activityreel
+offlineisolation dialogfocus collectionroute` plus the server `productionSafety`
+suite for the production-critical journeys; browser/device manual checks remain
+necessary.
+
+Mailbox sign-in is disabled unless an HTTPS public origin and a verified Resend
+sender are configured. Member-minted login links are gone. Restores prepare
+the on-disk primary before any live store loads; a corrupt primary without a
+valid backup fails startup. Production refuses development authentication and
+requires an explicit durable data directory. See [DEPLOYMENT.md](DEPLOYMENT.md)
+for the first-boot gate, recovery drill, and incident response.
+
+### CloudBites workday-lunch concept
+
+`/cloudbites` is a public, mobile-first, delivery-only kitchen **concept preview** reached from Home or Work. It uses optimized, locally served illustrative food photography; a sample menu, category filters, a temporary in-browser lunch list, an illustrative Nairobi neighborhood map, and a QR code for the web page. The rider and work links open Brief's existing errands and workforce surfaces. There is no CloudBites inventory, checkout, discount redemption, verified service radius, kitchen operation, native app, order tracking, partnership, safety certificate, or customer rating attached to this preview. ZIP codes do not confirm coverage, and the lunch list never charges or submits an order. Before a commercial launch, connect the kitchen's real catalog and fulfillment, verify coverage and ETA terms, publish allergens and policies, implement payment/dispatch/tracking, confirm any app-store links and promotional terms, and show only verified trust signals.

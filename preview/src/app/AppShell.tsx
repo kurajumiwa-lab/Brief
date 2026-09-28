@@ -612,33 +612,7 @@ export const AppShell: React.FC<AppShellProps> = ({
     }
   };
 
-  // First-run onboarding: a signed-in member with no group yet is intercepted
-  // by a guided checklist (the "dedicated onboarding state" similar apps use).
-  // "Start your group" drops them into the You tab, where the group flow lives;
-  // "Skip for now" is remembered so they are never nagged again.
-  // A group checklist is a Home invitation, not a gate on discovery,
-  // shared offers, requests or execution deep links.
-  if (firstRun && !adminRoute && !wanderlyOpen && (!window.location.hash || window.location.hash === '#home')) {
-    return (
-      <div className="min-h-screen w-full bg-[color:var(--color-bg)] text-[color:var(--color-text)] font-sans flex items-center justify-center px-4">
-        <div className="w-full max-w-md">
-          <FirstRunChecklist
-            groups={[]}
-            onStartGroup={() => {
-              setFirstRun(false);
-              setActiveTab('you');
-              if (typeof window !== 'undefined') window.location.hash = '#you';
-            }}
-            onDismiss={() => {
-              if (typeof window !== 'undefined') window.localStorage.setItem('brief.firstRunDismissed', '1');
-              setFirstRun(false);
-            }}
-          />
-        </div>
-      </div>
-    );
-  }
-
+  // The invitation is in Home, never a replacement for browsing or buying.
   // Wanderly owns browse, public detail, tickets and hosting; no duplicate shell.
   if (wanderlyOpen) {
     return (
@@ -734,6 +708,13 @@ export const AppShell: React.FC<AppShellProps> = ({
         )}
         {/* Legacy Home Surface Compatibility for tests */}
         {activeTab === 'home' ? (
+          <>
+          {firstRun && <section data-testid="home-group-invitation" className="max-w-3xl mx-auto my-4" aria-label="Optional group setup">
+            <p className="text-sm mb-2">Want to organise a group? You can set one up whenever you’re ready. Browsing and shopping are available below.</p>
+            <FirstRunChecklist compact groups={[]}
+              onStartGroup={() => { setFirstRun(false); setActiveTab('you'); window.location.hash = '#you'; }}
+              onDismiss={() => { window.localStorage.setItem('brief.firstRunDismissed', '1'); setFirstRun(false); }} />
+          </section>}
           <HomeSurface
             userName="there"
             onOpenWork={() => { setActiveTab('workforce'); window.location.hash = 'workforce'; }}
@@ -758,6 +739,7 @@ export const AppShell: React.FC<AppShellProps> = ({
             onOpenHow={() => { window.location.hash = 'you/how'; }}
             onOpenEarn={() => { window.location.hash = 'you/earn'; }}
           />
+          </>
         ) : (
           <div>
             {/* ── CITY (the board: what's happening nearby) ── */}

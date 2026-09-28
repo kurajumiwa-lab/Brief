@@ -17,7 +17,7 @@
 // ---------------------------------------------------------------------------
 
 import type { ApiResult, Block, ResaleTicket, ResaleListing,  ResaleListingRow, TicketOrder, CapabilityUnavailable, Circle, CircleCreate, CircleUpdate, Member, Signal, TargetView, AppConfig, ReleaseStatus, AuthStatus, Campaign, CampaignCreate, CampaignUpdate, PublicCampaign, Registration, RegistrationStatus, ShareChannel, ShareLink, ShareChannels, CampaignShare, CampaignBanner, Venue, MediaUpload, MediaStorageStatus, TriageQueue, Subscription, Subscriber, SubscriptionJoin, PaymentConfirmation, Transaction, TransactionCreate, TransactionStatus, VerificationKind, Wallet, Source, RawItem, VoteTally, MemberEvidence, BriefItPreview, BriefItSaved, Vendor, VendorCreate, VendorUpdate, Listing, ListingRevision, ListingCreate, ListingUpdate, ListingStatus, Order, OrderCreate, Dispute, VendorEarnings, PaymentIntent, PaymentInitiation, Vault, VaultCreate, Footstep, FootstepPage, VaultRequest, VaultSearchResult, ResolutionItem, VaultEntry, Ticket, CheckInResult, CommandCentre, Space, SpaceCreate, SpaceMode, SpaceOfferCreate, SpaceActivity, SpaceConversation, SpaceQuote, SpacePaymentPrompt, SpaceExpense, SpaceCustomerTab, SpaceMoneySummary, SpaceDispatch, SpaceDispatchCreate, SpaceDispatchStatus, SpaceUpdate, PublicSpace, SpaceFieldStatus, SpaceMaintenance, SpaceEditorialItem, SpacePipeline, SpacePublicPageView, SpacePublicFace, GuardianNetwork, SpaceGuardian, RoleAssignment, Invite, IssueInviteInput, RedeemInviteResult, ShopBrief, ShopBriefPrefs, ShopBriefFlag, ShopBriefSpace, ShopBriefPerson } from "./types";
-import { enqueue, replayQueue, queueDepth, type QueuedWrite } from './offlineQueue';
+import { enqueue, replayQueue, queueDepth, blockedQueueDepth, type QueuedWrite } from './offlineQueue';
 import { asTarget } from './types';
 import type { SpaceBroadcast, SpaceInsights, SpaceTemplate, PlaceSnapshot, PlacePriceClaim, PlacePriceClaimInput, MapPlace, EventRecurrence } from './types';
 import {
@@ -60,10 +60,25 @@ export const CLIENT_API_CONTRACT = 'gallery-banners-v1';
 
 const TOKEN_KEY = 'brief_session';
 let memoryToken: string | null = null;
+let verifiedOwner: { token: string; id: string } | null = null;
+
+function accountId(): string | null {
+  const token = getSessionToken();
+  return token && verifiedOwner?.token === token ? verifiedOwner.id : null;
+}
+function setVerifiedOwner(user: AuthedUser): void {
+  const token = getSessionToken();
+  if (token && user?.id && !(user as any).devFallback) {
+    verifiedOwner = { token, id: user.id };
+    // A boot-time /auth/me can safely drain parked writes for THIS account.
+    if (queueDepth() > 0) void flushOfflineQueue().catch(() => {});
+  }
+}
 
 export function setSessionToken(token: string | null): void {
   const changed = memoryToken !== token;
   memoryToken = token;
+  if (changed) verifiedOwner = null;
   try {
     if (token) window.localStorage.setItem(TOKEN_KEY, token);
     else window.localStorage.removeItem(TOKEN_KEY);
@@ -88,6 +103,7 @@ export function getSessionToken(): string | null {
 if (typeof window !== 'undefined') window.addEventListener('storage', (event) => {
   if (event.key !== TOKEN_KEY && event.key !== null) return;
   memoryToken = event.key === TOKEN_KEY ? event.newValue : null;
+  verifiedOwner = null;
   window.dispatchEvent(new window.Event('brief:session-changed'));
 });
 
@@ -223,21 +239,15 @@ async function send<T>(
     const method = (init.method ?? 'GET').toUpperCase();
     if (method !== 'GET' && method !== 'HEAD') {
       const body = typeof init.body === 'string' ? init.body : null;
-      const token = getSessionToken();
-      enqueue({
-        path,
-        method,
-        body,
-        // The key travels in the body itself; a re-tap replaces, not doubles.
-        clientKey: (body ? clientKeyOf(body) : null) ?? `auto_${method}_${path}_${Date.now().toString(36)}`,
-        headers: token ? { authorization: `Bearer ${token}` } : undefined
-      });
-      return {
-        ok: false,
-        status: null,
-        queued: true,
-        error: 'You are offline — this change is queued and will send itself when you reconnect.'
-      };
+      try {
+        enqueue({ path, method, body, accountId: accountId(),
+          clientKey: (body ? clientKeyOf(body) : null) ?? `auto_${method}_${path}_${Date.now().toString(36)}` });
+      } catch (storageError) {
+        return { ok: false, status: null,
+          error: storageError instanceof Error ? storageError.message : 'Offline change could not be saved. Retry when online.' };
+      }
+      return { ok: false, status: null, queued: true,
+        error: 'You are offline — this change is queued for this account and will send when you sign back in and reconnect.' };
     }
     return {
       ok: false,
@@ -262,7 +272,11 @@ function clientKeyOf(body: string): string | null {
  * browser's 'online' event. Idempotent server keys make double-sends harmless.
  */
 export async function flushOfflineQueue(): Promise<number> {
+  const owner = accountId();
+  const startingToken = getSessionToken();
   return replayQueue(async (w: QueuedWrite) => {
+    if (!owner || w.accountId !== owner || accountId() !== owner || getSessionToken() !== startingToken)
+      throw new Error('Account changed; pending writes remain queued for their owner');
     const headers: Record<string, string> = {};
     if (w.body) headers['content-type'] = 'application/json';
     const token = getSessionToken();
@@ -273,19 +287,21 @@ export async function flushOfflineQueue(): Promise<number> {
       body: w.body ?? undefined
     });
     if (res.ok) return { ok: true };
+    // An expired session is not a final refusal of the WRITE. Keep it until
+    // this same account signs in again rather than discarding it as a failure.
+    if (res.status === 401) throw new Error('Sign back in as the original account to replay pending changes');
     const text = await res.text().catch(() => '');
     let errMsg = `replay failed with status ${res.status}`;
     try {
       errMsg = JSON.parse(text)?.error ?? errMsg;
     } catch {}
     return { ok: false, error: errMsg };
-  });
+  }, owner);
 }
 
 /** How many writes are parked, for a badge if a surface wants one. */
-export function offlineQueueDepth(): number {
-  return queueDepth();
-}
+export function offlineQueueDepth(): number { return queueDepth(); }
+export function offlineQueueBlockedDepth(): number { return blockedQueueDepth(accountId()); }
 
 // ---------------------------------------------------------------------------
 // CIRCLES
@@ -1788,6 +1804,7 @@ export async function register(
   );
   if (!res.ok) return res;
   setSessionToken(res.data.token);
+  setVerifiedOwner(res.data.user);
   clearAcquisition();
   return { ok: true, data: res.data.user };
 }
@@ -1800,6 +1817,7 @@ export async function login(handle: string, password: string): Promise<ApiResult
   );
   if (!res.ok) return res;
   setSessionToken(res.data.token);
+  setVerifiedOwner(res.data.user);
   return { ok: true, data: res.data.user };
 }
 
@@ -1813,8 +1831,11 @@ export async function logout(): Promise<ApiResult<{ ok: boolean }>> {
 }
 
 /** Who the server says we are. Used on boot to restore a session. */
-export function whoAmI(): Promise<ApiResult<AuthedUser>> {
-  return request('/api/auth/me', undefined, (r) => (r?.user ? (r.user as AuthedUser) : undefined));
+export async function whoAmI(): Promise<ApiResult<AuthedUser>> {
+  const token = getSessionToken();
+  const result = await request<AuthedUser>('/api/auth/me', undefined, (r) => (r?.user ? (r.user as AuthedUser) : undefined));
+  if (result.ok && token === getSessionToken()) setVerifiedOwner(result.data);
+  return result;
 }
 
 // ---------------------------------------------------------------------------
@@ -1859,16 +1880,15 @@ export async function googleSignIn(
   );
   if (!res.ok) return res;
   setSessionToken(res.data.token);
+  setVerifiedOwner(res.data.user);
   clearAcquisition();
   return { ok: true, data: res.data.user };
 }
 
 /**
- * Continue from a link that carries a Brief-signed email token.
- *
- * This is the "arrived from a TikTok link and was already recognised" path.
- * The token is verified server-side; a bare email in a query string is not an
- * identity and is refused there.
+ * Continue from a mailbox-delivered, single-use, ten-minute sign-in proof.
+ * Legacy member-signed social links and bare email query parameters are
+ * rejected by the server; a public shared link never proves identity.
  */
 export async function continueFromLinkToken(
   token: string,
@@ -1881,20 +1901,15 @@ export async function continueFromLinkToken(
   );
   if (!res.ok) return res;
   setSessionToken(res.data.token);
+  setVerifiedOwner(res.data.user);
   clearAcquisition();
   return { ok: true, data: res.data.user };
 }
 
-/** Mint a one-tap link token for someone you are inviting by email. */
-export function mintEmailLinkToken(
-  email: string,
-  source?: string | null
-): Promise<ApiResult<{ token: string; expiresInMs: number }>> {
-  return request(
-    '/api/auth/email-link/mint',
-    { method: 'POST', body: JSON.stringify({ email, source: source ?? null }) },
-    (r) => (typeof r?.token === 'string' ? { token: r.token, expiresInMs: Number(r.expiresInMs ?? 0) } : undefined)
-  );
+/** Request proof of email ownership. No credential is returned to the caller. */
+export function requestEmailSignIn(email: string): Promise<ApiResult<{ ok: boolean; message: string }>> {
+  return request('/api/auth/email-link/request', { method: 'POST', body: JSON.stringify({ email }) },
+    (r) => r?.ok === true ? { ok: true, message: String(r.message ?? 'Check your inbox.') } : undefined);
 }
 
 export type LadderRungId = 'identity' | 'orient' | 'value' | 'contribute' | 'reach';
@@ -2333,6 +2348,7 @@ export async function telegramInit(initData: string): Promise<ApiResult<AuthedUs
   );
   if (!res.ok) return res;
   setSessionToken(res.data.token);
+  setVerifiedOwner(res.data.user);
   return { ok: true, data: res.data.user };
 }
 

@@ -128,6 +128,7 @@ const SUITES = [
   'test/settlement/manual.mjs',
   'test/integration.mjs',
   'test/groups.mjs',
+  'test/productionSafety.mjs',
   'test/shopTeam.mjs',
   'test/spaceModeration.mjs',
   'test/engine.mjs',

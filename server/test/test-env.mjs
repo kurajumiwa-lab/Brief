@@ -12,3 +12,6 @@ process.env.BRIEF_DATA_DIR = '/tmp/brief-test-data-' + process.pid;
 
 // Set before any app import: tests own ephemeral listeners, not the preview port.
 process.env.NODE_ENV = 'test';
+// Broad legacy suite creates hundreds of localhost accounts; targeted
+// productionSafety.mjs leaves this unset and checks the actual abuse policy.
+process.env.BRIEF_TEST_SKIP_AUTH_LIMITS = '1';

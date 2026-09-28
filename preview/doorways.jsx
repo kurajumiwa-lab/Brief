@@ -110,20 +110,20 @@ async function main() {
     root.unmount(); host.remove();
   }
 
-  // ── 4. HOME: the mode tiles, and no chip row ────────────────────────────
+  // ── 4. HOME: all categories visible, not behind a More disclosure ───
   {
     const { host, root } = await mount(React.createElement(HomeSurface, { onOpenSpace: () => {} }));
-    const tiles = host.querySelector('nav[aria-label="Quick actions"]');
-    check('Home carries the mode tiles', Boolean(tiles));
+    const tiles = host.querySelector('nav[aria-label="Explore categories"]');
+    check('Home carries the category doors', Boolean(tiles));
     const tileButtons = Array.from(tiles.querySelectorAll('button'));
-    check('three compact doorways: Discover, Wanderly, Work',
-      tileButtons.length === 3 &&
-      ['Discover', 'Wanderly', 'Work']
+    check('offers, events, work, groups and errands have direct doors',
+      tileButtons.length === 9 &&
+      ['Offers', 'Events', 'Work', 'Groups', 'Errands', 'Runs']
         .every((l) => tileButtons.some((b) => text(b).includes(l))));
     check('no filter-chips test id anywhere on Home',
       host.querySelector('[data-testid="filter-chips"]') === null &&
       !text(host).includes('filter-chips'));
-    check('secondary discovery is collapsed by default', host.querySelector('details')?.open === false);
+    check('secondary discovery is visible by default', host.querySelector('details') === null);
     check('Work is a direct doorway', Boolean(host.querySelector('[data-testid="home-work"]')));
     root.unmount(); host.remove();
   }

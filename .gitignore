@@ -22,3 +22,6 @@ playwright-report/
 # Isolated local preview records (not production data or test fixtures)
 .preview-data/
 .tmp.*
+
+# Accidental runtime store path; never distribute credential-bearing snapshots
+undefined/

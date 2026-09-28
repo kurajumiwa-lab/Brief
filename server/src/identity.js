@@ -11,7 +11,7 @@
 //      token resolved by the auth middleware. This always wins.
 //   2. The single-user development fallback -- the historical `usr_me`
 //      constant, permitted only outside production (or by an explicit
-//      BRIEF_DEV_AUTH=1, which authStatus() then reports as insecure).
+//      BRIEF_DEV_AUTH=1 is refused at startup and never activates it).
 //
 // What has NOT changed: no route ever reads an actor identity out of the
 // request body or query string. A client-supplied `userId` is a forgeable
@@ -59,7 +59,7 @@ export function requireCallerId(req) {
  */
 export function authStatus() {
   const dev = devAuthAllowed();
-  const insecureDevInProd = dev && process.env.NODE_ENV === 'production';
+  const insecureDevInProd = process.env.NODE_ENV === 'production' && process.env.BRIEF_DEV_AUTH === '1';
   return {
     // Authentication IS implemented: users, scrypt password hashing, expiring
     // revocable sessions, bearer tokens.
@@ -70,9 +70,8 @@ export function authStatus() {
     devFallback: dev,
     insecure: insecureDevInProd,
     reason: insecureDevInProd
-      ? 'BRIEF_DEV_AUTH=1 is set in production: unauthenticated requests are ' +
-        'accepted as the single local user. This is insecure and must be ' +
-        'unset before real deployment.'
+      ? 'BRIEF_DEV_AUTH=1 is forbidden in production: startup refuses it, ' +
+        'and the development identity cannot be enabled. Remove this setting.'
       : dev
         ? 'Session authentication is active. The single-user development ' +
           'fallback is also enabled (non-production), so unauthenticated ' +

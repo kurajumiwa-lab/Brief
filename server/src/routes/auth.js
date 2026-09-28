@@ -4,6 +4,8 @@ import * as auth from '../domain/auth.js';
 import * as referrals from '../domain/referrals.js';
 import * as attribution from '../domain/attribution.js';
 import * as federated from '../domain/federated.js';
+import * as emailAuth from '../domain/emailAuth.js';
+import { limitAuth, clearAuthLimit } from './authLimits.js';
 import * as onboarding from '../domain/onboarding.js';
 import * as person from '../domain/person.js';
 import { callerId, platformRolesOf, capabilitiesOf } from '../identity.js';
@@ -38,6 +40,7 @@ function acquisitionContext(req) {
 export function register(app) {
 app.use('/api/auth', requireFeature('auth'));
 app.post('/api/auth/register', (req, res) => {
+  if (!limitAuth(req, res, 'register-ip', 60)) return;
   try {
     const user = auth.createUser({
       handle: req.body?.handle,
@@ -78,11 +81,13 @@ app.post('/api/auth/register', (req, res) => {
 
 
 app.post('/api/auth/login', (req, res) => {
+  if (!limitAuth(req, res, 'login-ip', 40) || !limitAuth(req, res, 'login-handle', 12, req.body?.handle)) return;
   try {
     const { token, session } = auth.login({
       handle: req.body?.handle,
       password: req.body?.password
     });
+    clearAuthLimit('login-handle', req.body?.handle);
     const user = auth.getUser(session.userId);
     const mine = person.ensurePersonForUser(user.id);
     onboarding.ensureProfile(user.id);
@@ -178,6 +183,7 @@ app.post('/api/auth/google', async (req, res) => {
       remedy: 'Set GOOGLE_CLIENT_ID on the server and the matching VITE_GOOGLE_CLIENT_ID on the client.'
     });
   }
+  if (!limitAuth(req, res, 'google-ip', 40)) return;
   const verified = await federated.verifyGoogleIdToken(req.body?.credential);
   if (!verified.ok) {
     return res.status(401).json({ error: 'google credential rejected', reason: verified.reason });
@@ -207,63 +213,44 @@ app.post('/api/auth/google', async (req, res) => {
   }
 });
 
-/**
- * Continue from a link that already knows who you are.
- *
- * This is the TikTok case. An in-app browser cannot read the device's Google
- * account — no browser can, and pretending otherwise would be a lie. What can
- * be true is that the link itself carries an email THIS server signed, so
- * arriving from it is one tap instead of a sign-up form. A bare `?email=` is
- * refused: only a token with a valid, unexpired HMAC resolves to an account.
- */
-app.post('/api/auth/email-link', (req, res) => {
-  const redeemed = federated.redeemEmailLinkToken(req.body?.token);
-  if (!redeemed.ok) {
-    return res.status(401).json({ error: 'this link cannot identify you', reason: redeemed.reason });
-  }
+/** A request only DELIVERS a proof to the mailbox. It never returns a credential. */
+app.post('/api/auth/email-link/request', async (req, res) => {
+  if (!emailAuth.deliveryConfigured()) return res.status(503).json({ error: 'email sign-in is not configured' });
+  if (!limitAuth(req, res, 'email-ip', 10) || !limitAuth(req, res, 'email-target', 4, req.body?.email)) return;
   try {
-    const { user, created } = auth.signInWithVerifiedIdentity({
-      provider: 'email_link',
-      email: redeemed.email,
-      displayName: req.body?.displayName ?? null
-    });
-    const { token, session } = auth.issueSession(user.id);
-    const mine = person.ensurePersonForUser(user.id);
-    onboarding.ensureProfile(user.id);
-    onboarding.recordEvent(user.id, 'signed_in', { provider: 'email_link', created });
-    const source = req.body?.source ?? redeemed.source;
-    if (source) onboarding.setSource(user.id, source);
-    if (created) { try { attribution.capture(user.id, acquisitionContext(req)); } catch { /* attribution must never break sign-in */ } }
-    res.status(created ? 201 : 200).json({
-      user: { ...auth.publicUser(user), personId: mine.id },
-      token,
-      expiresAt: session.expiresAt,
-      created,
-      onboarding: onboarding.stateFor(user.id)
-    });
+    await emailAuth.requestEmailSignIn(req.body?.email);
+    // Same answer for existing/new accounts and send failure. Do not disclose
+    // the target's membership or whether an external provider accepted mail.
+    res.json({ ok: true, message: 'If delivery is available, check that inbox for a sign-in link.' });
   } catch (e) {
-    res.status(400).json({ error: String(e.message ?? e) });
+    if (e.message === 'enter a valid email address') return res.status(400).json({ error: e.message });
+    res.status(503).json({ error: 'email sign-in is temporarily unavailable' });
   }
 });
 
-/**
- * Mint a one-tap link token for an email you are inviting.
- *
- * Requires a live session: you may hand out recognition, but only as yourself,
- * and only for an address you typed. The token expires.
- */
-app.post('/api/auth/email-link/mint', (req, res) => {
-  const me = requireAuth(req, res);
-  if (!me) return;
+/** Proof is a random, single-use, ten-minute mailbox-delivered challenge. */
+app.post('/api/auth/email-link', (req, res) => {
+  if (!limitAuth(req, res, 'email-redeem-ip', 40)) return;
+  let redeemed;
+  try { redeemed = emailAuth.redeemEmailSignIn(req.body?.token); }
+  catch { return res.status(503).json({ error: 'email sign-in is temporarily unavailable' }); }
+  if (!redeemed.ok) return res.status(401).json({ error: 'this link cannot identify you' });
   try {
-    const token = federated.mintEmailLinkToken(req.body?.email, { source: req.body?.source ?? null });
-    res.status(201).json({
-      token,
-      expiresInMs: federated.EMAIL_LINK_TTL_MS,
-      note: 'Append this as ?bt=<token> to a Brief link. Anyone holding the link is treated as that email.'
+    const { user, created, token, session } = redeemed;
+    const mine = person.ensurePersonForUser(user.id);
+    onboarding.ensureProfile(user.id);
+    onboarding.recordEvent(user.id, 'signed_in', { provider: 'email_link', created });
+    if (created) { try { attribution.capture(user.id, acquisitionContext(req)); } catch { /* optional */ } }
+    res.status(created ? 201 : 200).json({
+      user: { ...auth.publicUser(user), personId: mine.id }, token,
+      expiresAt: session.expiresAt, created, onboarding: onboarding.stateFor(user.id)
     });
-  } catch (e) {
-    res.status(400).json({ error: String(e.message ?? e) });
-  }
+  } catch { res.status(503).json({ error: 'sign-in was verified; please retry from your account' }); }
+});
+
+// The old member-generated credential endpoint is retired, including on
+// deployments that still hold a BRIEF_LINK_SECRET or an old signed link.
+app.post('/api/auth/email-link/mint', (_req, res) => {
+  res.status(410).json({ error: 'member-generated sign-in links are discontinued' });
 });
 }

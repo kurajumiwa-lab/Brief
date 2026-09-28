@@ -598,7 +598,9 @@ export function YouSurface({
                 <p className="text-xs mt-0.5" style={{ color: "var(--color-text-muted)" }}>
                   {api.offlineQueueDepth() === 0
                     ? "Nothing is parked — every write reached the server."
-                    : `${api.offlineQueueDepth()} write${api.offlineQueueDepth() === 1 ? "" : "s"} waiting for signal; they send themselves when it returns.`}
+                    : api.offlineQueueBlockedDepth() > 0
+                      ? `${api.offlineQueueBlockedDepth()} pending write${api.offlineQueueBlockedDepth() === 1 ? " is" : "s are"} from another or unverified account. They will not send as this account; sign back in as the original owner to retry.`
+                      : `${api.offlineQueueDepth()} write${api.offlineQueueDepth() === 1 ? "" : "s"} waiting for signal; they send only while you are signed in as their owner.`}
                 </p>
               </div>
             </div>

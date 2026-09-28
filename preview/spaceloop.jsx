@@ -121,14 +121,13 @@ async function runTests() {
   check('Home does not greet', !/Hi Amina/.test(text1) && !/Hi there/.test(text1));
   check('Home does not reprint offers-live or standing',
     !/offers live/.test(text1) && !/Nothing pending on your ledger/.test(text1));
-  check('compact home names the network', text1.includes('Make things happen.'));
+  check('home names the network', text1.includes('More than a marketplace.'));
   check('work is reachable in one tap', Boolean(host1.querySelector('[data-testid="home-work"]')));
-  check('three compact doorways', host1.querySelectorAll('nav[aria-label="Quick actions"] button').length === 3);
-  check('secondary discovery is collapsed', host1.querySelector('details')?.open === false);
+  check('nine visible category doorways', host1.querySelectorAll('nav[aria-label="Explore categories"] button').length === 9);
+  check('secondary discovery is visible', host1.querySelector('details') === null);
   check('no invented standing', !/Position #\d|Sector \d|Trust Score/i.test(text1));
   check('no oversized home hero', !host1.querySelector('.shop-brand-cover'));
-  const createBtn = host1.querySelector('button[aria-label="Create a space"]');
-  check('space creation stays reachable', Boolean(createBtn));
+  check('shops are reachable from Home', Array.from(host1.querySelectorAll('.home-category')).some(b => b.textContent.includes('Shops')));
   const text1b = host1.textContent;
   check('no fabricated Today queue', !text1b.includes('Mary asked for a birthday cake') && !text1b.includes('Action Queue'));
   // Commerce is no longer mounted on Home.

@@ -116,6 +116,13 @@ import { register as positionRoutes } from './routes/position.js';
 import { register as commitmentsRoutes } from './routes/commitments.js';
 import { register as reciprocityRoutes } from './routes/reciprocity.js';
 
+// Refuse an insecure production environment before binding a public port.
+// The development identity is also impossible to activate in auth.js itself.
+if (process.env.NODE_ENV === 'production') {
+  if (process.env.BRIEF_DEV_AUTH === '1') throw new Error('BRIEF_DEV_AUTH=1 is forbidden in production');
+  if (!process.env.BRIEF_DATA_DIR) throw new Error('BRIEF_DATA_DIR is required in production (mount a persistent volume)');
+}
+
 const app = express();
 
 // HTML-escape for meta-tag injection: a campaign title or description is
@@ -147,13 +154,21 @@ app.use(express.json({
 // The public page's one form (an abuse report) is a plain HTML POST, so it
 // arrives urlencoded, not as JSON. 32kb is plenty for 500 characters of words.
 app.use(express.urlencoded({ extended: false, limit: '32kb' }));
-app.use((_req, res, next) => {
-  res.setHeader('access-control-allow-origin', '*');
-  res.setHeader('access-control-allow-headers', 'content-type,authorization,x-telegram-bot-api-secret-token,x-hub-signature-256');
-  res.setHeader('access-control-allow-methods', 'GET,POST,PATCH,DELETE,OPTIONS');
+app.use((req, res, next) => {
+  // Same-origin clients need no CORS headers. Explicit cross-origin clients
+  // must be listed by the operator; wildcard reads amplify bearer-token XSS.
+  const allowed = [process.env.BRIEF_PUBLIC_ORIGIN, ...(process.env.BRIEF_CORS_ORIGINS ?? '').split(',')]
+    .map(value => { try { return new URL(value.trim()).origin; } catch { return null; } });
+  res.vary('Origin');
+  if (req.headers.origin && allowed.includes(req.headers.origin)) {
+    res.setHeader('access-control-allow-origin', req.headers.origin);
+    res.setHeader('access-control-allow-headers', 'content-type,authorization,x-telegram-bot-api-secret-token,x-hub-signature-256');
+    res.setHeader('access-control-allow-methods', 'GET,POST,PATCH,DELETE,OPTIONS');
+  }
   next();
 });
-app.options('*', (_req, res) => res.sendStatus(204));
+app.options('*', (req, res) => req.headers.origin && !res.getHeader('access-control-allow-origin')
+  ? res.sendStatus(403) : res.sendStatus(204));
 
 // The production client calls the API under the /ingest prefix (the dev server
 // strips it with a Vite proxy; in production Express serves the API directly).
@@ -388,6 +403,17 @@ if (servingFrontend) {
     res.type('html').send(html);
   });
 
+  // CloudBites is a public, opt-in concept landing page. Give non-JS link
+  // previews an accurate title and description without pretending that its
+  // sample menu, discount or courier network is already live.
+  app.get(['/cloudbites', '/cloudbites/'], (_req, res) => {
+    const title = 'CloudBites — a delivery-only kitchen concept on Brief';
+    const desc = 'Explore a sample workday lunch menu and illustrative Nairobi delivery areas. Ordering is not live.';
+    const html = indexHtml.replace(/<title>.*?<\/title>/,
+      `<title>${escapeHtml(title)}</title>\n    <meta name="description" content="${escapeHtml(desc)}" />\n    <meta property="og:title" content="${escapeHtml(title)}" />\n    <meta property="og:description" content="${escapeHtml(desc)}" />`);
+    res.type('html').send(html);
+  });
+
   // Static assets: JS/CSS bundles, images, etc. `index: false` so '/' is
   // handled by the explicit fallback below rather than a silent directory
   // serve, and so an asset miss is not masked by a directory index.
@@ -455,7 +481,7 @@ if (process.env.NODE_ENV !== 'test') {
   // (e.g. a fresh deploy on Railway's ephemeral filesystem with a re-attached
   // volume), and take rolling snapshots so a crash or forced kill never loses
   // more than the last interval. The graceful-shutdown backup still runs too.
-  ops.restoreLatestBackupIfEmpty(store);
+  // store.js recovered the primary before any domain imported live rows.
   ops.installPeriodicBackup(store, {
     intervalMs: Number(process.env.BRIEF_BACKUP_INTERVAL_MS) || 15 * 60 * 1000
   });

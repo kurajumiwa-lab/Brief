@@ -200,11 +200,12 @@ export function createOrder({ listingId, buyerId, quantity = 1, delivery = null,
     createdAt: now,
     updatedAt: now
   };
-  store.insert('orders', order);
-
-  // A real order consumes real stock — and names itself to the shelf log, so
-  // a unit that left the counter can be tied back to the order that took it.
-  listings.consumeStock(listing.id, quantity, { orderId: order.id });
+  // All three economic rows commit in one atomic file swap. An injected disk
+  // failure (or stock validation error) restores the entire pre-order snapshot.
+  store.transaction(() => {
+    store.insert('orders', order);
+    listings.consumeStock(listing.id, quantity, { orderId: order.id });
+  });
 
   return hydrate(order);
 }

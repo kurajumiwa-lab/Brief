@@ -87,7 +87,7 @@ export function publicUser(user) {
     handle: user.handle,
     displayName: user.displayName,
     // Present only for accounts that actually carry a verified email (Google
-    // sign-in, signed email links). A password account has none and says so
+    // sign-in, delivered email proof). A password account has none and says so
     // with null rather than an empty string that looks like an address.
     email: user.email ?? null,
     authProvider: user.authProvider ?? 'password',
@@ -132,10 +132,10 @@ export function getUserByHandle(handle) {
 }
 
 // ---------------------------------------------------------------------------
-// FEDERATED ACCOUNTS (Google, signed email links)
+// FEDERATED ACCOUNTS (Google and mailbox-delivered, single-use email proofs)
 //
-// A verified email is an identity Brief can trust because something else
-// already proved it: Google's signature, or an HMAC this server produced.
+// A verified email is an identity Brief can trust because Google verified
+// the claim or a single-use proof was delivered to the target mailbox.
 // These accounts still get a password hash — a random one they never learn —
 // so that every account row has the same shape and no code path has to ask
 // "is this one of the passwordless ones?" before it can verify anything.
@@ -326,12 +326,13 @@ export function tokenFromRequest(req) {
  * Is the single-user development fallback permitted?
  *
  * PRODUCTION IS NEVER IMPLICITLY INSECURE. In production the fallback is off
- * unless someone deliberately sets BRIEF_DEV_AUTH=1, which is then reported
- * as an insecure configuration by authStatus(). Outside production it stays
+ * regardless of BRIEF_DEV_AUTH. Production also refuses that override at
+ * startup. Outside production it stays
  * on, which is what keeps local development and the existing test suite
  * usable without a login for every call.
  */
 export function devAuthAllowed() {
+  if (process.env.NODE_ENV === 'production') return false;
   if (process.env.BRIEF_DEV_AUTH === '1') return true;
   if (process.env.BRIEF_DEV_AUTH === '0') return false;
   return process.env.NODE_ENV !== 'production';

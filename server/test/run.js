@@ -6282,24 +6282,13 @@ console.log('\n=== FEDERATED SIGN-IN (Google + signed links) ===');
     auth.publicUser(second.user).email === 'wanjiru@example.com' &&
     auth.publicUser(second.user).passwordHash === undefined);
 
-  // Signed one-tap links (the TikTok arrival path).
-  const token = federated.mintEmailLinkToken('amina@example.com', { source: 'tiktok' });
-  const redeemed = federated.redeemEmailLinkToken(token);
-  check('a Brief-signed link identifies the address it was minted for',
-    redeemed.ok === true && redeemed.email === 'amina@example.com' && redeemed.source === 'tiktok');
-
-  const forged = `${token.split('.')[0]}.${'x'.repeat(token.split('.')[1].length)}`;
-  check('a forged signature is refused', federated.redeemEmailLinkToken(forged).ok === false);
-  check('a bare email is not a token', federated.redeemEmailLinkToken('amina@example.com').ok === false);
-
-  const stale = federated.mintEmailLinkToken('amina@example.com', { ttlMs: 1000, now: Date.now() - 60_000 });
-  check('an old link stops identifying anyone',
-    federated.redeemEmailLinkToken(stale).ok === false &&
-    federated.redeemEmailLinkToken(stale).reason === 'expired');
-
-  let rejectedEmail = false;
-  try { federated.mintEmailLinkToken('not-an-email'); } catch { rejectedEmail = true; }
-  check('a malformed address cannot be minted', rejectedEmail);
+  // The original signed email-link functions are deliberately retired. A
+  // signature alone proved only who minted a link, not mailbox ownership.
+  let retired = false;
+  try { federated.mintEmailLinkToken('amina@example.com'); } catch { retired = true; }
+  check('legacy member-minted email links cannot be issued', retired);
+  check('legacy signed links cannot be redeemed',
+    federated.redeemEmailLinkToken('old.payload').ok === false);
 
   delete process.env.GOOGLE_CLIENT_ID;
   federated._setGoogleKeys(null);

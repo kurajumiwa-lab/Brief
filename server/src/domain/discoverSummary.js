@@ -235,8 +235,10 @@ export function discoverSummary({ viewerId = null, now = Date.now() } = {}) {
   const publicSpaces = listPublicSpaces(100);
 
   const tiles = [
-    { key: 'marketplace', label: 'Marketplace', count: listings.length, unit: 'live offer' },
-    { key: 'shops', label: 'Shops', count: publicSpaces.length, unit: 'public storefront' },
+    // Feed/picker reads remain bounded; counts are derived over ALL eligible
+    // rows, not the first page of a capped browse result.
+    { key: 'marketplace', label: 'Marketplace', count: store.filter('listings', (l) => l.status === 'active').length, unit: 'live offer' },
+    { key: 'shops', label: 'Shops', count: store.filter('spaces', (s) => s.visibility === 'public' && s.status === 'active').length, unit: 'public storefront' },
     { key: 'events', label: 'Events', count: (events.total ?? events.events?.length) ?? 0, unit: 'published' },
     { key: 'circles', label: 'Groups', count: joinable, unit: 'you could join' },
     { key: 'errands', label: 'Errands', count: openErrands, unit: 'open' }
@@ -267,8 +269,8 @@ export function discoverSummary({ viewerId = null, now = Date.now() } = {}) {
     featured,
     featuredFrom,
     counts: {
-      listings: listings.length,
-      shops: publicSpaces.length,
+      listings: tiles[0].count,
+      shops: tiles[1].count,
       events: events.total ?? (events.events ?? []).length,
       circles: joinable,
       errands: openErrands

@@ -79,11 +79,10 @@ export function arrivalSource(url: string, userAgent: string | null | undefined)
 }
 
 /**
- * The Brief-signed link token, if the URL carries one.
+ * A mailbox-delivered, one-use link token, if the URL carries one.
  *
- * This is the only email-bearing thing the client will act on, and even then
- * it just posts it to the server, which checks the signature before it means
- * anything.
+ * The client posts it to the server; the server verifies the stored
+ * single-use proof before it means anything. Legacy signed links are refused.
  */
 export function linkTokenFrom(url: string): string | null {
   const token = paramsOf(url).get('bt');

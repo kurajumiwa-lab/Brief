@@ -81,8 +81,9 @@ export function startupDiagnostics({ store, capabilities }) {
 
   if (process.env.NODE_ENV === 'production') {
     if (process.env.BRIEF_DEV_AUTH === '1') {
-      problems.push('BRIEF_DEV_AUTH=1 in production: unauthenticated requests are accepted as a local user');
+      problems.push('BRIEF_DEV_AUTH=1 is forbidden in production; development identity is disabled');
     }
+    if (!process.env.BRIEF_DATA_DIR) problems.push('BRIEF_DATA_DIR must point at a persistent volume in production');
     if (!capabilities.payments?.configured) {
       notes.push('no payment provider configured: Brief cannot collect or disburse money');
     }
@@ -118,6 +119,8 @@ export function startupDiagnostics({ store, capabilities }) {
 export function readiness({ store, reconcilers = [] }) {
   const checks = [];
 
+  if (store.recovery?.error) checks.push({ name: 'recovery', ok: false, detail: store.recovery.error });
+  else checks.push({ name: 'recovery', ok: true, detail: store.recovery?.reason ?? 'restored' });
   // Can we actually read and write the store?
   let storeOk = false;
   try {
@@ -178,50 +181,54 @@ export function pruneBackups(store, keep = 14) {
   return { removed: doomed.length, kept: Math.min(files.length, keep) };
 }
 
-/**
- * Restore the newest snapshot when the primary data file is missing or empty.
- *
- * Railway's filesystem is ephemeral, so a fresh deploy starts with no data.
- * If the data directory is mounted on a persistent volume, this is a no-op
- * (the file is already there). If a previous run's snapshot exists — e.g. the
- * volume was re-attached after a crash, or a snapshot was copied in — this
- * brings it back so a redeploy does not silently wipe every record.
- *
- * Never overwrites an existing, non-empty data file: an empty/missing primary
- * is the only case that triggers a restore.
- */
-export function restoreLatestBackupIfEmpty(store) {
-  const src = store._file;
-  if (fs.existsSync(src)) {
+/** Prepare the primary BEFORE store.js reads it. A corrupt primary must
+ * never quietly become an empty live database. Backups are checked newest
+ * first; an invalid latest snapshot cannot hide an older valid snapshot. */
+export function prepareStoreFile(src) {
+  const valid = (file) => {
     try {
-      const parsed = JSON.parse(fs.readFileSync(src, 'utf8'));
-      const keys = Object.keys(parsed).filter((k) => !k.startsWith('__'));
-      const hasRows = Object.entries(parsed)
-        .filter(([k]) => !k.startsWith('__'))
-        .some(([, v]) => Array.isArray(v) && v.length > 0);
-      if (hasRows) return { restored: false, reason: 'data file present and non-empty' };
-      // Empty collections file (fresh init wrote a skeleton): treat as absent
-      // only if a snapshot exists.
-      if (keys.length > 0 && !hasRows) {
-        // fall through to restore attempt below
-      }
-    } catch {
-      return { restored: false, reason: 'data file unreadable; leaving as-is' };
-    }
+      const data = JSON.parse(fs.readFileSync(file, 'utf8'));
+      return data && !Array.isArray(data) && typeof data === 'object' &&
+        Object.values(data).some(Array.isArray) &&
+        Object.entries(data).filter(([k]) => !k.startsWith('__'))
+          .every(([, value]) => Array.isArray(value)) ? data : null;
+    } catch { return null; }
+  };
+  const primaryExists = fs.existsSync(src);
+  const primary = primaryExists ? valid(src) : null;
+  const hasRows = (data) => Object.entries(data ?? {}).some(([k, v]) => !k.startsWith('__') && Array.isArray(v) && v.length > 0);
+  if (primary && hasRows(primary)) return { restored: false, reason: 'primary data present' };
+  const dir = path.join(path.dirname(src), 'backups');
+  const files = fs.existsSync(dir) ? fs.readdirSync(dir)
+    .filter((f) => /^brief-.*\.json$/.test(f)).sort().reverse() : [];
+  const snapshot = files.map((f) => path.join(dir, f)).find((f) => hasRows(valid(f)));
+  if (!snapshot) {
+    if (primaryExists && !primary) throw new Error('database unreadable and no valid recovery snapshot; refusing to start');
+    if (files.length) throw new Error('no valid populated recovery snapshot; refusing to start with an empty database');
+    if (process.env.NODE_ENV === 'production' && process.env.BRIEF_ALLOW_EMPTY_STORE !== '1')
+      throw new Error('primary database is missing or empty with no populated backup; set BRIEF_ALLOW_EMPTY_STORE=1 only for a confirmed first deployment');
+    return { restored: false, reason: primaryExists ? 'empty primary, no populated snapshot' : 'new empty store, no snapshots' };
   }
+  fs.mkdirSync(path.dirname(src), { recursive: true });
+  const temp = `${src}.restore-${process.pid}.tmp`;
+  try {
+    fs.copyFileSync(snapshot, temp);
+    const fd = fs.openSync(temp, 'r');
+    try { fs.fsyncSync(fd); } finally { fs.closeSync(fd); }
+    if (!hasRows(valid(temp))) throw new Error('restored snapshot failed validation');
+    if (primaryExists && !primary) fs.renameSync(src, `${src}.corrupt-${Date.now()}`);
+    fs.renameSync(temp, src);
+  } finally { if (fs.existsSync(temp)) fs.unlinkSync(temp); }
+  logInfo('restored_from_snapshot', { file: snapshot });
+  return { restored: true, file: snapshot };
+}
 
-  const dir = path.join(path.dirname(store._file), 'backups');
-  if (!fs.existsSync(dir)) return { restored: false, reason: 'no snapshots' };
-  const files = fs.readdirSync(dir)
-    .filter((f) => f.startsWith('brief-') && f.endsWith('.json'))
-    .sort()
-    .reverse();
-  if (!files.length) return { restored: false, reason: 'no snapshots' };
-
-  const latest = path.join(dir, files[0]);
-  fs.copyFileSync(latest, src);
-  logInfo('restored_from_snapshot', { file: latest });
-  return { restored: true, file: latest };
+/** For explicit operator/test restores after initialization: rehydrate memory
+ * before reporting success. Normal boot calls prepareStoreFile before load. */
+export function restoreLatestBackupIfEmpty(store) {
+  const result = prepareStoreFile(store._file);
+  if (result.restored) store.reloadFromDisk();
+  return result;
 }
 
 /**

@@ -27,11 +27,10 @@ fresh deploy.
 ### Defense in depth (already in code)
 
 - **Snapshots on a cadence** — `BRIEF_BACKUP_INTERVAL_MS` (default 15 min)
-  copies the data file into `backups/`; the newest 14 are kept.
-- **Boot restore** — if the data file is missing/empty but a snapshot exists
-  (e.g. a volume re-attached after a crash), the server restores the newest one.
+  copies the data file into `backups/`; the newest 14 are kept on the SAME volume. Keep an independent offsite copy.
+- **Boot restore** — BEFORE loading the live store, Brief validates the primary and newest populated snapshot; missing/empty/corrupt primaries are restored from a valid backup, then loaded into memory. Corrupt primary files are preserved aside. A corrupt primary without a usable backup refuses startup. A missing **or empty** production primary with no populated backup also refuses startup unless `BRIEF_ALLOW_EMPTY_STORE=1` is set for a confirmed first deployment; remove this override immediately after initialization.
 - **Graceful-shutdown backup** — a final snapshot is taken on SIGTERM/SIGINT.
-- **Corrupt-file recovery** — an unreadable data file is moved aside, not fatal.
+- **Corrupt-file recovery** — an unreadable primary is preserved and replaced only when a validated snapshot exists; otherwise startup fails visibly. Do not delete that copy.
 
 > Note: snapshots alone do NOT survive an ephemeral filesystem. The volume is
 > the durability guarantee; snapshots are the crash-recovery guarantee.
@@ -41,7 +40,10 @@ fresh deploy.
 | Var | Purpose | Required |
 |---|---|---|
 | `PORT` | Listen port (Railway sets it) | yes |
-| `BRIEF_DATA_DIR` | Data dir (point at the volume) | for durability |
+| `BRIEF_DATA_DIR` | Data dir (point at a mounted persistent volume) | required for production startup |
+| `BRIEF_ALLOW_EMPTY_STORE` | One-time explicit first-deployment bootstrap if volume has neither primary nor snapshot; remove afterwards | no |
+| `RESEND_API_KEY` / `BRIEF_EMAIL_FROM` | Opt-in mailbox sign-in, requiring a verified sender domain and HTTPS origin; no provider means email login is disabled | for email login |
+| `BRIEF_CORS_ORIGINS` | Comma-separated allowed cross-origin API consumers (same-origin needs none) | no |
 | `BRIEF_PUBLIC_ORIGIN` | Canonical HTTPS origin for share links + Buni callback | for distribution/payments |
 | `BRIEF_BACKUP_INTERVAL_MS` | Snapshot cadence (default 900000) | no |
 | `BUNI_CONSUMER_KEY` / `BUNI_CONSUMER_SECRET` / `BUNI_WEBHOOK_SECRET` | Buni collection credentials and callback secret; server-side only | for collection |
@@ -94,3 +96,13 @@ content through the real extraction pipeline (marked `seedBatch`, removable with
 `npm run seed:clear`). It creates no money records. Seed the deployed instance
 via Railway's shell (`npm run seed`) to see the product behave before real
 ingestion is connected.
+
+## Safe recovery and identity release gate
+
+1. Stop writers and preserve the primary, uploads and `backups/` offsite before recovery. Never run `seed:clear` or a destructive reset on a live volume.
+2. Validate a snapshot offline; restore by restarting the process with the same `BRIEF_DATA_DIR`. The store prepares recovery **before** importing live rows and refuses invalid snapshots. Compare `/api/ready` and representative records before accepting traffic or permitting writes.
+3. Perform a disposable-volume drill for missing, empty and corrupt primaries, then a write and restart. On real infrastructure, verify mount persistence and an independent offsite backup; local tests cannot establish those facts.
+4. `BRIEF_DEV_AUTH=1` now aborts production startup. Do not use `BRIEF_ALLOW_EMPTY_STORE=1` beyond a confirmed fresh installation. Railway health-checks `/api/ready` (store + reconciliation), not only `/api/health` (liveness).
+5. The old member-minted signed `?bt=` links are revoked by code. If the vulnerable flow was exposed, review sessions and incident logs, revoke suspicious sessions, and notify affected users under your incident policy. A new email proof works only after a verified Resend sender, HTTPS `BRIEF_PUBLIC_ORIGIN` and both email variables are configured; test real delivery and inbox placement before enabling it. No real provider transaction or delivery was exercised by the repository tests.
+
+The old `BRIEF_LINK_SECRET` is ignored by authentication; rotating it alone does not revoke already-issued sessions. Public collections require `BRIEF_PUBLIC_ORIGIN` for absolute share links; the production client routes `/collections/:id` to a public read-only page.
