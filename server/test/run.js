@@ -5258,7 +5258,7 @@ console.log('\n=== MIGRATIONS AGAINST AN OLD FIXTURE ===');
   const result = st.migrate(merged, { onBackup: () => null });
   check('an unversioned database is detected as version 0', result.from === 0);
   check('it migrates to the current version', result.to === st.SCHEMA_VERSION);
-  check('migrations were applied in order', result.applied.join(',') === '1:baseline,2:backfill-order-currency', result.applied?.join(','));
+  check('migrations were applied in order', result.applied.join(',') === '1:baseline,2:backfill-order-currency,3:signal-sequence', result.applied?.join(','));
 
   // EXISTING DATA MUST SURVIVE. This is the whole safety requirement.
   check('existing sources survived', result.db.sources.length === 1 && result.db.sources[0].id === 'src_old');
@@ -5274,7 +5274,7 @@ console.log('\n=== MIGRATIONS AGAINST AN OLD FIXTURE ===');
     { id: 'ord_legacy_2', total: 800, currency: 'USD' } // already set
   ] };
   const r2 = st.migrate(withOrders, { onBackup: () => null });
-  check('a v1 database migrates to v2', r2.from === 1 && r2.to === 2);
+  check('a v1 database migrates to the current version', r2.from === 1 && r2.to === st.SCHEMA_VERSION);
   check('a missing currency is BACKFILLED', r2.db.orders[0].currency === 'KES');
   check('an existing currency is NOT overwritten', r2.db.orders[1].currency === 'USD', r2.db.orders[1].currency);
 

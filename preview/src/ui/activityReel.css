@@ -1,0 +1,260 @@
+/* ---------------------------------------------------------------------------
+   ACTIVITY REEL — the physical layer of the interaction grammar.
+
+   Everything here is one of three things:
+     * the deck, moved by --reel-x / --reel-y (the finger's own offsets);
+     * the depth, moved by --reel-open (0…1 as the card grows into its detail);
+     * the exit, moved by --reel-drop (0…1 as a card is dealt with).
+
+   Motion uses the house tokens only (--motion-normal / --motion-fast, the
+   decelerating easings). No bounce, no elastic, and everything transform-based
+   so a drag never triggers layout while the finger is moving.
+
+   `touch-action: none` on the stage is deliberate and is the one real trade:
+   the card owns vertical drags, so the page does not scroll under a card that
+   is being pulled. The rest of the panel scrolls normally, and the stylesheet
+   keeps the stage no taller than it needs to be.
+   --------------------------------------------------------------------------- */
+
+.reel { display: grid; gap: 8px; padding: 0 16px 14px; }
+
+/* --- Position: 2 of 5, with an end you can see ----------------------------- */
+.reel-meter { display: flex; align-items: center; gap: 10px; }
+.reel-segments { display: flex; flex: 1; gap: 4px; list-style: none; margin: 0; padding: 0; }
+.reel-segments li {
+  height: 3px; flex: 1; border-radius: 2px; background: var(--divider, var(--brief-line));
+  transition: background-color var(--motion-normal) var(--ease-standard),
+              transform var(--motion-normal) var(--ease-standard);
+}
+.reel-segments li[data-at='now'] { background: var(--color-primary); }
+.reel-segments li[data-at='past'] { background: var(--color-primary); opacity: .38; }
+.reel-count { font-size: 10px; font-weight: 700; letter-spacing: .06em; color: var(--brief-muted); text-transform: uppercase; margin: 0; }
+.reel-count-seen { font-weight: 400; letter-spacing: 0; text-transform: none; }
+
+/* --- The stage: one hand-sized area that owns the gestures ----------------- */
+.reel-stage {
+  position: relative;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  padding: 6px 0 10px;
+  cursor: grab;
+}
+.reel-stage[data-gesture='vertical'] { cursor: ns-resize; }
+.reel-stage:focus-within .reel-card[data-slot='now'] { outline: 2px solid var(--color-primary); outline-offset: 3px; }
+.reel-stage *:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 3px; }
+
+/* --- The deck -------------------------------------------------------------- */
+.reel-deck { position: relative; min-height: clamp(196px, 46vw, 260px); }
+.reel-card {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  border: 1px solid var(--divider, var(--brief-line));
+  border-radius: 18px;
+  background: var(--color-paper);
+  box-shadow: var(--lift-2);
+  transform: translate3d(calc(var(--slot-offset, 0px) + var(--reel-x, 0px)), 0, 0);
+  transition: transform var(--motion-normal) var(--ease-emphasized), opacity var(--motion-normal) var(--ease-standard);
+  will-change: transform;
+  overflow: hidden;
+}
+.reel-stage[data-gesture='horizontal'] .reel-card { transition: none; }
+.reel-card[data-slot='prev'] { --slot-offset: calc(-100% - 16px); opacity: .55; pointer-events: none; }
+.reel-card[data-slot='next'] { --slot-offset: calc(100% + 16px); opacity: .55; pointer-events: none; }
+
+/* A card that has been opened sits back so the detail can rise over it. */
+.reel-card[data-slot='now'] {
+  transform: translate3d(var(--reel-x, 0px), calc(var(--reel-y, 0px) - (6px * var(--reel-open, 0))), 0)
+             scale(calc(1 - (0.02 * var(--reel-open, 0))));
+  z-index: 2;
+}
+/* …and a card being dealt with falls away, in the direction it was thrown. */
+.reel-card[data-slot='now'][data-kind] { opacity: calc(1 - (0.85 * var(--reel-drop, 0))); }
+.reel-card[data-slot='now'] { transform-origin: 50% 60%; }
+
+.reel-card-photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: saturate(1.04) contrast(1.02); }
+.reel-card-body { position: relative; flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; padding: 18px; }
+/* A photo is a backdrop, not a layer the words sit beside: the same body, lit
+   by a gradient so a title stays readable on any picture. */
+.reel-card-photo + .reel-card-body {
+  justify-content: flex-end;
+  color: #FFFFFF;
+  background: linear-gradient(180deg, rgba(10, 14, 20, 0) 0%, rgba(10, 14, 20, .82) 46%, rgba(10, 14, 20, .92) 100%);
+}
+.reel-card-photo + .reel-card-body :is(.reel-card-title, .reel-card-meta, .reel-chip, .reel-card-tap) { color: #FFFFFF; }
+.reel-card-photo + .reel-card-body .reel-chip { background: rgba(255, 255, 255, .18); }
+
+.reel-card-top { display: flex; align-items: center; gap: 6px; }
+.reel-card-glyph { margin-left: auto; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: var(--color-primary-subtle, var(--well)); color: var(--color-primary); }
+.reel-card-photo + .reel-card-body .reel-card-glyph { background: rgba(255, 255, 255, .16); color: #FFFFFF; }
+
+.reel-chip {
+  display: inline-flex; align-items: center;
+  padding: 3px 8px; border-radius: 999px;
+  font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
+  background: var(--color-primary-subtle, var(--well)); color: var(--color-primary);
+}
+.reel-chip--quiet { background: transparent; border: 1px solid var(--divider, var(--brief-line)); color: var(--brief-muted); }
+.reel-chip--seen { background: transparent; border: 1px solid var(--divider, var(--brief-line)); color: var(--brief-muted); }
+
+.reel-card-title {
+  font-size: clamp(19px, 4.6vw, 26px);
+  font-weight: 750; letter-spacing: -.03em; line-height: 1.16;
+  margin: 2px 0 0; color: var(--brief-ink);
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+}
+.reel-card-meta { display: flex; flex-wrap: wrap; gap: 10px; margin: 0; font-size: 12px; font-weight: 600; color: var(--brief-muted); }
+.reel-card-meta span { display: inline-flex; align-items: center; gap: 4px; }
+.reel-card-price { font-size: 15px; font-weight: 800; color: var(--color-primary); }
+.reel-card[data-seen] { background: color-mix(in srgb, var(--color-paper) 92%, var(--brief-bg)); }
+
+/* The affordances are sentences, not icons: they wrap rather than shrink into
+   an ellipsis nobody can read. */
+.reel-card-foot { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; margin-top: auto; padding-top: 6px; }
+.reel-details-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 12px; border-radius: 10px;
+  border: 1px solid var(--divider, var(--brief-line));
+  font-size: 12px; font-weight: 700; color: var(--brief-ink); cursor: pointer;
+  background: var(--color-paper);
+}
+.reel-card-photo + .reel-card-body .reel-details-btn { background: rgba(255, 255, 255, .14); color: #FFFFFF; border-color: rgba(255, 255, 255, .3); }
+.reel-card-tap { font-size: 11px; color: var(--brief-muted); }
+
+/* --- The icon buttons (Save, Close) ---------------------------------------- */
+.reel-icon {
+  display: grid; place-items: center;
+  width: 30px; height: 30px; border-radius: 9px;
+  border: 1px solid var(--divider, var(--brief-line));
+  background: var(--color-paper); color: var(--brief-ink); cursor: pointer;
+}
+.reel-icon--oncard { margin-left: 8px; }
+.reel-icon[aria-pressed='true'] { background: var(--color-primary); border-color: var(--color-primary); color: var(--accent-ink); }
+.reel-icon[disabled] { opacity: .5; }
+
+/* --- Edge taps: the same ← → move, made precise ---------------------------- */
+.reel-edge {
+  position: absolute; top: 6px; bottom: 10px; width: 46px;
+  display: grid; place-items: center;
+  border: 0; background: transparent; color: var(--brief-muted); cursor: pointer;
+  z-index: 4; opacity: 0; transition: opacity var(--motion-fast) var(--ease-standard);
+}
+.reel-edge--prev { left: 0; }
+.reel-edge--next { right: 0; }
+.reel-stage:hover .reel-edge:not([disabled]), .reel-edge:focus-visible { opacity: 1; }
+.reel-edge[disabled] { cursor: default; }
+@media (hover: none) {
+  .reel-edge:not([disabled]) { opacity: .5; }
+  .reel-edge:not([disabled]):active { opacity: 1; }
+}
+
+/* --- Peek: hold, look, release --------------------------------------------- */
+.reel-peek {
+  position: absolute; inset: 6px 0 10px; z-index: 5;
+  display: flex; flex-direction: column; justify-content: flex-end; gap: 4px;
+  padding: 20px; border-radius: 18px;
+  background: linear-gradient(180deg, rgba(10, 14, 20, .45) 0%, rgba(10, 14, 20, .9) 62%);
+  color: #FFFFFF; pointer-events: none;
+  animation: reel-peek-in var(--motion-fast) var(--ease-decelerate) both;
+}
+.reel-peek-kind { margin: 0; font-size: 10px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; opacity: .85; }
+.reel-peek-title { margin: 0; font-size: 20px; font-weight: 750; letter-spacing: -.02em; }
+.reel-peek-price { margin: 0; font-size: 15px; font-weight: 800; }
+.reel-peek-line { margin: 0; font-size: 12px; opacity: .9; }
+.reel-peek-hint { margin: 8px 0 0; font-size: 11px; opacity: .7; }
+@keyframes reel-peek-in { from { opacity: 0; } to { opacity: 1; } }
+
+/* --- Depth: the detail rises over the card --------------------------------- */
+.reel-detail {
+  position: absolute; left: 0; right: 0; bottom: 10px; z-index: 6;
+  max-height: min(78vh, 560px); overflow-y: auto; overscroll-behavior: contain;
+  display: grid; gap: 10px;
+  padding: 16px 18px 18px;
+  border: 1px solid var(--divider, var(--brief-line));
+  border-radius: 18px;
+  background: var(--color-paper);
+  box-shadow: var(--lift-4);
+  transform: translate3d(0, calc((1 - var(--reel-open, 0)) * 26px), 0);
+  opacity: var(--reel-open, 0);
+  transition: transform var(--motion-normal) var(--ease-emphasized), opacity var(--motion-normal) var(--ease-standard);
+}
+.reel-stage[data-gesture='vertical'] .reel-detail { transition: none; }
+.reel-detail-head { display: flex; align-items: center; gap: 6px; }
+.reel-detail-head .reel-icon { margin-left: auto; }
+.reel-detail-title { margin: 0; font-size: clamp(19px, 4.4vw, 24px); font-weight: 750; letter-spacing: -.03em; color: var(--brief-ink); }
+.reel-detail-price { margin: 0; font-size: 17px; font-weight: 800; color: var(--color-primary); }
+.reel-facts { display: grid; gap: 6px; margin: 0; }
+.reel-facts > div { display: grid; grid-template-columns: 92px 1fr; gap: 10px; }
+.reel-facts dt { font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--brief-muted); }
+.reel-facts dd { margin: 0; font-size: 13px; font-weight: 600; color: var(--brief-ink); }
+.reel-detail-note { margin: 0; font-size: 13px; line-height: 1.5; color: var(--brief-muted); }
+.reel-why { margin: 0; font-size: 11px; color: var(--brief-muted); }
+.reel-actions { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 2px; }
+.reel-action {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 10px 14px; border-radius: 9px;
+  border: 1px solid var(--divider, var(--brief-line));
+  background: var(--color-paper); color: var(--brief-ink);
+  font-size: 12px; font-weight: 700; cursor: pointer;
+}
+.reel-action--quiet { color: var(--brief-muted); }
+.reel-action[disabled] { opacity: .5; }
+
+/* --- The card that has been dealt with, on its way out --------------------- */
+.reel-leaving {
+  position: absolute; inset: 6px 0 10px; z-index: 5; pointer-events: none;
+  animation: reel-deal var(--motion-normal) var(--ease-emphasized) both;
+}
+@keyframes reel-deal {
+  from { transform: translate3d(var(--reel-x, 0px), 0, 0) scale(1); opacity: 1; }
+  to { transform: translate3d(var(--reel-x, 0px), 46%, 0) scale(.96); opacity: 0; }
+}
+.reel-leaving .reel-card { position: absolute; inset: 0; transform: none; }
+
+/* --- What happened, and how to undo it ------------------------------------- */
+.reel-legend {
+  display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 0;
+  font-size: 11px; color: var(--brief-muted);
+}
+.reel-legend b { color: var(--brief-ink); font-weight: 700; }
+.reel-notice {
+  display: flex; align-items: center; gap: 10px; margin: 0;
+  padding: 8px 12px; border-radius: 10px;
+  font-size: 12px; line-height: 1.4;
+  border: 1px solid var(--divider, var(--brief-line));
+  background: var(--color-surface-elevated, var(--well));
+  color: var(--brief-ink);
+}
+.reel-notice-text { flex: 1; }
+.reel-notice button { font-size: 11px; font-weight: 800; color: var(--color-primary); cursor: pointer; }
+.reel-notice--error { border-color: var(--brief-danger, #DC2626); color: var(--brief-danger, #DC2626); }
+.reel-foot { margin: 0; font-size: 11px; color: var(--brief-muted); }
+
+/* --- The reel with nothing left in it -------------------------------------- */
+.reel--empty { gap: 10px; }
+.reel-empty { margin: 0; font-size: 13px; color: var(--brief-muted); }
+.reel-restore {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 12px; border-radius: 9px;
+  border: 1px solid var(--divider, var(--brief-line));
+  font-size: 12px; font-weight: 700; cursor: pointer;
+}
+
+/* A phone in a hurry: the deck is taller, the words are bigger, the legend
+   loses its least useful line rather than wrapping into a paragraph. */
+@media (max-width: 520px) {
+  .reel { padding: 0 12px 12px; }
+  .reel-deck { min-height: clamp(210px, 62vw, 280px); }
+  .reel-facts > div { grid-template-columns: 74px 1fr; }
+  /* The affordances stay — they are how the gestures are found — but they take
+     a size that leaves the content the room. */
+  .reel-card-tap { font-size: 10px; }
+}
+
+/* Reduced motion: the reel keeps every state change and drops the travel.
+   A card still moves to the next activity — it just does not fly there. */
+@media (prefers-reduced-motion: reduce) {
+  .reel-card, .reel-detail, .reel-segments li, .reel-edge { transition: none; }
+  .reel-leaving { animation: none; opacity: 0; }
+  .reel-peek { animation: none; }
+}

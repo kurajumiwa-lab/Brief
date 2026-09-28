@@ -930,6 +930,13 @@ export function setRegistrationStatus(
   );
 }
 
+/**
+ * HARD DELETE. Only succeeds while nothing depends on the offer — no
+ * registration, no ticket, no ledger row. Otherwise the server answers 409 with
+ * `code: 'withdrawal_required'` and the blockers, and the caller must use
+ * `withdrawCampaign` instead. The refusal rides along in `errorBody` so a
+ * surface can show the reasons rather than a generic failure.
+ */
 export function deleteCampaign(
   id: string
 ): Promise<ApiResult<{ ok: boolean }>> {
@@ -937,6 +944,89 @@ export function deleteCampaign(
     `/api/campaigns/${encodeURIComponent(id)}`,
     { method: 'DELETE' },
     (r) => (r?.ok ? { ok: true } : undefined)
+  );
+}
+
+/** One refund the ledger made, or one it did not. */
+export interface RefundLine {
+  transactionId: string;
+  amount: number;
+  refusal?: string;
+  currency?: string;
+}
+
+/** What a withdrawal did, in counts of real rows. */
+export interface WithdrawalReceipt {
+  campaignId: string;
+  actorId: string | null;
+  reason: string;
+  at: string;
+  before: { status: string };
+  receipt: {
+    registrationsCancelled: number;
+    registrationsLeftAlone: number;
+    ticketsVoided: number;
+    resaleListingsPulled: number;
+    ticketsStuckOnOpenOrder: Array<{ ticketId: string; listingId: string; reason: string }>;
+    refunded: RefundLine[];
+    owed: RefundLine[];
+    attemptsClosed: number;
+    holdersNotified: number;
+  };
+}
+
+/** What withdrawing WOULD do — computed from real rows, changing nothing. */
+export interface WithdrawalPreview {
+  campaignId: string;
+  status: string;
+  canWithdraw: boolean;
+  canDelete: boolean;
+  blockers: string[];
+  registrations: { total: number; byStatus: Record<string, number>; toCancel: number; leftAlone: number };
+  tickets: { issued: number; live: number; resaleListings: number };
+  money: { transactions: number; refundable: number; refundableKes: number; attemptsToClose: number; settledKes: number };
+  holders: { count: number };
+}
+
+export function getCampaignWithdrawal(
+  id: string
+): Promise<ApiResult<{ preview: WithdrawalPreview; withdrawal: WithdrawalReceipt | null }>> {
+  return request(`/api/campaigns/${encodeURIComponent(id)}/withdrawal`, undefined, (r) =>
+    r?.preview ? { preview: r.preview as WithdrawalPreview, withdrawal: (r.withdrawal ?? null) as WithdrawalReceipt | null } : undefined
+  );
+}
+
+/**
+ * Withdraw an offer. The row stays; the promise does not. Safe to call twice —
+ * the second call returns the same receipt and moves no money.
+ */
+export function withdrawCampaign(
+  id: string,
+  reason?: string
+): Promise<ApiResult<{ campaign: Campaign; withdrawal: WithdrawalReceipt; alreadyWithdrawn: boolean }>> {
+  return request(
+    `/api/campaigns/${encodeURIComponent(id)}/withdraw`,
+    { method: 'POST', body: JSON.stringify({ reason: reason ?? null }) },
+    (r) => (r?.withdrawal && isCampaign(r?.campaign)
+      ? { campaign: r.campaign as Campaign, withdrawal: r.withdrawal as WithdrawalReceipt, alreadyWithdrawn: Boolean(r.alreadyWithdrawn) }
+      : undefined)
+  );
+}
+
+/** Every recorded edit to a published offer, newest first. */
+export interface CampaignRevision {
+  id: string;
+  campaignId: string;
+  actorId: string | null;
+  fields: string[];
+  before: Record<string, unknown>;
+  after: Record<string, unknown>;
+  at: string;
+}
+
+export function getCampaignRevisions(id: string): Promise<ApiResult<CampaignRevision[]>> {
+  return request(`/api/campaigns/${encodeURIComponent(id)}/revisions`, undefined, (r) =>
+    Array.isArray(r?.revisions) ? (r.revisions as CampaignRevision[]) : undefined
   );
 }
 
@@ -4962,6 +5052,8 @@ export interface DiscoverTile {
 export interface DiscoverFeatured {
   kind: 'listing' | 'event';
   id: string;
+  /** Same rule as DiscoverFeedItem.objectId: read from the row, never minted. */
+  objectId?: string | null;
   title: string;
   description: string | null;
   price: number;
@@ -4980,6 +5072,11 @@ export interface DiscoverFeatured {
 }
 export interface DiscoverFeedItem {
   kind: 'listing' | 'event';
+  /** The object this row can be ACTED on, or null when it has none. Saving and
+      "not for me" are keyed by an object id, so a surface may only offer them
+      where this is a real id the server will accept — never the row's own id
+      wearing an object's name. */
+  objectId?: string | null;
   flow?: string | null;
   commodity?: string | null;
   origin?: string | null;

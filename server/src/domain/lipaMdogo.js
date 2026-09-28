@@ -36,6 +36,7 @@ import { activeCollectionProvider, collectionProvider } from '../providers.js';
 import { normalisePhone } from '../connectors/phone.js';
 import * as ledger from './ledger.js';
 import { recordAudit } from '../routes/helpers.js';
+import * as intake from './engine/intake.js';
 
 export const CONTRACT_STATUS = ['active', 'matured', 'cancelled'];
 export const LENDER_TYPES = new Set(['bank', 'sacco', 'cooperative']);
@@ -156,7 +157,13 @@ export async function requestCollection(contractId, installmentIndex, { phone = 
 
   if (idempotencyKey) {
     const prior = store.find('lipaMdogoPayments', (p) => p.idempotencyKey === idempotencyKey && p.contractId === contractId);
-    if (prior) return { ok: true, duplicate: true, payment: prior };
+    if (prior) {
+      // A collection request retried by a phone on a bad connection. The
+      // payment row is the authority; the key is recorded at the edge so the
+      // whole set is auditable in one place.
+      intake.note({ key: `lipa-mdogo:${contractId}:${idempotencyKey}`, source: 'lipaMdogo', handler: 'request_collection', outcome: { paymentId: prior.id } });
+      return { ok: true, duplicate: true, payment: prior };
+    }
   }
 
   const intentId = newId('lmdp');

@@ -7,6 +7,7 @@ import { capabilityCandidates } from "./search.js";
 import { ALGORITHM, assessCapability, demandTerms } from "./matchRanking.js";
 import * as participantTrust from "./participantTrust.js";
 import { available } from "../features.js";
+import { announce } from './engine/announce.js';
 export const MATCH_STATUSES = [
   "suggested",
   "viewed",
@@ -383,11 +384,31 @@ export function generateForRequest(userId, r, { idempotencyKey = null } = {}) {
             text: "Several capabilities overlap. Compatibility reasons describe the best-fit capability, not a combined fulfillment promise.",
           },
         ];
-      previous
+      const stored = previous
         ? store.update("matches", row.id, row)
         : store.insert("matches", row);
       keep.add(row.id);
       v.audit("match", row.id, e, row.revision);
+      // A NEW candidate is an event; a re-scored existing one is not. Without
+      // this, "match_workers" had no event to react to, so nothing downstream
+      // could know that a request had suppliers to choose between.
+      if (!previous) {
+        announce("match_suggested", {
+          entityKind: "match",
+          entityId: row.id,
+          // The request is the process: everything that happens because of it
+          // shares its correlation id.
+          correlationId: row.requestId,
+          metadata: {
+            matchId: row.id,
+            requestId: row.requestId ?? null,
+            participantId: row.participantId ?? null,
+            capabilityId: row.capabilityId ?? null,
+            score: row.score ?? null,
+            candidates: keep.size
+          }
+        });
+      }
     }
     for (const m of old)
       if (!keep.has(m.id) && m.status !== "expired") {

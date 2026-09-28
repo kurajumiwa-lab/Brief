@@ -286,17 +286,23 @@ async function main() {
     scrollY = 220;
     const { root } = mount(React.createElement(HomeSurface, { onOpenSpace: () => {} }));
     await flush(160);
-    const grid = document.querySelector('section[aria-label="Latest activity"] .compact-list');
-    check('Home activity is a compact list', Boolean(grid));
-    const orderBefore = Array.from(grid.querySelectorAll('li, article')).map((a) => a.getAttribute('data-testid')).join(',');
-    const card = document.querySelector('section[aria-label="Latest activity"] .compact-row');
-    click(card);
+    const deck = document.querySelector('section[aria-label="Latest activity"] .reel-deck');
+    check('Home activity is a reel of cards', Boolean(deck));
+    const orderBefore = Array.from(deck.querySelectorAll('[data-slot]')).map((a) => a.getAttribute('data-slot')).join(',');
+    // The reel is a deck, not a list: the card is selected first (a tap opens
+    // its detail), and the offer's own sheet stays the thing that opens the
+    // offer. Selection is still not a scroll, and the deck does not move.
+    click(document.querySelector('section[aria-label="Latest activity"] [data-testid="reel-card"]'));
+    await flush(40);
+    check('tapping an Open now card opens its detail in place',
+      Boolean(document.querySelector('[data-testid="reel-detail"]')) && !document.querySelector('[data-testid="reel-detail"]').hidden);
+    click([...document.querySelectorAll('[data-testid="reel-detail"] button')].find((b) => b.textContent.trim() === 'Open offer'));
     await flush(40);
     const sheet = document.querySelector('[data-testid="sheet"]');
-    check('tapping an Open now card raises the shared sheet', Boolean(sheet));
-    check('the Open now sheet is not inside the grid', !grid.querySelector('[data-testid="sheet"]'));
-    check('Open now grid order is unchanged',
-      orderBefore === Array.from(grid.querySelectorAll('li, article')).map((a) => a.getAttribute('data-testid')).join(','));
+    check('opening an offer raises the shared sheet', Boolean(sheet));
+    check('the offer sheet is not inside the deck', !deck.querySelector('[data-testid="sheet"]'));
+    check('Home deck order is unchanged',
+      orderBefore === Array.from(deck.querySelectorAll('[data-slot]')).map((a) => a.getAttribute('data-slot')).join(','));
     check('Open now selection does not write scrollY', scrollY === 220);
     click(document.querySelector('[data-testid="sheet-scrim"]'));
     await flush(20);

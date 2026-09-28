@@ -829,13 +829,13 @@ export function OverlaysShell(props: OverlaysShellProps) {
                 <button
                   disabled={campaignBusy}
                   onClick={() => {
-                    if (window.confirm('Cancel and remove this event?')) {
+                    if (window.confirm('Withdraw this event? Seats are released and anyone who paid is refunded.')) {
                       void handleRemoveCampaign(campaignDetail.id);
                     }
                   }}
                   className="w-full py-2.5 rounded-xl border border-red-200 bg-red-50 text-red-600 font-extrabold text-[12px] cursor-pointer hover:bg-red-100 transition-colors disabled:opacity-40"
                 >
-                  Cancel & Remove Event
+                  Withdraw event
                 </button>
               </div>
             )}
@@ -845,13 +845,13 @@ export function OverlaysShell(props: OverlaysShellProps) {
                 <button
                   disabled={campaignBusy}
                   onClick={() => {
-                    if (window.confirm('Cancel and remove this event?')) {
+                    if (window.confirm('Withdraw this event? Seats are released and anyone who paid is refunded.')) {
                       void handleRemoveCampaign(campaignDetail.id);
                     }
                   }}
                   className="w-full py-2.5 rounded-xl border border-red-200 bg-red-50 text-red-600 font-extrabold text-[12px] cursor-pointer hover:bg-red-100 transition-colors disabled:opacity-40"
                 >
-                  Cancel & Remove Event
+                  Withdraw event
                 </button>
               </div>
             )}

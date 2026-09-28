@@ -134,11 +134,90 @@ function Hosting() {
   const [error, setError] = useState('');
   const [attempt, setAttempt] = useState(0);
   const [busy, setBusy] = useState<string | null>(null);
+  const [editing, setEditing] = useState<Campaign | null>(null);
+  // Withdrawing is a two-step act on purpose: the consequences are fetched and
+  // SHOWN before the host commits, and the receipt is kept afterwards.
+  const [withdrawing, setWithdrawing] = useState<{ campaign: Campaign; preview: api.WithdrawalPreview } | null>(null);
+  const [receipts, setReceipts] = useState<Record<string, api.WithdrawalReceipt>>({});
   useEffect(() => { let live = true; setState('loading'); void api.getCampaigns().then(r => { if (!live) return; if (r.ok) { setRows(r.data); setState('ready'); } else { setError(r.error); setState('error'); } }); return () => { live = false; }; }, [attempt]);
   const publish = async (row: Campaign) => { setBusy(row.id); setError(''); const r = await api.campaignAction(row.id, 'publish'); setBusy(null); if (r.ok) setRows(old => old.map(c => c.id === row.id ? r.data : c)); else setError(r.error); };
+
+  const openWithdraw = async (row: Campaign) => {
+    setBusy(row.id); setError('');
+    const r = await api.getCampaignWithdrawal(row.id);
+    setBusy(null);
+    if (r.ok) setWithdrawing({ campaign: row, preview: r.data.preview });
+    else setError(r.error || 'Could not check what withdrawing would do.');
+  };
+  const confirmWithdraw = async () => {
+    if (!withdrawing) return;
+    const { campaign } = withdrawing;
+    setBusy(campaign.id);
+    const r = await api.withdrawCampaign(campaign.id, 'withdrawn by the host');
+    setBusy(null);
+    if (!r.ok) { setError(r.error); return; }
+    setRows(old => old.map(c => c.id === campaign.id ? r.data.campaign : c));
+    setReceipts(old => ({ ...old, [campaign.id]: r.data.withdrawal }));
+    setWithdrawing(null);
+  };
+  const remove = async (row: Campaign) => {
+    setBusy(row.id); setError('');
+    const r = await api.deleteCampaign(row.id);
+    setBusy(null);
+    if (r.ok) { setRows(old => old.filter(c => c.id !== row.id)); return; }
+    // A refusal is not a failure: the offer has a history, and the honest reply
+    // is to say what is in the way and offer the act that IS allowed.
+    const blockers: string[] = r.errorBody?.blockers ?? [];
+    setError(blockers.length
+      ? `${r.error} (${blockers.join(', ')}) — withdrawing it instead keeps those records.`
+      : r.error);
+  };
+
+  const withdrawPanel = withdrawing && <div className="wl-card p-4 space-y-3" role="alertdialog" aria-label={`Withdraw ${withdrawing.campaign.title}`}>
+    <h2 className="text-lg">Withdraw “{withdrawing.campaign.title}”?</h2>
+    <p className="wl-note">The plan stops being an offer. This is what actually happens, counted from the real records:</p>
+    <ul className="wl-note space-y-1">
+      <li>{withdrawing.preview.registrations.toCancel} held or registered {withdrawing.preview.registrations.toCancel === 1 ? 'place' : 'places'} released</li>
+      <li>{withdrawing.preview.tickets.live} live {withdrawing.preview.tickets.live === 1 ? 'ticket' : 'tickets'} stopped working</li>
+      <li>{withdrawing.preview.money.refundable === 0
+        ? 'No money has been taken, so there is nothing to refund'
+        : `${withdrawing.preview.money.refundable} payment${withdrawing.preview.money.refundable === 1 ? '' : 's'} refunded through the ledger (${money(withdrawing.preview.money.refundableKes, 'KES')})`}</li>
+      <li>{withdrawing.preview.holders.count} {withdrawing.preview.holders.count === 1 ? 'person is' : 'people are'} told</li>
+      <li>The record stays — the people and the money keep their history.</li>
+    </ul>
+    {withdrawing.preview.registrations.leftAlone > 0 && <p className="wl-note">
+      {withdrawing.preview.registrations.leftAlone} {withdrawing.preview.registrations.leftAlone === 1 ? 'person' : 'people'} already came through the gate or were marked absent; those records are left as they are, because that did happen.
+    </p>}
+    <div className="flex gap-2">
+      <button className="wl-button" disabled={busy !== null} onClick={() => void confirmWithdraw()}>{busy === withdrawing.campaign.id ? 'Withdrawing…' : 'Withdraw this plan'}</button>
+      <button className="wl-button quiet" disabled={busy !== null} onClick={() => setWithdrawing(null)}>Keep it</button>
+    </div>
+  </div>;
+
   return <section aria-label="Your hosted experiences"><div className="wl-section-head"><h1>Your plans</h1><a className="wl-button" href="#wanderly/host"><Plus size={15} /> Host a plan</a></div>
     {error && <p role="alert" className="wl-empty">{error} <button onClick={() => setAttempt(n => n + 1)}>Retry</button></p>}
-    {state === 'loading' ? <p role="status">Loading your plans…</p> : state === 'ready' && rows.length === 0 ? <p className="wl-empty">Nothing hosted yet. Start with a party, gathering or trip.</p> : <ul className="space-y-3">{rows.map(c => <li className="wl-card p-4 flex justify-between gap-4 items-center" key={c.id}><div><strong>{c.title}</strong><p className="wl-note">{c.status} · {date(c.startsAt)}</p></div>{c.status === 'draft' ? <button className="wl-button" disabled={busy !== null} onClick={() => void publish(c)}>{busy === c.id ? 'Publishing…' : 'Publish draft'}</button> : ['published', 'live'].includes(c.status) ? <a className="wl-button quiet" href={experienceHref(c.publicSlug)}>View plan</a> : <span className="wl-note">Not publicly available</span>}</li>)}</ul>}
+    {withdrawPanel}
+    {state === 'loading' ? <p role="status">Loading your plans…</p> : state === 'ready' && rows.length === 0 ? <p className="wl-empty">Nothing hosted yet. Start with a party, gathering or trip.</p> : <ul className="space-y-3">{rows.map(c => <li className="wl-card p-4 space-y-2" key={c.id}>
+      <div className="flex justify-between gap-4 items-center">
+        <div><strong>{c.title}</strong><p className="wl-note">{c.status} · {date(c.startsAt)}</p></div>
+        {c.status === 'draft' ? <button className="wl-button" disabled={busy !== null} onClick={() => void publish(c)}>{busy === c.id ? 'Publishing…' : 'Publish draft'}</button> : ['published', 'live'].includes(c.status) ? <a className="wl-button quiet" href={experienceHref(c.publicSlug)}>View plan</a> : <span className="wl-note">Not publicly available</span>}
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <button className="wl-note underline" disabled={busy !== null} onClick={() => setEditing(c)} data-testid={`edit-${c.id}`}>Edit details</button>
+        {['draft', 'published', 'live'].includes(c.status) && <button className="wl-note underline" disabled={busy !== null} onClick={() => void openWithdraw(c)} data-testid={`withdraw-${c.id}`}>
+          {busy === c.id ? 'Checking…' : 'Withdraw'}
+        </button>}
+        <button className="wl-note underline" disabled={busy !== null} onClick={() => void remove(c)} data-testid={`delete-${c.id}`}>Delete</button>
+      </div>
+      {receipts[c.id] && <p className="wl-note" data-testid={`receipt-${c.id}`}>
+        Withdrawn. {receipts[c.id].receipt.ticketsVoided} ticket{receipts[c.id].receipt.ticketsVoided === 1 ? '' : 's'} stopped,
+        {' '}{receipts[c.id].receipt.registrationsCancelled} place{receipts[c.id].receipt.registrationsCancelled === 1 ? '' : 's'} released,
+        {' '}{receipts[c.id].receipt.refunded.length} payment{receipts[c.id].receipt.refunded.length === 1 ? '' : 's'} refunded{receipts[c.id].receipt.owed.length > 0 ? `, ${receipts[c.id].receipt.owed.length} refund${receipts[c.id].receipt.owed.length === 1 ? '' : 's'} still owed and queued for a person` : ''},
+        {' '}{receipts[c.id].receipt.holdersNotified} {receipts[c.id].receipt.holdersNotified === 1 ? 'person' : 'people'} told. The record stays.
+      </p>}
+    </li>)}</ul>}
+    <HostEventSheet open={Boolean(editing)} editing={editing} onClose={() => setEditing(null)}
+      onSaved={(updated) => { setRows(old => old.map(c => c.id === updated.id ? updated : c)); setEditing(null); }} />
   </section>;
 }
 export default WanderlyPage;

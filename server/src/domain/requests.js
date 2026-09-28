@@ -8,6 +8,8 @@ import { recordAudit } from "../routes/helpers.js";
 import { readFile } from "./upload.js";
 import { todayKey } from '../dayBoundary.js';
 
+import { announce } from './engine/announce.js';
+
 export const REQUEST_STATUSES = [
   "draft",
   "open",
@@ -367,8 +369,40 @@ export function createRequest(userId, input) {
   // Lifecycle history is in the SAME atomic document write as the request.
   store.insert("requests", row);
   audit(row, row.history[0]);
+  // THE FIRST EVENT OF THE CHAIN. Before this, a request's whole life was a
+  // private array inside its own row: nothing could subscribe to it, nothing
+  // could replay it, and no screen could show it without reading the row.
+  announce("request_created", {
+    actorId: userId,
+    entityKind: "request",
+    entityId: row.id,
+    correlationId: row.id,
+    metadata: { requestId: row.id, status: row.status, capabilityId: row.capabilityId ?? null, title: row.title ?? null }
+  });
+  // Submitted-and-complete is its own fact: the status machine only reaches
+  // `open` after the completeness check passed.
+  if (row.status === "open") {
+    announce("request_validated", {
+      actorId: userId, entityKind: "request", entityId: row.id, correlationId: row.id,
+      metadata: { requestId: row.id, status: row.status, checks: "passed" }
+    });
+  }
   return view(row);
 }
+// Request state -> the event that says so. One map, next to the machine it
+// describes, so a new status cannot be added without someone deciding what it
+// is called in the log.
+const REQUEST_SIGNAL = {
+  open: "request_validated",
+  matching: "request_matching",
+  quoted: "request_quoted",
+  ready_for_work: "request_ready_for_work",
+  in_progress: "request_in_progress",
+  completed: "request_completed",
+  cancelled: "request_cancelled",
+  expired: "request_expired"
+};
+
 export function getRequest(userId, id) {
   return view(own(userId, id));
 }
@@ -441,6 +475,16 @@ export function changeRequestStatus(userId, id, input) {
       status: input.status, requirementsRevision: row.revision + 1, revision: row.revision + 1, history: [...row.history, e],
     });
     audit(updated,e);
+    // EVERY transition is announced, including the ones with no UI. A state
+    // machine whose moves are only visible in its own history column cannot be
+    // watched, escalated from, or replayed.
+    const announced = REQUEST_SIGNAL[input.status];
+    if (announced) {
+      announce(announced, {
+        actorId: userId, entityKind: "request", entityId: id, correlationId: id,
+        metadata: { requestId: id, from: row.status, to: input.status, revision: updated.revision }
+      });
+    }
     if(input.status==='matching')generateForRequest(userId,updated);
     return view(updated);
   });

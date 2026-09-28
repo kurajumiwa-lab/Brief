@@ -63,6 +63,17 @@ function newestTimestamp(values) {
 export function discoverSummary({ viewerId = null, now = Date.now() } = {}) {
   const listings = listListings({ status: 'active', limit: 200 });
 
+  // THE THING A ROW CAN BE ACTED ON. "Save" and "not for me" are keyed by an
+  // object id, so a card can only offer them when the row really has one:
+  // a listing carries its own `objectId` (null when the seller never attached
+  // an object — most offers are written straight onto the counter) and an
+  // event's object is its campaign's. Both are READ here, never minted, so a
+  // client can offer the action where it will actually land and say nothing
+  // where it cannot. A fabricated id would produce a 404 dressed as a feature.
+  const objectIdBySlug = new Map(
+    store.filter('campaigns', (c) => c.publicSlug).map((c) => [c.publicSlug, c.objectId ?? null])
+  );
+
   // Only spaces the owner pinned AND that are still active here. A pin pointing
   // at an archived offer is not promoted by a stale preference.
   const pinnedIds = new Set();
@@ -93,6 +104,9 @@ export function discoverSummary({ viewerId = null, now = Date.now() } = {}) {
       return {
         kind: 'listing',
         id: l.id,
+        // null is a real answer: this row is not attached to a Brief object, so
+        // nothing about it can be saved or hidden yet.
+        objectId: l.objectId ?? null,
         title: l.title,
         description: l.description || null,
         priceLabel: l.price === 0 ? 'Free' : `${l.currency ?? 'KES'} ${Number(l.price).toLocaleString('en-KE')}`,
@@ -129,6 +143,9 @@ export function discoverSummary({ viewerId = null, now = Date.now() } = {}) {
     ...(events.events ?? []).map((e) => ({
       kind: 'event',
       id: e.slug,
+      // The campaign's own object, so "Save" and "not for me" land on a row
+      // that exists.
+      objectId: objectIdBySlug.get(e.slug) ?? null,
       title: e.title,
       description: e.description || null,
       priceLabel: e.goalAmount != null ? 'Contribution pot' : (e.price === 0 ? 'Free' : `${e.currency ?? 'KES'} ${Number(e.price).toLocaleString('en-KE')}`),
@@ -170,6 +187,7 @@ export function discoverSummary({ viewerId = null, now = Date.now() } = {}) {
     featured = {
       kind: 'listing',
       id: picked.id,
+      objectId: picked.objectId ?? null,
       title: picked.title,
       description: picked.description ?? null,
       price: picked.price,
@@ -197,6 +215,7 @@ export function discoverSummary({ viewerId = null, now = Date.now() } = {}) {
     featured = {
       kind: 'event',
       id: e.slug,
+      objectId: objectIdBySlug.get(e.slug) ?? null,
       title: e.title,
       description: e.description ?? null,
       price: e.price,

@@ -23,6 +23,7 @@
 // ---------------------------------------------------------------------------
 import { store, newId } from "../store.js";
 import * as v from "./supplyValidation.js";
+import * as intake from './engine/intake.js';
 
 export const PLACES_SOURCE = "bizdata-web (OpenStreetMap)";
 export const PLACES_ATTRIBUTION = "© OpenStreetMap contributors · via BizData";
@@ -194,6 +195,11 @@ export function claimPlacePrice(actorId, input = {}) {
           409,
           "idempotency_key_reused",
         );
+      // The key is also recorded at the edge, so every idempotency key this
+      // system honours is visible in one place (see ops/intake). Enforcement
+      // stays here, where the live claim row is: the edge record is a ledger of
+      // keys, not a second source of truth about claims.
+      intake.note({ key: `claim:${actorId}:${key}`, source: 'places', handler: 'claim_price', outcome: { claimId: dupe.id }, actorId });
       return { claim: dupe, replayed: true };
     }
   }

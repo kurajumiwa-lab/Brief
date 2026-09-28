@@ -37,6 +37,7 @@ import * as wa from './whatsapp.js';
 import * as mpesa from '../../connectors/mpesa.js';
 import { store } from '../../store.js';
 import crypto from 'node:crypto';
+import * as intake from '../engine/intake.js';
 
 const WELCOME =
   'Habari! Welcome to HudumaLink. Skip the traffic, queues and system errors at ' +
@@ -304,6 +305,9 @@ async function placeOrderAndPay(phone, sess, { stk, log }) {
   // double-tapped Confirm (or a retried webhook) returns the same order, but a
   // genuinely different request (changed inputs) is allowed.
   const key = `confirm:${phone}:${sess.serviceId}:${hashInputs(sess.capturedInputs)}`;
+  // A WhatsApp client double-tapping Confirm is the same real act twice. The
+  // derived key is recorded centrally as well as enforced on the order row.
+  intake.note({ key: `huduma-chat:${key}`, source: 'huduma', handler: 'confirm_order' });
 
   let order;
   try {

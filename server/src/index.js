@@ -19,6 +19,10 @@ import { store } from './store.js';
 import * as auth from './domain/auth.js';
 import * as ops from './ops.js';
 import * as workflow from './domain/workflow.js';
+import * as intake from './domain/engine/intake.js';
+import * as engineReview from './domain/engine/review.js';
+import * as deadLetters from './domain/engine/deadLetters.js';
+import * as schedules from './domain/engine/schedules.js';
 import * as campaigns from './domain/campaign.js';
 import * as ledger from './domain/ledger.js';
 import * as telegram from './connectors/telegram.js';
@@ -455,8 +459,18 @@ if (process.env.NODE_ENV !== 'test') {
   ops.installPeriodicBackup(store, {
     intervalMs: Number(process.env.BRIEF_BACKUP_INTERVAL_MS) || 15 * 60 * 1000
   });
-  // Automation engine: sweep unprocessed signals through workflows on a
-  // cadence, so triggers fire without a request. Idempotent by design.
+  // THE OPERATIONS ENGINE (EVENT-ENGINE.md §7). One tick does four things:
+  // react to what happened (signals after the cursor), fire what is due, retry
+  // what broke, and look at what has been sitting in a state too long. It is
+  // idempotent by design and OFF in tests (NODE_ENV=test).
+  //
+  // Boot recovery first: an `intakeEvents` row left `processing` is the
+  // residue of a crash, and leaving it invisible is the failure mode this
+  // engine exists to remove.
+  intake.recoverStale();
+  // The engine's own rules are ROWS, seeded once by slug: a restart re-asserts
+  // the defaults without duplicating them, and never reverts an operator's edit.
+  workflow.ensureDefaultRules();
   workflow.installSweep({
     intervalMs: Number(process.env.BRIEF_WORKFLOW_INTERVAL_MS) || 60 * 1000
   });

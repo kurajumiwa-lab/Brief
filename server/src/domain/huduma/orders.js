@@ -26,6 +26,7 @@
 
 import { store, newId } from '../../store.js';
 import { getService, priceFor } from './catalog.js';
+import * as intake from '../engine/intake.js';
 
 export const ORDER_STATUS = ['PENDING', 'PAID', 'RUNNING', 'COMPLETED', 'REFUNDED', 'EXPIRED'];
 export const ESCROW_STATUS = ['NONE', 'LOCKED', 'RELEASED', 'REFUNDED', 'EXPIRED'];
@@ -75,7 +76,12 @@ export function createOrder({ phone, serviceId, capturedInputs = {}, idempotency
   if (idempotencyKey) {
     const prior = store.find('hudumaOrders',
       (o) => o.phone === phone && o.idempotencyKey === idempotencyKey);
-    if (prior) return hydrate(prior);
+    if (prior) {
+      // The edge record: one row per key this system honours. The order row
+      // remains the authority (and is returned live, not as a stored copy).
+      intake.note({ key: `huduma:${phone}:${idempotencyKey}`, source: 'huduma', handler: 'create_order', outcome: { orderId: prior.id } });
+      return hydrate(prior);
+    }
   }
 
   // Validate every declared input was actually captured. A service cannot be

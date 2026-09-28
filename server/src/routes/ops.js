@@ -12,8 +12,16 @@ import * as corrections from '../domain/corrections.js';
 import * as sourceTrust from '../domain/sourceTrust.js';
 import * as seed from '../domain/seed.js';
 import * as notifications from '../domain/notifications.js';
+import * as campaigns from '../domain/campaign.js';
 import { requireAuth, requireCap, recordAudit } from './helpers.js';
 import * as members from '../domain/members.js';
+import * as workflow from '../domain/workflow.js';
+import * as engineReview from '../domain/engine/review.js';
+import * as deadLetters from '../domain/engine/deadLetters.js';
+import * as schedules from '../domain/engine/schedules.js';
+import * as intake from '../domain/engine/intake.js';
+import * as signalLog from '../domain/signal.js';
+import * as workPayment from '../domain/workPayment.js';
 
 export function register(app) {
 /**
@@ -214,6 +222,35 @@ app.get('/api/ops/disputes', (req, res) => {
 
 
 /**
+ * THE REFUND QUEUE — money a withdrawal promised and the ledger refused.
+ *
+ * When an offer is withdrawn, every refundable payment is refunded through the
+ * ledger on the spot. Anything the ledger will not refund becomes a
+ * `refundObligations` row with status `owed`, carrying the ledger's own refusal
+ * and the transaction it belongs to. This is the surface for those: an unpaid
+ * refund must be a row on a queue a person can see, because the alternative —
+ * a refund that silently did not happen — is the failure mode the whole
+ * withdrawal flow exists to prevent.
+ *
+ * Read-only by design, like the disputes wall: the remedy is a ledger
+ * transition, which happens on the money routes, not here.
+ */
+app.get('/api/ops/refund-obligations', (req, res) => {
+  if (!requireCap(req, res, 'ops.read')) return;
+  const status = typeof req.query.status === 'string' && req.query.status ? req.query.status : 'owed';
+  const rows = campaigns.listRefundObligations({ status: status === 'all' ? null : status });
+  const owedRows = store.filter('refundObligations', (o) => o.status === 'owed');
+  res.json({
+    obligations: rows,
+    owed: {
+      count: owedRows.length,
+      total: owedRows.reduce((s, o) => s + (Number(o.amount) || 0), 0),
+      currency: owedRows[0]?.currency ?? 'KES'
+    }
+  });
+});
+
+/**
  * T8 (F4 Attention): the resale listing wall -- active listings plus the
  * removed ones WITH their reasons, so the moderation loop
  * (flag -> inspect -> decide -> audit) can be read end to end after the fact.
@@ -329,6 +366,236 @@ app.post('/api/ops/seed/clear', (req, res) => {
   const cleared = seed.clearSeed();
   recordAudit('ops.seed.clear', { actorId: me, objectType: 'store', after: { cleared: cleared?.length ?? cleared } });
   res.json({ cleared });
+});
+
+// ===========================================================================
+// THE OPERATIONS ENGINE'S CONTROL PLANE (EVENT-ENGINE.md §9)
+//
+// The console may read any projection, work the queues, and change policy. It
+// may NOT set a status directly or move money outside the ledger — every route
+// below either reads, or performs a named action that emits its own event.
+// ===========================================================================
+
+/** One object answering "what is the engine doing right now?". */
+app.get('/api/ops/engine', (req, res) => {
+  if (!requireCap(req, res, 'ops.read')) return;
+  res.json({
+    engine: workflow.engineStatus(),
+    intake: intake.stats(),
+    reconciliation: {
+      // A refund the ledger refused is an obligation, not a silence.
+      refundObligations: store.filter('refundObligations', (o) => o.status === 'owed').length,
+      settlementEscalations: store.filter('settlementEscalations', (e) => e.status === 'open').length
+    }
+  });
+});
+
+/**
+ * THE QUEUE THAT MUST NOT BE INVISIBLE.
+ *
+ * Every terminal automation failure lands here with the payload, the attempt
+ * count and the failing system's own words. Ordered oldest-first on purpose:
+ * the oldest failure is the one most likely to have been quietly hurting
+ * somebody for longest.
+ */
+app.get('/api/ops/dead-letters', (req, res) => {
+  if (!requireCap(req, res, 'ops.read')) return;
+  const status = typeof req.query.status === 'string' && req.query.status ? req.query.status : 'open';
+  res.json({
+    deadLetters: deadLetters.list({ status: status === 'all' ? null : status, limit: Number(req.query.limit) || 100 }),
+    stats: deadLetters.stats()
+  });
+});
+
+/**
+ * Resolve one. `resolution` says HOW it was dealt with, because "resolved" with
+ * no verb is not a record a reader can learn from. The act emits its own event.
+ */
+app.post('/api/ops/dead-letters/:id/resolve', (req, res) => {
+  const me = requireCap(req, res, 'ops.run');
+  if (!me) return;
+  const row = deadLetters.get(req.params.id);
+  if (!row) return res.status(404).json({ error: 'dead letter not found' });
+  const resolution = ['retried', 'discarded', 'noted'].includes(req.body?.resolution) ? req.body.resolution : 'noted';
+  try {
+    const resolved = deadLetters.resolve(row.id, { by: me, note: req.body?.note ?? null, resolution });
+    recordAudit('ops.dead_letter.resolve', {
+      actorId: me, objectType: 'dead_letter', objectId: row.id,
+      before: { status: 'open' }, after: { status: resolved.status, resolution }, reason: req.body?.note ?? null
+    });
+    res.json({ deadLetter: resolved });
+  } catch (e) {
+    res.status(400).json({ error: String(e?.message ?? e) });
+  }
+});
+
+/** The human-escalation queue: what the automation could not decide. */
+app.get('/api/ops/review-items', (req, res) => {
+  if (!requireCap(req, res, 'ops.read')) return;
+  const status = typeof req.query.status === 'string' && req.query.status ? req.query.status : 'pending';
+  res.json({
+    items: engineReview.list({
+      status: status === 'all' ? null : status,
+      kind: typeof req.query.kind === 'string' && req.query.kind ? req.query.kind : null,
+      overdueOnly: req.query.overdue === '1'
+    }),
+    stats: engineReview.stats()
+  });
+});
+
+/**
+ * Decide one. A person's decision is recorded as a person's decision — the
+ * `auto_*` statuses are reserved for the rules, which is what makes the
+ * automation frontier measurable instead of asserted.
+ */
+app.post('/api/ops/review-items/:id/decide', (req, res) => {
+  const me = requireCap(req, res, 'ops.run');
+  if (!me) return;
+  const row = engineReview.get(req.params.id);
+  if (!row) return res.status(404).json({ error: 'review item not found' });
+  try {
+    const decided = engineReview.decide(row.id, {
+      decision: req.body?.decision,
+      by: me,
+      byKind: 'operator',
+      note: req.body?.note ?? null
+    });
+    recordAudit('ops.review.decide', {
+      actorId: me, objectType: 'review_item', objectId: row.id,
+      before: { status: row.status }, after: { status: decided.status, decision: decided.decision },
+      reason: req.body?.note ?? null
+    });
+    res.json({ reviewItem: decided });
+  } catch (e) {
+    res.status(400).json({ error: String(e?.message ?? e) });
+  }
+});
+
+/** The payout frontier: what is waiting on a person, and what is still owed. */
+app.get('/api/ops/payouts', (req, res) => {
+  if (!requireCap(req, res, 'ops.read')) return;
+  const queue = workPayment.releaseQueue();
+  res.json({
+    queue,
+    thresholds: { payoutAutoMax: workPayment.PAYOUT_AUTO_MAX, key: workPayment.RELEASE_THRESHOLD_KEY },
+    owedOrders: queue.filter((s) => s.status === 'release_requested').length
+  });
+});
+
+/** Rules, including the engine's own, with their frontier level. */
+app.get('/api/ops/rules', (req, res) => {
+  if (!requireCap(req, res, 'ops.read')) return;
+  res.json({
+    rules: workflow.listWorkflows({ includeSystem: true }),
+    catalogue: workflow.ACTION_TYPES,
+    status: workflow.engineStatus()
+  });
+});
+
+/** Enable/disable or re-level a rule. Changing the level is an event. */
+app.post('/api/ops/rules/:id', (req, res) => {
+  const me = requireCap(req, res, 'ops.run');
+  if (!me) return;
+  const wf = workflow.getWorkflow(req.params.id);
+  if (!wf) return res.status(404).json({ error: 'rule not found' });
+  try {
+    const updated = workflow.updateWorkflow(wf.id, {
+      enabled: typeof req.body?.enabled === 'boolean' ? req.body.enabled : undefined,
+      frontier: req.body?.frontier,
+      updatedBy: me
+    });
+    recordAudit('ops.rule.update', {
+      actorId: me, objectType: 'workflow', objectId: wf.id,
+      before: { enabled: wf.enabled, frontier: wf.frontier },
+      after: { enabled: updated.enabled, frontier: updated.frontier },
+      reason: req.body?.note ?? null
+    });
+    res.json({ rule: updated });
+  } catch (e) {
+    res.status(400).json({ error: String(e?.message ?? e) });
+  }
+});
+
+/** What the clock is holding: durable "do this at that time" rows. */
+app.get('/api/ops/schedules', (req, res) => {
+  if (!requireCap(req, res, 'ops.read')) return;
+  res.json({ schedules: schedules.list({ status: req.query.status ?? null }), stats: schedules.stats() });
+});
+
+/** Run the engine by hand. Same code path the cadence uses. */
+app.post('/api/ops/engine/tick', async (req, res) => {
+  const me = requireCap(req, res, 'ops.run');
+  if (!me) return;
+  const result = await workflow.tick();
+  recordAudit('ops.engine.tick', { actorId: me, objectType: 'engine', after: result });
+  res.json({ tick: result, status: workflow.engineStatus() });
+});
+
+/**
+ * THE TIMELINE — what happened to one entity, in order, from the log alone.
+ *
+ * This is the payoff of keeping an append-only log: no join, no per-feature
+ * history table, and the answer includes the events nobody wrote a UI for.
+ */
+/** 'work_order' -> 'workOrder', so the metadata key can be derived. */
+function camel(snake) {
+  return String(snake).replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+}
+
+app.get('/api/ops/entities/:kind/:id/timeline', (req, res) => {
+  if (!requireCap(req, res, 'ops.read')) return;
+  const { kind, id } = req.params;
+  // THREE SHAPES, because the log has three eras and only the newest carries
+  // the envelope: `entityKind/entityId` (the envelope), `objectId` (how every
+  // pre-envelope event described its subject), and `metadata.<kind>Id` (how
+  // features that are not objects — campaigns, work orders, ledger rows —
+  // linked themselves to the thing that caused them).
+  const idField = `${camel(kind)}Id`;
+  const rows = store
+    .filter('signals', (s) =>
+      (s.entityKind === kind && s.entityId === id) ||
+      s.objectId === id ||
+      s.metadata?.[idField] === id ||
+      s.correlationId === id
+    )
+    .slice()
+    .sort((a, b) => Number(a.seq ?? 0) - Number(b.seq ?? 0));
+  // A correlation id groups a whole business process (a work order's life),
+  // which is usually what a person actually wants: not this row's events, but
+  // everything that happened because of it.
+  const correlation = rows.find((r) => r.correlationId)?.correlationId ?? null;
+  const correlated = correlation
+    ? store.filter('signals', (s) => s.correlationId === correlation).sort((a, b) => Number(a.seq ?? 0) - Number(b.seq ?? 0))
+    : [];
+  res.json({
+    entity: { kind, id },
+    events: rows,
+    correlated: correlated.length > rows.length ? correlated : [],
+    count: rows.length
+  });
+});
+
+/** The raw log, filtered. Read-only, capped, newest-last so a reader can follow it. */
+app.get('/api/ops/signals', (req, res) => {
+  if (!requireCap(req, res, 'ops.read')) return;
+  const limit = Math.min(Number(req.query.limit) || 200, 1000);
+  const type = typeof req.query.type === 'string' && req.query.type ? req.query.type : null;
+  const entityId = typeof req.query.entityId === 'string' && req.query.entityId ? req.query.entityId : null;
+  const fromSeq = Number(req.query.fromSeq) || 0;
+  let rows = store.all('signals').filter((s) => Number(s.seq ?? 0) > fromSeq);
+  if (type) rows = rows.filter((s) => s.type === type);
+  if (entityId) rows = rows.filter((s) => s.entityId === entityId);
+  rows = rows.sort((a, b) => Number(a.seq ?? 0) - Number(b.seq ?? 0)).slice(-limit);
+  res.json({ signals: rows, cursor: rows.at(-1)?.seq ?? null, count: rows.length });
+});
+
+/** Intake rows: what arrived at the edge, and what happened to it. */
+app.get('/api/ops/intake', (req, res) => {
+  if (!requireCap(req, res, 'ops.read')) return;
+  res.json({
+    events: intake.list({ status: req.query.status ?? null, source: req.query.source ?? null, limit: Number(req.query.limit) || 100 }),
+    stats: intake.stats()
+  });
 });
 }
 

@@ -698,6 +698,13 @@ export interface Campaign {
   price: number;
   currency: string;
   publicSlug: string;
+  /**
+   * Published (the slug resolves, the link works) but kept OFF the public feed —
+   * shared directly by the host. It is a field the host sets on create, so the
+   * read model carries it too: an edit form that could not see it would quietly
+   * unlist an unlisted event by writing `false` back.
+   */
+  unlisted?: boolean;
   createdAt: string;
   updatedAt: string;
   metrics: CampaignMetrics;

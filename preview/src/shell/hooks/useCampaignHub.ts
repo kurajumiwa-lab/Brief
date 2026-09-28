@@ -189,29 +189,64 @@ export function useCampaignHub(params: UseCampaignHubParams) {
     showToast('Saved');
   };
 
+  /**
+   * Remove an event from the dashboard.
+   *
+   * TWO DIFFERENT ACTS, and the server decides which one is available:
+   *
+   *   nothing depends on it  -> DELETE, and the row is gone
+   *   a registration, a ticket or a ledger row exists
+   *                          -> WITHDRAW, because deleting it would leave
+   *                             other people's records describing an event
+   *                             that no longer exists. The seats are released,
+   *                             tickets stop working, money is refunded through
+   *                             the ledger, and the holders are told - the same
+   *                             path the host's own Withdraw button takes.
+   *
+   * This used to cancel-then-delete, which skipped all of that: a cancelled
+   * campaign with live tickets, unrefunded money and nobody told.
+   */
   const handleRemoveCampaign = async (campaignId: string) => {
     setCampaignBusy(true);
     setCampaignActionError(null);
     try {
       const allCampaigns = campaignState.data ?? [];
       const c = allCampaigns.find((x) => x.id === campaignId) || campaignDetail;
-      if (c && c.status !== 'cancelled' && c.status !== 'closed') {
-        try { await briefApi.campaignAction(campaignId, 'cancel'); } catch {}
+      const preview = await briefApi.getCampaignWithdrawal(campaignId);
+
+      if (preview.ok && !preview.data.preview.canDelete && preview.data.preview.canWithdraw) {
+        const withdrawn = await briefApi.withdrawCampaign(campaignId, 'withdrawn from the campaign dashboard');
+        if (!withdrawn.ok) throw new Error(withdrawn.error);
+        setCampaignState((prev) => ({
+          ...prev,
+          data: (prev.data ?? []).map((item) => (item.id === campaignId ? withdrawn.data.campaign : item))
+        }));
+        setCampaignDetail((prev) => (prev && prev.id === campaignId ? withdrawn.data.campaign : prev));
+        const r = withdrawn.data.withdrawal.receipt;
+        showToast(
+          `Withdrawn - ${r.ticketsVoided} ticket${r.ticketsVoided === 1 ? '' : 's'} stopped, ` +
+          `${r.registrationsCancelled} place${r.registrationsCancelled === 1 ? '' : 's'} released, ` +
+          `${r.refunded.length} refund${r.refunded.length === 1 ? '' : 's'} recorded` +
+          `${r.owed.length ? `, ${r.owed.length} still owed and queued for a person` : ''}, ` +
+          `${r.holdersNotified} told. The record stays.`
+        );
+      } else {
+        const removed = await briefApi.deleteCampaign(campaignId);
+        if (!removed.ok) throw new Error(removed.error);
+        setCampaignState((prev) => ({
+          ...prev,
+          data: (prev.data ?? []).filter((item) => item.id !== campaignId)
+        }));
+        if (c?.objectId) {
+          setObjects((prev: any[]) => prev.filter((o) => o.id !== c.objectId));
+        }
+        setOpenCampaignId(null);
+        setCampaignDetail(null);
+        setEditDraft(null);
+        showToast('Event removed - nothing had happened on it yet.');
+        void loadObjects();
       }
-      await briefApi.deleteCampaign(campaignId);
-      setCampaignState((prev) => ({
-        ...prev,
-        data: (prev.data ?? []).filter((item) => item.id !== campaignId)
-      }));
-      if (c?.objectId) {
-        setObjects((prev: any[]) => prev.filter((o: any) => o.id !== c.objectId));
-      }
-      setOpenCampaignId(null);
-      setCampaignDetail(null);
-      setEditDraft(null);
-      showToast('Event removed.');
       void loadCampaigns();
-      void loadObjects();
     } catch (e: any) {
       setCampaignActionError(String(e.message || e));
     } finally {

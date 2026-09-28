@@ -570,3 +570,45 @@ export function voidTicket(moderatorId, ticketId, reason) {
   });
   return store.find('tickets', (t) => t.id === ticket.id);
 }
+
+/**
+ * Every live ticket for one event stops working, because the event itself was
+ * withdrawn. Not moderation — the host ended the thing the ticket admits
+ * someone to, and a valid ticket to a withdrawn event is a promise nobody can
+ * keep (the gate would scan it at a venue where nothing is happening).
+ *
+ * Returns what it did and what it could NOT do:
+ *   voided      tickets flipped to `void`
+ *   pulled      resale listings taken down with them (a listing for a dead
+ *               ticket is a sale nobody may complete)
+ *   stuck       tickets whose listing has an open order — a buyer is mid-buy,
+ *               so this is left for a person and NAMED rather than broken
+ *               underneath them.
+ */
+export function voidForCampaign(campaignId, reason, { actorId = null } = {}) {
+  const why = String(reason || 'the event was withdrawn').slice(0, 280);
+  const tickets = store.filter('tickets', (t) => t.eventId === campaignId && t.status === 'valid');
+  const voided = [];
+  const pulled = [];
+  const stuck = [];
+  for (const ticket of tickets) {
+    const listing = activeListingFor(ticket.id);
+    if (listing && listing.status === 'pending') {
+      stuck.push({ ticketId: ticket.id, listingId: listing.id, reason: 'a buyer has an open order on this ticket' });
+      continue;
+    }
+    store.update('tickets', ticket.id, { status: 'void', activeListingId: null });
+    voided.push(ticket.id);
+    if (listing && listing.status === 'active') {
+      store.update('ticketListings', listing.id, { status: 'removed', removedReason: why, removedBy: actorId });
+      pulled.push(listing.id);
+    }
+    signals.emitSignal({
+      type: 'ticket_voided',
+      actorId,
+      value: 0,
+      metadata: { ticketId: ticket.id, eventId: campaignId, reason: why, cause: 'event_withdrawn' }
+    });
+  }
+  return { voided, pulled, stuck };
+}

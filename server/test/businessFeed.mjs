@@ -301,14 +301,22 @@ try {
       );
     assert.equal(feed.feed(reader.id, { tab: 'saved' }).total, 1);
     assert.equal(feed.feed(stranger.id, { tab: 'saved' }).total, 0);
+    // A FRESH PROCESS, because a cached module would prove nothing about what
+    // was actually persisted. The specifier is an absolute file URL resolved
+    // from THIS file's location, not from the working directory: the previous
+    // root-relative path only worked when the suite happened to be launched
+    // from the repo root, and `npm test` runs with cwd=server/, so it asked for
+    // server/server/src/... and died — which stopped the whole chain here and
+    // silently stranded every suite after it.
+    const domain = new URL('../src/domain/businessFeed.js', import.meta.url).href;
     const result = execFileSync(
       process.execPath,
       [
         '--input-type=module',
         '-e',
-        `const {feed}=await import('./server/src/domain/businessFeed.js'); console.log(feed(${JSON.stringify(reader.id)},{tab:'saved'}).total);`
+        `const {feed}=await import(${JSON.stringify(domain)}); console.log(feed(${JSON.stringify(reader.id)},{tab:'saved'}).total);`
       ],
-      { cwd: process.cwd(), env: process.env, encoding: 'utf8' }
+      { env: process.env, encoding: 'utf8' }
     );
     assert.equal(result.trim(), '1');
   });
