@@ -16,6 +16,7 @@ import { toast } from "@/components/ui/Toast";
 import { useConfirm } from "@/components/ui/ConfirmDialog";
 import GroupForm from "@/components/forms/GroupForm";
 import VendorListForm from "@/components/forms/VendorListForm";
+import CollectivePanel from "@/components/groups/CollectivePanel";
 import { useGroupStore } from "@/stores/groupStore";
 import { GROUP_TYPES } from "@/config/constants";
 import { apiError } from "@/lib/api";
@@ -42,6 +43,20 @@ export default function Groups() {
     if (tab === "browse") fetchGroups({ search, group_type: type }).catch((e) => toast.error(apiError(e)));
     else fetchMine().catch((e) => toast.error(apiError(e)));
   }, [tab, search, type, fetchGroups, fetchMine]);
+
+  // ?group=<id> (from a notification) opens that group's drawer once it is loaded
+  const wanted = params.get("group");
+  useEffect(() => {
+    if (!wanted) return;
+    const hit = [...mine, ...groups].find((g) => g.id === wanted);
+    if (hit) {
+      setOpen(hit);
+      const next = new URLSearchParams(params);
+      next.delete("group");
+      next.delete("panel");
+      setParams(next, { replace: true });
+    }
+  }, [wanted, mine, groups]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onJoin = async (g) => {
     try {
@@ -204,6 +219,8 @@ function GroupDrawer({ group, onClose, onChat }) {
               <VendorListForm onSubmit={(payload) => createList(group.id, payload)} onDone={() => setListing(false)} onCancel={() => setListing(false)} />
             </div>
           )}
+
+          {group.my_role && group.my_role !== "pending" && <CollectivePanel group={group} canOpen />}
 
           {admin && pending.length > 0 && (
             <section>
