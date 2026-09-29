@@ -57,6 +57,10 @@ vi.mock("@/lib/api", () => {
     toolAPI: { browse: vi.fn(() => ok([])), mine: vi.fn(() => ok([])), couriers: vi.fn(() => ok([])), create: vi.fn(), registerCourier: vi.fn(), setAvailability: vi.fn(), bookWarehouse: vi.fn() },
     eventAPI: { browse: vi.fn(() => ok([])), mine: vi.fn(() => ok([])), get: vi.fn(), registrations: vi.fn(() => ok([])), create: vi.fn(), register: vi.fn(), cancelRegistration: vi.fn(), setStatus: vi.fn() },
     posAPI: { connections: vi.fn(() => ok([])), connect: vi.fn(), disconnect: vi.fn(), sync: vi.fn(), push: vi.fn(), pushCsv: vi.fn(), syncLogs: vi.fn(() => ok([])) },
+    // v2.1
+    notificationAPI: { list: vi.fn(() => ok({ unread_count: 0, notifications: [] })), unreadCount: vi.fn(() => ok({ unread_count: 0 })), markRead: vi.fn(() => ok({})), markAllRead: vi.fn(() => ok({})) },
+    collectiveAPI: { list: vi.fn(() => ok([])), get: vi.fn(), create: vi.fn(), pledge: vi.fn(), withdraw: vi.fn(), setStatus: vi.fn() },
+    fileAPI: { upload: vi.fn(), limits: vi.fn(() => ok({ max_mb: 10, allowed: [".pdf"] })) },
   };
 });
 
