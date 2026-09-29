@@ -68,6 +68,10 @@ function Root() {
     onClose={() => window.location.assign('/#home')}
     onOpenObject={(object) => { window.location.assign(`/#entity/${encodeURIComponent(object.id)}`); }} />;
   if (/^\/cloudbites\/?$/.test(window.location.pathname)) return <CloudBitesPage />;
+  // /pillars is the public, mobile-fitted gallery for the three-pillar
+  // architecture record. It is a concept surface: no live order, batch, pool,
+  // stall, payout or payment rail is connected to it.
+  if (/^\/pillars\/?$/.test(window.location.pathname)) return <PillarsApp />;
   if (/^\/reviews(?:\/[A-Za-z0-9_-]+)?\/?$/.test(window.location.pathname)) return <ReviewsPage />;
   if (/^\/track\/?$/.test(window.location.pathname)) return <OrderTrackingPage />;
   if (/^\/groups\/?$/.test(window.location.pathname)) return <PublicGroupsPage />;

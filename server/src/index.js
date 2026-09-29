@@ -414,6 +414,17 @@ if (servingFrontend) {
     res.type('html').send(html);
   });
 
+  // /pillars is the public, mobile-fitted gallery for the three-pillar
+  // architecture record (docs/THREE-PILLAR-PRIMARY-ARCHITECTURE.md). Give link
+  // previews an honest title: the screens are a concept, not a live network.
+  app.get(['/pillars', '/pillars/'], (_req, res) => {
+    const title = 'Brief Trade — three pillars, fitted to a phone';
+    const desc = 'Supply, Shop and Gather: the three-pillar commerce architecture of Brief, shown screen by screen on a phone. Concept preview — no live orders, pools, stalls or payments.';
+    const html = indexHtml.replace(/<title>.*?<\/title>/,
+      `<title>${escapeHtml(title)}</title>\n    <meta name="description" content="${escapeHtml(desc)}" />\n    <meta property="og:title" content="${escapeHtml(title)} />\n    <meta property="og:description" content="${escapeHtml(desc)}" />`);
+    res.type('html').send(html);
+  });
+
   // Static assets: JS/CSS bundles, images, etc. `index: false` so '/' is
   // handled by the explicit fallback below rather than a silent directory
   // serve, and so an asset miss is not masked by a directory index.

@@ -120,6 +120,16 @@ try {
     const publicPage = await nativeFetch(url(`/collections/${collection.id}`));
     check('compiled production entry serves the shared collection path', () =>
       assert.equal(publicPage.status, 200));
+    // The three-pillar concept surface is public too, and its link preview must
+    // say it is a concept rather than a live network.
+    const pillars = await nativeFetch(url('/pillars'));
+    const pillarsHtml = await pillars.text();
+    check('the three-pillar concept route serves with an honest title', () => {
+      assert.equal(pillars.status, 200);
+      assert.match(pillarsHtml, /<title>Brief Trade[\s\S]*?<\/title>/);
+      assert.match(pillarsHtml, /Concept preview/);
+      assert.doesNotMatch(pillarsHtml, /<title>Wairo Blue Avenue<\/title>/);
+    });
   } else console.log('SKIP compiled collection HTML: build client first');
 
   // Every economic failure must leave the same order, listing, log, and
