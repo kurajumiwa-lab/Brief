@@ -6,6 +6,8 @@ export const useVendorStore = create((set, get) => ({
   network: [],
   connections: [],
   suggested: [],
+  discovered: [],
+  discoverWeights: null,
   stats: null,
   patron: null,
   loading: false,
@@ -30,6 +32,22 @@ export const useVendorStore = create((set, get) => ({
     set({ suggested: data });
     return data;
   },
+  /** Discovery algorithm (v2.2) — ranked candidates with the factors behind each score. */
+  fetchDiscover: async (params = {}) => {
+    set({ loading: true });
+    try {
+      const { data } = await vendorAPI.discover({ limit: 12, ...params });
+      set({ discovered: data });
+      return data;
+    } finally {
+      set({ loading: false });
+    }
+  },
+  fetchDiscoverWeights: async () => {
+    const { data } = await vendorAPI.discoverWeights();
+    set({ discoverWeights: data?.factors || null });
+    return data;
+  },
   fetchStats: async () => {
     const { data } = await vendorAPI.stats();
     set({ stats: data });
@@ -47,7 +65,11 @@ export const useVendorStore = create((set, get) => ({
       const same = (v) => (v.id || v.vendor_id) === id;
       const flip = (arr) => arr.map((v) => (same(v) ? { ...v, connected } : v));
       // suggestions are "people you're not connected to yet"
-      return { network: flip(s.network), suggested: connected ? s.suggested.filter((v) => !same(v)) : s.suggested };
+      return {
+        network: flip(s.network),
+        suggested: connected ? s.suggested.filter((v) => !same(v)) : s.suggested,
+        discovered: connected ? s.discovered.filter((v) => !same(v)) : s.discovered,
+      };
     }),
 
   connect: async (id) => {

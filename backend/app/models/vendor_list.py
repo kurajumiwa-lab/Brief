@@ -76,12 +76,16 @@ class VendorList(Base):
     # Stats
     member_count = Column(Integer, default=0, nullable=False)
     total_stock_value = Column(Float, default=0, nullable=False)
+    # Reviews (v2.1 §4.2) — denormalised so browse can rank and filter on them.
+    avg_rating = Column(Float, default=0.0, nullable=False, server_default="0")
+    review_count = Column(Integer, default=0, nullable=False, server_default="0")
 
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
     patron = relationship("Patron", back_populates="vendor_lists")
     memberships = relationship("VendorListMembership", back_populates="vendor_list")
+    reviews = relationship("VendorListReview", back_populates="vendor_list", cascade="all, delete-orphan")
 
 
 class VendorListMembership(Base):

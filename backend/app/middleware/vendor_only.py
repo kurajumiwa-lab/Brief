@@ -11,7 +11,9 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
-OPEN_PREFIXES = ("/api/auth/", "/api/health", "/docs", "/redoc", "/openapi.json")
+# `/api/metrics` is the Prometheus scrape target (gate it with METRICS_TOKEN in
+# production — see app/routes/ops.py). Everything else under /api needs a vendor.
+OPEN_PREFIXES = ("/api/auth/", "/api/health", "/api/metrics", "/docs", "/redoc", "/openapi.json")
 
 
 class VendorOnlyMiddleware(BaseHTTPMiddleware):

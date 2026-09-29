@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     APP_NAME: str = "Brief_ Vendor Network"
-    VERSION: str = "2.1.0"
+    VERSION: str = "2.2.0"
     DESCRIPTION: str = "No consumers. Only vendors."
     DEBUG: bool = False
 
@@ -68,6 +68,16 @@ class Settings(BaseSettings):
     # Rate limits (requests per minute)
     RATE_LIMIT_AUTH: int = 20
     RATE_LIMIT_API: int = 600
+
+    # Observability (v2.2 §6.2). METRICS_ENABLED off removes the timing middleware;
+    # METRICS_TOKEN set gates GET /api/metrics behind ?token= or a bearer token.
+    METRICS_ENABLED: bool = True
+    METRICS_TOKEN: str = ""
+    SLOW_REQUEST_MS: int = 1000          # requests above this are logged and listed by /api/ops/slow
+
+    # Tool bookings & routing (v2.2 §5.x)
+    BOOKING_MAX_DAYS: int = 365          # longest window a single booking may span
+    ROUTE_DEFAULT_SPEED_KMH: float = 25.0
 
     # Single-container deploys: serve the built frontend from here if it exists.
     FRONTEND_DIST: str = "../frontend/dist"

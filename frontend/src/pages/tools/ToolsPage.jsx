@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Plus, Wrench, Truck, MapPin, Star, CalendarCheck, Power, Warehouse, Package, Store, Hotel, Box, Snowflake } from "lucide-react";
+import { Plus, Wrench, Truck, MapPin, Star, CalendarCheck, CalendarDays, Power, Warehouse, Package, Store, Hotel, Box, Snowflake, Route } from "lucide-react";
 import Tabs from "@/components/ui/Tabs";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
@@ -12,11 +12,13 @@ import { PageSpinner } from "@/components/ui/Spinner";
 import { toast } from "@/components/ui/Toast";
 import ToolForm, { CourierForm } from "@/components/forms/ToolForm";
 import ShipmentPanel, { BookShipmentModal } from "@/components/tools/ShipmentPanel";
+import RoutePlanner from "@/components/tools/RoutePlanner";
+import BookingPanel from "@/components/tools/BookingPanel";
 import { useSearchParams } from "react-router-dom";
 import { useToolStore } from "@/stores/toolStore";
 import { useAuthStore } from "@/stores/authStore";
 import { TOOL_CATEGORIES, PRICE_UNITS } from "@/config/constants";
-import { apiError } from "@/lib/api";
+import { apiError, toolAPI } from "@/lib/api";
 import { currency, num } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 
@@ -24,6 +26,8 @@ const TABS = [
   { value: "browse", label: "Browse", icon: Wrench },
   { value: "couriers", label: "Couriers", icon: Truck },
   { value: "shipments", label: "Shipments", icon: Package },
+  { value: "routes", label: "Routes", icon: Route },
+  { value: "bookings", label: "Bookings", icon: CalendarDays },
   { value: "mine", label: "My Listings" },
 ];
 
@@ -42,6 +46,7 @@ export default function ToolsPage() {
   const [courier, setCourier] = useState(false);
   const [booking, setBooking] = useState(null);
   const [shipping, setShipping] = useState(null); // courier being booked for a parcel
+  const [courierOpen, setCourierOpen] = useState(false);
   const me = useAuthStore((s) => s.vendor);
   const { tools, mine, couriers, loading, fetchTools, fetchMine, fetchCouriers, setAvailability } = useToolStore();
 
@@ -153,6 +158,10 @@ export default function ToolsPage() {
 
       {tab === "shipments" && <ShipmentPanel />}
 
+      {tab === "routes" && <RoutePlanner onRegisterCourier={() => setCourierOpen(true)} />}
+
+      {tab === "bookings" && <BookingPanel />}
+
       {tab === "mine" &&
         (mine.length === 0 ? (
           <EmptyState icon={Wrench} title="You haven't listed anything" description="Listings you create appear here; toggle availability when they're booked out." />
@@ -167,8 +176,8 @@ export default function ToolsPage() {
       <Modal open={listing} onClose={() => setListing(false)} title="List a tool" description="Priced per unit of time, weight or space — your call.">
         <ToolForm defaultCategory={category || "warehouse"} onDone={() => setListing(false)} onCancel={() => setListing(false)} />
       </Modal>
-      <Modal open={courier} onClose={() => setCourier(false)} title="Register a courier service" description="Also listed under Tools → Courier so vendors can find you." size="sm">
-        <CourierForm onDone={() => { setCourier(false); setTab("couriers"); }} onCancel={() => setCourier(false)} />
+      <Modal open={courier || courierOpen} onClose={() => { setCourier(false); setCourierOpen(false); }} title="Register a courier service" description="Also listed under Tools → Courier so vendors can find you." size="sm">
+        <CourierForm onDone={() => { setCourier(false); setCourierOpen(false); setTab("couriers"); }} onCancel={() => { setCourier(false); setCourierOpen(false); }} />
       </Modal>
       <BookingModal tool={booking} onClose={() => setBooking(null)} />
       <BookShipmentModal courier={shipping} open={!!shipping} onClose={() => setShipping(null)} onDone={() => setTab("shipments")} />
@@ -179,7 +188,7 @@ export default function ToolsPage() {
 function ToolCard({ tool: t, mine, onBook, onToggle }) {
   const cat = TOOL_CATEGORIES.find((c) => c.value === t.category);
   const Icon = (cat && ICONS[cat.icon]) || Wrench;
-  const bookable = ["warehouse", "cold_storage"].includes(t.category);
+  const bookable = ["warehouse", "cold_storage", "popup_shop", "hotel_sourcing"].includes(t.category);
   return (
     <Card className={cn("flex flex-col gap-3", !t.is_available && "opacity-70")}>
       <div className="flex items-start gap-3">
@@ -236,22 +245,50 @@ function ToolCard({ tool: t, mine, onBook, onToggle }) {
   );
 }
 
+const BOOKABLE_FIELDS = {
+  warehouse: { unit: "sqm", label: "Space needed (sqm)" },
+  cold_storage: { unit: "sqm", label: "Space needed (sqm)" },
+  popup_shop: { unit: "spaces", label: "Spaces / stalls" },
+  hotel_sourcing: { unit: "rooms", label: "Rooms" },
+};
+
 function BookingModal({ tool, onClose }) {
-  const book = useToolStore((s) => s.book);
-  const [form, setForm] = useState({ start: "", end: "", space: "" });
+  const [form, setForm] = useState({ start: "", end: "", quantity: "", notes: "", guests: "" });
+  const [calendar, setCalendar] = useState(null);
   const [busy, setBusy] = useState(false);
-  useEffect(() => setForm({ start: "", end: "", space: "" }), [tool?.id]);
+  const field = BOOKABLE_FIELDS[tool?.category] || { unit: "units", label: "Quantity" };
+  useEffect(() => setForm({ start: "", end: "", quantity: "", notes: "", guests: "" }), [tool?.id]);
+
+  // Paint free capacity for the chosen window before they ask for it.
+  useEffect(() => {
+    if (!tool || !form.start) return setCalendar(null);
+    let live = true;
+    toolAPI
+      .calendar(tool.id, { from: form.start, to: form.end || form.start })
+      .then(({ data }) => live && setCalendar(data))
+      .catch(() => live && setCalendar(null));
+    return () => {
+      live = false;
+    };
+  }, [tool?.id, form.start, form.end]);
+
   const submit = async (e) => {
     e.preventDefault();
-    if (!form.start || !form.end) return toast.error("Pick start and end");
+    if (!form.start || !form.end) return toast.error("Pick a start and an end date");
     setBusy(true);
     try {
-      const res = await book(tool.id, {
-        start_date: new Date(form.start).toISOString(),
-        end_date: new Date(form.end).toISOString(),
-        space_allocated: form.space ? { value: Number(form.space), unit: tool.capacity?.unit || "units" } : {},
+      const quantity = Number(form.quantity) || 1;
+      const details = { space_allocated: { value: quantity, unit: field.unit } };
+      if (tool.category === "hotel_sourcing" && form.guests) details.guests = Number(form.guests);
+      const res = await toolAPI.book(tool.id, {
+        start_date: form.start,
+        end_date: form.end,
+        quantity,
+        unit: field.unit,
+        details,
+        notes: form.notes || undefined,
       });
-      toast.success(res?.message || "Booking requested");
+      toast.success(res.data?.message || "Booking requested");
       onClose();
     } catch (err) {
       toast.error(apiError(err, "Couldn't book"));
@@ -259,13 +296,46 @@ function BookingModal({ tool, onClose }) {
       setBusy(false);
     }
   };
+
   return (
-    <Modal open={!!tool} onClose={onClose} title={tool ? `Book ${tool.title}` : ""} description={tool ? `${tool.vendor_business} · ${tool.price_per_unit != null ? currency(tool.price_per_unit) : "price on request"} ${unitLabel(tool.price_unit)}` : ""} size="sm">
+    <Modal
+      open={!!tool}
+      onClose={onClose}
+      title={tool ? `Book ${tool.title}` : ""}
+      description={tool ? `${tool.vendor_business} · ${tool.price_per_unit != null ? currency(tool.price_per_unit) : "price on request"} ${unitLabel(tool.price_unit)}` : ""}
+      size="sm"
+    >
       {tool && (
         <form onSubmit={submit} className="space-y-3">
-          <Input label="From" type="datetime-local" required value={form.start} onChange={(e) => setForm({ ...form, start: e.target.value })} />
-          <Input label="Until" type="datetime-local" required min={form.start || undefined} value={form.end} onChange={(e) => setForm({ ...form, end: e.target.value })} />
-          <Input label={`Space needed${tool.capacity?.unit ? ` (${tool.capacity.unit})` : ""}`} type="number" min="0" step="any" value={form.space} onChange={(e) => setForm({ ...form, space: e.target.value })} />
+          <div className="grid grid-cols-2 gap-3">
+            <Input label="From" type="date" required value={form.start} onChange={(e) => setForm({ ...form, start: e.target.value })} />
+            <Input label="Until (inclusive)" type="date" required min={form.start || undefined} value={form.end} onChange={(e) => setForm({ ...form, end: e.target.value })} />
+          </div>
+
+          {calendar?.days?.length > 0 && (
+            <div className="flex gap-1 overflow-x-auto pb-1">
+              {calendar.days.map((d) => (
+                <div
+                  key={d.date}
+                  title={`${d.committed} of ${d.capacity} ${calendar.unit} committed`}
+                  className={cn(
+                    "shrink-0 rounded-md border px-2 py-1 text-2xs font-mono",
+                    d.full ? "border-red-900/60 bg-red-950/20 text-red-300" : d.committed > 0 ? "border-amber-900/50 bg-amber-950/10 text-amber-300" : "border-edge-1 bg-surface-1 text-ink-4"
+                  )}
+                >
+                  {d.date.slice(8)} · {d.free} free
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-3">
+            <Input label={field.label} type="number" min="1" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} placeholder="1" />
+            {tool.category === "hotel_sourcing" && (
+              <Input label="Guests" type="number" min="1" value={form.guests} onChange={(e) => setForm({ ...form, guests: e.target.value })} placeholder="2" />
+            )}
+          </div>
+          <Input label="Notes for the host" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Delivery, access, storage needs…" />
           {tool.terms && <p className="text-2xs text-ink-4 rounded-lg bg-surface-1 border border-edge-1 p-2">Terms: {tool.terms}</p>}
           <div className="flex justify-end gap-2 pt-1">
             <Button variant="ghost" onClick={onClose}>

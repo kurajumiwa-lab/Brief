@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { ListChecks, Plus, Crown, Users, Lock, Unlock, Check, X, MessageSquare, Settings2 } from "lucide-react";
+import { ListChecks, Plus, Crown, Users, Lock, Unlock, Check, X, MessageSquare, Settings2, Star } from "lucide-react";
 import Tabs from "@/components/ui/Tabs";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
@@ -14,6 +14,7 @@ import { PageSpinner } from "@/components/ui/Spinner";
 import { toast } from "@/components/ui/Toast";
 import { useConfirm } from "@/components/ui/ConfirmDialog";
 import VendorListForm from "@/components/forms/VendorListForm";
+import ReviewsDrawer, { Stars } from "@/components/lists/ReviewPanel";
 import { useListStore } from "@/stores/listStore";
 import { useVendorStore } from "@/stores/vendorStore";
 import { useAuthStore } from "@/stores/authStore";
@@ -36,6 +37,7 @@ export default function VendorLists() {
   const [region, setRegion] = useState("");
   const [creating, setCreating] = useState(false);
   const [managing, setManaging] = useState(null);
+  const [reviews, setReviews] = useState(null);
   const me = useAuthStore((s) => s.vendor);
   const { lists, mine, loading, fetchLists, fetchMine, register } = useListStore();
   const { patron, fetchPatron, becomePatron } = useVendorStore();
@@ -125,7 +127,7 @@ export default function VendorLists() {
       ) : (
         <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-3">
           {source.map((l) => (
-            <ListCard key={l.id} list={l} onRegister={onRegister} onManage={setManaging} />
+            <ListCard key={l.id} list={l} onRegister={onRegister} onManage={setManaging} onReviews={setReviews} />
           ))}
         </div>
       )}
@@ -134,11 +136,12 @@ export default function VendorLists() {
         <VendorListForm onDone={() => setCreating(false)} onCancel={() => setCreating(false)} maxVendorsCap={patron?.max_vendors_per_list} />
       </Modal>
       <ManageDrawer list={managing} onClose={() => setManaging(null)} />
+      <ReviewsDrawer list={reviews} onClose={() => setReviews(null)} />
     </div>
   );
 }
 
-function ListCard({ list: l, onRegister, onManage }) {
+function ListCard({ list: l, onRegister, onManage, onReviews }) {
   const navigate = useNavigate();
   const fetchRooms = useChatStore((s) => s.fetchRooms);
   const openRoom = async () => {
@@ -155,6 +158,17 @@ function ListCard({ list: l, onRegister, onManage }) {
           <p className="text-2xs text-ink-4 mt-0.5">
             run by <span className="text-ink-3">{l.patron_business}</span> <span className="font-mono">@{l.patron_handle}</span>
           </p>
+          {l.review_count > 0 && (
+            <button
+              onClick={() => onReviews(l)}
+              className="mt-1 inline-flex items-center gap-1.5 text-2xs text-ink-4 hover:text-ink-2 transition-colors"
+              title="Read member reviews"
+            >
+              <Stars value={l.avg_rating} size={10} />
+              <span className="font-mono">{Number(l.avg_rating || 0).toFixed(1)}</span>
+              <span>· {num(l.review_count)} review{l.review_count === 1 ? "" : "s"}</span>
+            </button>
+          )}
         </div>
         {l.i_run_it ? (
           <Badge variant="amber" size="xs">
@@ -203,6 +217,9 @@ function ListCard({ list: l, onRegister, onManage }) {
           {l.max_vendors ? ` / ${num(l.max_vendors)}` : ""}
         </span>
         <div className="flex items-center gap-1.5">
+          <Button size="xs" variant="ghost" icon={Star} onClick={() => onReviews(l)}>
+            Reviews
+          </Button>
           {(l.i_run_it || l.my_status === "approved") && <Button size="xs" variant="ghost" icon={MessageSquare} onClick={openRoom} aria-label="Open list chat" />}
           {l.i_run_it ? (
             <Button size="xs" variant="secondary" icon={Settings2} onClick={() => onManage(l)}>

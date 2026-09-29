@@ -1,11 +1,12 @@
 import { useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Users, Compass, Sparkles, Link2 } from "lucide-react";
+import { Users, Compass, Sparkles, Link2, SlidersHorizontal } from "lucide-react";
 import Tabs from "@/components/ui/Tabs";
 import SearchInput from "@/components/ui/SearchInput";
 import Select from "@/components/ui/Select";
 import Input from "@/components/ui/Input";
 import EmptyState from "@/components/ui/EmptyState";
+import Badge from "@/components/ui/Badge";
 import { PageSpinner } from "@/components/ui/Spinner";
 import VendorCard from "@/components/vendor/VendorCard";
 import { useVendorStore } from "@/stores/vendorStore";
@@ -26,7 +27,7 @@ export default function Network() {
   const role = params.get("role") || "";
   const location = params.get("location") || "";
   const me = useAuthStore((s) => s.vendor);
-  const { network, connections, suggested, stats, loading, fetchNetwork, fetchConnections, fetchSuggested, fetchStats } = useVendorStore();
+  const { network, connections, discovered, discoverWeights, stats, loading, fetchNetwork, fetchConnections, fetchDiscover, fetchDiscoverWeights, fetchStats } = useVendorStore();
 
   const setParam = (patch) => {
     const next = new URLSearchParams(params);
@@ -41,8 +42,11 @@ export default function Network() {
   useEffect(() => {
     if (tab === "discover") fetchNetwork({ search, role, location }).catch(() => {});
     if (tab === "connections") fetchConnections().catch(() => {});
-    if (tab === "suggested") fetchSuggested(12).catch(() => {});
-  }, [tab, search, role, location, fetchNetwork, fetchConnections, fetchSuggested]);
+    if (tab === "suggested") {
+      fetchDiscover({ limit: 12 }).catch(() => {});
+      fetchDiscoverWeights().catch(() => {});
+    }
+  }, [tab, search, role, location, fetchNetwork, fetchConnections, fetchDiscover, fetchDiscoverWeights]);
 
   const others = network.filter((v) => v.id !== me?.id);
 
@@ -105,14 +109,39 @@ export default function Network() {
         ))}
 
       {tab === "suggested" &&
-        (suggested.length === 0 ? (
+        (discovered.length === 0 ? (
           <EmptyState icon={Sparkles} title="Nothing to suggest yet" description="Suggestions come from your profile: what you stock and what you source. Fill it in from your profile page." />
         ) : (
-          <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-3">
-            {suggested.map((v) => (
-              <VendorCard key={v.vendor_id} vendor={v} compact reasons={v.reasons} />
-            ))}
-          </div>
+          <>
+            {discoverWeights && (
+              <div className="flex flex-wrap items-center gap-1.5 text-2xs text-ink-4">
+                <Badge variant="outline" size="xs">
+                  <SlidersHorizontal size={9} /> scoring
+                </Badge>
+                {Object.entries(discoverWeights).map(([k, v]) => (
+                  <span key={k} className="rounded bg-surface-3 px-1.5 py-0.5 font-mono">
+                    {k} {v}
+                  </span>
+                ))}
+              </div>
+            )}
+            <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-3">
+              {discovered.map((v) => (
+                <VendorCard
+                  key={v.vendor_id}
+                  vendor={v}
+                  compact
+                  reasons={v.reasons}
+                  footer={
+                    <div className="flex items-center justify-between gap-2 text-2xs text-ink-4 font-mono">
+                      <span>match {Number(v.score || 0).toFixed(0)}/100</span>
+                      {v.distance_km != null && <span>{Number(v.distance_km).toFixed(1)} km</span>}
+                    </div>
+                  }
+                />
+              ))}
+            </div>
+          </>
         ))}
     </div>
   );

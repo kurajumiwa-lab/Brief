@@ -1,0 +1,40 @@
+# Alert rules for the metrics exported by app/middleware/metrics.py.
+groups:
+  - name: brief-api
+    rules:
+      - alert: BriefApiDown
+        expr: up{job="brief-api"} == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "Brief_ API is not answering scrapes"
+          description: "Prometheus has failed to scrape /api/metrics for 2 minutes."
+
+      - alert: BriefApiHighP95
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum by (le) (rate(brief_request_duration_ms_bucket[5m]))
+          ) > 1000
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "p95 latency above 1s"
+          description: "The API's 95th percentile latency has been over SLOW_REQUEST_MS for 10 minutes."
+
+      - alert: BriefApiServerErrors
+        expr: rate(brief_errors_total[5m]) > 0.05
+        for: 5m
+        labels: { severity: critical }
+        annotations:
+          summary: "5xx responses are being served"
+          description: "More than 0.05 server errors per second over 5 minutes."
+
+      - alert: BriefRateLimitStorm
+        expr: |
+          sum by (status) (rate(brief_requests_total{status="429"}[5m])) > 0.5
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "A lot of requests are being rate limited"
+          description: "Sustained 429s usually mean a runaway client or a genuinely overloaded instance."

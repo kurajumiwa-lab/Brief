@@ -55,6 +55,8 @@ class VendorListOut(BaseModel):
     patron_business: Optional[str]
     patron_handle: Optional[str]
     member_count: int
+    avg_rating: float = 0.0
+    review_count: int = 0
     max_vendors: int
     is_open: bool
     requires_approval: bool
@@ -70,7 +72,8 @@ def _out(vl: VendorList, patron_vendor: Optional[Vendor], my_status: Optional[st
         category=vl.category, region=vl.region,
         patron_business=patron_vendor.business_name if patron_vendor else None,
         patron_handle=patron_vendor.vendor_handle if patron_vendor else None,
-        member_count=vl.member_count, max_vendors=vl.max_vendors, is_open=vl.is_open,
+        member_count=vl.member_count, avg_rating=vl.avg_rating or 0.0, review_count=vl.review_count or 0,
+        max_vendors=vl.max_vendors, is_open=vl.is_open,
         requires_approval=vl.requires_approval, is_group_created=vl.is_group_created,
         creating_group_id=str(vl.creating_group_id) if vl.creating_group_id else None,
         my_status=my_status, i_run_it=i_run_it,

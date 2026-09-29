@@ -1,16 +1,15 @@
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import List, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models.tools import (
-    CourierRegistration, HotelSourcing, PopupShop, ToolCategory, ToolListing,
-    TransportService, WarehouseRental,
+    CourierRegistration, HotelSourcing, PopupShop, ToolCategory, ToolListing, TransportService,
 )
 from app.models.vendor import Vendor
 from app.routes.auth import get_current_vendor
@@ -73,18 +72,6 @@ class CourierRegister(BaseModel):
     service_types: list[str] = []
     price_per_kg: Optional[float] = Field(None, ge=0)
     base_rate: Optional[float] = Field(None, ge=0)
-
-
-class WarehouseBooking(BaseModel):
-    start_date: datetime
-    end_date: datetime
-    space_allocated: dict = {}
-
-    @field_validator("start_date", "end_date")
-    @classmethod
-    def _naive_utc(cls, dt: datetime) -> datetime:
-        # Browsers send tz-aware ISO strings ("...Z"); the columns are naive UTC.
-        return dt.astimezone(timezone.utc).replace(tzinfo=None) if dt.tzinfo else dt
 
 
 def _tool_out(t: ToolListing, v: Vendor, details: Optional[dict] = None) -> ToolOut:
@@ -224,33 +211,6 @@ async def browse_couriers(
         "service_types": c.service_types or [], "price_per_kg": c.price_per_kg, "base_rate": c.base_rate,
         "is_verified": c.is_verified, "rating": c.rating, "total_deliveries": c.total_deliveries,
     } for c, v in rows]
-
-
-@router.post("/{tool_id}/book-warehouse", status_code=201)
-async def book_warehouse(
-    tool_id: UUID,
-    data: WarehouseBooking,
-    vendor: Vendor = Depends(get_current_vendor),
-    db: AsyncSession = Depends(get_db),
-):
-    """Reserve space in a listed warehouse or cold store."""
-    tool = await db.get(ToolListing, tool_id)
-    if not tool or not tool.is_available:
-        raise HTTPException(404, "Tool not found")
-    if tool.category not in (ToolCategory.WAREHOUSE, ToolCategory.COLD_STORAGE):
-        raise HTTPException(400, "Only warehouse and cold-storage listings take space bookings")
-    if tool.vendor_id == vendor.id:
-        raise HTTPException(400, "This is your own space")
-    if data.end_date <= data.start_date:
-        raise HTTPException(400, "end_date must be after start_date")
-    rental = WarehouseRental(
-        tool_listing_id=tool.id, renter_vendor_id=vendor.id, space_allocated=data.space_allocated,
-        start_date=data.start_date, end_date=data.end_date, monthly_rate=tool.price_per_unit,
-    )
-    db.add(rental)
-    tool.times_booked += 1
-    await db.commit()
-    return {"message": "Space booked", "rental_id": str(rental.id)}
 
 
 @router.post("/{tool_id}/availability")

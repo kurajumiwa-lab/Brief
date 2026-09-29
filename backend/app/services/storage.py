@@ -144,5 +144,10 @@ def local_root() -> Optional[str]:
     return str(storage.local_root)
 
 
+def storage_mode() -> str:
+    """'s3' or 'local' — surfaced by /api/ops/status."""
+    return storage.name
+
+
 def is_public_url(url: str) -> bool:
     return bool(url) and (url.startswith("/static/") or url.startswith("http://") or url.startswith("https://"))

@@ -23,15 +23,21 @@ there are the vendors who move it between each other.
 | **Chat** | group, vendor-list, deal, direct and open niche-topic rooms. Messages go over HTTP; a receive-only WebSocket broadcasts them (Redis fan-out across workers). Share a stock item straight into a room. |
 | **Vendor Tools & couriers** | warehouse, cold storage, transport, courier, pop-up shop, hotel sourcing, equipment, packaging. Courier registration, warehouse booking, and **shipments**: book a courier for a movement, tracking number, forward-only status history, receiver rating. |
 | **Events** | market days, sourcing trips, trade fairs — capacity, fee, requirements, optionally scoped to a list or group. Vendors **check in** on the day (or the organiser does it at the door); organisers get fill rate, attendance and category analytics. |
-| **Notifications** | Every consequential action (sourcing steps, deals, list/group decisions, collective progress, shipments, low stock, verification, promotions) lands in the bell — `GET /notifications`, polled every 30 s by the UI. |
+| **Notifications** | Every consequential action (sourcing steps, deals, list/group decisions, collective progress, shipments, reviews, bookings, routes, low stock, verification, promotions) lands in the bell — `GET /notifications`, polled every 30 s by the UI. |
 | **POS Bridge** | Square / Shopify pulled on a schedule; CSV / manual / custom API pushed from the shop by `pos-extension/sync_daemon.py` (idempotent, back-off, health file) or a CSV upload. Every sync is logged. |
+| **Trade analytics dashboard** | `/analytics` — what you supplied and sourced over 30/90/180/365 days, stacked trend, top counterparties, category mix, **price position** against the network average per category, your share of the network and your parasitism index/live score, plus a per-counterparty drill-down (net position, history, top items). `GET /analytics/*`. |
+| **Vendor-list reviews** | Approved members rate a list 1–5 with a title and body; the drawer shows the star distribution, sorts by recent / rating / helpful, and lets each vendor edit or delete their one review. Aggregates (`avg_rating`, `review_count`) are denormalised onto the list for browse and sort, and the patron is notified on every new review. |
+| **Discovery / recommendation** | `GET /vendors/discover` ranks vendors you have not connected to yet on six weighted factors — complementarity, reciprocity, trade evidence, proximity, graph distance and reputation — with the weights exposed at `/discover/weights` and a human-readable `reasons` list per candidate (the Network → Suggested tab). |
+| **Courier route optimisation** | A courier plans a run from explicit stops or straight from their undelivered shipments; nearest-neighbour + 2-opt ordering, per-leg distance, cumulative km and ETA, and an honest `saved_km` against the booking order. Dispatch notifies the senders whose parcels are on the run; stops are ticked off one by one. |
+| **Bookings & calendars** | One dated-hold model for the three tool flows: **warehouse / cold-storage space**, **pop-up shop pitches** (shared spaces) and **hotel sourcing rooms** for travelling vendors. Live day-by-day availability calendar, request → confirm/decline → complete, and cancellation that frees the window. |
+| **Monitoring & ops** | In-process metrics registry (`/metrics`, Prometheus text) with per-route percentiles and a slow-request list, `X-Request-ID` on every response, and an **Ops** console (`/ops`) showing version, environment, p50/p95/p99, error rate, pool and the raw scrape. Prometheus + Grafana + alerts ship in `deploy/monitoring/`. |
 
 ## Stack
 
 * **Backend** — FastAPI 0.104, SQLAlchemy 2 (async, asyncpg), PostgreSQL 16, Alembic, JWT access + refresh tokens (python-jose) + bcrypt, Redis (rate limiter, login lockout, WebSocket fan-out) with an in-process fallback, local or S3-compatible file storage. `backend/`
-* **Frontend** — React 18, Vite 5, Tailwind 3, zustand, axios, lucide-react. Dark theme, sidebar: Dashboard · Stock Room · Network · Vendor Lists · Groups · Chat · Tools · Events · POS Bridge. `frontend/`
+* **Frontend** — React 18, Vite 5, Tailwind 3, zustand, axios, lucide-react. Dark theme, sidebar: Dashboard · Stock Room · Network · Analytics · Vendor Lists · Groups · Chat · Tools · Events · POS Bridge · Ops. `frontend/`
 * **POS extension** — Python daemon + adapters (csv, manual, square, shopify). `pos-extension/`
-* **Ops** — `docker-compose.yml` for development, `docker-compose.prod.yml` (Caddy TLS, nginx, 4 API workers, scheduler worker, nightly `pg_dump`, optional POS daemon), a GitHub Actions pipeline in `deploy/github-deploy.yml`.
+* **Ops** — `docker-compose.yml` for development, `docker-compose.prod.yml` (Caddy TLS, nginx, 4 API workers, scheduler worker, nightly `pg_dump`, optional POS daemon), a GitHub Actions pipeline in `deploy/github-deploy.yml`, an observability stack in `deploy/monitoring/` (Prometheus scrape of `/metrics`, alert rules, Grafana dashboard) and a load-test harness in `loadtest/`.
 
 ## Run it
 
@@ -57,10 +63,39 @@ service owns the scheduler (POS pulls, hold expiry, nightly score recompute and
 event reminders). Caddy terminates TLS for `$DOMAIN`; `db-backup` keeps 14
 nightly dumps in the `backups` volume.
 
-`deploy/github-deploy.yml` is a ready CI/CD pipeline (backend pytest + frontend
-build, image build to GHCR, SSH deploy). Copy it to
-`.github/workflows/deploy.yml` in a commit made with your own credentials — the
-bot that opened this branch is not allowed to write under `.github/workflows/`.
+`deploy/github-deploy.yml` is a ready CI/CD pipeline (backend pytest with
+migrations applied, checked and rolled back on the Postgres service; a
+load-test smoke run against a booted API; frontend tests + build; image build
+to GHCR; SSH deploy). Copy it to `.github/workflows/deploy.yml` in a commit
+made with your own credentials — the bot that opened this branch is not allowed
+to write under `.github/workflows/`.
+
+### Monitoring
+
+`GET /api/metrics` is a Prometheus scrape target served from the API's own
+in-process registry (per-route counters and latency histogram, in-flight and
+5xx counters) — no exporter sidecar. Point a scraper at it, or bring up the
+bundled stack:
+
+```bash
+docker compose -f docker-compose.prod.yml -f deploy/monitoring/docker-compose.observability.yml up -d
+# Prometheus :9090 (alert rules for down / p95 / 5xx / 429 storms)
+# Grafana    :3001 (the "Brief_ API" dashboard is provisioned)
+```
+
+`/ops` in the UI reads the same registry: version and environment, p50/p95/p99,
+error rate, DB pool, rate-limit budget and the busiest/slowest routes.
+
+### Load testing
+
+```bash
+python loadtest/brief_load.py --smoke                    # CI: 2 vendors, 40 requests, SLO gate
+python loadtest/brief_load.py --vendors 25 --duration 60 --p95 800 --error-rate 2
+k6 run loadtest/k6-brief.js                              # same scenario, k6 reporting
+```
+
+Both harnesses drive the read paths a vendor actually uses and exit non-zero
+when p95 or the error rate misses the budget. See `loadtest/README.md`.
 
 ### Local, no Docker
 
@@ -106,8 +141,9 @@ check-in. Password for all four is `Brief-demo-2026`, email
 ### Tests
 
 ```bash
-cd backend && pytest            # boots an embedded Postgres, walks the whole vendor loop (incl. v2.1 flows)
-cd frontend && npm test         # renders every page against a fake API (28 specs)
+cd backend && pytest            # boots an embedded Postgres, walks the whole vendor loop (incl. v2.1 and v2.2 flows)
+cd frontend && npm test         # renders every page against a fake API (37 specs)
+cd backend && alembic upgrade head && alembic check && alembic downgrade base   # migrations replay cleanly
 ```
 
 ## API in one screen
@@ -134,6 +170,13 @@ POST /events/create  /{id}/register  /{id}/status  /{id}/check-in  /{id}/check-i
 GET  /notifications?unread_only=  /notifications/unread-count     POST /notifications/read-all  /notifications/{id}/read
 POST /files/upload (multipart)   GET /files/limits
 POST /pos/connect  /pos/{id}/sync  /pos/{id}/push  /pos/{id}/push-csv  GET /pos/connections  /pos/sync-logs/{id}
+# v2.2
+GET  /analytics/overview  /trend  /counterparties  /categories  /price-position  /network  /counterparty/{handle}  /weights
+GET  /vendors/discover  /vendors/discover/weights
+GET  /vendor-lists/{id}/reviews  /{id}/reviews/mine  /{id}/rating      POST /{id}/reviews  /{id}/reviews/{review_id}/helpful   PUT|DELETE /{id}/reviews/mine
+POST /tools/{id}/book  /tools/{id}/book-warehouse (legacy alias)  /tools/bookings/{id}/status?status=   GET /tools/{id}/availability-calendar  /tools/bookings?role=
+POST /tools/couriers/{courier}/routes  /{courier}/routes/from-shipments   GET /tools/routes?role=  /tools/routes/{id}
+POST /tools/routes/{id}/status?status=  /tools/routes/{id}/stops/{stop_id}/solve       GET /metrics  /ops/status  /ops/slow
 ```
 
 Auth returns an `access_token` (24 h) and a `refresh_token` (30 d); the frontend
@@ -154,25 +197,44 @@ worker). `S3_BUCKET` empty → uploads land in `UPLOAD_DIR` and are served at
 `/static`; set it (plus `S3_ENDPOINT` for R2 / MinIO / Spaces) to use a bucket.
 `RUN_SCHEDULER=false` on the API when you run `python -m app.worker`
 separately. `AUTO_CREATE_TABLES=false` in production — migrations own the schema
-(`alembic upgrade head`; `0002_v21_upgrade` adds everything listed above).
+(`alembic upgrade head`; `0002_v21_upgrade` carries the v2.1 features,
+`0003_v22_marketplace` the reviews, bookings and route-plan tables).
+`METRICS_ENABLED=false` removes the timing middleware entirely; `METRICS_TOKEN`
+gates `/api/metrics` behind `?token=` or a bearer token;
+`SLOW_REQUEST_MS` (1000) is the threshold `/ops/slow` lists against;
+`BOOKING_MAX_DAYS` (365) caps one booking window and
+`ROUTE_DEFAULT_SPEED_KMH` (25) seeds the route ETA.
 
 ## Repository layout
 
 ```
-backend/     app/{models,services,routes,middleware,worker.py}, alembic/versions/{0001_initial,0002_v21_upgrade}.py,
+backend/     app/{models,services,routes,middleware,worker.py}, alembic/versions/{0001_initial,0002_v21_upgrade,0003_v22_marketplace}.py,
              tests/, dev_local.py, seed_demo.py, entrypoint.sh
-frontend/    src/{config,lib,stores,components/{layout,ui,vendor,stock,chat,groups,tools,notifications,forms},pages/*,test}
+             models: bookings.py (tool bookings) · reviews.py (list reviews) · routing.py (route plans & stops)
+             services: analytics_service.py · discovery.py · routing.py · booking_service.py
+             routes: analytics.py · reviews.py · bookings.py · route_planner.py · ops.py
+frontend/    src/{config,lib,stores,components/{layout,ui,vendor,stock,chat,groups,tools,lists,notifications,forms},pages/*,test}
+             pages/analytics/ (trade dashboard) · pages/ops/ (monitoring console)
+             components/tools/{RoutePlanner,BookingPanel}.jsx · components/lists/ReviewPanel.jsx
 pos-extension/  sync_daemon.py, adapters/, Dockerfile
-deploy/      github-deploy.yml (copy to .github/workflows/)
+deploy/      github-deploy.yml (copy to .github/workflows/) · monitoring/ (Prometheus, alerts, Grafana)
+loadtest/    brief_load.py (repo-only harness, CI gate) · k6-brief.js · README.md
 docker-compose.yml  docker-compose.prod.yml  Dockerfile  railway.json  .env.example
 ```
 
-### Not built (named in the v2.1 manifest only)
+## What v2.2 added
 
-Trade analytics dashboard, vendor-list reviews, the discovery/recommendation
-algorithm, courier route optimisation, warehouse calendar / pop-up / hotel
-booking flows, monitoring and load-test harnesses. Each is a manifest line
-without a specification; nothing in the code pretends to provide them.
+Every item below is implemented end to end — model, migration, route, service,
+UI and tests — not just named:
+
+| # | feature | where |
+|---|---|---|
+| 1 | **Trade analytics dashboard** | `pages/analytics/Analytics.jsx`, `routes/analytics.py`, `services/analytics_service.py`, `GET /api/analytics/*` |
+| 2 | **Vendor-list reviews** | `components/lists/ReviewPanel.jsx`, `routes/reviews.py`, `models/reviews.py`, `GET|POST /api/vendor-lists/{id}/reviews` |
+| 3 | **Discovery / recommendation algorithm** | Network → Suggested, `services/discovery.py`, `routes/vendors.py`, `GET /api/vendors/discover(+weights)` |
+| 4 | **Courier route optimisation** | `components/tools/RoutePlanner.jsx`, `services/routing.py`, `routes/route_planner.py`, `POST /api/tools/couriers/{id}/routes` |
+| 5 | **Warehouse calendar / pop-up / hotel flows** | `components/tools/BookingPanel.jsx`, `services/booking_service.py`, `routes/bookings.py`, `POST /api/tools/{id}/book` + `/availability-calendar` |
+| 6 | **Monitoring & load-test harnesses** | `middleware/metrics.py`, `routes/ops.py`, `pages/ops/Ops.jsx`, `deploy/monitoring/`, `loadtest/` |
 
 ## History
 
