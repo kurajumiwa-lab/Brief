@@ -23,3 +23,7 @@ frontend/coverage/
 .DS_Store
 .idea/
 .vscode/
+
+# local uploads (S3_BUCKET unset) and shop-side POS exports
+backend/static/
+pos-data/

@@ -1,0 +1,173 @@
+# Brief_ vendor network — production stack (Directive v2.1 §7).
+#
+#   cp .env.example .env            # set SECRET_KEY, POSTGRES_PASSWORD, DOMAIN, …
+#   docker compose -f docker-compose.prod.yml up -d --build
+#   docker compose -f docker-compose.prod.yml --profile pos up -d pos-daemon      # optional shop-side sync
+#
+# Layout
+#   caddy      :80/:443  automatic HTTPS for $DOMAIN → frontend
+#   frontend   nginx serving the SPA, proxying /api, /static, /docs → backend
+#   backend    FastAPI, 4 uvicorn workers; `alembic upgrade head` runs in the entrypoint
+#   worker     the single scheduler process (POS syncs, hold expiry, event reminders)
+#   db/redis   Postgres 16 + Redis 7 (rate limiter, chat fan-out across workers)
+#   db-backup  nightly pg_dump into the `backups` volume, 14 days retained
+#   pos-daemon (profile `pos`) pushes a CSV export from ./pos-data to a connection
+
+x-backend-env: &backend-env
+  DATABASE_URL: postgresql+asyncpg://brief:${POSTGRES_PASSWORD:-brief}@db:5432/brief_vendors
+  REDIS_URL: redis://redis:6379/0
+  SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY in .env}
+  AUTO_CREATE_TABLES: "false"
+  DEBUG: "false"
+  ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-1440}
+  REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_EXPIRE_DAYS:-30}
+  MAX_LOGIN_ATTEMPTS: ${MAX_LOGIN_ATTEMPTS:-5}
+  LOGIN_LOCKOUT_MINUTES: ${LOGIN_LOCKOUT_MINUTES:-15}
+  RATE_LIMIT_AUTH: ${RATE_LIMIT_AUTH:-20}
+  RATE_LIMIT_API: ${RATE_LIMIT_API:-600}
+  CORS_ORIGINS: ${CORS_ORIGINS:-}
+  POS_SYNC_INTERVAL: ${POS_SYNC_INTERVAL:-300}
+  ALLOWED_POS_SYSTEMS: ${ALLOWED_POS_SYSTEMS:-square,shopify,csv,manual,custom_api}
+  STOCK_LOW_THRESHOLD: ${STOCK_LOW_THRESHOLD:-5}
+  RESERVATION_HOLD_HOURS: ${RESERVATION_HOLD_HOURS:-72}
+  UPLOAD_DIR: /uploads
+  MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-10}
+  S3_BUCKET: ${S3_BUCKET:-}
+  AWS_ACCESS_KEY: ${AWS_ACCESS_KEY:-}
+  AWS_SECRET_KEY: ${AWS_SECRET_KEY:-}
+  AWS_REGION: ${AWS_REGION:-us-east-1}
+  S3_ENDPOINT: ${S3_ENDPOINT:-}
+  S3_PUBLIC_URL: ${S3_PUBLIC_URL:-}
+  S3_PUBLIC_ACL: ${S3_PUBLIC_ACL:-false}
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: brief
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-brief}
+      POSTGRES_DB: brief_vendors
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U brief -d brief_vendors"]
+      interval: 10s
+      timeout: 3s
+      retries: 30
+    # not published: only the compose network reaches Postgres
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 30
+
+  backend:
+    build: ./backend
+    image: ${IMAGE_BACKEND:-brief-backend:latest}
+    restart: unless-stopped
+    environment:
+      <<: *backend-env
+      RUN_SCHEDULER: "false"           # the worker service runs it exactly once
+      RUN_MIGRATIONS: "true"           # `alembic upgrade head` before serving
+      UVICORN_EXTRA: "--workers 4"
+    volumes:
+      - uploads:/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    expose:
+      - "8000"
+
+  worker:
+    image: ${IMAGE_BACKEND:-brief-backend:latest}
+    restart: unless-stopped
+    entrypoint: ["python", "-m", "app.worker"]
+    environment:
+      <<: *backend-env
+    volumes:
+      - uploads:/uploads
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  frontend:
+    build: ./frontend
+    image: ${IMAGE_FRONTEND:-brief-frontend:latest}
+    restart: unless-stopped
+    depends_on:
+      - backend
+    expose:
+      - "80"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    command: >
+      sh -c 'printf "%s {\n  encode gzip\n  reverse_proxy frontend:80\n}\n" "$${DOMAIN:-:80}" > /etc/caddy/Caddyfile
+      && caddy run --config /etc/caddy/Caddyfile --adapter caddyfile'
+    environment:
+      DOMAIN: ${DOMAIN:-}              # e.g. brief.example.com → Let's Encrypt certificate; empty → plain :80
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - frontend
+
+  db-backup:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD:-brief}
+      BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-14}
+      BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:-86400}
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        while true; do
+          f=/backups/brief_vendors-$$(date -u +%Y%m%dT%H%M%SZ).sql.gz
+          if pg_dump -h db -U brief brief_vendors | gzip > "$$f"; then
+            echo "backup written: $$f"
+          else
+            echo "backup FAILED" >&2; rm -f "$$f"
+          fi
+          find /backups -name 'brief_vendors-*.sql.gz' -mtime +$${BACKUP_KEEP_DAYS} -delete
+          sleep $${BACKUP_INTERVAL_SECONDS}
+        done
+    volumes:
+      - backups:/backups
+    depends_on:
+      db:
+        condition: service_healthy
+
+  pos-daemon:
+    profiles: ["pos"]
+    build: ./pos-extension
+    restart: unless-stopped
+    environment:
+      BRIEF_API: http://backend:8000
+      BRIEF_EMAIL: ${POS_DAEMON_EMAIL:-}
+      BRIEF_PASSWORD: ${POS_DAEMON_PASSWORD:-}
+    command: ["--connection", "${POS_DAEMON_CONNECTION:-}", "--adapter", "csv", "--file", "/data/stock.csv", "--interval", "${POS_DAEMON_INTERVAL:-60}"]
+    volumes:
+      - ./pos-data:/data
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  uploads:
+  backups:
+  caddy_data:
+  caddy_config:
