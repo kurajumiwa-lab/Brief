@@ -13,9 +13,11 @@ import socket
 import subprocess
 import sys
 import threading
+import uuid
+from urllib.parse import urlencode
 
 import pytest
-from sqlalchemy import text
+from sqlalchemy import create_engine, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import create_async_engine
 
@@ -113,13 +115,25 @@ def test_probe_accepts_a_password_libpq_cannot_parse():
     reads the `/` in this password as the start of the path ('invalid integer value "ab" for
     connection option "port"'). SQLAlchemy — what alembic and the API use — parses it fine, so
     the old probe reported "never became reachable" for a database that was up.
+
+    Uses a throwaway role so the password is really checked where the server demands one (CI's
+    Postgres service); on the embedded trust-auth server the parse failure alone is what it guards.
     """
     base = make_url(settings.database_url_sync)
-    if "host" not in base.query or base.password:
-        pytest.skip("needs the embedded trust-auth Postgres (unix socket), where any password is accepted")
-    url = f"postgresql://{base.username}:ab/cd+ef=@/{base.database}?host={base.query['host']}"
-    ok, out = _run(url, 5)
-    assert ok, out
+    role = f"slash_{uuid.uuid4().hex[:8]}"
+    admin = create_engine(base, isolation_level="AUTOCOMMIT")
+    with admin.connect() as conn:
+        conn.execute(text(f"CREATE ROLE {role} LOGIN PASSWORD 'ab/cd+ef='"))
+    try:
+        # Built by hand: the "/" must stay unencoded — that is the whole point.
+        port = f":{base.port}" if base.port else ""
+        query = f"?{urlencode(dict(base.query))}" if base.query else ""      # host=<socket dir> for the embedded server
+        ok, out = _run(f"postgresql://{role}:ab/cd+ef=@{base.host or ''}{port}/{base.database}{query}", 5)
+        assert ok, out
+    finally:
+        with admin.connect() as conn:
+            conn.execute(text(f"DROP ROLE {role}"))
+        admin.dispose()
 
 
 def test_a_refused_connection_is_diagnosed_and_the_password_stays_out_of_the_log():
