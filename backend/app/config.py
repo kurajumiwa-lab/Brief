@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     APP_NAME: str = "Brief_ Vendor Network"
-    VERSION: str = "2.0.0"
+    VERSION: str = "2.1.0"
     DESCRIPTION: str = "No consumers. Only vendors."
     DEBUG: bool = False
 
@@ -45,14 +45,24 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "vendor-network-secret-change-in-production"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440  # 24 hours - vendors are busy
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 30
+    # Password rule: PASSWORD_MIN_LENGTH+ chars, one uppercase, one digit (v2.1).
+    PASSWORD_MIN_LENGTH: int = 8
+    # Login lockout: after MAX_LOGIN_ATTEMPTS failures for one account (or from
+    # one client) within LOGIN_LOCKOUT_MINUTES, further attempts get a 429.
+    MAX_LOGIN_ATTEMPTS: int = 5
+    LOGIN_LOCKOUT_MINUTES: int = 15
 
     # Browser clients on another origin. The Vite dev server proxies /api and the
     # production image serves the built frontend itself, so same-origin needs
     # none of these. Comma-separated so it can be set from any host's env UI.
     CORS_ORIGINS: str = "http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000"
 
-    # POS Bridge
+    # POS Bridge + housekeeping scheduler (hold expiry, event reminders).
+    # Multi-worker deploys set RUN_SCHEDULER=false on the API and run
+    # `python -m app.worker` once instead.
     POS_SYNC_INTERVAL: int = 300  # seconds between scheduler passes
+    RUN_SCHEDULER: bool = True
     ALLOWED_POS_SYSTEMS: str = "square,shopify,csv,manual,custom_api"
 
     # Rate limits (requests per minute)
@@ -61,6 +71,26 @@ class Settings(BaseSettings):
 
     # Single-container deploys: serve the built frontend from here if it exists.
     FRONTEND_DIST: str = "../frontend/dist"
+
+    # File storage (spec sheets, CSVs, images) — Directive v2.1 §2.4.
+    # Setting S3_BUCKET switches uploads to any S3-compatible bucket (AWS,
+    # MinIO, Cloudflare R2, DO Spaces — S3_ENDPOINT selects the host).
+    # Otherwise files land under UPLOAD_DIR and are served at /static.
+    S3_BUCKET: str = ""
+    AWS_ACCESS_KEY: str = ""
+    AWS_SECRET_KEY: str = ""
+    AWS_REGION: str = "us-east-1"
+    S3_ENDPOINT: str = ""
+    S3_PUBLIC_URL: str = ""      # CDN / public base URL for keys; optional
+    S3_PUBLIC_ACL: bool = False  # send ACL=public-read (only buckets with ACLs enabled accept it)
+    UPLOAD_DIR: str = "./static"
+    MAX_UPLOAD_MB: int = 10
+
+    # Notifications & holds
+    STOCK_LOW_THRESHOLD: int = 5        # units at or below which a STOCK_LOW alert fires
+    EVENT_REMINDER_HOURS: int = 24
+    RESERVATION_HOLD_HOURS: int = 72    # unconfirmed sourcing requests lapse after this
+    PERFORMANCE_ON_TIME_HOURS: int = 72  # confirm → ship inside this counts as on time
 
     @field_validator("DATABASE_URL")
     @classmethod

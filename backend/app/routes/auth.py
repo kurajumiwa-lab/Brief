@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime, timedelta
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -14,12 +14,34 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.database import get_db
 from app.models.vendor import Vendor, VendorProfile, VendorRole
+from app.services import login_guard
 
 router = APIRouter()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
 HANDLE_RE = re.compile(r"^[a-z0-9_]{3,100}$")
+PASSWORD_RULE = "Password must be at least {n} characters with one uppercase letter and one number"
+
+
+def validate_password(password: str) -> str:
+    """Directive v2.1 §1.2: 8+ characters, one uppercase letter, one digit.
+    bcrypt reads at most 72 bytes, so the upper bound stays."""
+    rule = PASSWORD_RULE.format(n=settings.PASSWORD_MIN_LENGTH)
+    if len(password) < settings.PASSWORD_MIN_LENGTH:
+        raise HTTPException(400, rule)
+    if len(password.encode("utf-8")) > 72:
+        raise HTTPException(400, "Password must be at most 72 characters")
+    if not re.search(r"[A-Z]", password) or not re.search(r"[0-9]", password):
+        raise HTTPException(400, rule)
+    return password
+
+
+def client_address(request: Optional[Request]) -> str:
+    if request is None:
+        return "unknown"
+    forwarded = request.headers.get("x-forwarded-for", "").split(",")[0].strip()
+    return forwarded or (request.client.host if request.client else "unknown")
 
 
 def normalize_handle(raw: str) -> str:
@@ -34,7 +56,7 @@ class VendorRegister(BaseModel):
     vendor_handle: str
     email: EmailStr
     phone: Optional[str] = None
-    password: str = Field(min_length=8, max_length=72)  # bcrypt's input limit
+    password: str = Field(min_length=1, max_length=72)  # rule enforced by validate_password()
     business_categories: list[str] = []
     business_description: Optional[str] = None
     physical_location: Optional[str] = None
@@ -50,22 +72,51 @@ class Token(BaseModel):
     token_type: str
     vendor_id: str
     vendor_handle: str
+    refresh_token: Optional[str] = None
+    expires_in: int = settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60  # seconds
+
+
+class RefreshRequest(BaseModel):
+    refresh_token: str
 
 
 def create_access_token(data: dict) -> str:
     to_encode = data.copy()
     expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode.update({"exp": expire})
+    to_encode.update({"exp": expire, "type": "access"})
     return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
 
-def vendor_id_from_token(token: str) -> Optional[uuid.UUID]:
-    """Shared by the HTTP dependency and the chat WebSocket."""
+def create_refresh_token(data: dict) -> str:
+    """Long-lived, only good for /auth/refresh. Carries a `pwd` fingerprint so
+    changing the password invalidates refresh tokens issued before it."""
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+    to_encode.update({"exp": expire, "type": "refresh", "jti": uuid.uuid4().hex})
+    return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+
+
+def _decode(token: str, expected_type: str) -> Optional[dict]:
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+    except JWTError:
+        return None
+    # Tokens minted before v2.1 carry no type; treat them as access tokens.
+    if payload.get("type", "access") != expected_type:
+        return None
+    return payload
+
+
+def vendor_id_from_token(token: str) -> Optional[uuid.UUID]:
+    """Shared by the HTTP dependency and the chat WebSocket. Refresh tokens
+    are refused here: they only open /auth/refresh."""
+    payload = _decode(token, "access")
+    if not payload:
+        return None
+    try:
         sub = payload.get("sub")
         return uuid.UUID(sub) if sub else None
-    except (JWTError, ValueError):
+    except ValueError:
         return None
 
 
@@ -94,9 +145,14 @@ async def get_current_vendor(
     return vendor
 
 
+def _pwd_fingerprint(vendor: Vendor) -> str:
+    return (vendor.password_hash or "")[-12:]
+
+
 def _token_for(vendor: Vendor) -> Token:
     return Token(
         access_token=create_access_token({"sub": str(vendor.id)}),
+        refresh_token=create_refresh_token({"sub": str(vendor.id), "pwd": _pwd_fingerprint(vendor)}),
         token_type="bearer",
         vendor_id=str(vendor.id),
         vendor_handle=vendor.vendor_handle,
@@ -108,6 +164,7 @@ async def register_vendor(data: VendorRegister, db: AsyncSession = Depends(get_d
     """Register as a vendor. There is no consumer registration. You ARE a vendor."""
     handle = normalize_handle(data.vendor_handle)
     email = data.email.lower()
+    validate_password(data.password)
 
     existing = (await db.execute(
         select(Vendor).where((Vendor.email == email) | (Vendor.vendor_handle == handle))
@@ -135,14 +192,66 @@ async def register_vendor(data: VendorRegister, db: AsyncSession = Depends(get_d
 
 
 @router.post("/login", response_model=Token)
-async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_db)):
-    """Log in with email or @handle."""
+async def login(
+    request: Request,
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: AsyncSession = Depends(get_db),
+):
+    """Log in with email or @handle. Five failures lock the account for
+    LOGIN_LOCKOUT_MINUTES (429 with Retry-After)."""
     username = form_data.username.strip().lower().lstrip("@")
+    client = client_address(request)
+    await login_guard.assert_not_locked(username, client)
+
     vendor = (await db.execute(
         select(Vendor).where((Vendor.email == username) | (Vendor.vendor_handle == username))
     )).scalar_one_or_none()
 
     if not vendor or not pwd_context.verify(form_data.password, vendor.password_hash):
+        remaining = await login_guard.record_failure(username, client)
+        if remaining <= 0:
+            raise HTTPException(
+                429, f"Too many failed login attempts. Try again in {settings.LOGIN_LOCKOUT_MINUTES} minutes.",
+                headers={"Retry-After": str(settings.LOGIN_LOCKOUT_MINUTES * 60)},
+            )
         raise HTTPException(401, "Invalid credentials")
 
+    await login_guard.clear(username, client)
+    return _token_for(vendor)
+
+
+@router.post("/refresh", response_model=Token)
+async def refresh(data: RefreshRequest, db: AsyncSession = Depends(get_db)):
+    """Trade a refresh token for a fresh access token (and a rotated refresh token)."""
+    payload = _decode(data.refresh_token, "refresh")
+    if not payload:
+        raise HTTPException(401, "Invalid or expired refresh token")
+    try:
+        vendor_id = uuid.UUID(payload.get("sub") or "")
+    except ValueError:
+        raise HTTPException(401, "Invalid or expired refresh token")
+
+    vendor = await db.get(Vendor, vendor_id)
+    if vendor is None or payload.get("pwd") != _pwd_fingerprint(vendor):
+        raise HTTPException(401, "Refresh token no longer valid; log in again")
+    return _token_for(vendor)
+
+
+class PasswordChange(BaseModel):
+    current_password: str
+    new_password: str
+
+
+@router.post("/change-password", response_model=Token)
+async def change_password(
+    data: PasswordChange,
+    vendor: Vendor = Depends(get_current_vendor),
+    db: AsyncSession = Depends(get_db),
+):
+    """Rotate the password; every refresh token issued before this stops working."""
+    if not pwd_context.verify(data.current_password, vendor.password_hash):
+        raise HTTPException(400, "Current password is incorrect")
+    validate_password(data.new_password)
+    vendor.password_hash = pwd_context.hash(data.new_password)
+    await db.commit()
     return _token_for(vendor)

@@ -36,6 +36,13 @@ class _MemoryBackend:
                 del self._hits[k]
         return c
 
+    async def peek(self, key: str, window: int) -> int:
+        w, c = self._hits.get(key, (0, 0))
+        return c if w == window else 0
+
+    async def reset(self, key: str, window: int) -> None:
+        self._hits.pop(key, None)
+
 
 class _RedisBackend:
     def __init__(self, client):
@@ -45,9 +52,16 @@ class _RedisBackend:
         rkey = f"brief:rl:{key}:{window}"
         pipe = self._r.pipeline()
         pipe.incr(rkey)
-        pipe.expire(rkey, 90)
+        pipe.expire(rkey, max(90, settings.LOGIN_LOCKOUT_MINUTES * 60 + 30))
         count, _ = await pipe.execute()
         return int(count)
+
+    async def peek(self, key: str, window: int) -> int:
+        value = await self._r.get(f"brief:rl:{key}:{window}")
+        return int(value or 0)
+
+    async def reset(self, key: str, window: int) -> None:
+        await self._r.delete(f"brief:rl:{key}:{window}")
 
 
 async def make_backend():
@@ -72,6 +86,11 @@ _holder: dict = {"backend": _MemoryBackend()}
 
 async def configure_backend() -> None:
     _holder["backend"] = await make_backend()
+
+
+def current_backend():
+    """The shared counter store — also used by the login lockout."""
+    return _holder["backend"]
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
