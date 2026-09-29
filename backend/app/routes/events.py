@@ -17,7 +17,7 @@ from app.services import patron_service
 
 router = APIRouter()
 
-EVENT_TYPES = {"trade_show", "sourcing_trip", "popup_market", "networking", "workshop"}
+EVENT_TYPES = {"market_day", "sourcing_trip", "trade_fair", "popup_market", "workshop", "networking", "auction"}
 
 
 class EventCreate(BaseModel):

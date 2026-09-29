@@ -73,7 +73,8 @@ export const TOOL_CATEGORIES = [
   { id: 'equipment', label: 'Equipment' },
   { id: 'packaging', label: 'Packaging' },
 ]
-export const EVENT_TYPES = ['market_day', 'sourcing_trip', 'trade_fair', 'workshop', 'popup', 'meetup', 'auction']
+// Must match EVENT_TYPES in backend/app/routes/events.py
+export const EVENT_TYPES = ['market_day', 'sourcing_trip', 'trade_fair', 'popup_market', 'workshop', 'networking', 'auction']
 export const POS_TYPES = [
   { id: 'square', label: 'Square', mode: 'pull' },
   { id: 'shopify', label: 'Shopify', mode: 'pull' },
