@@ -85,6 +85,9 @@ export const vendorAPI = {
   disconnect: (id) => api.delete(`/vendors/connect/${id}`),
   connections: () => api.get("/vendors/connections"),
   suggested: (limit = 6) => api.get("/vendors/suggested", { params: { limit } }),
+  /** Discovery algorithm (v2.2): ranked vendors with the factors behind each score. */
+  discover: (params) => api.get("/vendors/discover", { params: noEmpty(params) }), // limit, category, location, group_id, min_score, include_connected
+  discoverWeights: () => api.get("/vendors/discover/weights"),
   graph: () => api.get("/vendors/graph"),
   stats: () => api.get("/vendors/stats"),
   becomePatron: () => api.post("/vendors/become-patron"),
@@ -144,6 +147,13 @@ export const listAPI = {
   approve: (id, vendorId) => api.post(`/vendor-lists/${id}/approve/${vendorId}`),
   reject: (id, vendorId) => api.post(`/vendor-lists/${id}/reject/${vendorId}`),
   setOpen: (id, isOpen) => api.post(`/vendor-lists/${id}/close`, null, { params: { is_open: isOpen } }),
+  // reviews (v2.2)
+  reviews: (id, params) => api.get(`/vendor-lists/${id}/reviews`, { params: noEmpty(params) }), // skip, limit
+  myReview: (id) => api.get(`/vendor-lists/${id}/reviews/mine`),
+  createReview: (id, data) => api.post(`/vendor-lists/${id}/reviews`, data), // { rating, title, body }
+  updateReview: (id, data) => api.put(`/vendor-lists/${id}/reviews/mine`, data),
+  deleteReview: (id) => api.delete(`/vendor-lists/${id}/reviews/mine`),
+  markHelpful: (id, reviewId) => api.post(`/vendor-lists/${id}/reviews/${reviewId}/helpful`),
 };
 
 // ── Chat ───────────────────────────────────────────────────────────────────
@@ -171,6 +181,22 @@ export const toolAPI = {
   couriers: (params) => api.get("/tools/couriers", { params: noEmpty(params) }), // area, service_type
   registerCourier: (data) => api.post("/tools/courier/register", data),
   bookWarehouse: (id, data) => api.post(`/tools/${id}/book-warehouse`, data), // { start_date, end_date, space_allocated }
+  // dated bookings & calendars (v2.2)
+  book: (id, data) => api.post(`/tools/${id}/book`, data), // { start_date, end_date, quantity, unit, details, notes }
+  calendar: (id, params) => api.get(`/tools/${id}/availability-calendar`, { params: noEmpty(params) }), // from, to, days
+  bookings: (role = "all") => api.get("/tools/bookings", { params: { role } }), // host | booker | all
+  booking: (id) => api.get(`/tools/bookings/${id}`),
+  setBookingStatus: (id, status, note) =>
+    api.post(`/tools/bookings/${id}/status`, null, { params: noEmpty({ status, note }) }),
+  // route optimisation (v2.2)
+  planRoute: (courierId, data) => api.post(`/tools/couriers/${courierId}/routes`, data),
+  planRouteFromShipments: (courierId, params) =>
+    api.post(`/tools/couriers/${courierId}/routes/from-shipments`, null, { params: noEmpty(params) }),
+  routes: (params) => api.get("/tools/routes", { params: noEmpty(params) }), // role, status
+  route: (id) => api.get(`/tools/routes/${id}`),
+  setRouteStatus: (id, status) => api.post(`/tools/routes/${id}/status`, null, { params: { status } }),
+  solveStop: (routeId, stopId, solved = true) =>
+    api.post(`/tools/routes/${routeId}/stops/${stopId}/solve`, null, { params: { solved } }),
   // courier shipments (v2.1)
   shipments: (role) => api.get("/tools/shipments", { params: noEmpty({ role }) }), // sent | received | courier
   bookShipment: (courierId, data) => api.post(`/tools/couriers/${courierId}/shipments`, data), // { receiver_vendor_id*, origin, destination, weight_kg, cost, notes, movement_id }
@@ -235,6 +261,26 @@ export const posAPI = {
     return api.post(`/pos/${id}/push-csv`, form, { headers: { "Content-Type": "multipart/form-data" } });
   },
   syncLogs: (id) => api.get(`/pos/sync-logs/${id}`),
+};
+
+// ── Trade analytics (v2.2) ─────────────────────────────────────────────────
+export const analyticsAPI = {
+  overview: (days = 90) => api.get("/analytics/overview", { params: { days } }),
+  trend: (days = 90) => api.get("/analytics/trend", { params: { days } }),
+  counterparties: (params) => api.get("/analytics/counterparties", { params: noEmpty(params) }), // days, limit
+  categories: (days = 90) => api.get("/analytics/categories", { params: { days } }),
+  pricePosition: (days = 90) => api.get("/analytics/price-position", { params: { days } }),
+  network: (days = 30) => api.get("/analytics/network", { params: { days } }),
+  counterparty: (handle, days = 180) => api.get(`/analytics/counterparty/${encodeURIComponent(handle)}`, { params: { days } }),
+  weights: () => api.get("/analytics/weights"),
+};
+
+// ── Ops / monitoring (v2.2) ────────────────────────────────────────────────
+export const opsAPI = {
+  status: () => api.get("/ops/status"),
+  slow: (thresholdMs) => api.get("/ops/slow", { params: noEmpty({ threshold_ms: thresholdMs }) }),
+  /** /metrics answers Prometheus text, not JSON — ask axios for the raw string. */
+  metrics: () => api.get("/metrics", { responseType: "text", transformResponse: [(d) => d] }),
 };
 
 export default api;

@@ -1,0 +1,46 @@
+# Observability stack for Brief_ (Directive v2.1 §6.2).
+#
+#   docker compose -f docker-compose.prod.yml \
+#                  -f deploy/monitoring/docker-compose.observability.yml up -d
+#
+# Scrapes the API's own /api/metrics registry — a scrape target and a curl are
+# enough; there is no exporter container. Grafana comes up with the "Brief_ API"
+# dashboard pre-provisioned and Prometheus wired as its datasource.
+#
+# If the API runs with METRICS_TOKEN set, add the token to prometheus.yml's
+# metrics_path: `metrics_path: /api/metrics?token=...`.
+services:
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=15d
+      - --web.enable-lifecycle
+    volumes:
+      - ./deploy/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./deploy/monitoring/alert-rules.yml:/etc/prometheus/alert-rules.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-brief}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/grafana-dashboard.json
+    volumes:
+      - ./deploy/monitoring/grafana-datasource.yml:/etc/grafana/provisioning/datasources/prometheus.yml:ro
+      - ./deploy/monitoring/grafana-dashboards.yml:/etc/grafana/provisioning/dashboards/brief.yml:ro
+      - ./deploy/monitoring/grafana-dashboard.json:/var/lib/grafana/dashboards/grafana-dashboard.json:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+volumes:
+  prometheus-data:
+  grafana-data:

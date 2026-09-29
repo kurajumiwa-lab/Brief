@@ -6,7 +6,9 @@
 #
 #   mkdir -p .github/workflows && cp deploy/github-deploy.yml .github/workflows/deploy.yml
 #
-#   push / PR → main   : backend tests (Postgres service), frontend tests + build
+#   push / PR → main   : backend tests (Postgres service, migrations applied and
+#                        checked), a load-test smoke run against a live API,
+#                        frontend tests + build
 #   push → main        : build & push both images to GHCR, then SSH to the host and
 #                        `docker compose -f docker-compose.prod.yml up -d` (migrations run in the entrypoint)
 #
@@ -69,6 +71,60 @@ jobs:
         working-directory: backend
         run: pytest -q
 
+  loadtest-smoke:
+    runs-on: ubuntu-latest
+    needs: backend-tests
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: brief
+          POSTGRES_PASSWORD: brief
+          POSTGRES_DB: brief_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U brief -d brief_test"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+    env:
+      DATABASE_URL: postgresql+asyncpg://brief:brief@localhost:5432/brief_test
+      REDIS_URL: ""
+      SECRET_KEY: ci-only-secret
+      AUTO_CREATE_TABLES: "false"
+      RUN_SCHEDULER: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/requirements*.txt
+      - name: Install
+        working-directory: backend
+        run: pip install -r requirements.txt -r requirements-dev.txt
+      - name: Migrate
+        working-directory: backend
+        run: alembic upgrade head
+      - name: Start the API
+        working-directory: backend
+        run: |
+          nohup python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 > /tmp/brief-api.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:8000/api/health && break
+            sleep 1
+          done
+      - name: Load smoke (harness + SLO gate)
+        run: python loadtest/brief_load.py --smoke --requests 40 --json loadtest-smoke.json
+      - name: Upload the load summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: loadtest-smoke
+          path: loadtest-smoke.json
+          if-no-files-found: ignore
+      - name: API log on failure
+        if: failure()
+        run: tail -100 /tmp/brief-api.log
+
   frontend-tests:
     runs-on: ubuntu-latest
     steps:
@@ -90,7 +146,7 @@ jobs:
 
   build-images:
     if: github.event_name != 'pull_request'
-    needs: [backend-tests, frontend-tests]
+    needs: [backend-tests, loadtest-smoke, frontend-tests]
     runs-on: ubuntu-latest
     permissions:
       contents: read

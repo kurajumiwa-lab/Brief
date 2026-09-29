@@ -37,6 +37,7 @@ class NotificationType(str, PyEnum):
     LIST_REGISTRATION = "list_registration"  # A vendor registered for your list
     LIST_APPROVED = "list_approved"          # Approved for a vendor list
     LIST_REJECTED = "list_rejected"          # Rejected from a vendor list
+    LIST_REVIEW = "list_review"              # A member reviewed a list you run
     COLLECTIVE_UPDATE = "collective_update"  # Group collective sourcing progress
     EVENT_REGISTRATION = "event_registration"  # A vendor registered for your event
     EVENT_REMINDER = "event_reminder"        # Upcoming event
@@ -47,6 +48,10 @@ class NotificationType(str, PyEnum):
     PARASITISM_MILESTONE = "parasitism"      # Mutual trade milestone
     PATRON_PROMOTION = "patron_promotion"    # Tier upgrade
     SHIPMENT_UPDATE = "shipment_update"      # Courier shipment status
+    # Tools: bookings & routing (v2.2)
+    BOOKING_REQUEST = "booking_request"      # A vendor wants your space / rooms / pitch
+    BOOKING_UPDATE = "booking_update"        # Your booking was confirmed, declined or cancelled
+    ROUTE_UPDATE = "route_update"            # A courier planned a run carrying your parcel
     SYSTEM = "system"                        # Platform announcements
 
 

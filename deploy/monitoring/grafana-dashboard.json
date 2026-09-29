@@ -1,0 +1,115 @@
+{
+  "title": "Brief_ API",
+  "uid": "brief-api",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "tags": ["brief", "v2.2"],
+  "timezone": "browser",
+  "time": { "from": "now-3h", "to": "now" },
+  "refresh": "30s",
+  "templating": {
+    "list": [
+      {
+        "name": "path",
+        "label": "Route",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "query": { "query": "label_values(brief_request_duration_ms_count, path)", "refId": "A" },
+        "includeAll": true,
+        "multi": true,
+        "current": { "text": "All", "value": "$__all" }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Up",
+      "gridPos": { "h": 4, "w": 3, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "brief_up{job=\"brief-api\"}", "refId": "A" }],
+      "fieldConfig": { "defaults": { "thresholds": { "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] } }, "overrides": [] }
+    },
+    {
+      "type": "stat",
+      "title": "Uptime",
+      "gridPos": { "h": 4, "w": 4, "x": 3, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "brief_uptime_seconds{job=\"brief-api\"}", "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] }
+    },
+    {
+      "type": "stat",
+      "title": "5xx / s",
+      "gridPos": { "h": 4, "w": 4, "x": 7, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "rate(brief_errors_total{job=\"brief-api\"}[5m])", "refId": "A" }],
+      "fieldConfig": { "defaults": { "thresholds": { "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 0.05 }] } }, "overrides": [] }
+    },
+    {
+      "type": "stat",
+      "title": "Rate limited (429 / s)",
+      "gridPos": { "h": 4, "w": 4, "x": 11, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "sum(rate(brief_requests_total{status=\"429\"}[5m]))", "refId": "A" }]
+    },
+    {
+      "type": "stat",
+      "title": "In flight",
+      "gridPos": { "h": 4, "w": 3, "x": 15, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "brief_requests_in_flight{job=\"brief-api\"}", "refId": "A" }]
+    },
+    {
+      "type": "timeseries",
+      "title": "Requests / s by route",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "sum by (path) (rate(brief_requests_total{job=\"brief-api\", path=~\"$path\"}[5m]))", "legendFormat": "{{path}}", "refId": "A" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] }
+    },
+    {
+      "type": "timeseries",
+      "title": "Latency percentiles",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "histogram_quantile(0.95, sum by (le, path) (rate(brief_request_duration_ms_bucket{job=\"brief-api\", path=~\"$path\"}[5m])))", "legendFormat": "p95 {{path}}", "refId": "A" },
+        { "expr": "histogram_quantile(0.50, sum by (le) (rate(brief_request_duration_ms_bucket{job=\"brief-api\", path=~\"$path\"}[5m])))", "legendFormat": "p50 all", "refId": "B" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "ms" }, "overrides": [] }
+    },
+    {
+      "type": "timeseries",
+      "title": "Slowest routes (p95)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "topk(8, histogram_quantile(0.95, sum by (le, path) (rate(brief_request_duration_ms_bucket{job=\"brief-api\"}[10m]))))", "legendFormat": "{{path}}", "refId": "A" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "ms" }, "overrides": [] }
+    },
+    {
+      "type": "timeseries",
+      "title": "Status mix",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "sum by (status) (rate(brief_requests_total{job=\"brief-api\"}[5m]))", "legendFormat": "{{status}}", "refId": "A" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Request volume (load-test window)",
+      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 20 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "sum(rate(brief_requests_total{job=\"brief-api\"}[1m]))", "legendFormat": "all routes", "refId": "A" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] }
+    }
+  ]
+}

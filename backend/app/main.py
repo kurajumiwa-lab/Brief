@@ -11,11 +11,12 @@ from sqlalchemy import text
 
 from app.config import settings
 from app.database import async_session, engine, init_db
+from app.middleware.metrics import MetricsMiddleware
 from app.middleware.rate_limiter import RateLimitMiddleware, configure_backend
 from app.middleware.vendor_only import VendorOnlyMiddleware
 from app.routes import (
-    auth, chat, collective, events, files, groups, notifications, pos_bridge, stock, tools, vendor_lists,
-    vendors, verification,
+    analytics, auth, bookings, chat, collective, events, files, groups, notifications, ops as ops_routes,
+    pos_bridge, reviews, route_planner, stock, tools, vendor_lists, vendors, verification,
 )
 from app.services import pos_sync
 from app.services.storage import local_root
@@ -60,7 +61,9 @@ app = FastAPI(
 )
 
 # Middleware order: the last one added is the outermost, so CORS answers
-# preflights first, then the rate limiter, then the vendor-only gate.
+# preflights first, then the rate limiter, then the vendor-only gate. Metrics
+# wraps everything (added first = innermost) so it times what the handlers spend.
+app.add_middleware(MetricsMiddleware)
 app.add_middleware(VendorOnlyMiddleware)
 app.add_middleware(RateLimitMiddleware)
 app.add_middleware(
@@ -86,6 +89,12 @@ app.include_router(notifications.router, prefix="/api/notifications", tags=["Not
 app.include_router(files.router, prefix="/api/files", tags=["Files"])
 app.include_router(verification.router, prefix="/api/stock", tags=["Stock Verification"])
 app.include_router(collective.router, prefix="/api/collective", tags=["Collective Sourcing"])
+# v2.2 — analytics, list reviews, tool bookings & calendars, courier routing, ops
+app.include_router(analytics.router, prefix="/api/analytics", tags=["Trade Analytics"])
+app.include_router(reviews.router, prefix="/api/vendor-lists", tags=["Vendor List Reviews"])
+app.include_router(bookings.router, prefix="/api/tools", tags=["Tool Bookings & Calendars"])
+app.include_router(route_planner.router, prefix="/api/tools", tags=["Courier Routing"])
+app.include_router(ops_routes.router, prefix="/api", tags=["Ops"])
 
 # Local file storage (spec sheets, images). Public by unguessable key; S3 deploys skip this.
 _static_root = local_root()
@@ -114,6 +123,9 @@ async def api_root():
             "notifications": "/api/notifications",
             "files": "/api/files",
             "collective": "/api/collective",
+            "analytics": "/api/analytics",
+            "ops": "/api/ops/status",
+            "metrics": "/api/metrics",
             "docs": "/docs",
         },
     }

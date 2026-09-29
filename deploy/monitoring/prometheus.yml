@@ -1,0 +1,28 @@
+# Prometheus scrape config for Brief_ (Directive v2.1 §6.2).
+#
+#   docker compose -f deploy/monitoring/docker-compose.observability.yml up -d
+#
+# The API exposes /api/metrics in the Prometheus text format from its own
+# in-process registry — no sidecar exporter, no extra dependency. When
+# METRICS_TOKEN is set, append `?token=...` to the metrics_path below (or use
+# the `authorization` block with a bearer token).
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    app: brief
+
+rule_files:
+  - alert-rules.yml
+
+scrape_configs:
+  - job_name: brief-api
+    metrics_path: /api/metrics
+    static_configs:
+      - targets: ["backend:8000"]        # compose service name; use host:port elsewhere
+        labels:
+          env: production
+
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]

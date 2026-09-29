@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.models.vendor import Vendor, VendorProfile, VendorRole, vendor_connections
 from app.routes.auth import get_current_vendor
-from app.services import stock_engine, patron_service, vendor_network
+from app.services import discovery, patron_service, stock_engine, vendor_network
 
 router = APIRouter()
 
@@ -207,8 +207,44 @@ async def suggested_vendors(
     vendor: Vendor = Depends(get_current_vendor),
     db: AsyncSession = Depends(get_db),
 ):
-    """Vendors whose business complements yours."""
-    return await vendor_network.suggest_vendors(db, vendor, limit)
+    """Vendors whose business complements yours, scored and explained (§4.5).
+
+    Delegates to the discovery algorithm, so the dashboard, the network page
+    and `/discover` all rank with the same weights.
+    """
+    return await discovery.discover(db, vendor, limit=limit)
+
+
+@router.get("/discover")
+async def discover_vendors(
+    limit: int = Query(12, ge=1, le=50),
+    category: Optional[str] = None,
+    location: Optional[str] = None,
+    role: Optional[VendorRole] = None,
+    min_score: float = Query(0, ge=0, le=100),
+    include_connected: bool = False,
+    explain: bool = True,
+    vendor: Vendor = Depends(get_current_vendor),
+    db: AsyncSession = Depends(get_db),
+):
+    """The discovery algorithm (v2.1 §4.5): who to meet next, and why.
+
+    Every candidate carries its 0-100 score, the six weighted factors behind it
+    and the human reasons a vendor actually reads. Connected vendors are left
+    out unless `include_connected=true`.
+    """
+    return await discovery.discover(
+        db, vendor, limit=limit, category=category, location=location,
+        role=role.value if role else None, min_score=min_score,
+        include_connected=include_connected, explain=explain,
+    )
+
+
+@router.get("/discover/weights")
+async def discovery_weights(vendor: Vendor = Depends(get_current_vendor)):
+    """The weights behind the score, so the ranking is auditable, not mystical."""
+    return {"factors": discovery.factor_weights(),
+            "notes": "Each factor returns 0..weight; the total is capped at 100."}
 
 
 @router.get("/graph")

@@ -12,6 +12,8 @@ import ChatPage from "@/pages/chat/ChatPage";
 import ToolsPage from "@/pages/tools/ToolsPage";
 import EventsPage from "@/pages/events/EventsPage";
 import POSBridge from "@/pages/pos/POSBridge";
+import Analytics from "@/pages/analytics/Analytics";
+import Ops from "@/pages/ops/Ops";
 import VendorProfile from "@/pages/vendor/VendorProfile";
 import { useAuthStore } from "@/stores/authStore";
 
@@ -46,12 +48,14 @@ export default function App() {
         <Route path="/" element={<Dashboard />} />
         <Route path="/stock" element={<StockRoom />} />
         <Route path="/network" element={<Network />} />
+        <Route path="/analytics" element={<Analytics />} />
         <Route path="/lists" element={<VendorLists />} />
         <Route path="/groups" element={<Groups />} />
         <Route path="/chat" element={<ChatPage />} />
         <Route path="/tools" element={<ToolsPage />} />
         <Route path="/events" element={<EventsPage />} />
         <Route path="/pos" element={<POSBridge />} />
+        <Route path="/ops" element={<Ops />} />
         <Route path="/@:handle" element={<VendorProfile />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
