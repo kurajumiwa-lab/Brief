@@ -4,6 +4,34 @@ from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+def _rename_query_option(url: str, old: str, new: str) -> str:
+    """Rename one `?key=value` option, leaving every other byte of the URL alone.
+
+    libpq (psycopg2) spells the TLS option `sslmode`, asyncpg spells it `ssl`, and
+    SQLAlchemy forwards query options to the driver verbatim — so the wrong
+    spelling is rejected (`invalid connection option "ssl"` / `unexpected keyword
+    argument 'sslmode'`). Hosts hand out the libpq spelling; people copy the asyncpg
+    one from SQLAlchemy docs. Accepting both means one DATABASE_URL serves both
+    drivers. If the target spelling is already present it wins and `old` is dropped.
+    """
+    # rpartition: a `?` inside the password must not be mistaken for the query start.
+    base, sep, query = url.rpartition("?")
+    if not sep:
+        return url
+    pairs = query.split("&")
+    keys = [pair.partition("=")[0] for pair in pairs]
+    if old not in keys:
+        return url
+    kept = []
+    for pair, key in zip(pairs, keys):
+        if key == old:
+            if new in keys:
+                continue
+            pair = new + pair[len(old):]
+        kept.append(pair)
+    return base + "?" + "&".join(kept)
+
+
 def _to_async_url(url: str) -> str:
     """Accept the URL shapes hosts hand out (`postgres://`, `postgresql://`)
     and normalise to the asyncpg driver the app uses."""
@@ -11,7 +39,7 @@ def _to_async_url(url: str) -> str:
         url = "postgresql://" + url[len("postgres://"):]
     if url.startswith("postgresql://"):
         url = "postgresql+asyncpg://" + url[len("postgresql://"):]
-    return url
+    return _rename_query_option(url, "sslmode", "ssl")
 
 
 def _to_sync_url(url: str) -> str:
@@ -20,7 +48,7 @@ def _to_sync_url(url: str) -> str:
         url = "postgresql://" + url[len("postgres://"):]
     if url.startswith("postgresql+asyncpg://"):
         url = "postgresql://" + url[len("postgresql+asyncpg://"):]
-    return url
+    return _rename_query_option(url, "ssl", "sslmode")
 
 
 class Settings(BaseSettings):
@@ -37,6 +65,9 @@ class Settings(BaseSettings):
     DATABASE_URL_SYNC: Optional[str] = None
     # Dev convenience: create tables at boot. Production runs `alembic upgrade head`.
     AUTO_CREATE_TABLES: bool = True
+    # entrypoint.sh keeps retrying this many seconds for Postgres to accept connections
+    # before it gives up with "database never became reachable" (0 = one attempt).
+    DB_WAIT_TIMEOUT: int = 60
 
     # Redis for the rate limiter (optional; falls back to in-process memory).
     REDIS_URL: str = "redis://redis:6379/0"

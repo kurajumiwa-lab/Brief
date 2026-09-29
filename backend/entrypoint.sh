@@ -2,23 +2,9 @@
 # Wait for Postgres, apply migrations, serve.
 set -e
 
-python - <<'PY'
-import os, sys, time
-import psycopg2
-from app.config import settings
-url = settings.database_url_sync
-for attempt in range(60):
-    try:
-        psycopg2.connect(url).close()
-        break
-    except Exception as exc:
-        if attempt == 0:
-            print(f"waiting for database ... ({type(exc).__name__})", file=sys.stderr)
-        time.sleep(1)
-else:
-    print("database never became reachable", file=sys.stderr)
-    sys.exit(1)
-PY
+# Exits non-zero (set -e then stops the container) if Postgres never answers; the log
+# says why and what to change. DB_WAIT_TIMEOUT=<seconds> changes the 60 s budget.
+python -m app.wait_for_db
 
 if [ "${RUN_MIGRATIONS:-true}" = "true" ]; then
   alembic upgrade head
