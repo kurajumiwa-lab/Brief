@@ -1,27 +1,22 @@
-# Local secrets (keep the checked-in templates)
+# python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.pgdata/
+*.egg-info/
+
+# node
+node_modules/
+frontend/dist/
+frontend/coverage/
+.vite/
+
+# env & local
 .env
 .env.*
 !.env.example
-
-# Dependencies (installed per environment, lockfiles are the committed source of truth)
-node_modules/
-preview/node_modules
-tc/node_modules
-
-# Build output (rebuilt on deploy)
-preview/dist/
-
-# Runtime data store + backups (never commit live data)
-server/data/
-
-# Disposable tests, browser artifacts and local preview data
-.cache/
-test-results/
-playwright-report/
-
-# Isolated local preview records (not production data or test fixtures)
-.preview-data/
-.tmp.*
-
-# Accidental runtime store path; never distribute credential-bearing snapshots
-undefined/
+*.log
+.DS_Store
+.idea/
+.vscode/
