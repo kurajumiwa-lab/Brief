@@ -51,6 +51,19 @@ async def client():
             yield c
 
 
+@pytest.fixture(autouse=True)
+def _fresh_rate_limits():
+    """Every test starts with an empty per-IP budget (the suite makes far more
+    auth calls than a browser would). Login lockout counters live in the same
+    store, so each test also starts unlocked."""
+    from app.middleware.rate_limiter import current_backend
+
+    backend = current_backend()
+    if hasattr(backend, "_hits"):
+        backend._hits.clear()
+    yield
+
+
 def pytest_sessionfinish(session, exitstatus):
     global _server
     if _server is not None:

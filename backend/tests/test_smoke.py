@@ -24,7 +24,7 @@ async def _register(client, handle: str, categories: list[str]) -> dict:
         "business_name": handle.replace("_", " ").title(),
         "vendor_handle": f"{handle}_{suffix}",
         "email": f"{handle}_{suffix}@example.com",
-        "password": "correct horse battery",
+        "password": "Correct-horse-9",
         "business_categories": categories,
         "physical_location": "Nairobi",
     })
@@ -53,7 +53,7 @@ async def test_full_loop(client):
     s, b = _auth(supplier["access_token"]), _auth(buyer["access_token"])
 
     # Login by handle works too.
-    r = await client.post("/api/auth/login", data={"username": supplier["vendor_handle"], "password": "correct horse battery"})
+    r = await client.post("/api/auth/login", data={"username": supplier["vendor_handle"], "password": "Correct-horse-9"})
     assert r.status_code == 200 and r.json()["vendor_id"] == supplier["vendor_id"]
 
     # Duplicate handle is refused.
