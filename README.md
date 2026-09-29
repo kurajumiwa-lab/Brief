@@ -190,7 +190,10 @@ Interactive docs at `/docs`.
 ## Configuration
 
 See `.env.example`. `DATABASE_URL` accepts `postgres://`, `postgresql://` or
-`postgresql+asyncpg://`; Alembic derives the sync URL. `CORS_ORIGINS` and
+`postgresql+asyncpg://`; Alembic derives the sync URL, and a TLS option may be
+written `?sslmode=require` or `?ssl=require` (each driver gets its own spelling).
+The container entrypoint waits `DB_WAIT_TIMEOUT` seconds (60) for Postgres before
+it migrates and serves — see Troubleshooting if it gives up. `CORS_ORIGINS` and
 `ALLOWED_POS_SYSTEMS` are comma-separated. `REDIS_URL` empty → in-memory rate
 limiter, login guard and single-process WebSocket fan-out (fine for one
 worker). `S3_BUCKET` empty → uploads land in `UPLOAD_DIR` and are served at
@@ -205,10 +208,44 @@ gates `/api/metrics` behind `?token=` or a bearer token;
 `BOOKING_MAX_DAYS` (365) caps one booking window and
 `ROUTE_DEFAULT_SPEED_KMH` (25) seeds the route ETA.
 
+## Troubleshooting
+
+### `database never became reachable`
+
+`backend/entrypoint.sh` waits up to `DB_WAIT_TIMEOUT` seconds (default 60) for
+Postgres, then exits 1. That message is only the verdict — the lines around it name
+the target, say which setting supplied the URL, quote the driver's own error and
+suggest a fix (abridged):
+
+```
+[wait-for-db] waiting up to 60s for brief@db:5432/brief_vendors (from the built-in default — DATABASE_URL is not set)
+[wait-for-db] not ready: could not translate host name "db" to address: Name or service not known
+[wait-for-db] database never became reachable: brief@db:5432/brief_vendors (from …) — gave up after 60s and 61 attempts
+[wait-for-db] hint: DATABASE_URL is not set, so the built-in default was used and its host "db" only exists inside docker compose. …
+```
+
+| last error | usual cause | fix |
+|---|---|---|
+| `could not translate host name "db"` (source: *built-in default*) | `DATABASE_URL` is not set. The default host `db` exists only inside docker compose. | Set `DATABASE_URL` on the service. **Railway:** add a Postgres service, then on the app service set `DATABASE_URL=${{Postgres.DATABASE_URL}}` and deploy — variable changes are staged until you do. |
+| `Connection refused` | Nothing listens on that host:port — often `localhost` copied from `.env.example`; inside a container that is the container itself. | Use the database's service or host name; check it is running. |
+| `password authentication failed` | Wrong credentials, or `POSTGRES_PASSWORD` was changed after the data volume was created (the image reads it only on first init). | Fix the URL, or reset the volume (`docker compose down -v`, **deletes data**) / `ALTER USER`. |
+| `database "x" does not exist` | The URL names a database the server lacks. | Create it or fix the last path segment. |
+| `server does not support SSL` · `pg_hba.conf` | TLS mismatch, or the host's allow-list excludes this machine. | `?sslmode=require` if the server demands TLS, `?sslmode=disable` if it has none; allow this host. |
+| `timeout expired` · `Network is unreachable` | Firewall / IP allow-list, wrong host or port, private network not up yet. | Check reachability from the same network; raise `DB_WAIT_TIMEOUT` for slow starters. |
+| `DATABASE_URL has a second "@"` | An unencoded `@` in the password. | Write it as `%40` (other reserved characters: `%3A` `%2F` `%3F` `%23` `%25`). |
+| `DATABASE_URL is empty` · `not a valid database URL` | The variable is empty, or a `${{…}}` placeholder was not resolved by the platform. | Check the variable and the referenced service's name. |
+
+The last two rows fail at once (waiting cannot fix them); everything else is retried
+for the full budget. To re-check a running container without restarting it:
+
+```bash
+docker compose exec backend python -m app.wait_for_db --timeout 5
+```
+
 ## Repository layout
 
 ```
-backend/     app/{models,services,routes,middleware,worker.py}, alembic/versions/{0001_initial,0002_v21_upgrade,0003_v22_marketplace}.py,
+backend/     app/{models,services,routes,middleware,worker.py,wait_for_db.py}, alembic/versions/{0001_initial,0002_v21_upgrade,0003_v22_marketplace}.py,
              tests/, dev_local.py, seed_demo.py, entrypoint.sh
              models: bookings.py (tool bookings) · reviews.py (list reviews) · routing.py (route plans & stops)
              services: analytics_service.py · discovery.py · routing.py · booking_service.py
