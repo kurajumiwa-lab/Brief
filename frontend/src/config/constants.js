@@ -73,3 +73,79 @@ export const MESSAGE_TYPES = [
   { value: "stock_share", label: "Share Stock" },
   { value: "deal_proposal", label: "Propose Deal" },
 ];
+
+// backend/app/models/stock.py · QualityStatus (v2.1)
+export const QUALITY_STATUSES = [
+  { value: "unverified", label: "Unverified", variant: "gray", hint: "No provenance on file" },
+  { value: "self_declared", label: "Self-declared", variant: "blue", hint: "Batch and origin declared by the vendor" },
+  { value: "patron_verified", label: "Patron-verified", variant: "purple", hint: "Checked by the patron of a list this vendor is on" },
+  { value: "lab_certified", label: "Lab-certified", variant: "brand", hint: "Certificate / spec sheet attached" },
+];
+
+// backend/app/routes/chat.py · DealProposalData (v2.1)
+export const DELIVERY_TERMS = [
+  { value: "pickup", label: "Pickup" },
+  { value: "delivery", label: "Seller delivers" },
+  { value: "courier", label: "Courier" },
+];
+export const PAYMENT_TERMS = [
+  { value: "on_delivery", label: "On delivery" },
+  { value: "advance", label: "In advance" },
+  { value: "credit_30", label: "30-day credit" },
+];
+export const DEAL_STATUS_BADGE = { proposed: "amber", countered: "blue", accepted: "brand", declined: "red" };
+
+// backend/app/models/tools.py · SHIPMENT_STATUSES (v2.1)
+export const SHIPMENT_STATUSES = [
+  { value: "picked_up", label: "Picked up", variant: "gray" },
+  { value: "in_transit", label: "In transit", variant: "blue" },
+  { value: "out_for_delivery", label: "Out for delivery", variant: "amber" },
+  { value: "delivered", label: "Delivered", variant: "brand" },
+  { value: "failed", label: "Failed", variant: "red" },
+];
+
+// backend/app/models/collective.py · COLLECTIVE_STATUSES (v2.1)
+export const COLLECTIVE_STATUSES = [
+  { value: "gathering", label: "Gathering pledges", variant: "amber" },
+  { value: "quota_met", label: "Quota met", variant: "brand" },
+  { value: "negotiating", label: "Negotiating", variant: "blue" },
+  { value: "ordered", label: "Ordered", variant: "purple" },
+  { value: "fulfilled", label: "Fulfilled", variant: "brand" },
+  { value: "cancelled", label: "Cancelled", variant: "red" },
+];
+
+// backend/app/models/patron.py · PatronTier + services/patron_service.py TIER_REQUIREMENTS (v2.1)
+export const PATRON_TIERS = [
+  { value: "starter", label: "Starter", next: "established", requirements: null },
+  { value: "established", label: "Established", next: "mogul", requirements: { vendors: 20, events: 3, reputation: 50 } },
+  { value: "mogul", label: "Mogul", next: "legend", requirements: { vendors: 100, events: 10, reputation: 80 } },
+  { value: "legend", label: "Legend", next: null, requirements: { vendors: 500, events: 25, reputation: 95 } },
+];
+
+// backend/app/models/notification.py · NotificationType → where a click should land
+export const NOTIFICATION_ROUTES = {
+  source_request: "/stock?tab=movements&direction=outgoing",
+  source_accepted: "/stock?tab=movements&direction=incoming",
+  source_shipped: "/stock?tab=movements&direction=incoming",
+  source_received: "/stock?tab=movements&direction=outgoing",
+  source_cancelled: "/stock?tab=movements",
+  deal_proposal: "/chat",
+  deal_accepted: "/chat",
+  deal_countered: "/chat",
+  deal_declined: "/chat",
+  group_invite: "/groups",
+  group_join_request: "/groups?tab=mine",
+  group_approved: "/groups?tab=mine",
+  list_registration: "/lists?tab=mine",
+  list_approved: "/lists",
+  list_rejected: "/lists",
+  collective_update: "/groups?tab=mine",
+  event_registration: "/events?tab=mine",
+  event_reminder: "/events",
+  stock_low: "/stock",
+  stock_verified: "/stock",
+  parasitism_milestone: "/network",
+  patron_promotion: "/profile",
+  shipment_update: "/tools?tab=shipments",
+  system: "/",
+};

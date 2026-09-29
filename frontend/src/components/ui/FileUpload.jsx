@@ -3,9 +3,22 @@ import { useDropzone } from "react-dropzone";
 import { FileUp, FileCheck2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export default function FileUpload({ file, onFile, accept = { "text/csv": [".csv"] }, label = "Drop a CSV here, or click to choose", hint, className }) {
+const MIME = { ".csv": "text/csv", ".pdf": "application/pdf", ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp", ".gif": "image/gif" };
+
+/** Accept either react-dropzone's `{ mime: [ext] }` map or a plain ".pdf,.png" list. */
+const normaliseAccept = (accept) => {
+  if (!accept || typeof accept !== "string") return accept;
+  const out = {};
+  accept.split(",").map((e) => e.trim().toLowerCase()).filter(Boolean).forEach((ext) => {
+    const mime = MIME[ext] || "application/octet-stream";
+    out[mime] = [...(out[mime] || []), ext];
+  });
+  return out;
+};
+
+export default function FileUpload({ file, onFile, accept = { "text/csv": [".csv"] }, label = "Drop a CSV here, or click to choose", hint, className, maxSizeMb = 10 }) {
   const onDrop = useCallback((accepted) => accepted[0] && onFile?.(accepted[0]), [onFile]);
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop, accept, multiple: false, maxSize: 10 * 1024 * 1024 });
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop, accept: normaliseAccept(accept), multiple: false, maxSize: maxSizeMb * 1024 * 1024 });
 
   return (
     <div className={className}>

@@ -1,7 +1,8 @@
 import { useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Bell, Menu } from "lucide-react";
+import { ArrowLeftRight, Menu } from "lucide-react";
 import Badge from "@/components/ui/Badge";
+import NotificationBell from "@/components/notifications/NotificationBell";
 import { NAV, Brand } from "./Sidebar";
 import { useUIStore } from "@/stores/uiStore";
 import { useStockStore } from "@/stores/stockStore";
@@ -47,19 +48,20 @@ export default function TopBar() {
         </Badge>
       )}
       <div className="ml-auto flex items-center gap-1">
-        <Link
-          to="/stock?tab=movements"
-          className="relative p-2 rounded-lg text-ink-3 hover:text-ink-1 hover:bg-surface-3"
-          aria-label={pending ? `${pending} movements need your action` : "Movements"}
-          title={pending ? `${pending} movement${pending === 1 ? "" : "s"} waiting on you` : "Stock movements"}
-        >
-          <Bell size={17} />
-          {pending > 0 && (
-            <span className="absolute top-1 right-1 min-w-[1rem] h-4 px-1 rounded-full bg-brand-500 text-surface-0 text-2xs font-bold flex items-center justify-center">
+        {pending > 0 && (
+          <Link
+            to="/stock?tab=movements"
+            className="relative p-2 rounded-lg text-amber-300 hover:text-amber-200 hover:bg-surface-3"
+            aria-label={`${pending} movements need your action`}
+            title={`${pending} movement${pending === 1 ? "" : "s"} waiting on you`}
+          >
+            <ArrowLeftRight size={17} />
+            <span className="absolute top-1 right-1 min-w-[1rem] h-4 px-1 rounded-full bg-amber-500 text-surface-0 text-2xs font-bold flex items-center justify-center">
               {pending > 9 ? "9+" : pending}
             </span>
-          )}
-        </Link>
+          </Link>
+        )}
+        <NotificationBell />
       </div>
     </header>
   );

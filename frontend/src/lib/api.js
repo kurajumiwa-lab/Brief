@@ -14,11 +14,28 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// 401 anywhere → the session is dead; drop it and let the router bounce to /auth
+// 401 anywhere → try the refresh token once (v2.1), then replay the request;
+// if that fails too the session is dead: drop it and let the router bounce to /auth.
+let refreshing = null;
 api.interceptors.response.use(
   (res) => res,
-  (err) => {
-    if (err.response?.status === 401 && useAuthStore.getState().token) {
+  async (err) => {
+    const original = err.config || {};
+    const store = useAuthStore.getState();
+    const isAuthCall = String(original.url || "").startsWith("/auth/");
+    if (err.response?.status === 401 && store.token && !isAuthCall && !original._retried) {
+      original._retried = true;
+      try {
+        refreshing = refreshing || store.refresh();
+        const token = await refreshing;
+        refreshing = null;
+        if (token) {
+          original.headers = { ...(original.headers || {}), Authorization: `Bearer ${token}` };
+          return api.request(original);
+        }
+      } catch {
+        refreshing = null;
+      }
       useAuthStore.getState().logout();
     }
     return Promise.reject(err);
@@ -51,6 +68,8 @@ export const authAPI = {
     form.append("password", password);
     return api.post("/auth/login", form, { headers: { "Content-Type": "application/x-www-form-urlencoded" } });
   },
+  refresh: (refreshToken) => api.post("/auth/refresh", { refresh_token: refreshToken }),
+  changePassword: (data) => api.post("/auth/change-password", data), // { current_password, new_password }
 };
 
 // ── Vendors ────────────────────────────────────────────────────────────────
@@ -70,6 +89,7 @@ export const vendorAPI = {
   stats: () => api.get("/vendors/stats"),
   becomePatron: () => api.post("/vendors/become-patron"),
   patronStatus: () => api.get("/vendors/me/patron"),
+  performance: (handle) => api.get(`/vendors/${handle}/performance`), // SRM-lite metrics
 };
 
 // ── Stock ──────────────────────────────────────────────────────────────────
@@ -84,6 +104,16 @@ export const stockAPI = {
   source: (id, data) => api.post(`/stock/${id}/source`, data),
   movements: (params) => api.get("/stock/movements", { params: noEmpty(params) }), // status, direction
   advance: (id, action) => api.post(`/stock/movements/${id}/${action}`), // confirm | ship | receive | cancel
+  alternatives: (id, limit = 6) => api.get(`/stock/${id}/alternatives`, { params: { limit } }),
+  /** Self-declare / lab-certify provenance. `fields`: batch_number*, origin_country, expiry_date, lab_certified, spec_sheet_url; `file`: spec sheet */
+  verify: (id, fields, file) => {
+    const form = new FormData();
+    Object.entries(noEmpty(fields)).forEach(([k, v]) => form.append(k, v));
+    if (file) form.append("spec_sheet", file);
+    return api.post(`/stock/${id}/verify`, form, { headers: { "Content-Type": "multipart/form-data" } });
+  },
+  patronVerify: (id) => api.post(`/stock/${id}/patron-verify`),
+  revokePatronVerify: (id) => api.delete(`/stock/${id}/patron-verify`),
   bulkImport: (file) => {
     const form = new FormData();
     form.append("file", file);
@@ -126,6 +156,10 @@ export const chatAPI = {
   createTopic: (data) => api.post("/chat/niche-topic", data), // { name, topic, topic_tags }
   directRoom: (vendorId) => api.post(`/chat/direct/${vendorId}`),
   dealRoom: (stockId) => api.post(`/chat/deal/${stockId}`),
+  // deal protocol (v2.1)
+  acceptDeal: (roomId, messageId) => api.post(`/chat/${roomId}/deals/${messageId}/accept`),
+  counterDeal: (roomId, messageId, data) => api.post(`/chat/${roomId}/deals/${messageId}/counter`, data), // { proposed_price_per_unit*, quantity, delivery_terms, payment_terms, notes }
+  declineDeal: (roomId, messageId) => api.post(`/chat/${roomId}/deals/${messageId}/decline`),
 };
 
 // ── Tools ──────────────────────────────────────────────────────────────────
@@ -137,6 +171,12 @@ export const toolAPI = {
   couriers: (params) => api.get("/tools/couriers", { params: noEmpty(params) }), // area, service_type
   registerCourier: (data) => api.post("/tools/courier/register", data),
   bookWarehouse: (id, data) => api.post(`/tools/${id}/book-warehouse`, data), // { start_date, end_date, space_allocated }
+  // courier shipments (v2.1)
+  shipments: (role) => api.get("/tools/shipments", { params: noEmpty({ role }) }), // sent | received | courier
+  bookShipment: (courierId, data) => api.post(`/tools/couriers/${courierId}/shipments`, data), // { receiver_vendor_id*, origin, destination, weight_kg, cost, notes, movement_id }
+  shipmentStatus: (id, status, note) => api.post(`/tools/shipments/${id}/status`, null, { params: noEmpty({ status, note }) }),
+  rateShipment: (id, data) => api.post(`/tools/shipments/${id}/rate`, data), // { rating 1-5, review }
+  track: (trackingNumber) => api.get(`/tools/shipments/track/${encodeURIComponent(trackingNumber)}`),
 };
 
 // ── Events ─────────────────────────────────────────────────────────────────
@@ -149,6 +189,37 @@ export const eventAPI = {
   register: (id) => api.post(`/events/${id}/register`),
   cancelRegistration: (id) => api.post(`/events/${id}/cancel-registration`),
   setStatus: (id, status) => api.post(`/events/${id}/status`, null, { params: { status } }),
+  checkIn: (id) => api.post(`/events/${id}/check-in`),
+  checkInVendor: (id, vendorId) => api.post(`/events/${id}/check-in/${vendorId}`),
+  analytics: (id) => api.get(`/events/${id}/analytics`),
+};
+
+// ── Notifications (v2.1) ───────────────────────────────────────────────────
+export const notificationAPI = {
+  list: (params) => api.get("/notifications", { params: noEmpty(params) }), // unread_only, skip, limit → { unread_count, notifications }
+  unreadCount: () => api.get("/notifications/unread-count"),
+  markRead: (id) => api.post(`/notifications/${id}/read`),
+  markAllRead: () => api.post("/notifications/read-all"),
+};
+
+// ── Files (v2.1) ───────────────────────────────────────────────────────────
+export const fileAPI = {
+  upload: (file) => {
+    const form = new FormData();
+    form.append("file", file);
+    return api.post("/files/upload", form, { headers: { "Content-Type": "multipart/form-data" } });
+  },
+  limits: () => api.get("/files/limits"),
+};
+
+// ── Collective sourcing (v2.1) ─────────────────────────────────────────────
+export const collectiveAPI = {
+  list: (params) => api.get("/collective", { params: noEmpty(params) }), // group_id, status
+  get: (id) => api.get(`/collective/${id}`),
+  create: (data) => api.post("/collective/create", data), // { group_id*, item_name*, target_quantity*, target_price_per_unit, unit_of_measure, description, deadline }
+  pledge: (id, data) => api.post(`/collective/${id}/pledge`, data), // { pledged_quantity*, max_price_per_unit, notes }
+  withdraw: (id) => api.post(`/collective/${id}/withdraw`),
+  setStatus: (id, status) => api.post(`/collective/${id}/status`, null, { params: { status } }),
 };
 
 // ── POS bridge ─────────────────────────────────────────────────────────────
