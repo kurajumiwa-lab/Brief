@@ -1,0 +1,469 @@
+"""
+Stock Engine — what happens to shelves when vendors deal with each other.
+
+A sourcing request reserves stock on the supplier's shelf (a `StockReservation`
+hold, v2.1 §3.4). The movement then walks pending → confirmed → shipped →
+received (or → cancelled at any point before it is received). On `received`
+the supplier's shelf is debited, the buyer's shelf is credited with a
+`network_transfer` item, and the parasitism engine re-scores the pair. On
+`cancelled` the reservation is released. Unconfirmed holds lapse after
+RESERVATION_HOLD_HOURS (`expire_stale_holds`, run by the scheduler).
+
+Every step notifies the other side (v2.1 §2.3) and refreshes the supplier's
+SRM-lite metrics (§4.4). Callers commit.
+"""
+
+from datetime import datetime, timedelta
+from typing import Optional
+from uuid import UUID
+
+from sqlalchemy import or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.config import settings
+from app.models.notification import NotificationType
+from app.models.stock import MovementStatus, StockItem, StockMovement, StockReservation, StockSource
+from app.models.vendor import Vendor
+from app.services import notification_service, parasitism_engine, performance_service
+
+
+class StockError(Exception):
+    """A rule of the shelf was broken. Routes translate this to HTTP 400/403."""
+
+    def __init__(self, message: str, status_code: int = 400):
+        super().__init__(message)
+        self.status_code = status_code
+
+
+def recompute_available(item: StockItem) -> None:
+    item.quantity_available = max(0, (item.quantity_in_stock or 0) - (item.quantity_reserved or 0))
+
+
+# --- pricing ------------------------------------------------------------------------
+
+def base_unit_price(item: StockItem) -> float:
+    """Network price for a line: wholesale when set, else the unit price."""
+    return float(item.wholesale_price or item.unit_price or 0.0)
+
+
+def tier_for(item: StockItem, quantity: int) -> Optional[dict]:
+    """The best matching bulk tier: `[{"qty": 100, "discount": 10}, ...]`
+    (discount in %; a `price` key sets an absolute unit price instead)."""
+    best = None
+    for tier in item.bulk_discount_tiers or []:
+        try:
+            threshold = int(float(tier.get("qty") or 0))
+        except (TypeError, ValueError, AttributeError):
+            continue
+        if threshold <= 0 or quantity < threshold:
+            continue
+        if best is None or threshold > int(float(best.get("qty") or 0)):
+            best = tier
+    return best
+
+
+def effective_unit_price(item: StockItem, quantity: int) -> float:
+    """Price per unit at this quantity once bulk tiers apply (v2.1 §3.3)."""
+    base = base_unit_price(item)
+    tier = tier_for(item, quantity)
+    if not tier:
+        return round(base, 2)
+    if tier.get("price") not in (None, ""):
+        try:
+            return round(float(tier["price"]), 2)
+        except (TypeError, ValueError):
+            return round(base, 2)
+    try:
+        discount = float(tier.get("discount") or 0)
+    except (TypeError, ValueError):
+        discount = 0.0
+    return round(base * (1 - max(0.0, min(discount, 100.0)) / 100), 2)
+
+
+def fulfillment_rate(vendor: Vendor) -> Optional[float]:
+    """Share of confirmed movements this vendor delivered (None until there is a sample)."""
+    done = int(getattr(vendor, "movements_completed", 0) or 0)
+    lost = int(getattr(vendor, "movements_cancelled", 0) or 0)
+    if done + lost == 0:
+        return None
+    return round(100.0 * done / (done + lost), 1)
+
+
+# --- sourcing -----------------------------------------------------------------------
+
+async def request_sourcing(
+    db: AsyncSession, item: StockItem, buyer: Vendor,
+    quantity: int, proposed_price: Optional[float], notes: Optional[str],
+    confirmed: bool = False,
+) -> StockMovement:
+    """Reserve `quantity` of `item` for `buyer`. `confirmed=True` is for deals
+    both sides already agreed to in chat: the movement starts at `confirmed`."""
+    if item.vendor_id == buyer.id:
+        raise StockError("Can't source from yourself")
+    if not item.visible_to_network:
+        raise StockError("This stock is not offered to the network", 403)
+    if quantity <= 0:
+        raise StockError("Quantity must be positive")
+    if quantity < item.min_order_quantity:
+        raise StockError(f"Minimum order: {item.min_order_quantity}")
+    if item.quantity_available < quantity:
+        raise StockError(f"Only {item.quantity_available} available")
+
+    unit_price = proposed_price if proposed_price is not None else effective_unit_price(item, quantity)
+    now = datetime.utcnow()
+    movement = StockMovement(
+        stock_item_id=item.id,
+        from_vendor_id=item.vendor_id,
+        to_vendor_id=buyer.id,
+        quantity=quantity,
+        unit_price=unit_price,
+        total_value=round(unit_price * quantity, 2),
+        movement_type="sourcing",
+        status=MovementStatus.CONFIRMED.value if confirmed else MovementStatus.PENDING.value,
+        notes=notes,
+        confirmed_at=now if confirmed else None,
+    )
+    item.quantity_reserved += quantity
+    recompute_available(item)
+    db.add(movement)
+    await db.flush()  # movement.id for the hold and the notification deep link
+
+    db.add(StockReservation(
+        stock_item_id=item.id, reserving_vendor_id=buyer.id, movement_id=movement.id,
+        quantity=quantity, agreed_price=unit_price, status="held",
+        hold_expires_at=now + timedelta(hours=settings.RESERVATION_HOLD_HOURS),
+    ))
+
+    if not confirmed:
+        await notification_service.create_notification(
+            db, item.vendor_id, NotificationType.SOURCE_REQUEST,
+            f"@{buyer.vendor_handle} wants {quantity} {item.unit_of_measure} of {item.name}",
+            f"At {unit_price:g} per {item.unit_of_measure} · total {movement.total_value:g}"
+            + (f" · “{notes}”" if notes else "") + f" · hold {settings.RESERVATION_HOLD_HOURS}h",
+            sender_id=buyer.id,
+            data={"movement_id": movement.id, "stock_id": item.id, "vendor_handle": buyer.vendor_handle,
+                  "direction": "outgoing"},
+        )
+    return movement
+
+
+async def _hold_for(db: AsyncSession, movement_id: UUID) -> Optional[StockReservation]:
+    return (await db.execute(select(StockReservation).where(
+        StockReservation.movement_id == movement_id, StockReservation.status == "held",
+    ))).scalars().first()
+
+
+async def _resolve_hold(db: AsyncSession, movement: StockMovement, status: str) -> None:
+    hold = await _hold_for(db, movement.id)
+    if hold is not None:
+        hold.status = status
+        hold.resolved_at = datetime.utcnow()
+
+
+_TRANSITIONS = {
+    "confirm": (MovementStatus.PENDING, MovementStatus.CONFIRMED, "supplier"),
+    "ship": (MovementStatus.CONFIRMED, MovementStatus.SHIPPED, "supplier"),
+    "receive": (MovementStatus.SHIPPED, MovementStatus.RECEIVED, "buyer"),
+}
+
+
+async def transition(db: AsyncSession, movement: StockMovement, action: str, actor: Vendor,
+                     reason: Optional[str] = None) -> StockMovement:
+    """Advance a movement. Supplier confirms and ships; buyer receives; either
+    side may cancel before receipt."""
+    item = await db.get(StockItem, movement.stock_item_id)
+    if item is None:
+        raise StockError("Stock item no longer exists", 404)
+
+    if action == "cancel":
+        if actor.id not in (movement.from_vendor_id, movement.to_vendor_id):
+            raise StockError("Not your movement", 403)
+        if movement.status == MovementStatus.RECEIVED.value:
+            raise StockError("Already received; cannot cancel")
+        if movement.status == MovementStatus.CANCELLED.value:
+            return movement
+        await _cancel(db, movement, item, actor.id, reason or "cancelled", actor)
+        await performance_service.recalculate(db, movement.from_vendor_id)
+        return movement
+
+    if action not in _TRANSITIONS:
+        raise StockError(f"Unknown action '{action}'")
+    expected, nxt, side = _TRANSITIONS[action]
+    owner = movement.from_vendor_id if side == "supplier" else movement.to_vendor_id
+    if actor.id != owner:
+        raise StockError(f"Only the {side} can {action} this movement", 403)
+    if movement.status != expected.value:
+        raise StockError(f"Movement is '{movement.status}', expected '{expected.value}' to {action}")
+
+    now = datetime.utcnow()
+    movement.status = nxt.value
+    if nxt is MovementStatus.CONFIRMED:
+        movement.confirmed_at = now
+    elif nxt is MovementStatus.SHIPPED:
+        movement.shipped_at = now
+    elif nxt is MovementStatus.RECEIVED:
+        await _settle_receipt(db, movement, item)
+
+    counterpart = movement.to_vendor_id if side == "supplier" else movement.from_vendor_id
+    ntype, title = {
+        "confirm": (NotificationType.SOURCE_ACCEPTED, f"@{actor.vendor_handle} confirmed your {item.name} request"),
+        "ship": (NotificationType.SOURCE_SHIPPED, f"@{actor.vendor_handle} shipped {movement.quantity} {item.unit_of_measure} of {item.name}"),
+        "receive": (NotificationType.SOURCE_RECEIVED, f"@{actor.vendor_handle} received {item.name} — movement settled"),
+    }[action]
+    await notification_service.create_notification(
+        db, counterpart, ntype, title,
+        f"{movement.quantity} {item.unit_of_measure} · total {movement.total_value:g}",
+        sender_id=actor.id,
+        data={"movement_id": movement.id, "stock_id": item.id, "vendor_handle": actor.vendor_handle,
+              "direction": "incoming" if side == "supplier" else "outgoing"},
+    )
+    await performance_service.recalculate(db, movement.from_vendor_id)
+    return movement
+
+
+async def _cancel(db: AsyncSession, movement: StockMovement, item: StockItem, by_vendor_id: Optional[UUID],
+                  reason: str, actor: Optional[Vendor] = None, hold_status: str = "released") -> None:
+    item.quantity_reserved = max(0, item.quantity_reserved - movement.quantity)
+    recompute_available(item)
+    was = movement.status
+    movement.status = MovementStatus.CANCELLED.value
+    movement.completed_at = datetime.utcnow()
+    movement.cancelled_by_vendor_id = by_vendor_id
+    await _resolve_hold(db, movement, hold_status)
+
+    if actor is not None:
+        other = movement.to_vendor_id if actor.id == movement.from_vendor_id else movement.from_vendor_id
+        recipients = [other]
+        title = f"@{actor.vendor_handle} cancelled the {item.name} movement"
+    else:  # system expiry: tell both sides
+        recipients = [movement.from_vendor_id, movement.to_vendor_id]
+        title = f"Hold expired: {item.name} request was not confirmed in time"
+    for rid in recipients:
+        await notification_service.create_notification(
+            db, rid, NotificationType.SOURCE_CANCELLED, title,
+            f"{movement.quantity} {item.unit_of_measure} released" + (f" (was {was})" if was else "") + f" · {reason}",
+            sender_id=actor.id if actor else None,
+            data={"movement_id": movement.id, "stock_id": item.id,
+                  "vendor_handle": actor.vendor_handle if actor else None,
+                  "direction": "incoming" if rid == movement.to_vendor_id else "outgoing"},
+        )
+
+
+async def expire_stale_holds(db: AsyncSession) -> int:
+    """Cancel sourcing requests still `pending` past their hold. Caller commits."""
+    now = datetime.utcnow()
+    holds = (await db.execute(select(StockReservation).where(
+        StockReservation.status == "held", StockReservation.hold_expires_at <= now,
+    ))).scalars().all()
+    expired = 0
+    for hold in holds:
+        movement = await db.get(StockMovement, hold.movement_id) if hold.movement_id else None
+        if movement is None:
+            hold.status = "released"
+            hold.resolved_at = now
+            continue
+        if movement.status != MovementStatus.PENDING.value:
+            # Confirmed deals don't lapse; the hold simply follows the movement.
+            hold.hold_expires_at = now + timedelta(hours=settings.RESERVATION_HOLD_HOURS)
+            continue
+        item = await db.get(StockItem, movement.stock_item_id)
+        if item is None:
+            hold.status = "released"
+            hold.resolved_at = now
+            continue
+        await _cancel(db, movement, item, None, "hold expired", None, hold_status="expired")
+        expired += 1
+    return expired
+
+
+async def _settle_receipt(db: AsyncSession, movement: StockMovement, item: StockItem) -> None:
+    """Debit the supplier, credit the buyer, score the pair."""
+    qty = movement.quantity
+    previous_qty = item.quantity_in_stock
+    item.quantity_reserved = max(0, item.quantity_reserved - qty)
+    item.quantity_in_stock = max(0, item.quantity_in_stock - qty)
+    recompute_available(item)
+    movement.completed_at = datetime.utcnow()
+    await _resolve_hold(db, movement, "fulfilled")
+
+    # The goods now sit on the buyer's shelf. Same SKU on the buyer's side is
+    # topped up; otherwise a new network_transfer item is opened.
+    buyer_item = None
+    if item.sku:
+        buyer_item = (await db.execute(
+            select(StockItem).where(StockItem.vendor_id == movement.to_vendor_id, StockItem.sku == item.sku)
+        )).scalars().first()
+    if buyer_item is None:
+        buyer_item = StockItem(
+            vendor_id=movement.to_vendor_id,
+            sku=item.sku,
+            name=item.name,
+            category=item.category,
+            subcategory=item.subcategory,
+            description=item.description,
+            unit_of_measure=item.unit_of_measure,
+            cost_price=movement.unit_price,
+            unit_price=item.unit_price,
+            wholesale_price=item.wholesale_price,
+            source=StockSource.NETWORK_TRANSFER,
+            visible_to_network=False,  # the buyer decides when to offer it onward
+            tags=list(item.tags or []),
+            quantity_in_stock=0,
+            # Provenance travels with the goods; verification does not.
+            batch_number=item.batch_number,
+            origin_country=item.origin_country,
+            expiry_date=item.expiry_date,
+            spec_sheet_url=item.spec_sheet_url,
+        )
+        db.add(buyer_item)
+    buyer_item.quantity_in_stock = (buyer_item.quantity_in_stock or 0) + qty
+    recompute_available(buyer_item)
+
+    supplier = await db.get(Vendor, movement.from_vendor_id)
+    buyer = await db.get(Vendor, movement.to_vendor_id)
+    if supplier:
+        supplier.total_stock_moved += qty
+    if buyer:
+        buyer.total_stock_moved += qty
+
+    # A shelf that just ran low tells its owner.
+    await notification_service.low_stock_alert(db, item, previous_qty=previous_qty)
+
+    before = await parasitism_engine.stored_connection_score(movement.from_vendor_id, movement.to_vendor_id, db)
+    after = await parasitism_engine.update_connection_score(movement.from_vendor_id, movement.to_vendor_id, db)
+    await parasitism_engine.update_vendor_network_score(movement.from_vendor_id, db)
+    await parasitism_engine.update_vendor_network_score(movement.to_vendor_id, db)
+    milestone = notification_service.crossed_milestone(before, after)
+    if milestone and supplier and buyer:
+        for me, other in ((supplier, buyer), (buyer, supplier)):
+            await notification_service.create_notification(
+                db, me.id, NotificationType.PARASITISM_MILESTONE,
+                f"Mutual benefit with @{other.vendor_handle} reached {milestone}",
+                "Trade flows both ways — the network is working.",
+                data={"vendor_handle": other.vendor_handle, "score": after, "milestone": milestone},
+            )
+
+
+# --- comparison ---------------------------------------------------------------------
+
+async def find_alternatives(db: AsyncSession, stock_item_id: UUID, for_vendor: Optional[Vendor] = None,
+                            limit: int = 10) -> list:
+    """Similar stock from other vendors for comparison (v2.1 §3.2). Matches the
+    same SKU or category + any name keyword; the viewer's own shelf is left
+    out (you can't source from yourself). Returns (StockItem, Vendor) rows
+    ordered by network price."""
+    item = await db.get(StockItem, stock_item_id)
+    if not item:
+        return []
+
+    query = (
+        select(StockItem, Vendor)
+        .join(Vendor, StockItem.vendor_id == Vendor.id)
+        .where(StockItem.id != stock_item_id)
+        .where(StockItem.visible_to_network.is_(True))
+        .where(StockItem.quantity_available > 0)
+    )
+    if for_vendor is not None:
+        query = query.where(StockItem.vendor_id != for_vendor.id)
+
+    keywords = [kw for kw in (item.name or "").replace("-", " ").split() if len(kw) > 3][:3]
+    name_match = [StockItem.name.ilike(f"%{kw}%") for kw in keywords]
+    if not name_match and item.name:
+        name_match = [StockItem.name.ilike(f"%{item.name.strip()}%")]
+    similar = []
+    if item.sku:
+        similar.append(StockItem.sku == item.sku)
+    if item.category and name_match:
+        similar.append((StockItem.category.ilike(item.category)) & or_(*name_match))
+    elif name_match:
+        similar.append(or_(*name_match))
+    elif item.category:
+        similar.append(StockItem.category.ilike(item.category))
+    if similar:
+        query = query.where(or_(*similar))
+
+    query = query.order_by(
+        StockItem.wholesale_price.asc().nullslast(),
+        StockItem.unit_price.asc().nullslast(),
+        StockItem.quantity_available.desc(),
+    ).limit(limit)
+    return (await db.execute(query)).all()
+
+
+# --- POS / CSV import ---------------------------------------------------------------
+
+async def upsert_from_pos(
+    db: AsyncSession, vendor: Vendor, rows: list[dict], source: StockSource,
+    sync_config: Optional[dict] = None,
+) -> dict:
+    """Idempotent import used by the POS bridge and the CSV importer. Matches an
+    existing shelf line by `pos_item_id`, then by `sku`; otherwise adds one.
+    Returns counts for the sync log."""
+    cfg = sync_config or {}
+    exclude = set(cfg.get("exclude_sku") or [])
+    min_stock = int(cfg.get("min_stock") or 0)
+    added = updated = skipped = 0
+    errors: list[str] = []
+    now = datetime.utcnow()
+
+    for i, row in enumerate(rows):
+        try:
+            name = (row.get("name") or "").strip()
+            if not name:
+                raise ValueError("missing name")
+            sku = (row.get("sku") or None) or None
+            if sku in exclude:
+                skipped += 1
+                continue
+            qty = int(float(row.get("quantity") or row.get("quantity_in_stock") or 0))
+            if qty < min_stock:
+                skipped += 1
+                continue
+            pos_item_id = row.get("pos_item_id") or None
+
+            item = None
+            if pos_item_id:
+                item = (await db.execute(select(StockItem).where(
+                    StockItem.vendor_id == vendor.id, StockItem.pos_item_id == str(pos_item_id)
+                ))).scalars().first()
+            if item is None and sku:
+                item = (await db.execute(select(StockItem).where(
+                    StockItem.vendor_id == vendor.id, StockItem.sku == str(sku)
+                ))).scalars().first()
+
+            previous_qty: Optional[int]
+            if item is None:
+                item = StockItem(vendor_id=vendor.id, name=name, source=source)
+                db.add(item)
+                added += 1
+                previous_qty = None
+            else:
+                updated += 1
+                previous_qty = item.quantity_in_stock
+
+            item.name = name
+            item.sku = str(sku) if sku else item.sku
+            item.pos_item_id = str(pos_item_id) if pos_item_id else item.pos_item_id
+            item.category = row.get("category") or item.category
+            item.description = row.get("description") or item.description
+            item.unit_of_measure = row.get("unit_of_measure") or item.unit_of_measure or "units"
+            for field in ("unit_price", "wholesale_price", "cost_price"):
+                val = row.get(field)
+                if val not in (None, ""):
+                    setattr(item, field, float(val))
+            if row.get("tags"):
+                tags = row["tags"]
+                item.tags = [t.strip() for t in tags.split("|")] if isinstance(tags, str) else list(tags)
+            for field in ("batch_number", "origin_country"):
+                if row.get(field):
+                    setattr(item, field, str(row[field])[:100])
+            item.quantity_in_stock = qty
+            recompute_available(item)
+            item.last_pos_sync = now
+            item.visible_to_network = bool(row.get("visible_to_network", item.visible_to_network if item.visible_to_network is not None else True))
+            if previous_qty is not None:
+                await notification_service.low_stock_alert(db, item, previous_qty)
+        except Exception as exc:  # one bad row must not sink the sync
+            errors.append(f"row {i + 1}: {exc}")
+
+    return {"processed": len(rows), "added": added, "updated": updated, "skipped": skipped, "errors": errors}

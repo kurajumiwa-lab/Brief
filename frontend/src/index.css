@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-edge-1;
+  }
+  :root {
+    color-scheme: dark;
+  }
+  body {
+    @apply bg-surface-0 text-ink-1;
+  }
+  ::-webkit-scrollbar {
+    @apply w-1.5 h-1.5;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-edge-2 rounded-full hover:bg-edge-3;
+  }
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+  }
+  input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.6);
+  }
+}
+
+@layer components {
+  .glass {
+    @apply bg-surface-2/80 backdrop-blur-xl border border-edge-1;
+  }
+  .glow-brand {
+    box-shadow: 0 0 20px -4px rgba(34, 168, 103, 0.25);
+  }
+}

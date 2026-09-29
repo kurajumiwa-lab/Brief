@@ -1,0 +1,6 @@
+-r requirements.txt
+pytest==7.4.3
+pytest-asyncio==0.21.1
+# Bundled PostgreSQL 16 binaries so the smoke tests run wherever pip runs.
+# Production still points DATABASE_URL at a real Postgres (docker-compose / managed).
+pgserver==0.1.4
