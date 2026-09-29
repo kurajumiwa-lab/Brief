@@ -3,28 +3,38 @@
 @tailwind utilities;
 
 @layer base {
-  :root { color-scheme: dark; }
-  body { @apply bg-brief-dark text-neutral-100 antialiased; }
-  ::-webkit-scrollbar { width: 8px; height: 8px; }
-  ::-webkit-scrollbar-thumb { @apply bg-neutral-800 rounded-full; }
-  ::-webkit-scrollbar-track { @apply bg-transparent; }
+  * {
+    @apply border-edge-1;
+  }
+  :root {
+    color-scheme: dark;
+  }
+  body {
+    @apply bg-surface-0 text-ink-1;
+  }
+  ::-webkit-scrollbar {
+    @apply w-1.5 h-1.5;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-edge-2 rounded-full hover:bg-edge-3;
+  }
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+  }
+  input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.6);
+  }
 }
 
 @layer components {
-  .card { @apply bg-brief-card border border-brief-border rounded-xl; }
-  .input {
-    @apply w-full bg-neutral-900 border border-brief-border rounded-lg px-3 py-2 text-sm text-neutral-100
-      placeholder:text-neutral-600 focus:outline-none focus:ring-2 focus:ring-vendor-600/60 focus:border-vendor-600;
+  .glass {
+    @apply bg-surface-2/80 backdrop-blur-xl border border-edge-1;
   }
-  .label { @apply block text-xs font-medium uppercase tracking-wide text-neutral-500 mb-1; }
-  .btn { @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed; }
-  .btn-primary { @apply btn bg-vendor-600 hover:bg-vendor-500 text-white; }
-  .btn-ghost { @apply btn bg-transparent hover:bg-neutral-800 text-neutral-200 border border-brief-border; }
-  .btn-danger { @apply btn bg-red-900/40 hover:bg-red-900/70 text-red-200 border border-red-900/50; }
-  .pill { @apply inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium; }
-  .pill-green { @apply pill bg-vendor-900/50 text-vendor-300 border border-vendor-800; }
-  .pill-gray { @apply pill bg-neutral-800 text-neutral-300 border border-neutral-700; }
-  .pill-amber { @apply pill bg-amber-900/40 text-amber-200 border border-amber-900/60; }
-  .pill-red { @apply pill bg-red-900/40 text-red-200 border border-red-900/60; }
-  .pill-blue { @apply pill bg-sky-900/40 text-sky-200 border border-sky-900/60; }
+  .glow-brand {
+    box-shadow: 0 0 20px -4px rgba(34, 168, 103, 0.25);
+  }
 }

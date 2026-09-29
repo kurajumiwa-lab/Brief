@@ -16,6 +16,9 @@ frontend/coverage/
 .env
 .env.*
 !.env.example
+# the frontend env files hold only proxy targets / comments — no secrets
+!frontend/.env
+!frontend/.env.production
 *.log
 .DS_Store
 .idea/

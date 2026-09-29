@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID
 
@@ -17,7 +17,7 @@ from app.services import patron_service
 
 router = APIRouter()
 
-EVENT_TYPES = {"market_day", "sourcing_trip", "trade_fair", "popup_market", "workshop", "networking", "auction"}
+EVENT_TYPES = {"networking", "trade_show", "sourcing_trip", "popup_market", "workshop", "market_day", "trade_fair", "auction"}
 
 
 class EventCreate(BaseModel):
@@ -39,11 +39,19 @@ class EventCreate(BaseModel):
 
     @model_validator(mode="after")
     def _dates(self):
+        # Browsers send tz-aware ISO strings ("...Z"); the columns are naive UTC.
+        self.start_date = _naive_utc(self.start_date)
+        self.end_date = _naive_utc(self.end_date)
         if self.end_date < self.start_date:
             raise ValueError("end_date must not be before start_date")
         if self.event_type not in EVENT_TYPES:
             raise ValueError(f"event_type must be one of {sorted(EVENT_TYPES)}")
         return self
+
+
+def _naive_utc(dt: datetime) -> datetime:
+    """Normalise any datetime to naive UTC so it fits TIMESTAMP WITHOUT TIME ZONE."""
+    return dt.astimezone(timezone.utc).replace(tzinfo=None) if dt.tzinfo else dt
 
 
 def _event_out(e: Event, organizer: Vendor, my_status: Optional[str] = None) -> dict:

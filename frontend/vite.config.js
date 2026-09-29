@@ -1,25 +1,47 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+/// <reference types="vitest" />
+import { defineConfig, loadEnv } from "vite";
+import react from "@vitejs/plugin-react";
+import { fileURLToPath, URL } from "node:url";
 
-// In development every /api call (HTTP and WebSocket) is proxied to the
-// FastAPI server, so the browser never needs CORS or a hard-coded host.
-// In production the API serves the built `dist/` itself (see backend/app/main.py).
-export default defineConfig({
-  plugins: [react()],
-  server: {
-    port: 5173,
-    host: '0.0.0.0',
-    allowedHosts: true,
-    proxy: {
-      '/api': {
-        target: process.env.VITE_API_TARGET || 'http://localhost:8000',
-        changeOrigin: true,
-        ws: true,
+// The browser only ever talks to its own origin:
+//   dev   → Vite proxies /api (HTTP + WebSocket) to the FastAPI server
+//   prod  → FastAPI serves dist/ itself (backend/app/main.py), or nginx proxies /api
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), "");
+  return {
+    plugins: [react()],
+    resolve: {
+      alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },
+    },
+    server: {
+      port: 3000,
+      host: "0.0.0.0",
+      allowedHosts: true,
+      proxy: {
+        "/api": {
+          target: env.VITE_API_URL || "http://localhost:8000",
+          changeOrigin: true,
+          ws: true, // /api/chat/{room}/ws rides the same proxy
+        },
       },
     },
-  },
-  build: {
-    outDir: 'dist',
-    sourcemap: false,
-  },
-})
+    build: {
+      outDir: "dist",
+      sourcemap: false,
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            react: ["react", "react-dom", "react-router-dom"],
+            motion: ["framer-motion"],
+            vendor: ["axios", "zustand", "date-fns", "react-hot-toast", "react-dropzone", "clsx"],
+          },
+        },
+      },
+    },
+    test: {
+      environment: "jsdom",
+      globals: true,
+      setupFiles: ["./src/test/setup.js"],
+    },
+  };
+});

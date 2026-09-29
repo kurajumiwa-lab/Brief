@@ -1,49 +1,60 @@
-import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
-import { useAuth } from './hooks/useAuth'
-import Layout from './components/Layout'
-import Login from './pages/Login'
-import Register from './pages/Register'
-import Dashboard from './pages/Dashboard'
-import StockRoom from './pages/StockRoom'
-import VendorLists from './pages/VendorLists'
-import Groups from './pages/Groups'
-import Chat from './pages/Chat'
-import Tools from './pages/Tools'
-import Events from './pages/Events'
-import POSBridge from './pages/POSBridge'
-import VendorProfile from './pages/VendorProfile'
+import { useEffect } from "react";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+import Shell from "@/components/layout/Shell";
+import { PageSpinner } from "@/components/ui/Spinner";
+import AuthPage from "@/pages/auth/AuthPage";
+import Dashboard from "@/pages/dashboard/Dashboard";
+import StockRoom from "@/pages/stock/StockRoom";
+import Network from "@/pages/network/Network";
+import VendorLists from "@/pages/lists/VendorLists";
+import Groups from "@/pages/groups/Groups";
+import ChatPage from "@/pages/chat/ChatPage";
+import ToolsPage from "@/pages/tools/ToolsPage";
+import EventsPage from "@/pages/events/EventsPage";
+import POSBridge from "@/pages/pos/POSBridge";
+import VendorProfile from "@/pages/vendor/VendorProfile";
+import { useAuthStore } from "@/stores/authStore";
 
+/** Gate: no token → /auth; token but vendor not loaded yet → spinner. */
 function RequireVendor({ children }) {
-  const { isAuthenticated } = useAuth()
-  const loc = useLocation()
-  if (!isAuthenticated) return <Navigate to="/login" replace state={{ from: loc.pathname + loc.search }} />
-  return children
-}
-
-function PublicOnly({ children }) {
-  const { isAuthenticated } = useAuth()
-  return isAuthenticated ? <Navigate to="/" replace /> : children
+  const { token, vendor, ready } = useAuthStore();
+  const location = useLocation();
+  if (!token) return <Navigate to="/auth" replace state={{ from: location.pathname + location.search }} />;
+  if (!ready || !vendor) return ready && !vendor ? <Navigate to="/auth" replace /> : <PageSpinner label="Entering the network…" />;
+  return children;
 }
 
 export default function App() {
+  const token = useAuthStore((s) => s.token);
+  const ready = useAuthStore((s) => s.ready);
+  const fetchVendor = useAuthStore((s) => s.fetchVendor);
+
+  useEffect(() => {
+    if (!ready) fetchVendor();
+  }, [ready, token, fetchVendor]);
+
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/login" element={<PublicOnly><Login /></PublicOnly>} />
-        <Route path="/register" element={<PublicOnly><Register /></PublicOnly>} />
-        <Route element={<RequireVendor><Layout /></RequireVendor>}>
-          <Route index element={<Dashboard />} />
-          <Route path="stock" element={<StockRoom />} />
-          <Route path="vendor-lists" element={<VendorLists />} />
-          <Route path="groups" element={<Groups />} />
-          <Route path="chat" element={<Chat />} />
-          <Route path="tools" element={<Tools />} />
-          <Route path="events" element={<Events />} />
-          <Route path="pos" element={<POSBridge />} />
-          <Route path=":handle" element={<VendorProfile />} />
-        </Route>
+    <Routes>
+      <Route path="/auth" element={<AuthPage />} />
+      <Route
+        element={
+          <RequireVendor>
+            <Shell />
+          </RequireVendor>
+        }
+      >
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/stock" element={<StockRoom />} />
+        <Route path="/network" element={<Network />} />
+        <Route path="/lists" element={<VendorLists />} />
+        <Route path="/groups" element={<Groups />} />
+        <Route path="/chat" element={<ChatPage />} />
+        <Route path="/tools" element={<ToolsPage />} />
+        <Route path="/events" element={<EventsPage />} />
+        <Route path="/pos" element={<POSBridge />} />
+        <Route path="/@:handle" element={<VendorProfile />} />
         <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </BrowserRouter>
-  )
+      </Route>
+    </Routes>
+  );
 }

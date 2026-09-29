@@ -1,9 +1,9 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -79,6 +79,12 @@ class WarehouseBooking(BaseModel):
     start_date: datetime
     end_date: datetime
     space_allocated: dict = {}
+
+    @field_validator("start_date", "end_date")
+    @classmethod
+    def _naive_utc(cls, dt: datetime) -> datetime:
+        # Browsers send tz-aware ISO strings ("...Z"); the columns are naive UTC.
+        return dt.astimezone(timezone.utc).replace(tzinfo=None) if dt.tzinfo else dt
 
 
 def _tool_out(t: ToolListing, v: Vendor, details: Optional[dict] = None) -> ToolOut:

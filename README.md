@@ -56,7 +56,7 @@ python dev_local.py             # embedded Postgres in ./.pgdata, API on :8000
 # Frontend (separate terminal)
 cd frontend
 npm install
-npm run dev                     # http://localhost:5173, proxies /api (+ WebSocket) to :8000
+npm run dev                     # http://localhost:3000, proxies /api (+ WebSocket) to :8000
 ```
 
 `npm run build` produces `frontend/dist/`; when it exists the API serves it at
@@ -103,7 +103,7 @@ limiter.
 
 ```
 backend/     app/{models,services,routes,middleware}, alembic/, tests/, dev_local.py
-frontend/    src/{pages,components,hooks,store,lib}, vite.config.js, nginx.conf
+frontend/    src/{config,lib,stores,components/{layout,ui,vendor,stock,chat,forms},pages/*}, vite.config.js, nginx.conf
 pos-extension/  sync_daemon.py, adapters/
 docker-compose.yml  Dockerfile  railway.json  .env.example
 ```

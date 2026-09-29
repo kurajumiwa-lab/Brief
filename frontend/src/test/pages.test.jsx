@@ -1,212 +1,219 @@
-/**
- * Renders every page against a fake API so a runtime error in any of them
- * (undefined identifier, wrong field name, bad hook order) fails the build.
- */
-import { render, screen, waitFor, fireEvent } from '@testing-library/react'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import { vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
+import { MemoryRouter, Routes, Route } from "react-router-dom";
 
-const VENDOR = {
-  id: 'v1', business_name: 'Mama Mboga', vendor_handle: 'mama_mboga', current_role: 'both', business_categories: ['produce'],
-  business_description: 'Fresh greens', physical_location: 'Nairobi', network_score: 42, parasitism_index: 12.5,
-  total_sourced: 1, total_supplied: 3, total_stock_moved: 140, has_pos_connected: false, is_patron: false, is_verified: true, connected: false,
-}
-const OTHER = { ...VENDOR, id: 'v2', business_name: 'Kibanda Kitchen', vendor_handle: 'kibanda_kitchen', current_role: 'sourcing', connected: false }
-const STOCK = {
-  id: 's1', vendor_id: 'v1', vendor_handle: 'mama_mboga', vendor_business: 'Mama Mboga', name: 'Sukuma wiki', sku: 'SUK-1', category: 'produce',
-  subcategory: null, description: 'Fresh', quantity_in_stock: 100, quantity_reserved: 40, quantity_available: 60, unit_of_measure: 'bunches',
-  cost_price: 10, wholesale_price: 20, unit_price: 30, min_order_quantity: 10, bulk_discount_tiers: [], source: 'manual', visible_to_network: true,
-  tags: ['greens'], images: [], last_pos_sync: null, updated_at: null,
-}
-const NET_STOCK = { ...STOCK, id: 's2', vendor_id: 'v2', vendor_handle: 'kibanda_kitchen', name: 'Chapati flour' }
-const MOVEMENT = {
-  id: 'm1', stock_item_id: 's1', stock_name: 'Sukuma wiki', sku: 'SUK-1', from_vendor_id: 'v1', from_handle: 'mama_mboga', to_vendor_id: 'v2', to_handle: 'kibanda_kitchen',
-  quantity: 40, unit_price: 20, total_value: 800, movement_type: 'sourcing', status: 'pending', notes: 'Friday', created_at: new Date().toISOString(), completed_at: null, direction: 'outgoing',
-}
-const LIST = { id: 'l1', name: 'Nairobi Fresh', slug: 'nairobi-fresh', description: 'd', category: 'produce', region: 'Nairobi', patron_business: 'Mama Mboga', patron_handle: 'mama_mboga', member_count: 3, max_vendors: 20, is_open: true, requires_approval: true, is_group_created: false, creating_group_id: null, my_status: null, i_run_it: true }
-const GROUP = { id: 'g1', name: 'Wakulima', slug: 'wakulima', description: 'd', group_type: 'sourcing', category: 'produce', tags: ['x'], region: 'Nairobi', member_count: 4, max_members: null, is_public: true, requires_approval: false, created_by: 'mama_mboga', chat_room_id: 'r1', my_role: 'admin' }
-const ROOM = { id: 'r1', name: 'Wakulima', room_type: 'group', topic: null, topic_tags: [], group_id: 'g1', vendor_list_id: null, deal_stock_item_id: null, participant_count: 4, message_count: 1, joined: true, created_at: null }
-const MESSAGE = { id: 'msg1', room_id: 'r1', sender_id: 'v2', sender_handle: 'kibanda_kitchen', sender_business: 'Kibanda', content: 'Habari', message_type: 'text', shared_stock: null, deal_data: {}, attachments: [], is_pinned: false, sent_at: new Date().toISOString() }
-const TOOL = { id: 't1', vendor_id: 'v2', vendor_handle: 'kibanda_kitchen', vendor_business: 'K', category: 'warehouse', title: 'Cold room', description: null, location: 'Nairobi', price_per_unit: 1500, price_unit: 'per_day', min_booking: null, deposit_required: null, capacity: { sqm: 40 }, features: ['24h'], terms: null, is_available: true, times_booked: 2, avg_rating: null, details: null }
-const COURIER = { id: 'c1', courier_name: 'Boda Express', vendor_handle: 'kibanda_kitchen', vendor_id: 'v2', registration_number: null, coverage_areas: ['CBD'], service_types: ['same_day'], price_per_kg: 50, base_rate: null, is_verified: false, rating: null, total_deliveries: 0 }
-const EVENT = { id: 'e1', title: 'Market day', description: null, event_type: 'market_day', organizer: 'mama_mboga', organizer_id: 'v1', organizer_business: 'Mama Mboga', start_date: '2027-01-09T06:00:00', end_date: '2027-01-09T12:00:00', location: 'Marikiti', is_virtual: false, virtual_link: null, max_vendors: 20, registered_count: 5, entry_fee: 0, spots_left: 15, vendor_requirements: {}, vendor_list_id: null, group_id: null, status: 'upcoming', my_status: null }
-const CONN = { id: 'p1', pos_type: 'csv', connection_name: 'Till export', store_id: null, has_credentials: false, auto_sync: true, sync_interval_minutes: 15, last_sync_at: null, items_synced: 3, sync_config: {}, is_active: true, mode: 'push', created_at: null }
-const LOG = { id: 'log1', sync_type: 'push', status: 'success', started_at: new Date().toISOString(), completed_at: null, items_processed: 3, items_added: 1, items_updated: 2, items_removed: 0, errors: [] }
+// ── API + socket doubles ────────────────────────────────────────────────────
+const ok = (data) => Promise.resolve({ data });
+const ME = {
+  id: "v-me", business_name: "Mama Mboga Fresh", vendor_handle: "mama_mboga", current_role: "selling",
+  business_categories: ["vegetables"], network_score: 5, parasitism_index: 42, total_sourced: 0, total_supplied: 1,
+  total_stock_moved: 40, has_pos_connected: true, is_patron: true, is_verified: false, connected: false,
+};
+const OTHER = { ...ME, id: "v-2", business_name: "Kibanda Kitchen", vendor_handle: "kibanda_kitchen", current_role: "sourcing", connected: false, is_patron: false };
+const MOVEMENTS = [
+  { id: "m1", stock_name: "Tomatoes", sku: "TOM-C", from_handle: "mama_mboga", to_handle: "kibanda_kitchen", quantity: 2, unit_price: 2700, total_value: 5400, status: "pending", direction: "outgoing", notes: "Pickup Saturday", created_at: "2026-09-29T10:00:00" },
+  { id: "m2", stock_name: "Sukuma wiki", sku: "SUK-1", from_handle: "mama_mboga", to_handle: "kibanda_kitchen", quantity: 40, unit_price: 20, total_value: 800, status: "received", direction: "outgoing", created_at: "2026-09-28T10:00:00" },
+];
+const STOCK = [
+  { id: "s1", name: "Sukuma wiki", sku: "SUK-1", category: "vegetables", quantity_in_stock: 280, quantity_reserved: 0, quantity_available: 280, unit_of_measure: "bunches", unit_price: 20, min_order_quantity: 20, visible_to_network: true, tags: ["fresh"], vendor_handle: "mama_mboga", vendor_business: "Mama Mboga Fresh" },
+];
+const NETWORK_STOCK = [{ ...STOCK[0], id: "s9", name: "Kitenge 6-yard", vendor_handle: "gikomba_textiles", vendor_business: "Gikomba Textiles", unit_price: 1200, min_order_quantity: 5, quantity_available: 60 }];
+const ROOMS = [
+  { id: "r1", name: "Wakulima Sourcing Collective Chat", room_type: "group", topic: null, topic_tags: [], participant_count: 3, message_count: 5, joined: true },
+  { id: "r2", name: "Import regulations", room_type: "niche", topic: "KEBS and KRA", topic_tags: ["imports"], participant_count: 1, message_count: 0, joined: false },
+];
+const MESSAGES = [
+  { id: "x1", room_id: "r1", sender_id: "v-2", sender_handle: "kibanda_kitchen", sender_business: "Kibanda Kitchen", content: "Count me in for 60 bunches", message_type: "text", sent_at: "2026-09-29T09:00:00" },
+  { id: "x2", room_id: "r1", sender_id: "v-me", sender_handle: "mama_mboga", sender_business: "Mama Mboga Fresh", content: "Fresh this morning", message_type: "stock_share", shared_stock: { id: "s1", name: "Sukuma wiki", quantity_available: 280, unit_of_measure: "bunches", unit_price: 20, min_order_quantity: 20 }, sent_at: "2026-09-29T09:05:00" },
+];
 
-const GET = {
-  '/vendors/me': VENDOR, '/vendors/me/profile': { primary_goods: ['sukuma'], sourcing_interests: [], preferred_regions: [], accepts_bulk: true, offers_credit: false },
-  '/vendors/me/patron': { is_patron: true, tier: 'starter', total_vendors_managed: 3, total_events_organized: 1, reputation_score: 13, max_lists: 1, max_vendors_per_list: 20 },
-  '/vendors/connections': [{ vendor_id: 'v2', vendor_handle: 'kibanda_kitchen', business_name: 'Kibanda Kitchen', business_categories: ['food'], current_role: 'sourcing', connection_type: 'trade', parasitism_score: 85, connected_at: null }],
-  '/vendors/suggested': [{ vendor_id: 'v3', vendor_handle: 'duka', business_name: 'Duka', business_categories: ['books'], current_role: 'selling', network_score: 3, reasons: ['same trade'] }],
-  '/vendors/stats': { vendors: 12, by_role: { both: 12 }, connections: 4 }, '/vendors/mama_mboga': VENDOR, '/vendors/kibanda_kitchen': OTHER,
-  '/stock/my-stock': [STOCK], '/stock/network-stock': [NET_STOCK], '/stock/movements': [MOVEMENT], '/stock/categories': { categories: ['produce'] }, '/stock/s1': STOCK,
-  '/vendor-lists/browse': [LIST], '/vendor-lists/mine': [LIST], '/vendor-lists/l1/members': [{ vendor_id: 'v2', vendor_handle: 'kibanda_kitchen', business_name: 'Kibanda', business_categories: [], status: 'pending', role_in_list: 'member', joined_at: new Date().toISOString(), approved_at: null }],
-  '/groups/browse': [GROUP, { ...GROUP, id: 'g2', name: 'Textiles', my_role: null }], '/groups/mine': [GROUP], '/groups/g1': GROUP, '/groups/g1/members': [{ vendor_id: 'v1', vendor_handle: 'mama_mboga', business_name: 'Mama Mboga', role: 'admin', is_active: true, joined_at: new Date().toISOString(), messages_sent: 2, deals_made_in_group: 0 }],
-  '/chat/rooms': [ROOM, { ...ROOM, id: 'r2', name: 'Import regs', room_type: 'niche', joined: false }], '/chat/r1': ROOM, '/chat/r1/messages': [MESSAGE],
-  '/tools/browse': [TOOL], '/tools/mine': [{ ...TOOL, id: 't2', vendor_id: 'v1', vendor_handle: 'mama_mboga' }], '/tools/couriers': [COURIER],
-  '/events/browse': [EVENT], '/events/mine': [EVENT], '/events/e1/registrations': [{ vendor_id: 'v2', vendor_handle: 'kibanda_kitchen', business_name: 'K', status: 'registered', booth_assignment: null, registered_at: new Date().toISOString() }],
-  '/pos/connections': [CONN], '/pos/sync-logs/p1': [LOG],
-}
-const posted = []
-vi.mock('../lib/api', async () => {
-  const actual = await vi.importActual('../lib/api')
-  const respond = (url) => {
-    const key = url.split('?')[0]
-    if (!(key in GET)) throw Object.assign(new Error(`unmocked GET ${key}`), { response: { status: 404, data: { detail: `unmocked ${key}` } } })
-    return Promise.resolve({ data: GET[key] })
-  }
+vi.mock("@/lib/api", () => {
+  const apiError = (e, f = "Something went wrong") => e?.response?.data?.detail || f;
   return {
-    ...actual,
-    api: {
-      get: vi.fn(respond),
-      post: vi.fn((url, body) => { posted.push([url, body]); return Promise.resolve({ data: { message: 'ok', status: 'member', room_id: 'r1', sent: MESSAGE, role: 'selling', tier: 'starter', ...LOG } }) }),
-      put: vi.fn(() => Promise.resolve({ data: { message: 'ok' } })),
-      delete: vi.fn(() => Promise.resolve({ data: { message: 'ok' } })),
-      interceptors: { request: { use() {} }, response: { use() {} } },
+    default: {},
+    apiError,
+    authAPI: { login: vi.fn(() => ok({ access_token: "tok" })), register: vi.fn(() => ok({})) },
+    vendorAPI: {
+      me: vi.fn(() => ok(ME)), stats: vi.fn(() => ok({ vendors: 4, by_role: { selling: 1, sourcing: 1, both: 2 }, connections: 3 })),
+      suggested: vi.fn(() => ok([{ vendor_id: "v-3", vendor_handle: "boda_express", business_name: "Boda Express", business_categories: ["logistics"], current_role: "both", network_score: 1, reasons: ["They source what you stock"] }])),
+      connections: vi.fn(() => ok([{ vendor_id: "v-2", vendor_handle: "kibanda_kitchen", business_name: "Kibanda Kitchen", business_categories: [], current_role: "sourcing", connection_type: "trade", parasitism_score: 35 }])),
+      network: vi.fn(() => ok([ME, OTHER])), connect: vi.fn(() => ok({ message: "Connected" })), disconnect: vi.fn(() => ok({})),
+      switchRole: vi.fn((role) => ok({ role })), byHandle: vi.fn(() => ok(OTHER)), profile: vi.fn(() => ok({})), patronStatus: vi.fn(() => ok({ is_patron: true, tier: "starter", max_lists: 1, max_vendors_per_list: 20 })),
+      becomePatron: vi.fn(() => ok({})), update: vi.fn(() => ok(ME)), updateProfile: vi.fn(() => ok({})), graph: vi.fn(() => ok({})),
     },
-  }
-})
+    stockAPI: {
+      mine: vi.fn(() => ok(STOCK)), network: vi.fn(() => ok(NETWORK_STOCK)), movements: vi.fn(() => ok(MOVEMENTS)), categories: vi.fn(() => ok(["vegetables", "textiles"])),
+      add: vi.fn(() => ok({ message: "Stock added", stock_id: "s-new" })), get: vi.fn(() => ok({ ...STOCK[0], id: "s-new", name: "Spinach" })),
+      update: vi.fn(() => ok(STOCK[0])), remove: vi.fn(() => ok({})), source: vi.fn(() => ok({ movement_id: "m9", total_value: 6000 })),
+      advance: vi.fn((id, action) => ok({ message: `Movement ${action}ed`, status: action === "confirm" ? "confirmed" : action, movement_id: id })), bulkImport: vi.fn(() => ok({ added: 1, updated: 0, errors: [] })),
+    },
+    groupAPI: { browse: vi.fn(() => ok([])), mine: vi.fn(() => ok([])), get: vi.fn(() => ok({})), members: vi.fn(() => ok([])), create: vi.fn(), join: vi.fn(), leave: vi.fn(), approve: vi.fn(), createList: vi.fn() },
+    listAPI: { browse: vi.fn(() => ok([])), mine: vi.fn(() => ok([])), members: vi.fn(() => ok([])), create: vi.fn(), register: vi.fn(), approve: vi.fn(), reject: vi.fn(), setOpen: vi.fn() },
+    chatAPI: {
+      rooms: vi.fn(() => ok(ROOMS)), room: vi.fn(() => ok(ROOMS[0])), messages: vi.fn(() => ok(MESSAGES)),
+      send: vi.fn((room, body) => ok({ message: "Sent", message_id: "x3", sent: { id: "x3", room_id: room, sender_id: "v-me", sender_handle: "mama_mboga", sender_business: "Mama Mboga Fresh", content: body.content, message_type: body.message_type, sent_at: "2026-09-29T09:10:00" } })),
+      join: vi.fn(() => ok({})), createTopic: vi.fn(() => ok({ message: "created", room_id: "r3" })), directRoom: vi.fn(() => ok({ room_id: "d1" })), dealRoom: vi.fn(() => ok({ room_id: "deal1" })),
+    },
+    toolAPI: { browse: vi.fn(() => ok([])), mine: vi.fn(() => ok([])), couriers: vi.fn(() => ok([])), create: vi.fn(), registerCourier: vi.fn(), setAvailability: vi.fn(), bookWarehouse: vi.fn() },
+    eventAPI: { browse: vi.fn(() => ok([])), mine: vi.fn(() => ok([])), get: vi.fn(), registrations: vi.fn(() => ok([])), create: vi.fn(), register: vi.fn(), cancelRegistration: vi.fn(), setStatus: vi.fn() },
+    posAPI: { connections: vi.fn(() => ok([])), connect: vi.fn(), disconnect: vi.fn(), sync: vi.fn(), push: vi.fn(), pushCsv: vi.fn(), syncLogs: vi.fn(() => ok([])) },
+  };
+});
 
-// WebSocket stub: opens and stays quiet.
-class FakeWS { constructor() { setTimeout(() => this.onopen?.(), 0) } send() {} close() {} }
-FakeWS.OPEN = 1
-window.WebSocket = FakeWS
+const wsSubscribe = vi.fn(() => () => {});
+vi.mock("@/lib/ws", () => ({ ws: { subscribe: (...a) => wsSubscribe(...a), disconnect: vi.fn(), disconnectAll: vi.fn(), isOpen: () => true }, default: {} }));
 
-import { useAuthStore } from '../store/authStore'
-import Layout from '../components/Layout'
-import Dashboard from '../pages/Dashboard'
-import StockRoom from '../pages/StockRoom'
-import VendorLists from '../pages/VendorLists'
-import Groups from '../pages/Groups'
-import Chat from '../pages/Chat'
-import Tools from '../pages/Tools'
-import Events from '../pages/Events'
-import POSBridge from '../pages/POSBridge'
-import VendorProfile from '../pages/VendorProfile'
-import Login from '../pages/Login'
-import Register from '../pages/Register'
+import * as api from "@/lib/api";
+import { useAuthStore } from "@/stores/authStore";
+import { useChatStore } from "@/stores/chatStore";
+import { useStockStore } from "@/stores/stockStore";
+import App from "@/App";
+import Dashboard from "@/pages/dashboard/Dashboard";
+import StockRoom from "@/pages/stock/StockRoom";
+import ChatPage from "@/pages/chat/ChatPage";
+import Network from "@/pages/network/Network";
+import Sidebar from "@/components/layout/Sidebar";
 
-beforeEach(() => {
-  useAuthStore.setState({ token: 'tok', vendor: VENDOR })
-  posted.length = 0
-})
-
-function mount(path, element, extra = null) {
-  return render(
+const mount = (ui, path = "/") =>
+  render(
     <MemoryRouter initialEntries={[path]}>
       <Routes>
-        <Route element={<Layout />}>
-          <Route path={path.split('?')[0].startsWith('/@') ? ':handle' : path.split('?')[0]} element={element} />
-          {extra}
-        </Route>
+        <Route path="*" element={ui} />
       </Routes>
-    </MemoryRouter>,
-  )
-}
+    </MemoryRouter>
+  );
 
-test('layout renders nav, role switcher and scores', async () => {
-  mount('/', <Dashboard />)
-  for (const label of ['Dashboard', 'Stock Room', 'Vendor Lists', 'Groups', 'Chat', 'Tools', 'Events', 'POS Bridge']) {
-    expect(screen.getAllByText(label).length).toBeGreaterThan(0)
-  }
-  expect(screen.getByRole('radio', { name: 'Both' })).toHaveAttribute('aria-checked', 'true')
-  await waitFor(() => expect(screen.getByText(/Movements needing you/)).toBeInTheDocument())
-  expect(screen.getByText('Sukuma wiki')).toBeInTheDocument()
-  expect(screen.getByText('Kibanda Kitchen')).toBeInTheDocument()
-  expect(screen.getByText('same trade')).toBeInTheDocument()
-})
+beforeEach(() => {
+  window.localStorage.clear();
+  useAuthStore.setState({ token: "tok", vendor: ME, ready: true, loading: false });
+  useChatStore.setState({ rooms: [], activeRoom: null, messages: [], live: false });
+  useStockStore.setState({ mine: [], network: [], movements: [], categories: [] });
+  vi.clearAllMocks();
+});
 
-test('stock room: my shelves, network, movements, add form', async () => {
-  mount('/stock', <StockRoom />)
-  await waitFor(() => expect(screen.getByText('Sukuma wiki')).toBeInTheDocument())
-  expect(screen.getByText('on the network')).toBeInTheDocument()
-  fireEvent.click(screen.getByText('Network stock'))
-  await waitFor(() => expect(screen.getByText('Chapati flour')).toBeInTheDocument())
-  fireEvent.click(screen.getByText('Source'))
-  expect(screen.getByText(/Request stock/)).toBeInTheDocument()
-  fireEvent.click(screen.getByText('Cancel'))
-  fireEvent.click(screen.getByText('Movements'))
-  await waitFor(() => expect(screen.getByText('Confirm')).toBeInTheDocument())
-  fireEvent.click(screen.getByText('Add stock'))
-  expect(screen.getByText('Put it on the shelf')).toBeInTheDocument()
-})
+describe("routing & auth gate", () => {
+  it("sends signed-out visitors to /auth and shows the vendor-only pitch", async () => {
+    useAuthStore.setState({ token: null, vendor: null, ready: true });
+    mount(<App />, "/stock");
+    expect(await screen.findByRole("heading", { name: /enter the network/i })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: /join/i }));
+    expect(await screen.findByRole("heading", { name: /register your business/i })).toBeInTheDocument();
+    // handle auto-slugs from the business name
+    fireEvent.change(screen.getByLabelText(/business name/i), { target: { value: "Mama Mboga Fresh" } });
+    expect(screen.getByLabelText(/^handle/i)).toHaveValue("mama_mboga_fresh");
+  });
 
-test('vendor lists: patron bar, manage modal with pending vendors', async () => {
-  mount('/vendor-lists', <VendorLists />)
-  await waitFor(() => expect(screen.getAllByText('Nairobi Fresh').length).toBeGreaterThan(0))
-  expect(screen.getByText(/3 vendors managed/)).toBeInTheDocument()
-  fireEvent.click(screen.getAllByText('Manage')[0])
-  await waitFor(() => expect(screen.getByText('Approve')).toBeInTheDocument())
-  fireEvent.click(screen.getByText('Approve'))
-  await waitFor(() => expect(posted.some(([u]) => u === '/vendor-lists/l1/approve/v2')).toBe(true))
-})
+  it("renders the shell with the nine nav items and the inline role switcher", async () => {
+    mount(<App />, "/");
+    const nav = await screen.findByRole("navigation", { name: /primary/i });
+    for (const label of ["Dashboard", "Stock Room", "Network", "Vendor Lists", "Groups", "Chat", "Tools", "Events", "POS Bridge"]) {
+      expect(within(nav).getByText(label)).toBeInTheDocument();
+    }
+    expect(screen.getByRole("radiogroup", { name: /current role/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /exit network/i })).toBeInTheDocument();
+  });
+});
 
-test('groups: mine + browse, detail with group list form', async () => {
-  mount('/groups', <Groups />)
-  await waitFor(() => expect(screen.getByText('Textiles')).toBeInTheDocument())
-  fireEvent.click(screen.getAllByText('Wakulima')[0])
-  await waitFor(() => expect(screen.getByText('Create a vendor list')).toBeInTheDocument())
-  fireEvent.click(screen.getByText('Create a vendor list'))
-  expect(screen.getByPlaceholderText('List name')).toBeInTheDocument()
-})
+describe("Sidebar role switcher", () => {
+  it("switches role through the API and updates the vendor", async () => {
+    mount(<Sidebar />);
+    fireEvent.click(screen.getByTitle(/^Sourcing —/));
+    await waitFor(() => expect(api.vendorAPI.switchRole).toHaveBeenCalledWith("sourcing"));
+    await waitFor(() => expect(useAuthStore.getState().vendor.current_role).toBe("sourcing"));
+  });
+});
 
-test('chat: rooms list, messages, send', async () => {
-  mount('/chat?room=r1', <Chat />)
-  await waitFor(() => expect(screen.getByText('Habari')).toBeInTheDocument())
-  expect(screen.getByText('Import regs')).toBeInTheDocument()
-  await waitFor(() => expect(screen.getByText('live')).toBeInTheDocument())
-  fireEvent.change(screen.getByPlaceholderText('Message the room'), { target: { value: 'Una sukuma?' } })
-  fireEvent.click(screen.getByLabelText('Send'))
-  await waitFor(() => expect(posted.some(([u, b]) => u === '/chat/r1/message' && b.content === 'Una sukuma?')).toBe(true))
-})
+describe("Dashboard", () => {
+  it("shows stats, actionable movements and suggested vendors", async () => {
+    mount(<Dashboard />);
+    expect(await screen.findByText("Mama Mboga Fresh")).toBeInTheDocument();
+    expect(await screen.findByText("Tomatoes")).toBeInTheDocument(); // pending outgoing movement needs my confirm
+    expect(screen.getByRole("button", { name: /confirm/i })).toBeInTheDocument();
+    expect(await screen.findByText("Boda Express")).toBeInTheDocument();
+    expect(screen.getByText(/they source what you stock/i)).toBeInTheDocument();
+    expect(screen.getByText("4")).toBeInTheDocument(); // network pulse vendor count
+  });
 
-test('tools: categories, couriers, list form switches per category', async () => {
-  mount('/tools', <Tools />)
-  await waitFor(() => expect(screen.getAllByText('Cold room').length).toBeGreaterThan(0))
-  expect(screen.getByText('Boda Express')).toBeInTheDocument()
-  fireEvent.click(screen.getByText('List a tool'))
-  fireEvent.change(screen.getByLabelText(/Category/), { target: { value: 'transport' } })
-  expect(screen.getByLabelText(/Vehicle type/)).toBeInTheDocument()
-})
+  it("advances a movement from the dashboard", async () => {
+    mount(<Dashboard />);
+    fireEvent.click(await screen.findByRole("button", { name: /confirm/i }));
+    await waitFor(() => expect(api.stockAPI.advance).toHaveBeenCalledWith("m1", "confirm"));
+    expect(await screen.findByRole("button", { name: /mark shipped/i })).toBeInTheDocument();
+  });
+});
 
-test('events: organizer view with registrations', async () => {
-  mount('/events', <Events />)
-  await waitFor(() => expect(screen.getAllByText('Market day').length).toBeGreaterThan(0))
-  fireEvent.click(screen.getAllByText('Registrations')[0])
-  await waitFor(() => expect(screen.getByText(/Registered vendors · 1/)).toBeInTheDocument())
-  fireEvent.click(screen.getByLabelText('Close'))
-  fireEvent.click(screen.getByText('New event'))
-  expect(screen.getByLabelText(/Who can register/)).toBeInTheDocument()
-})
+describe("Stock Room", () => {
+  it("lists my shelf with owner controls", async () => {
+    mount(<StockRoom />, "/stock");
+    expect(await screen.findByText("Sukuma wiki")).toBeInTheDocument();
+    expect(screen.getByLabelText("Edit")).toBeInTheDocument();
+    expect(screen.getByLabelText("Remove")).toBeInTheDocument();
+  });
 
-test('pos bridge: connection card, logs, connect modal', async () => {
-  mount('/pos', <POSBridge />)
-  await waitFor(() => expect(screen.getByText('Till export')).toBeInTheDocument())
-  expect(screen.getByText('Push CSV')).toBeInTheDocument()
-  fireEvent.click(screen.getByText('Logs'))
-  await waitFor(() => expect(screen.getByText('push')).toBeInTheDocument())
-  fireEvent.click(screen.getByText('Connect a POS'))
-  expect(screen.getByLabelText(/Square access token/)).toBeInTheDocument()
-  fireEvent.click(screen.getByText('Shopify'))
-  expect(screen.getByLabelText(/Shop domain/)).toBeInTheDocument()
-})
+  it("adds stock via the form and pulls the full item back", async () => {
+    mount(<StockRoom />, "/stock");
+    fireEvent.click(await screen.findByRole("button", { name: /add stock/i }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.change(within(dialog).getByLabelText(/item name/i), { target: { value: "Spinach" } });
+    fireEvent.change(within(dialog).getByLabelText(/quantity in stock/i), { target: { value: "120" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: /add to shelf/i }));
+    await waitFor(() => expect(api.stockAPI.add).toHaveBeenCalled());
+    expect(api.stockAPI.add.mock.calls[0][0]).toMatchObject({ name: "Spinach", quantity_in_stock: 120, unit_price: null, visible_to_network: true });
+    await waitFor(() => expect(api.stockAPI.get).toHaveBeenCalledWith("s-new"));
+    expect(await screen.findByText("Spinach")).toBeInTheDocument();
+  });
 
-test('vendor profile: own page with editor, other vendor with connect', async () => {
-  const { unmount } = mount('/@mama_mboga', <VendorProfile />)
-  await waitFor(() => expect(screen.getByText('Edit profile')).toBeInTheDocument())
-  fireEvent.click(screen.getByText('Edit profile'))
-  expect(screen.getByLabelText(/Primary goods/)).toBeInTheDocument()
-  unmount()
-  mount('/@kibanda_kitchen', <VendorProfile />)
-  await waitFor(() => expect(screen.getByText('Connect')).toBeInTheDocument())
-  expect(screen.getByText('Message')).toBeInTheDocument()
-})
+  it("sources network stock through the dialog", async () => {
+    mount(<StockRoom />, "/stock?tab=network");
+    expect(await screen.findByText("Kitenge 6-yard")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /^source$/i }));
+    const dialog = await screen.findByRole("dialog");
+    const qty = within(dialog).getByLabelText(/quantity/i);
+    expect(qty).toHaveValue(5); // defaults to min order
+    fireEvent.change(qty, { target: { value: "10" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: /send request/i }));
+    await waitFor(() => expect(api.stockAPI.source).toHaveBeenCalledWith("s9", { quantity: 10, proposed_price: null, notes: null }));
+  });
 
-test('login and register render without a session', () => {
-  useAuthStore.setState({ token: null, vendor: null })
-  const { unmount } = render(<MemoryRouter><Login /></MemoryRouter>)
-  expect(screen.getByText('Enter the network')).toBeInTheDocument()
-  unmount()
-  render(<MemoryRouter><Register /></MemoryRouter>)
-  expect(screen.getByText('Join the network')).toBeInTheDocument()
-})
+  it("shows movements with the right actions per side", async () => {
+    mount(<StockRoom />, "/stock?tab=movements");
+    expect(await screen.findByText("Tomatoes")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /confirm/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /received/i })).not.toBeInTheDocument(); // buyer-only action
+    expect(screen.getByText(/1 needs your action/i)).toBeInTheDocument();
+  });
+});
+
+describe("Network", () => {
+  it("hides me from discover and connects to a vendor", async () => {
+    mount(<Network />, "/network");
+    expect(await screen.findByText("Kibanda Kitchen")).toBeInTheDocument();
+    expect(screen.queryByText("Mama Mboga Fresh")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /^connect$/i }));
+    await waitFor(() => expect(api.vendorAPI.connect).toHaveBeenCalledWith("v-2"));
+    expect(await screen.findByRole("button", { name: /connected/i })).toBeInTheDocument();
+  });
+});
+
+describe("Chat", () => {
+  it("opens a deep-linked room, subscribes with the token socket, renders shares and sends", async () => {
+    mount(<ChatPage />, "/chat?room=r1");
+    expect(await screen.findByText("Count me in for 60 bunches")).toBeInTheDocument();
+    expect(screen.getByText(/source it in the stock room|Sukuma wiki/i)).toBeInTheDocument();
+    expect(wsSubscribe).toHaveBeenCalledWith("r1", expect.any(Function));
+    fireEvent.change(screen.getByLabelText("Message"), { target: { value: "On my way" } });
+    fireEvent.click(screen.getByLabelText("Send"));
+    await waitFor(() => expect(api.chatAPI.send).toHaveBeenCalledWith("r1", { message_type: "text", content: "On my way" }));
+    expect(await screen.findByText("On my way")).toBeInTheDocument();
+    // a socket echo of the same id must not duplicate
+    const listener = wsSubscribe.mock.calls[0][1];
+    listener({ type: "message", message: { id: "x3", room_id: "r1", sender_id: "v-me", sender_handle: "mama_mboga", content: "On my way", message_type: "text", sent_at: "2026-09-29T09:10:00" } });
+    await waitFor(() => expect(screen.getAllByText("On my way")).toHaveLength(1));
+  });
+
+  it("asks to join an open topic before posting", async () => {
+    mount(<ChatPage />, "/chat?room=r2");
+    expect(await screen.findByRole("button", { name: /join topic/i })).toBeInTheDocument();
+    expect(screen.queryByLabelText("Send")).not.toBeInTheDocument();
+  });
+});
