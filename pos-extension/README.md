@@ -20,7 +20,27 @@ python sync_daemon.py --api https://your-brief.example --connection <id> \
 ```
 
 Sign in with `--token <jwt>` or `--email/--password` (or `BRIEF_EMAIL`,
-`BRIEF_PASSWORD`, `BRIEF_API`, `BRIEF_TOKEN` in the environment).
+`BRIEF_PASSWORD`, `BRIEF_API`, `BRIEF_TOKEN` in the environment). With
+email/password the daemon re-logs in when the token expires; with a fixed
+token it exits with a clear error instead.
+
+## Running it unattended
+
+* Each pass fingerprints the export and only pushes when something changed
+  (`--force` overrides). `--state-file` keeps that fingerprint across restarts.
+* Failures back off exponentially up to `--max-backoff` seconds (default 600);
+  an expired token triggers a re-login when credentials are available.
+* `--health-file` writes `{"ok", "at", "rows", "changed", "added", "updated",
+  "errors" | "error", "failures"}` after every pass — the container
+  `HEALTHCHECK` reads it; point a cron or monitor at it on bare metal.
+* SIGTERM / SIGINT finish the current pass and exit cleanly.
+* Pushes are idempotent on the server (rows match on `pos_item_id`, then `sku`),
+  so re-running after a crash never duplicates stock.
+
+Container: `docker-compose.prod.yml --profile pos up -d pos-daemon` builds
+`pos-extension/Dockerfile`, mounts `./pos-data` at `/data` and pushes
+`/data/stock.csv` to `POS_DAEMON_CONNECTION` every `POS_DAEMON_INTERVAL`
+seconds (see `.env.example`).
 
 ## Adapters
 
