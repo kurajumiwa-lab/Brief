@@ -5,9 +5,12 @@ import Select from "@/components/ui/Select";
 import Input from "@/components/ui/Input";
 import { toast } from "@/components/ui/Toast";
 import { useStockStore } from "@/stores/stockStore";
-import { apiError } from "@/lib/api";
+import { useChatStore } from "@/stores/chatStore";
+import { useAuthStore } from "@/stores/authStore";
+import { DELIVERY_TERMS, PAYMENT_TERMS } from "@/config/constants";
+import { stockAPI, apiError } from "@/lib/api";
 import { currency } from "@/lib/formatters";
-import { cn, numOrNull } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 const MODES = [
   { value: "text", label: "Message", icon: MessageSquare },
@@ -15,19 +18,51 @@ const MODES = [
   { value: "deal_proposal", label: "Propose deal", icon: HeartHandshake },
 ];
 
+const blankDeal = { stock_item_id: "", quantity: "", price: "", delivery_terms: "pickup", payment_terms: "on_delivery" };
+
 /** Composer. `onSend(payload)` receives a full MessageCreate body. */
 export default function ChatInput({ onSend, disabled, sending, placeholder = "Message the room…" }) {
   const [mode, setMode] = useState("text");
   const [text, setText] = useState("");
   const [stockId, setStockId] = useState("");
-  const [deal, setDeal] = useState({ item: "", quantity: "", unit_price: "", delivery: "", payment: "" });
+  const [deal, setDeal] = useState(blankDeal);
+  const [dealStock, setDealStock] = useState([]); // items a proposal can be about (the room's item, or the other side's shelf)
   const mine = useStockStore((s) => s.mine);
   const fetchMine = useStockStore((s) => s.fetchMine);
+  const room = useChatStore((s) => s.activeRoom);
+  const me = useAuthStore((s) => s.vendor);
   const ref = useRef(null);
 
   useEffect(() => {
     if (mode === "stock_share" && mine.length === 0) fetchMine().catch(() => {});
   }, [mode, mine.length, fetchMine]);
+
+  // Deal mode: proposals are structured (v2.1) — pick real stock so the API can price and reserve it.
+  useEffect(() => {
+    if (mode !== "deal_proposal" || !room) return;
+    let alive = true;
+    const others = (room.participants || []).filter((p) => p.id !== me?.id);
+    const load = async () => {
+      let items = [];
+      if (room.deal_stock_item_id) {
+        const { data } = await stockAPI.get(room.deal_stock_item_id);
+        items = [data];
+      } else if (others.length) {
+        const results = await Promise.all(others.map((o) => stockAPI.network({ vendor_handle: o.vendor_handle }).then((r) => r.data).catch(() => [])));
+        items = results.flat();
+      } else {
+        const { data } = await stockAPI.network({});
+        items = data;
+      }
+      if (!alive) return;
+      setDealStock(items);
+      setDeal((d) => (d.stock_item_id || items.length !== 1 ? d : { ...d, stock_item_id: items[0].id, price: items[0].wholesale_price ?? items[0].unit_price ?? "" }));
+    };
+    load().catch(() => alive && setDealStock([]));
+    return () => {
+      alive = false;
+    };
+  }, [mode, room, me?.id]);
 
   // auto-grow
   useEffect(() => {
@@ -37,7 +72,8 @@ export default function ChatInput({ onSend, disabled, sending, placeholder = "Me
     el.style.height = Math.min(el.scrollHeight, 160) + "px";
   }, [text]);
 
-  const dealTotal = Number(deal.quantity || 0) * Number(deal.unit_price || 0);
+  const dealTotal = Number(deal.quantity || 0) * Number(deal.price || 0);
+  const dealItem = dealStock.find((i) => i.id === deal.stock_item_id);
 
   const submit = async () => {
     if (disabled || sending) return;
@@ -47,18 +83,18 @@ export default function ChatInput({ onSend, disabled, sending, placeholder = "Me
       const item = mine.find((i) => i.id === stockId);
       payload = { message_type: "stock_share", shared_stock_id: stockId, content: text.trim() || `Sharing ${item?.name || "stock"} from my shelf` };
     } else if (mode === "deal_proposal") {
-      if (!deal.item.trim() || !deal.quantity) return toast.error("A deal needs an item and a quantity");
+      if (!deal.stock_item_id) return toast.error("Pick the stock the deal is about");
+      if (!(Number(deal.quantity) > 0)) return toast.error("How many units?");
+      if (deal.price === "" || Number(deal.price) < 0) return toast.error("Propose a price per unit");
       const deal_data = {
-        item: deal.item.trim(),
+        stock_item_id: deal.stock_item_id,
         quantity: Number(deal.quantity),
-        unit_price: numOrNull(deal.unit_price),
-        total: deal.unit_price ? dealTotal : null,
-        delivery: deal.delivery.trim() || null,
-        payment: deal.payment.trim() || null,
+        proposed_price_per_unit: Number(deal.price),
+        delivery_terms: deal.delivery_terms,
+        payment_terms: deal.payment_terms,
         notes: text.trim() || null,
-        status: "proposed",
       };
-      payload = { message_type: "deal_proposal", deal_data, content: text.trim() || `Deal: ${deal.quantity} × ${deal.item}${deal.unit_price ? ` @ ${currency(deal.unit_price)}` : ""}` };
+      payload = { message_type: "deal_proposal", deal_data, content: text.trim() || `Proposal: ${deal.quantity} × ${dealItem?.name || "stock"} at ${currency(deal.price)} per ${dealItem?.unit_of_measure || "unit"}` };
     } else {
       if (!text.trim()) return;
       payload = { message_type: "text", content: text.trim() };
@@ -67,7 +103,7 @@ export default function ChatInput({ onSend, disabled, sending, placeholder = "Me
       await onSend(payload);
       setText("");
       setStockId("");
-      setDeal({ item: "", quantity: "", unit_price: "", delivery: "", payment: "" });
+      setDeal(blankDeal);
       if (mode !== "text") setMode("text");
     } catch (err) {
       toast.error(apiError(err, "Message not sent"));
@@ -101,12 +137,25 @@ export default function ChatInput({ onSend, disabled, sending, placeholder = "Me
 
       {mode === "deal_proposal" && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          <Input placeholder="Item" value={deal.item} onChange={(e) => setDeal({ ...deal, item: e.target.value })} wrapperClassName="col-span-2 sm:col-span-1" />
-          <Input type="number" min="0" step="any" placeholder="Quantity" value={deal.quantity} onChange={(e) => setDeal({ ...deal, quantity: e.target.value })} />
-          <Input type="number" min="0" step="any" placeholder="Unit price" prefix="KES" value={deal.unit_price} onChange={(e) => setDeal({ ...deal, unit_price: e.target.value })} />
-          <div className="h-9 flex items-center justify-end px-2 rounded-lg bg-surface-2 border border-edge-1 text-xs font-mono text-amber-200">{dealTotal ? currency(dealTotal) : "total"}</div>
-          <Input placeholder="Delivery (e.g. pickup Sat)" value={deal.delivery} onChange={(e) => setDeal({ ...deal, delivery: e.target.value })} wrapperClassName="col-span-2" />
-          <Input placeholder="Payment (e.g. M-Pesa on receipt)" value={deal.payment} onChange={(e) => setDeal({ ...deal, payment: e.target.value })} wrapperClassName="col-span-2" />
+          <Select
+            value={deal.stock_item_id}
+            onChange={(e) => {
+              const it = dealStock.find((i) => i.id === e.target.value);
+              setDeal({ ...deal, stock_item_id: e.target.value, price: it ? (it.wholesale_price ?? it.unit_price ?? "") : deal.price });
+            }}
+            placeholder={dealStock.length ? "Which stock?" : "No stock to deal on here"}
+            options={dealStock.map((i) => ({ value: i.id, label: `${i.name} · ${i.quantity_available ?? i.quantity_in_stock} ${i.unit_of_measure || ""} · @${i.vendor_handle}` }))}
+            aria-label="Deal stock"
+            wrapperClassName="col-span-2 sm:col-span-4"
+          />
+          <Input type="number" min="1" step="1" placeholder="Quantity" value={deal.quantity} onChange={(e) => setDeal({ ...deal, quantity: e.target.value })} aria-label="Deal quantity" />
+          <Input type="number" min="0" step="any" placeholder="Price / unit" prefix="KES" value={deal.price} onChange={(e) => setDeal({ ...deal, price: e.target.value })} aria-label="Deal price per unit" />
+          <Select value={deal.delivery_terms} onChange={(e) => setDeal({ ...deal, delivery_terms: e.target.value })} options={DELIVERY_TERMS} aria-label="Delivery terms" />
+          <Select value={deal.payment_terms} onChange={(e) => setDeal({ ...deal, payment_terms: e.target.value })} options={PAYMENT_TERMS} aria-label="Payment terms" />
+          <div className="col-span-2 sm:col-span-4 h-8 flex items-center justify-between px-2 rounded-lg bg-surface-2 border border-edge-1 text-2xs font-mono text-amber-200">
+            <span className="text-ink-4">{dealItem ? `list ${currency(dealItem.wholesale_price ?? dealItem.unit_price ?? 0)} / ${dealItem.unit_of_measure || "unit"}` : "the API reserves stock when the other side accepts"}</span>
+            <span>{dealTotal ? `total ${currency(dealTotal)}` : "total —"}</span>
+          </div>
         </div>
       )}
 

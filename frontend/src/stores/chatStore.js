@@ -37,6 +37,7 @@ export const useChatStore = create((set, get) => ({
       if (frame.type === "open" || frame.type === "hello") set({ live: true });
       else if (frame.type === "close") set({ live: false });
       else if (frame.type === "message" && frame.message) get().pushMessage(frame.message);
+      else if (frame.type === "message_update" && frame.message) get().updateMessage(frame.message);
     });
   },
 
@@ -48,6 +49,37 @@ export const useChatStore = create((set, get) => ({
 
   pushMessage: (msg) =>
     set((s) => (s.messages.some((m) => m.id === msg.id) ? s : { messages: [...s.messages, msg] })),
+
+  /** A deal changed state (accepted / countered / declined) — swap the message in place. */
+  updateMessage: (msg) => set((s) => ({ messages: s.messages.map((m) => (m.id === msg.id ? { ...m, ...msg } : m)) })),
+
+  // --- deal protocol (v2.1) ---------------------------------------------------------
+  acceptDeal: async (messageId) => {
+    const room = get().activeRoom;
+    const { data } = await chatAPI.acceptDeal(room.id, messageId);
+    await get().refreshMessages();
+    return data;
+  },
+  counterDeal: async (messageId, terms) => {
+    const room = get().activeRoom;
+    const { data } = await chatAPI.counterDeal(room.id, messageId, terms);
+    if (data?.sent) get().pushMessage(data.sent);
+    await get().refreshMessages();
+    return data;
+  },
+  declineDeal: async (messageId) => {
+    const room = get().activeRoom;
+    const { data } = await chatAPI.declineDeal(room.id, messageId);
+    await get().refreshMessages();
+    return data;
+  },
+  /** Re-read the room after a deal action so statuses are right even without the socket. */
+  refreshMessages: async () => {
+    const room = get().activeRoom;
+    if (!room) return;
+    const { data } = await chatAPI.messages(room.id, { limit: 200 });
+    if (get().activeRoom?.id === room.id) set({ messages: data });
+  },
 
   send: async (payload) => {
     const room = get().activeRoom;
