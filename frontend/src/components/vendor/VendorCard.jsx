@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { MapPin, MessageSquare, ShieldCheck, Crown, Plug } from "lucide-react";
+import { MapPin, MessageSquare, ShieldCheck, Crown, Plug, Gauge } from "lucide-react";
 import Card from "@/components/ui/Card";
 import Avatar from "@/components/ui/Avatar";
 import Badge from "@/components/ui/Badge";
@@ -11,6 +11,20 @@ import { useChatStore } from "@/stores/chatStore";
 import { toast } from "@/components/ui/Toast";
 import { apiError } from "@/lib/api";
 import { num } from "@/lib/formatters";
+
+/** v2.1 · VendorPerformance summary — fulfilment rate feeds 40% of the live parasitism index. */
+export function ReliabilityChip({ rate, score, completed }) {
+  const r = Number(rate ?? 0);
+  const variant = r >= 90 ? "brand" : r >= 70 ? "blue" : r >= 50 ? "amber" : "red";
+  return (
+    <div className="flex items-center gap-1.5" data-testid="reliability-chip">
+      <Badge variant={variant} size="xs" title={`${completed || 0} movements completed`}>
+        <Gauge size={10} /> {r.toFixed(0)}% fulfilled
+      </Badge>
+      {score != null && <span className="text-2xs text-ink-4 font-mono">reliability {Number(score).toFixed(0)}</span>}
+    </div>
+  );
+}
 
 export default function VendorCard({ vendor, compact = false, reasons, footer }) {
   const navigate = useNavigate();
@@ -84,6 +98,9 @@ export default function VendorCard({ vendor, compact = false, reasons, footer })
           <span title="Network score">score {Number(vendor.network_score || 0).toFixed(1)}</span>
           <span>{num(vendor.total_supplied || 0)} supplied · {num(vendor.total_sourced || 0)} sourced</span>
         </div>
+      )}
+      {!compact && (vendor.movements_completed > 0 || vendor.reliability_score > 0) && (
+        <ReliabilityChip rate={vendor.fulfillment_rate} score={vendor.reliability_score} completed={vendor.movements_completed} />
       )}
 
       <div className="flex items-center justify-between gap-2 mt-auto pt-1">

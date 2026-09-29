@@ -1,28 +1,32 @@
 import { Link } from "react-router-dom";
-import { Eye, EyeOff, Pencil, Trash2, ArrowDownToLine, HeartHandshake, Plug } from "lucide-react";
+import { Eye, EyeOff, Pencil, Trash2, ArrowDownToLine, HeartHandshake, Plug, Scale, ShieldCheck, BadgeCheck, Crown, FileText } from "lucide-react";
 import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
-import { currency, num } from "@/lib/formatters";
+import QualityBadge from "./QualityBadge";
+import { currency, num, shortDate } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 
 /**
- * mode="mine"    → owner controls (edit / remove / visibility)
- * mode="network" → source + deal-room actions, vendor attribution
+ * mode="mine"    → owner controls (edit / remove / visibility / verify)
+ * mode="network" → source, compare, deal-room actions, vendor attribution,
+ *                  patron-verify when the viewer is a patron (`canPatronVerify`)
  */
-export default function StockCard({ item, mode = "network", onSource, onDeal, onEdit, onRemove, onToggleVisible }) {
+export default function StockCard({ item, mode = "network", onSource, onDeal, onEdit, onRemove, onToggleVisible, onCompare, onVerify, onPatronVerify, canPatronVerify }) {
   const available = item.quantity_available ?? item.quantity_in_stock ?? 0;
   const low = available > 0 && available <= (item.min_order_quantity || 1) * 2;
   const out = available <= 0;
+  const provenance = item.batch_number || item.origin_country || item.expiry_date || item.spec_sheet_url;
 
   return (
     <Card className="flex flex-col gap-3" padding="p-4">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <h3 className="text-sm font-semibold text-ink-1 truncate">{item.name}</h3>
-          <div className="flex items-center gap-2 text-2xs text-ink-4 font-mono mt-0.5">
+          <div className="flex items-center gap-2 text-2xs text-ink-4 font-mono mt-0.5 flex-wrap">
             {item.sku && <span>{item.sku}</span>}
             {item.category && <span className="text-ink-3">{item.category}</span>}
+            <QualityBadge status={item.quality_status} showUnverified={mode === "mine"} />
           </div>
         </div>
         {mode === "mine" ? (
@@ -52,6 +56,19 @@ export default function StockCard({ item, mode = "network", onSource, onDeal, on
         </div>
       )}
 
+      {provenance && (
+        <div className="flex flex-wrap gap-x-3 gap-y-1 text-2xs text-ink-4">
+          {item.batch_number && <span className="font-mono">lot {item.batch_number}</span>}
+          {item.origin_country && <span>from {item.origin_country}</span>}
+          {item.expiry_date && <span className={cn(new Date(item.expiry_date) < Date.now() && "text-red-300")}>exp {shortDate(item.expiry_date)}</span>}
+          {item.spec_sheet_url && (
+            <a href={item.spec_sheet_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-brand-300 hover:underline">
+              <FileText size={10} /> sheet
+            </a>
+          )}
+        </div>
+      )}
+
       {item.tags?.length > 0 && (
         <div className="flex flex-wrap gap-1">
           {item.tags.slice(0, 4).map((t) => (
@@ -65,10 +82,16 @@ export default function StockCard({ item, mode = "network", onSource, onDeal, on
       <div className="mt-auto flex items-center justify-between gap-2 pt-1">
         {mode === "network" ? (
           <>
-            <Link to={`/@${item.vendor_handle}`} className="min-w-0 text-2xs text-ink-4 hover:text-brand-300 truncate">
+            <Link to={`/@${item.vendor_handle}`} className="min-w-0 text-2xs text-ink-4 hover:text-brand-300 truncate" title={item.vendor_fulfillment_rate != null ? `${item.vendor_fulfillment_rate.toFixed(0)}% of confirmed movements delivered` : undefined}>
               <span className="text-ink-3">{item.vendor_business}</span> <span className="font-mono">@{item.vendor_handle}</span>
+              {item.vendor_is_patron && <Crown size={10} className="inline ml-1 text-purple-300" />}
+              {item.vendor_fulfillment_rate != null && <span className={cn("ml-1 font-mono", item.vendor_fulfillment_rate >= 90 ? "text-brand-400" : item.vendor_fulfillment_rate >= 70 ? "text-amber-300" : "text-red-300")}>{item.vendor_fulfillment_rate.toFixed(0)}%</span>}
             </Link>
-            <div className="flex items-center gap-1.5 shrink-0">
+            <div className="flex items-center gap-1 shrink-0">
+              {canPatronVerify && onPatronVerify && item.quality_status !== "patron_verified" && (
+                <Button size="xs" variant="ghost" icon={BadgeCheck} onClick={() => onPatronVerify(item)} title="Verify as patron" aria-label="Verify as patron" />
+              )}
+              {onCompare && <Button size="xs" variant="ghost" icon={Scale} onClick={() => onCompare(item)} title="Compare alternatives" aria-label="Compare alternatives" />}
               {onDeal && <Button size="xs" variant="ghost" icon={HeartHandshake} onClick={() => onDeal(item)} title="Open a deal room" aria-label="Open a deal room" />}
               <Button size="xs" icon={ArrowDownToLine} onClick={() => onSource?.(item)} disabled={out}>
                 {out ? "Sold out" : "Source"}
@@ -79,6 +102,7 @@ export default function StockCard({ item, mode = "network", onSource, onDeal, on
           <>
             <span className="text-2xs text-ink-4">min order {num(item.min_order_quantity || 1)}</span>
             <div className="flex items-center gap-1">
+              {onVerify && <Button size="xs" variant="ghost" icon={ShieldCheck} onClick={() => onVerify(item)} title="Declare provenance" aria-label="Declare provenance" />}
               <Button size="xs" variant="ghost" icon={Pencil} onClick={() => onEdit?.(item)} aria-label="Edit" />
               <Button size="xs" variant="dangerGhost" icon={Trash2} onClick={() => onRemove?.(item)} aria-label="Remove" />
             </div>

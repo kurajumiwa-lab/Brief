@@ -51,6 +51,13 @@ export const useStockStore = create((set, get) => ({
     set((s) => ({ mine: [item, ...s.mine.filter((i) => i.id !== item.id)] }));
     return item;
   },
+  /** Swap an item returned by a v2.1 endpoint (verify, patron-verify) into both lists. */
+  replaceItem: (item) =>
+    set((s) => ({
+      mine: s.mine.map((i) => (i.id === item.id ? { ...i, ...item } : i)),
+      network: s.network.map((i) => (i.id === item.id ? { ...i, ...item } : i)),
+    })),
+
   update: async (id, payload) => {
     const { data } = await stockAPI.update(id, payload);
     set((s) => ({ mine: s.mine.map((i) => (i.id === id ? data : i)) }));

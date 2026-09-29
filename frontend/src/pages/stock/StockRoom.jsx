@@ -13,11 +13,14 @@ import { useConfirm } from "@/components/ui/ConfirmDialog";
 import StockCard from "@/components/stock/StockCard";
 import StockForm from "@/components/stock/StockForm";
 import SourceDialog from "@/components/stock/SourceDialog";
+import StockCompareModal from "@/components/stock/StockCompareModal";
+import StockVerifyDialog from "@/components/stock/StockVerifyDialog";
 import BulkImport from "@/components/stock/BulkImport";
 import MovementRow from "@/components/stock/MovementRow";
 import { useStockStore, needsMyAction } from "@/stores/stockStore";
 import { useChatStore } from "@/stores/chatStore";
-import { apiError } from "@/lib/api";
+import { useAuthStore } from "@/stores/authStore";
+import { stockAPI, apiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 const TABS = [
@@ -35,12 +38,15 @@ export default function StockRoom() {
   const category = params.get("category") || "";
   const direction = params.get("direction") || "";
 
-  const { mine, network, movements, categories, loading, networkLoading, fetchMine, fetchNetwork, fetchMovements, fetchCategories, remove, update } = useStockStore();
+  const { mine, network, movements, categories, loading, networkLoading, fetchMine, fetchNetwork, fetchMovements, fetchCategories, remove, update, replaceItem } = useStockStore();
   const openDeal = useChatStore((s) => s.openDeal);
+  const isPatron = useAuthStore((s) => !!s.vendor?.is_patron);
 
   const [editing, setEditing] = useState(null); // null | "new" | item
   const [importing, setImporting] = useState(false);
   const [sourcing, setSourcing] = useState(null);
+  const [comparing, setComparing] = useState(null);
+  const [verifying, setVerifying] = useState(null);
 
   const setParam = useCallback(
     (patch) => {
@@ -97,6 +103,19 @@ export default function StockRoom() {
       navigate(`/chat?room=${roomId}`);
     } catch (e) {
       toast.error(apiError(e, "Couldn't open a deal room"));
+    }
+  };
+
+  const onPatronVerify = async (item) => {
+    if (!(await confirm({ title: `Verify ${item.name}?`, message: `You vouch for @${item.vendor_handle}'s provenance on this item. It shows as patron-verified until they change the batch or origin.`, confirmLabel: "Verify" }))) return;
+    try {
+      const { data } = await stockAPI.patronVerify(item.id);
+      const updated = data?.item || data;
+      if (updated?.id) replaceItem(updated);
+      else fetchNetwork({ search, category }).catch(() => {});
+      toast.success("Marked patron-verified");
+    } catch (e) {
+      toast.error(apiError(e, "Couldn't verify this item"));
     }
   };
 
@@ -165,7 +184,7 @@ export default function StockRoom() {
             ) : (
               <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-3">
                 {filteredMine.map((item) => (
-                  <StockCard key={item.id} item={item} mode="mine" onEdit={setEditing} onRemove={onRemove} onToggleVisible={onToggleVisible} />
+                  <StockCard key={item.id} item={item} mode="mine" onEdit={setEditing} onRemove={onRemove} onToggleVisible={onToggleVisible} onVerify={setVerifying} />
                 ))}
               </div>
             ))}
@@ -178,7 +197,7 @@ export default function StockRoom() {
             ) : (
               <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-3">
                 {network.map((item) => (
-                  <StockCard key={item.id} item={item} mode="network" onSource={setSourcing} onDeal={onDeal} />
+                  <StockCard key={item.id} item={item} mode="network" onSource={setSourcing} onDeal={onDeal} onCompare={setComparing} canPatronVerify={isPatron} onPatronVerify={onPatronVerify} />
                 ))}
               </div>
             ))}
@@ -220,6 +239,16 @@ export default function StockRoom() {
         <BulkImport onDone={() => setImporting(false)} />
       </Modal>
       <SourceDialog item={sourcing} open={!!sourcing} onClose={() => setSourcing(null)} onDone={() => fetchMovements().catch(() => {})} />
+      <StockCompareModal
+        item={comparing}
+        open={!!comparing}
+        onClose={() => setComparing(null)}
+        onSource={(alt) => {
+          setComparing(null);
+          setSourcing(alt);
+        }}
+      />
+      <StockVerifyDialog item={verifying} open={!!verifying} onClose={() => setVerifying(null)} />
     </div>
   );
 }
