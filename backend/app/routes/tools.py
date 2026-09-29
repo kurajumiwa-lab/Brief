@@ -266,3 +266,232 @@ async def set_availability(
     tool.is_available = is_available
     await db.commit()
     return {"message": "Updated", "is_available": is_available}
+
+
+# --- courier shipments: tracking & rating (v2.1 §6.1) ---------------------------------
+
+import secrets  # noqa: E402
+
+from app.models.notification import NotificationType  # noqa: E402
+from app.models.stock import StockMovement  # noqa: E402
+from app.models.tools import SHIPMENT_STATUSES, CourierShipment  # noqa: E402
+from app.services.notification_service import create_notification  # noqa: E402
+
+
+class ShipmentCreate(BaseModel):
+    receiver_vendor_id: str
+    origin: Optional[str] = Field(None, max_length=500)
+    destination: Optional[str] = Field(None, max_length=500)
+    weight_kg: Optional[float] = Field(None, ge=0)
+    cost: Optional[float] = Field(None, ge=0)
+    notes: Optional[str] = Field(None, max_length=1000)
+    movement_id: Optional[str] = None  # the stock movement this parcel carries
+
+
+class ShipmentRating(BaseModel):
+    rating: int = Field(ge=1, le=5)
+    review: Optional[str] = Field(None, max_length=1000)
+
+
+def _tracking_number() -> str:
+    return "BRF-" + secrets.token_hex(3).upper() + "-" + secrets.token_hex(2).upper()
+
+
+def _shipment_out(s: CourierShipment, courier: CourierRegistration, sender: Vendor, receiver: Vendor, me: Vendor) -> dict:
+    return {
+        "id": str(s.id), "tracking_number": s.tracking_number, "status": s.status,
+        "courier_id": str(courier.id), "courier_name": courier.courier_name, "courier_vendor_id": str(courier.vendor_id),
+        "sender_vendor_id": str(sender.id), "sender_handle": sender.vendor_handle,
+        "receiver_vendor_id": str(receiver.id), "receiver_handle": receiver.vendor_handle,
+        "movement_id": str(s.movement_id) if s.movement_id else None,
+        "origin": s.origin, "destination": s.destination, "weight_kg": s.weight_kg, "cost": s.cost, "notes": s.notes,
+        "created_at": s.created_at.isoformat(), "picked_up_at": s.picked_up_at.isoformat() if s.picked_up_at else None,
+        "delivered_at": s.delivered_at.isoformat() if s.delivered_at else None,
+        "status_history": s.status_history or [],
+        "rating": s.rating, "review": s.review,
+        "my_role": "courier" if courier.vendor_id == me.id else "sender" if sender.id == me.id else "receiver",
+    }
+
+
+async def _shipment_rows(db: AsyncSession, where):
+    from sqlalchemy.orm import aliased
+    Snd, Rcv = aliased(Vendor), aliased(Vendor)
+    query = (
+        select(CourierShipment, CourierRegistration, Snd, Rcv)
+        .join(CourierRegistration, CourierRegistration.id == CourierShipment.courier_id)
+        .join(Snd, Snd.id == CourierShipment.sender_vendor_id)
+        .join(Rcv, Rcv.id == CourierShipment.receiver_vendor_id)
+        .where(where)
+        .order_by(CourierShipment.created_at.desc()).limit(200)
+    )
+    return (await db.execute(query)).all()
+
+
+@router.post("/couriers/{courier_id}/shipments", status_code=201)
+async def book_shipment(
+    courier_id: UUID,
+    data: ShipmentCreate,
+    vendor: Vendor = Depends(get_current_vendor),
+    db: AsyncSession = Depends(get_db),
+):
+    """Hand a parcel to a registered courier. The receiver and the courier are told."""
+    courier = await db.get(CourierRegistration, courier_id)
+    if not courier:
+        raise HTTPException(404, "Courier not found")
+    try:
+        receiver_id = UUID(data.receiver_vendor_id)
+    except ValueError:
+        raise HTTPException(400, "receiver_vendor_id is not a UUID")
+    receiver = await db.get(Vendor, receiver_id)
+    if not receiver:
+        raise HTTPException(404, "Receiving vendor not found")
+    if receiver.id == vendor.id:
+        raise HTTPException(400, "Ship to another vendor")
+    movement_id = None
+    if data.movement_id:
+        try:
+            movement_id = UUID(data.movement_id)
+        except ValueError:
+            raise HTTPException(400, "movement_id is not a UUID")
+        movement = await db.get(StockMovement, movement_id)
+        if not movement or vendor.id not in (movement.from_vendor_id, movement.to_vendor_id):
+            raise HTTPException(404, "Movement not found")
+
+    now = datetime.utcnow()
+    shipment = CourierShipment(
+        courier_id=courier.id, sender_vendor_id=vendor.id, receiver_vendor_id=receiver.id, movement_id=movement_id,
+        tracking_number=_tracking_number(), status="picked_up", origin=data.origin, destination=data.destination,
+        weight_kg=data.weight_kg, cost=data.cost, notes=data.notes, picked_up_at=now,
+        status_history=[{"status": "picked_up", "at": now.isoformat(), "by": vendor.vendor_handle}],
+    )
+    db.add(shipment)
+    await db.flush()
+    for rid in {receiver.id, courier.vendor_id}:
+        await create_notification(
+            db, rid, NotificationType.SHIPMENT_UPDATE,
+            f"Shipment {shipment.tracking_number} from @{vendor.vendor_handle}",
+            f"Via {courier.courier_name}" + (f" · to {data.destination}" if data.destination else ""),
+            sender_id=vendor.id, data={"shipment_id": shipment.id, "tracking_number": shipment.tracking_number},
+        )
+    await db.commit()
+    return {"message": "Shipment booked", "shipment_id": str(shipment.id), "tracking_number": shipment.tracking_number}
+
+
+@router.get("/shipments")
+async def my_shipments(
+    role: Optional[str] = Query(None, pattern="^(sent|received|courier)$"),
+    vendor: Vendor = Depends(get_current_vendor),
+    db: AsyncSession = Depends(get_db),
+):
+    from sqlalchemy import or_
+    my_couriers = select(CourierRegistration.id).where(CourierRegistration.vendor_id == vendor.id)
+    if role == "sent":
+        where = CourierShipment.sender_vendor_id == vendor.id
+    elif role == "received":
+        where = CourierShipment.receiver_vendor_id == vendor.id
+    elif role == "courier":
+        where = CourierShipment.courier_id.in_(my_couriers)
+    else:
+        where = or_(CourierShipment.sender_vendor_id == vendor.id, CourierShipment.receiver_vendor_id == vendor.id,
+                    CourierShipment.courier_id.in_(my_couriers))
+    rows = await _shipment_rows(db, where)
+    return [_shipment_out(s, c, snd, rcv, vendor) for s, c, snd, rcv in rows]
+
+
+@router.get("/shipments/track/{tracking_number}")
+async def track_shipment(
+    tracking_number: str,
+    vendor: Vendor = Depends(get_current_vendor),
+    db: AsyncSession = Depends(get_db),
+):
+    rows = await _shipment_rows(db, CourierShipment.tracking_number == tracking_number.strip().upper())
+    if not rows:
+        raise HTTPException(404, "No shipment with that tracking number")
+    s, c, snd, rcv = rows[0]
+    return _shipment_out(s, c, snd, rcv, vendor)
+
+
+@router.post("/shipments/{shipment_id}/status")
+async def update_shipment_status(
+    shipment_id: UUID,
+    status: str = Query(..., pattern="^(picked_up|in_transit|out_for_delivery|delivered|failed)$"),
+    note: Optional[str] = Query(None, max_length=300),
+    vendor: Vendor = Depends(get_current_vendor),
+    db: AsyncSession = Depends(get_db),
+):
+    """The courier advances the parcel; the receiver may confirm `delivered`."""
+    shipment = await db.get(CourierShipment, shipment_id, with_for_update=True)
+    if not shipment:
+        raise HTTPException(404, "Shipment not found")
+    courier = await db.get(CourierRegistration, shipment.courier_id)
+    is_courier = courier is not None and courier.vendor_id == vendor.id
+    is_receiver = shipment.receiver_vendor_id == vendor.id
+    if not (is_courier or (is_receiver and status == "delivered")):
+        raise HTTPException(403, "Only the courier updates a shipment (the receiver can confirm delivery)")
+    if shipment.status in ("delivered", "failed"):
+        raise HTTPException(400, f"Shipment already {shipment.status}")
+    if SHIPMENT_STATUSES.index(status) < SHIPMENT_STATUSES.index(shipment.status) and status != "failed":
+        raise HTTPException(400, f"Can't go back from {shipment.status} to {status}")
+
+    now = datetime.utcnow()
+    shipment.status = status
+    history = list(shipment.status_history or [])
+    history.append({"status": status, "at": now.isoformat(), "by": vendor.vendor_handle, "note": note})
+    shipment.status_history = history
+    if status == "delivered":
+        shipment.delivered_at = now
+        if courier is not None:
+            courier.total_deliveries = (courier.total_deliveries or 0) + 1
+    for rid in {shipment.sender_vendor_id, shipment.receiver_vendor_id, courier.vendor_id if courier else None} - {vendor.id, None}:
+        await create_notification(
+            db, rid, NotificationType.SHIPMENT_UPDATE,
+            f"{shipment.tracking_number}: {status.replace('_', ' ')}",
+            note or (f"Updated by @{vendor.vendor_handle}"),
+            sender_id=vendor.id, data={"shipment_id": shipment.id, "tracking_number": shipment.tracking_number, "status": status},
+        )
+    await db.commit()
+    return {"message": f"Shipment {status}", "status": status}
+
+
+@router.post("/shipments/{shipment_id}/rate")
+async def rate_shipment(
+    shipment_id: UUID,
+    data: ShipmentRating,
+    vendor: Vendor = Depends(get_current_vendor),
+    db: AsyncSession = Depends(get_db),
+):
+    """Sender or receiver rates a delivered shipment; the courier's average moves."""
+    shipment = await db.get(CourierShipment, shipment_id, with_for_update=True)
+    if not shipment or vendor.id not in (shipment.sender_vendor_id, shipment.receiver_vendor_id):
+        raise HTTPException(404, "Shipment not found")
+    if shipment.status not in ("delivered", "failed"):
+        raise HTTPException(400, "Rate a shipment once it is delivered (or failed)")
+    if shipment.rating is not None:
+        raise HTTPException(400, "This shipment is already rated")
+    shipment.rating = data.rating
+    shipment.review = data.review
+    shipment.rated_at = datetime.utcnow()
+
+    courier = await db.get(CourierRegistration, shipment.courier_id)
+    if courier is not None:
+        from sqlalchemy import func
+        avg, count = (await db.execute(
+            select(func.avg(CourierShipment.rating), func.count(CourierShipment.rating))
+            .where(CourierShipment.courier_id == courier.id, CourierShipment.rating.isnot(None))
+        )).one()
+        courier.rating = round(float(avg or 0), 2)
+        # The Tools listing mirrors the courier's rating so it ranks honestly in browse.
+        listing = (await db.execute(select(ToolListing).where(
+            ToolListing.vendor_id == courier.vendor_id, ToolListing.category == ToolCategory.COURIER,
+            ToolListing.title == courier.courier_name,
+        ))).scalars().first()
+        if listing is not None:
+            listing.avg_rating = courier.rating
+        await create_notification(
+            db, courier.vendor_id, NotificationType.SHIPMENT_UPDATE,
+            f"@{vendor.vendor_handle} rated {shipment.tracking_number} {data.rating}/5",
+            data.review or f"{count} rating{'s' if count != 1 else ''} · average {courier.rating}",
+            sender_id=vendor.id, data={"shipment_id": shipment.id, "rating": data.rating},
+        )
+    await db.commit()
+    return {"message": "Thanks — rating recorded", "rating": data.rating, "courier_rating": courier.rating if courier else None}

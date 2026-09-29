@@ -219,4 +219,25 @@ async def scheduler_loop(session_factory, interval_seconds: int) -> None:
             raise
         except Exception:
             log.exception("POS scheduler pass failed")
+        await housekeeping(session_factory)
         await asyncio.sleep(interval_seconds)
+
+
+async def housekeeping(session_factory) -> None:
+    """The other timed jobs of a single-container deploy (v2.1): lapse
+    unconfirmed stock holds and send event reminders. Each in its own
+    transaction so one failure does not block the other."""
+    from app.services import notification_service, stock_engine
+
+    for name, job in (("hold expiry", stock_engine.expire_stale_holds),
+                      ("event reminders", notification_service.send_event_reminders)):
+        try:
+            async with session_factory() as db:
+                n = await job(db)
+                await db.commit()
+                if n:
+                    log.info("%s: %s processed", name, n)
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            log.exception("%s pass failed", name)

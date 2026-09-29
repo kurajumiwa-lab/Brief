@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.models.vendor import Vendor, VendorProfile, VendorRole, vendor_connections
 from app.routes.auth import get_current_vendor
-from app.services import patron_service, vendor_network
+from app.services import stock_engine, patron_service, vendor_network
 
 router = APIRouter()
 
@@ -33,6 +33,10 @@ class VendorOut(BaseModel):
     is_patron: bool
     is_verified: bool
     connected: bool = False
+    # SRM-lite (v2.1 §4.4)
+    fulfillment_rate: Optional[float] = None   # % of confirmed movements delivered; None until there is a sample
+    movements_completed: int = 0
+    reliability_score: Optional[float] = None  # filled where the performance row is loaded
 
 
 class VendorUpdate(BaseModel):
@@ -78,6 +82,8 @@ def vendor_out(v: Vendor, connected: bool = False) -> VendorOut:
         is_patron=v.is_patron,
         is_verified=v.is_verified,
         connected=connected,
+        fulfillment_rate=stock_engine.fulfillment_rate(v),
+        movements_completed=int(getattr(v, "movements_completed", 0) or 0),
     )
 
 
@@ -232,6 +238,24 @@ async def network_stats(
     }
 
 
+@router.get("/{handle}/performance")
+async def vendor_performance(
+    handle: str,
+    vendor: Vendor = Depends(get_current_vendor),
+    db: AsyncSession = Depends(get_db),
+):
+    """SRM-lite metrics for a vendor (v2.1 §4.4): fulfilment, responsiveness, volume, reliability."""
+    from app.models.performance import VendorPerformance
+    from app.services import performance_service
+
+    target = (await db.execute(select(Vendor).where(Vendor.vendor_handle == handle.lstrip("@").lower()))).scalars().first()
+    if not target:
+        raise HTTPException(404, "Vendor not found")
+    perf = (await db.execute(select(VendorPerformance).where(VendorPerformance.vendor_id == target.id))).scalar_one_or_none()
+    return {"vendor_handle": target.vendor_handle, "fulfillment_rate": stock_engine.fulfillment_rate(target),
+            **performance_service.to_dict(perf)}
+
+
 @router.get("/{handle}", response_model=VendorOut)
 async def vendor_by_handle(
     handle: str,
@@ -241,7 +265,15 @@ async def vendor_by_handle(
     target = (await db.execute(select(Vendor).where(Vendor.vendor_handle == handle.lstrip("@").lower()))).scalars().first()
     if not target:
         raise HTTPException(404, "Vendor not found")
-    return vendor_out(target, connected=await vendor_network.are_connected(db, vendor.id, target.id))
+    out = vendor_out(target, connected=await vendor_network.are_connected(db, vendor.id, target.id))
+    out.reliability_score = await _reliability(db, target.id)
+    return out
+
+
+async def _reliability(db: AsyncSession, vendor_id: UUID) -> Optional[float]:
+    from app.models.performance import VendorPerformance
+    return (await db.execute(
+        select(VendorPerformance.reliability_score).where(VendorPerformance.vendor_id == vendor_id))).scalar_one_or_none()
 
 
 @router.post("/connect/{target_vendor_id}")

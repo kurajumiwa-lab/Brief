@@ -1,18 +1,34 @@
 import csv
 import io
+from datetime import datetime, timezone
 from typing import List, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.models.stock import MovementStatus, StockItem, StockMovement, StockSource
+from app.models.notification import NotificationType
+from app.models.stock import MovementStatus, QualityStatus, StockItem, StockMovement, StockReservation, StockSource
 from app.models.vendor import Vendor
+from app.models.vendor_list import VendorList, VendorListMembership
 from app.routes.auth import get_current_vendor
-from app.services import stock_engine
+from app.services import notification_service, patron_service, stock_engine
+from app.services.storage import is_public_url
+
+# What a vendor may set on their own stock; `patron_verified` only comes from a patron.
+VENDOR_SETTABLE_QUALITY = {QualityStatus.UNVERIFIED, QualityStatus.SELF_DECLARED, QualityStatus.LAB_CERTIFIED}
+
+
+def _naive_utc(v):
+    """Browsers send `...Z`; the columns are TIMESTAMP WITHOUT TIME ZONE."""
+    if isinstance(v, str) and v.strip():
+        v = datetime.fromisoformat(v.strip().replace("Z", "+00:00"))
+    if isinstance(v, datetime) and v.tzinfo is not None:
+        v = v.astimezone(timezone.utc).replace(tzinfo=None)
+    return v or None
 
 router = APIRouter()
 
@@ -35,6 +51,14 @@ class StockItemCreate(BaseModel):
     images: list = []
     specifications: dict = {}
     tags: list[str] = []
+    # Quality verification (v2.1 §3.1)
+    quality_status: Optional[QualityStatus] = None
+    spec_sheet_url: Optional[str] = Field(None, max_length=500)
+    batch_number: Optional[str] = Field(None, max_length=100)
+    origin_country: Optional[str] = Field(None, max_length=100)
+    expiry_date: Optional[datetime] = None
+
+    _expiry = field_validator("expiry_date", mode="before")(lambda cls, v: _naive_utc(v))
 
 
 class StockItemUpdate(BaseModel):
@@ -55,6 +79,13 @@ class StockItemUpdate(BaseModel):
     images: Optional[list] = None
     specifications: Optional[dict] = None
     tags: Optional[list[str]] = None
+    quality_status: Optional[QualityStatus] = None
+    spec_sheet_url: Optional[str] = Field(None, max_length=500)
+    batch_number: Optional[str] = Field(None, max_length=100)
+    origin_country: Optional[str] = Field(None, max_length=100)
+    expiry_date: Optional[datetime] = None
+
+    _expiry = field_validator("expiry_date", mode="before")(lambda cls, v: _naive_utc(v))
 
 
 class StockItemOut(BaseModel):
@@ -84,6 +115,19 @@ class StockItemOut(BaseModel):
     images: list = []
     last_pos_sync: Optional[str] = None
     updated_at: Optional[str] = None
+    # Quality verification (v2.1 §3.1)
+    quality_status: str = "unverified"
+    spec_sheet_url: Optional[str] = None
+    batch_number: Optional[str] = None
+    origin_country: Optional[str] = None
+    expiry_date: Optional[str] = None
+    verified_by_vendor_id: Optional[str] = None
+    verified_at: Optional[str] = None
+    # Supplier reliability (v2.1 §4.4)
+    vendor_network_score: float = 0.0
+    vendor_parasitism_index: float = 0.0
+    vendor_fulfillment_rate: Optional[float] = None
+    vendor_is_patron: bool = False
 
 
 class SourceRequest(BaseModel):
@@ -109,7 +153,10 @@ class MovementOut(BaseModel):
     status: str
     notes: Optional[str]
     created_at: str
+    confirmed_at: Optional[str] = None
+    shipped_at: Optional[str] = None
     completed_at: Optional[str]
+    hold_expires_at: Optional[str] = None
     direction: str  # incoming (I am buying) | outgoing (I am supplying)
 
 
@@ -139,10 +186,57 @@ def stock_out(i: StockItem, v: Vendor) -> StockItemOut:
         images=i.images or [],
         last_pos_sync=i.last_pos_sync.isoformat() if i.last_pos_sync else None,
         updated_at=i.updated_at.isoformat() if i.updated_at else None,
+        quality_status=(i.quality_status.value if i.quality_status else "unverified"),
+        spec_sheet_url=i.spec_sheet_url,
+        batch_number=i.batch_number,
+        origin_country=i.origin_country,
+        expiry_date=i.expiry_date.isoformat() if i.expiry_date else None,
+        verified_by_vendor_id=str(i.verified_by_vendor_id) if i.verified_by_vendor_id else None,
+        verified_at=i.verified_at.isoformat() if i.verified_at else None,
+        vendor_network_score=float(v.network_score or 0.0),
+        vendor_parasitism_index=float(v.parasitism_index or 0.0),
+        vendor_fulfillment_rate=stock_engine.fulfillment_rate(v),
+        vendor_is_patron=bool(v.is_patron),
     )
 
 
-def _movement_out(m: StockMovement, item: StockItem, frm: Vendor, to: Vendor, me: Vendor) -> MovementOut:
+def apply_quality_fields(item: StockItem, data: dict, is_new: bool) -> None:
+    """Shared by create/update: vendors may declare or certify their own stock,
+    never patron-verify it. Changing the batch or spec sheet of a
+    patron-verified line drops it back to self-declared — a verification is
+    tied to the batch that was inspected."""
+    status = data.pop("quality_status", None)
+    provenance_changed = False
+    for field in ("spec_sheet_url", "batch_number", "origin_country", "expiry_date"):
+        if field in data:
+            value = data.pop(field)
+            if field == "spec_sheet_url" and value and not is_public_url(value):
+                raise HTTPException(400, "spec_sheet_url must be an uploaded file URL or https link")
+            if getattr(item, field) != value:
+                provenance_changed = True
+            setattr(item, field, value)
+
+    current = item.quality_status or QualityStatus.UNVERIFIED
+    if status is not None:
+        if status not in VENDOR_SETTABLE_QUALITY:
+            raise HTTPException(400, "Only a patron can mark stock patron_verified (POST /stock/{id}/patron-verify)")
+        if status == QualityStatus.LAB_CERTIFIED and not item.spec_sheet_url:
+            raise HTTPException(400, "lab_certified needs a spec sheet or certificate (spec_sheet_url)")
+        if status != current and current == QualityStatus.PATRON_VERIFIED:
+            item.verified_by_vendor_id = None
+            item.verified_at = None
+        item.quality_status = status
+    elif provenance_changed and current == QualityStatus.PATRON_VERIFIED:
+        item.quality_status = QualityStatus.SELF_DECLARED
+        item.verified_by_vendor_id = None
+        item.verified_at = None
+    elif current == QualityStatus.UNVERIFIED and (item.batch_number or item.spec_sheet_url):
+        item.quality_status = QualityStatus.SELF_DECLARED
+    if item.quality_status is None:
+        item.quality_status = QualityStatus.UNVERIFIED
+
+
+def _movement_out(m: StockMovement, item: StockItem, frm: Vendor, to: Vendor, me: Vendor, hold_expires_at=None) -> MovementOut:
     return MovementOut(
         id=str(m.id), stock_item_id=str(item.id), stock_name=item.name, sku=item.sku,
         from_vendor_id=str(frm.id), from_handle=frm.vendor_handle,
@@ -150,6 +244,9 @@ def _movement_out(m: StockMovement, item: StockItem, frm: Vendor, to: Vendor, me
         quantity=m.quantity, unit_price=m.unit_price, total_value=m.total_value,
         movement_type=m.movement_type, status=m.status, notes=m.notes,
         created_at=m.created_at.isoformat(), completed_at=m.completed_at.isoformat() if m.completed_at else None,
+        confirmed_at=m.confirmed_at.isoformat() if m.confirmed_at else None,
+        shipped_at=m.shipped_at.isoformat() if m.shipped_at else None,
+        hold_expires_at=hold_expires_at.isoformat() if hold_expires_at else None,
         direction="incoming" if m.to_vendor_id == me.id else "outgoing",
     )
 
@@ -161,12 +258,15 @@ async def add_stock(
     db: AsyncSession = Depends(get_db),
 ):
     """Add stock. This is NOT a listing. This is what's on your shelf."""
+    payload = data.model_dump()
+    quality = {k: payload.pop(k) for k in ("quality_status", "spec_sheet_url", "batch_number", "origin_country", "expiry_date")}
     item = StockItem(
         vendor_id=vendor.id,
         source=StockSource.MANUAL_ENTRY,
         quantity_available=data.quantity_in_stock,
-        **data.model_dump(),
+        **payload,
     )
+    apply_quality_fields(item, {k: v for k, v in quality.items() if v is not None}, is_new=True)
     db.add(item)
     await db.commit()
     return {"message": "Stock added", "stock_id": str(item.id)}
@@ -284,7 +384,94 @@ async def list_movements(
         query = query.where(StockMovement.status == status)
     query = query.order_by(StockMovement.created_at.desc()).limit(200)
     rows = (await db.execute(query)).all()
-    return [_movement_out(m, item, frm, to, vendor) for m, item, frm, to in rows]
+    # Active holds, so the UI can show when an unconfirmed request lapses.
+    pending_ids = [m.id for m, *_ in rows if m.status == MovementStatus.PENDING.value]
+    holds = {}
+    if pending_ids:
+        holds = dict((await db.execute(
+            select(StockReservation.movement_id, StockReservation.hold_expires_at).where(
+                StockReservation.movement_id.in_(pending_ids), StockReservation.status == "held")
+        )).all())
+    return [_movement_out(m, item, frm, to, vendor, holds.get(m.id)) for m, item, frm, to in rows]
+
+
+@router.get("/{stock_id}/alternatives", response_model=List[StockItemOut])
+async def stock_alternatives(
+    stock_id: UUID,
+    limit: int = Query(10, ge=1, le=50),
+    vendor: Vendor = Depends(get_current_vendor),
+    db: AsyncSession = Depends(get_db),
+):
+    """Comparable stock from other vendors, cheapest network price first (v2.1 §3.2)."""
+    if not await db.get(StockItem, stock_id):
+        raise HTTPException(404, "Stock item not found")
+    rows = await stock_engine.find_alternatives(db, stock_id, for_vendor=vendor, limit=limit)
+    return [stock_out(item, v) for item, v in rows]
+
+
+async def _patron_can_verify(db: AsyncSession, patron_vendor: Vendor, item: StockItem) -> bool:
+    """A patron may verify stock of a vendor approved onto one of their lists."""
+    patron = await patron_service.get_patron(db, patron_vendor)
+    if not patron:
+        return False
+    row = (await db.execute(
+        select(VendorListMembership.id)
+        .join(VendorList, VendorList.id == VendorListMembership.vendor_list_id)
+        .where(VendorList.patron_id == patron.id, VendorListMembership.vendor_id == item.vendor_id,
+               VendorListMembership.status == "approved")
+    )).first()
+    return row is not None
+
+
+@router.post("/{stock_id}/patron-verify", response_model=StockItemOut)
+async def patron_verify_stock(
+    stock_id: UUID,
+    vendor: Vendor = Depends(get_current_vendor),
+    db: AsyncSession = Depends(get_db),
+):
+    """A patron vouches for this batch. Only for vendors on the patron's lists."""
+    item = await db.get(StockItem, stock_id)
+    if not item:
+        raise HTTPException(404, "Stock item not found")
+    if item.vendor_id == vendor.id:
+        raise HTTPException(400, "You can't patron-verify your own stock")
+    if not vendor.is_patron:
+        raise HTTPException(403, "Only patrons verify stock")
+    if not await _patron_can_verify(db, vendor, item):
+        raise HTTPException(403, "You can only verify stock of vendors approved onto your lists")
+    item.quality_status = QualityStatus.PATRON_VERIFIED
+    item.verified_by_vendor_id = vendor.id
+    item.verified_at = datetime.utcnow()
+    await notification_service.create_notification(
+        db, item.vendor_id, NotificationType.STOCK_VERIFIED,
+        f"@{vendor.vendor_handle} verified your {item.name}" + (f" (batch {item.batch_number})" if item.batch_number else ""),
+        "Patron-verified stock ranks higher in comparisons.",
+        sender_id=vendor.id, data={"stock_id": item.id, "vendor_handle": vendor.vendor_handle},
+    )
+    await db.commit()
+    await db.refresh(item)
+    owner = await db.get(Vendor, item.vendor_id)
+    return stock_out(item, owner)
+
+
+@router.delete("/{stock_id}/patron-verify", response_model=StockItemOut)
+async def revoke_patron_verification(
+    stock_id: UUID,
+    vendor: Vendor = Depends(get_current_vendor),
+    db: AsyncSession = Depends(get_db),
+):
+    item = await db.get(StockItem, stock_id)
+    if not item:
+        raise HTTPException(404, "Stock item not found")
+    if item.verified_by_vendor_id != vendor.id:
+        raise HTTPException(403, "Only the verifying patron can withdraw a verification")
+    item.quality_status = QualityStatus.SELF_DECLARED if (item.batch_number or item.spec_sheet_url) else QualityStatus.UNVERIFIED
+    item.verified_by_vendor_id = None
+    item.verified_at = None
+    await db.commit()
+    await db.refresh(item)
+    owner = await db.get(Vendor, item.vendor_id)
+    return stock_out(item, owner)
 
 
 @router.get("/{stock_id}", response_model=StockItemOut)
@@ -310,8 +497,13 @@ async def update_stock_item(
     item = await db.get(StockItem, stock_id)
     if not item or item.vendor_id != vendor.id:
         raise HTTPException(404, "Stock item not found")
-    for field, value in data.model_dump(exclude_none=True).items():
+    payload = data.model_dump(exclude_unset=True)
+    quality = {k: payload.pop(k) for k in list(payload) if k in ("quality_status", "spec_sheet_url", "batch_number", "origin_country", "expiry_date")}
+    for field, value in payload.items():
+        if value is None:
+            continue
         setattr(item, field, value)
+    apply_quality_fields(item, quality, is_new=False)
     stock_engine.recompute_available(item)
     await db.commit()
     await db.refresh(item)

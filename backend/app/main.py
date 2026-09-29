@@ -13,8 +13,12 @@ from app.config import settings
 from app.database import async_session, engine, init_db
 from app.middleware.rate_limiter import RateLimitMiddleware, configure_backend
 from app.middleware.vendor_only import VendorOnlyMiddleware
-from app.routes import auth, chat, events, groups, pos_bridge, stock, tools, vendor_lists, vendors
+from app.routes import (
+    auth, chat, collective, events, files, groups, notifications, pos_bridge, stock, tools, vendor_lists,
+    vendors, verification,
+)
 from app.services import pos_sync
+from app.services.storage import local_root
 
 logging.basicConfig(level=logging.DEBUG if settings.DEBUG else logging.INFO,
                     format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -26,17 +30,24 @@ async def lifespan(app: FastAPI):
     if settings.AUTO_CREATE_TABLES:
         await init_db()
     await configure_backend()
-    scheduler = asyncio.create_task(pos_sync.scheduler_loop(async_session, settings.POS_SYNC_INTERVAL))
-    log.info("🏪 Brief_ Vendor Network initialized")
+    await chat.manager.configure()
+    scheduler = None
+    if settings.RUN_SCHEDULER:
+        scheduler = asyncio.create_task(pos_sync.scheduler_loop(async_session, settings.POS_SYNC_INTERVAL))
+    else:
+        log.info("scheduler disabled here (RUN_SCHEDULER=false) — run `python -m app.worker` once")
+    log.info("🏪 Brief_ Vendor Network v%s initialized", settings.VERSION)
     log.info("📦 No consumers. Only vendors.")
     try:
         yield
     finally:
-        scheduler.cancel()
-        try:
-            await scheduler
-        except (asyncio.CancelledError, Exception):
-            pass
+        if scheduler:
+            scheduler.cancel()
+            try:
+                await scheduler
+            except (asyncio.CancelledError, Exception):
+                pass
+        await chat.manager.shutdown()
         await engine.dispose()
         log.info("👋 Shutting down vendor network")
 
@@ -70,6 +81,16 @@ app.include_router(chat.router, prefix="/api/chat", tags=["Chat & Topics"])
 app.include_router(tools.router, prefix="/api/tools", tags=["Vendor Tools"])
 app.include_router(events.router, prefix="/api/events", tags=["Events"])
 app.include_router(pos_bridge.router, prefix="/api/pos", tags=["POS Bridge"])
+# v2.1
+app.include_router(notifications.router, prefix="/api/notifications", tags=["Notifications"])
+app.include_router(files.router, prefix="/api/files", tags=["Files"])
+app.include_router(verification.router, prefix="/api/stock", tags=["Stock Verification"])
+app.include_router(collective.router, prefix="/api/collective", tags=["Collective Sourcing"])
+
+# Local file storage (spec sheets, images). Public by unguessable key; S3 deploys skip this.
+_static_root = local_root()
+if _static_root:
+    app.mount("/static", StaticFiles(directory=_static_root), name="static")
 
 
 @app.get("/api", include_in_schema=False)
@@ -90,6 +111,9 @@ async def api_root():
             "tools": "/api/tools",
             "events": "/api/events",
             "pos_bridge": "/api/pos",
+            "notifications": "/api/notifications",
+            "files": "/api/files",
+            "collective": "/api/collective",
             "docs": "/docs",
         },
     }

@@ -13,8 +13,10 @@ from app.models.chat import ChatRoom, ChatRoomType, chat_room_participants
 from app.models.groups import GroupMembership, VendorGroup
 from app.models.vendor import Vendor
 from app.models.vendor_list import Patron, VendorList, VendorListMembership
+from app.models.notification import NotificationType
 from app.routes.auth import get_current_vendor
 from app.services import patron_service
+from app.services.notification_service import create_notification
 
 router = APIRouter()
 
@@ -255,13 +257,20 @@ async def register_for_vendor_list(
         membership = VendorListMembership(vendor_id=vendor.id, vendor_list_id=list_id, status=status)
         db.add(membership)
 
+    patron = await patron_service.patron_for_list(db, vlist)
     if status == "approved":
         membership.approved_at = datetime.utcnow()
         vlist.member_count += 1
         await _join_list_room(db, vlist, vendor)
-        patron = await patron_service.patron_for_list(db, vlist)
         if patron:
             await patron_service.record_approval(db, patron)
+    if patron and patron.vendor_id != vendor.id:
+        await create_notification(
+            db, patron.vendor_id, NotificationType.LIST_REGISTRATION,
+            f"@{vendor.vendor_handle} {'joined' if status == 'approved' else 'wants to join'} {vlist.name}",
+            "Auto-approved by the list's settings." if status == "approved" else "Review the registration on the list.",
+            sender_id=vendor.id, data={"list_id": vlist.id, "vendor_handle": vendor.vendor_handle, "status": status},
+        )
 
     await db.commit()
     return {"message": f"Registration {status}", "status": status}
@@ -312,6 +321,13 @@ async def approve_vendor(
     patron = await patron_service.patron_for_list(db, vlist)
     if patron:
         await patron_service.record_approval(db, patron)
+    await create_notification(
+        db, vendor_id, NotificationType.LIST_APPROVED,
+        f"You're on {vlist.name}",
+        f"@{vendor.vendor_handle} approved your registration. The list's room is open to you.",
+        sender_id=vendor.id, data={"list_id": vlist.id, "room_id": (await db.execute(
+            select(ChatRoom.id).where(ChatRoom.vendor_list_id == vlist.id))).scalar()},
+    )
     await db.commit()
     return {"message": "Vendor approved"}
 
@@ -337,6 +353,12 @@ async def reject_vendor(
     membership.status = "removed" if was_approved else "rejected"
     if was_approved:
         vlist.member_count = max(0, vlist.member_count - 1)
+    await create_notification(
+        db, vendor_id, NotificationType.LIST_REJECTED,
+        f"{'Removed from' if was_approved else 'Not accepted onto'} {vlist.name}",
+        f"Decided by @{vendor.vendor_handle}." + ("" if was_approved else " Other lists in your categories are open."),
+        sender_id=vendor.id, data={"list_id": vlist.id},
+    )
     await db.commit()
     return {"message": f"Registration {membership.status}"}
 

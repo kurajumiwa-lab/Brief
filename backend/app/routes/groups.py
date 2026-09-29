@@ -12,7 +12,9 @@ from app.models.chat import ChatRoom, ChatRoomType
 from app.models.groups import GroupMembership, GroupType, VendorGroup
 from app.models.vendor import Vendor
 from app.models.vendor_list import VendorList
+from app.models.notification import NotificationType
 from app.routes.auth import get_current_vendor
+from app.services.notification_service import create_notification, notify_many
 
 router = APIRouter()
 
@@ -235,6 +237,17 @@ async def join_group(
         room = (await db.execute(select(ChatRoom).where(ChatRoom.group_id == group_id))).scalars().first()
         if room:
             room.participant_count += 1
+    else:
+        admins = (await db.execute(select(GroupMembership.vendor_id).where(
+            GroupMembership.group_id == group_id, GroupMembership.is_active.is_(True),
+            GroupMembership.role.in_(["admin", "moderator"]),
+        ))).scalars().all()
+        await notify_many(
+            db, admins, NotificationType.GROUP_JOIN_REQUEST,
+            f"@{vendor.vendor_handle} asked to join {group.name}",
+            ", ".join(vendor.business_categories or []) or vendor.business_name,
+            sender_id=vendor.id, data={"group_id": group.id, "vendor_handle": vendor.vendor_handle},
+        )
     await db.commit()
     return {"message": f"Joined group '{group.name}'" if active else "Request sent to the group admins",
             "status": "member" if active else "pending"}
@@ -268,6 +281,12 @@ async def approve_member(
     room = (await db.execute(select(ChatRoom).where(ChatRoom.group_id == group_id))).scalars().first()
     if room:
         room.participant_count += 1
+    await create_notification(
+        db, vendor_id, NotificationType.GROUP_APPROVED,
+        f"You're in {group.name}",
+        f"@{vendor.vendor_handle} approved your request. The group's room is open to you.",
+        sender_id=vendor.id, data={"group_id": group.id, "room_id": room.id if room else None},
+    )
     await db.commit()
     return {"message": "Member approved"}
 

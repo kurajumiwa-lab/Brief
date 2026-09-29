@@ -12,8 +12,10 @@ from app.models.events import Event, EventRegistration
 from app.models.groups import GroupMembership
 from app.models.vendor import Vendor
 from app.models.vendor_list import VendorList, VendorListMembership
+from app.models.notification import NotificationType
 from app.routes.auth import get_current_vendor
 from app.services import patron_service
+from app.services.notification_service import create_notification, notify_many
 
 router = APIRouter()
 
@@ -119,7 +121,7 @@ async def create_event(
     if patron:
         patron_id = patron.id
         patron.total_events_organized += 1
-        patron_service.recompute_tier(patron)
+        await patron_service.check_patron_promotion(patron.id, db, patron=patron)
 
     event = Event(
         organizer_id=vendor.id, patron_id=patron_id, vendor_list_id=vendor_list_id, group_id=group_id,
@@ -213,7 +215,9 @@ async def event_registrations(
     )).all()
     return [{
         "vendor_id": str(v.id), "vendor_handle": v.vendor_handle, "business_name": v.business_name,
+        "business_categories": v.business_categories or [],
         "status": r.status, "booth_assignment": r.booth_assignment, "registered_at": r.registered_at.isoformat(),
+        "checked_in_at": r.checked_in_at.isoformat() if r.checked_in_at else None,
     } for r, v in rows]
 
 
@@ -260,6 +264,12 @@ async def register_for_event(
 
     db.add(EventRegistration(event_id=event_id, vendor_id=vendor.id))
     event.registered_count += 1
+    await create_notification(
+        db, event.organizer_id, NotificationType.EVENT_REGISTRATION,
+        f"@{vendor.vendor_handle} registered for {event.title}",
+        f"{event.registered_count}/{event.max_vendors} vendors registered",
+        sender_id=vendor.id, data={"event_id": event.id, "vendor_handle": vendor.vendor_handle},
+    )
     await db.commit()
     return {"message": f"Registered for '{event.title}'"}
 
@@ -292,6 +302,106 @@ async def set_event_status(
     event = await db.get(Event, event_id)
     if not event or event.organizer_id != vendor.id:
         raise HTTPException(404, "Event not found")
+    previous = event.status
     event.status = status
+    if status == "completed" and previous != "completed":
+        # Registered vendors who never checked in are no-shows (post-event analytics).
+        regs = (await db.execute(select(EventRegistration).where(
+            EventRegistration.event_id == event_id, EventRegistration.status.in_(("registered", "confirmed")),
+        ))).scalars().all()
+        for r in regs:
+            r.status = "no_show"
+    if status == "cancelled" and previous != "cancelled":
+        vendor_ids = (await db.execute(select(EventRegistration.vendor_id).where(
+            EventRegistration.event_id == event_id, EventRegistration.status.in_(("registered", "confirmed")),
+        ))).scalars().all()
+        await notify_many(db, vendor_ids, NotificationType.SYSTEM, f"Cancelled: {event.title}",
+                          f"The organiser @{vendor.vendor_handle} cancelled this event.",
+                          sender_id=vendor.id, data={"event_id": event.id})
     await db.commit()
     return {"message": f"Event is now {status}", "status": status}
+
+
+# --- check-in & post-event analytics (v2.1 §4.4) --------------------------------------
+
+async def _check_in(db: AsyncSession, event: Event, vendor_id: UUID) -> EventRegistration:
+    reg = (await db.execute(select(EventRegistration).where(
+        EventRegistration.event_id == event.id, EventRegistration.vendor_id == vendor_id,
+    ))).scalar_one_or_none()
+    if not reg:
+        raise HTTPException(404, "No registration for that vendor")
+    if reg.status != "attended":
+        reg.status = "attended"
+        reg.checked_in_at = datetime.utcnow()
+    return reg
+
+
+@router.post("/{event_id}/check-in")
+async def self_check_in(
+    event_id: UUID,
+    vendor: Vendor = Depends(get_current_vendor),
+    db: AsyncSession = Depends(get_db),
+):
+    """A registered vendor checks in once the event is running (or on the day)."""
+    event = await db.get(Event, event_id)
+    if not event:
+        raise HTTPException(404, "Event not found")
+    now = datetime.utcnow()
+    window_open = event.status == "active" or (event.status == "upcoming" and event.start_date.date() <= now.date())
+    if not window_open:
+        raise HTTPException(400, "Check-in opens on the day of the event")
+    reg = await _check_in(db, event, vendor.id)
+    await db.commit()
+    return {"message": f"Checked in to '{event.title}'", "status": reg.status, "checked_in_at": reg.checked_in_at.isoformat()}
+
+
+@router.post("/{event_id}/check-in/{vendor_id}")
+async def organiser_check_in(
+    event_id: UUID,
+    vendor_id: UUID,
+    vendor: Vendor = Depends(get_current_vendor),
+    db: AsyncSession = Depends(get_db),
+):
+    """The organiser marks a vendor present at the door."""
+    event = await db.get(Event, event_id)
+    if not event or event.organizer_id != vendor.id:
+        raise HTTPException(404, "Event not found")
+    reg = await _check_in(db, event, vendor_id)
+    await db.commit()
+    return {"message": "Checked in", "status": reg.status, "checked_in_at": reg.checked_in_at.isoformat()}
+
+
+@router.get("/{event_id}/analytics")
+async def event_analytics(
+    event_id: UUID,
+    vendor: Vendor = Depends(get_current_vendor),
+    db: AsyncSession = Depends(get_db),
+):
+    """Registrations, attendance and the category mix — for the organiser."""
+    event = await db.get(Event, event_id)
+    if not event or event.organizer_id != vendor.id:
+        raise HTTPException(404, "Event not found")
+    rows = (await db.execute(
+        select(EventRegistration, Vendor).join(Vendor, Vendor.id == EventRegistration.vendor_id)
+        .where(EventRegistration.event_id == event_id)
+    )).all()
+    by_status: dict[str, int] = {}
+    categories: dict[str, int] = {}
+    for r, v in rows:
+        by_status[r.status] = by_status.get(r.status, 0) + 1
+        for c in v.business_categories or []:
+            categories[c] = categories.get(c, 0) + 1
+    attended = by_status.get("attended", 0)
+    registered = len(rows)
+    return {
+        "event_id": str(event.id),
+        "status": event.status,
+        "registered": registered,
+        "capacity": event.max_vendors,
+        "fill_rate": round(100.0 * registered / event.max_vendors, 1) if event.max_vendors else 0,
+        "attended": attended,
+        "no_show": by_status.get("no_show", 0),
+        "attendance_rate": round(100.0 * attended / registered, 1) if registered else 0,
+        "by_status": by_status,
+        "categories": sorted(({"category": k, "vendors": n} for k, n in categories.items()), key=lambda x: -x["vendors"]),
+    }
