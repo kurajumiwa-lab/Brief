@@ -59,6 +59,9 @@ class Vendor(Base):
     total_stock_moved = Column(Integer, default=0, nullable=False)
     total_sourced = Column(Integer, default=0, nullable=False)
     total_supplied = Column(Integer, default=0, nullable=False)
+    # SRM-lite (v2.1 §3.4): how reliably this vendor fulfils what it confirms.
+    movements_completed = Column(Integer, default=0, nullable=False, server_default="0")
+    movements_cancelled = Column(Integer, default=0, nullable=False, server_default="0")
     parasitism_index = Column(Float, default=0.0, nullable=False)  # Mutual benefit score
 
     # POS Integration
@@ -73,7 +76,7 @@ class Vendor(Base):
 
     # Relationships
     profile = relationship("VendorProfile", back_populates="vendor", uselist=False)
-    stock_items = relationship("StockItem", back_populates="vendor")
+    stock_items = relationship("StockItem", back_populates="vendor", foreign_keys="StockItem.vendor_id")
     pos_connections = relationship("POSConnection", back_populates="vendor")
     created_events = relationship("Event", back_populates="organizer")
     tool_listings = relationship("ToolListing", back_populates="vendor")

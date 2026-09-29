@@ -15,6 +15,7 @@ class PatronTier(str, PyEnum):
     STARTER = "starter"       # Can create 1 vendor list, up to 20 vendors
     ESTABLISHED = "established"  # Up to 5 lists, 100 vendors each
     MOGUL = "mogul"           # Unlimited lists, arranges events
+    LEGEND = "legend"         # Platform governance, revenue share (v2.1 §5.1)
 
 
 class Patron(Base):

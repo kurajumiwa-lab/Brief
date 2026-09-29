@@ -47,6 +47,7 @@ class Event(Base):
 
     images = Column(JSONB, default=list)
     status = Column(String(50), default="upcoming", nullable=False)  # upcoming, active, completed, cancelled
+    reminder_sent_at = Column(DateTime)  # EVENT_REMINDER dispatched (v2.1 §1.3)
 
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
@@ -65,6 +66,7 @@ class EventRegistration(Base):
     status = Column(String(50), default="registered", nullable=False)  # registered, confirmed, attended, no_show
     booth_assignment = Column(String(100))
     registered_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    checked_in_at = Column(DateTime)  # set by check-in (v2.1 §4.4)
     notes = Column(Text)
 
     event = relationship("Event", back_populates="registrations")

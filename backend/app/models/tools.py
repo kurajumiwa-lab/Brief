@@ -154,3 +154,42 @@ class HotelSourcing(Base):
     meeting_room = Column(Boolean, default=False, nullable=False)
 
     listing = relationship("ToolListing")
+
+
+SHIPMENT_STATUSES = ("picked_up", "in_transit", "out_for_delivery", "delivered", "failed")
+
+
+class CourierShipment(Base):
+    """A parcel moving between two vendors through a registered courier
+    (v2.1 §6.1). Tracked by status, rated by the receiver once delivered."""
+    __tablename__ = "courier_shipments"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    courier_id = Column(UUID(as_uuid=True), ForeignKey('courier_registrations.id'), nullable=False, index=True)
+    sender_vendor_id = Column(UUID(as_uuid=True), ForeignKey('vendors.id'), nullable=False, index=True)
+    receiver_vendor_id = Column(UUID(as_uuid=True), ForeignKey('vendors.id'), nullable=False, index=True)
+    movement_id = Column(UUID(as_uuid=True), ForeignKey('stock_movements.id'))  # optional: the deal it carries
+
+    tracking_number = Column(String(100), unique=True, nullable=False)
+    status = Column(String(50), default="picked_up", nullable=False, index=True)
+    # picked_up → in_transit → out_for_delivery → delivered → failed
+
+    origin = Column(String(500))
+    destination = Column(String(500))
+    weight_kg = Column(Float)
+    cost = Column(Float)
+    notes = Column(Text)
+
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    picked_up_at = Column(DateTime)
+    delivered_at = Column(DateTime)
+    status_history = Column(JSONB, default=list)  # [{status, at, note}]
+
+    # Rating after delivery (by the receiver)
+    rating = Column(Integer)  # 1-5
+    review = Column(Text)
+    rated_at = Column(DateTime)
+
+    sender = relationship("Vendor", foreign_keys=[sender_vendor_id])
+    receiver = relationship("Vendor", foreign_keys=[receiver_vendor_id])
+    courier = relationship("CourierRegistration")
