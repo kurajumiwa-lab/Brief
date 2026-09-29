@@ -11,6 +11,8 @@ import EmptyState from "@/components/ui/EmptyState";
 import { PageSpinner } from "@/components/ui/Spinner";
 import { toast } from "@/components/ui/Toast";
 import ToolForm, { CourierForm } from "@/components/forms/ToolForm";
+import ShipmentPanel, { BookShipmentModal } from "@/components/tools/ShipmentPanel";
+import { useSearchParams } from "react-router-dom";
 import { useToolStore } from "@/stores/toolStore";
 import { useAuthStore } from "@/stores/authStore";
 import { TOOL_CATEGORIES, PRICE_UNITS } from "@/config/constants";
@@ -21,6 +23,7 @@ import { cn } from "@/lib/utils";
 const TABS = [
   { value: "browse", label: "Browse", icon: Wrench },
   { value: "couriers", label: "Couriers", icon: Truck },
+  { value: "shipments", label: "Shipments", icon: Package },
   { value: "mine", label: "My Listings" },
 ];
 
@@ -29,13 +32,16 @@ const ICONS = { Warehouse, Truck, Package, Store, Hotel, Wrench, Box, Snowflake 
 const unitLabel = (u) => PRICE_UNITS.find((p) => p.value === u)?.label || (u ? `/ ${u.replace("per_", "")}` : "");
 
 export default function ToolsPage() {
-  const [tab, setTab] = useState("browse");
+  const [params, setParams] = useSearchParams();
+  const tab = TABS.some((t) => t.value === params.get("tab")) ? params.get("tab") : "browse";
+  const setTab = (v) => setParams(v === "browse" ? {} : { tab: v }, { replace: true });
   const [category, setCategory] = useState("");
   const [search, setSearch] = useState("");
   const [area, setArea] = useState("");
   const [listing, setListing] = useState(false);
   const [courier, setCourier] = useState(false);
   const [booking, setBooking] = useState(null);
+  const [shipping, setShipping] = useState(null); // courier being booked for a parcel
   const me = useAuthStore((s) => s.vendor);
   const { tools, mine, couriers, loading, fetchTools, fetchMine, fetchCouriers, setAvailability } = useToolStore();
 
@@ -133,12 +139,19 @@ export default function ToolsPage() {
                       <Star size={11} className="text-amber-400" /> {Number(c.rating || 0).toFixed(1)} · {num(c.total_deliveries || 0)} runs
                     </span>
                   </div>
+                  {c.vendor_handle !== me?.vendor_handle && (
+                    <Button size="xs" icon={Package} onClick={() => setShipping(c)} className="self-end">
+                      Book a delivery
+                    </Button>
+                  )}
                 </Card>
               ))}
             </div>
           )}
         </>
       )}
+
+      {tab === "shipments" && <ShipmentPanel />}
 
       {tab === "mine" &&
         (mine.length === 0 ? (
@@ -158,6 +171,7 @@ export default function ToolsPage() {
         <CourierForm onDone={() => { setCourier(false); setTab("couriers"); }} onCancel={() => setCourier(false)} />
       </Modal>
       <BookingModal tool={booking} onClose={() => setBooking(null)} />
+      <BookShipmentModal courier={shipping} open={!!shipping} onClose={() => setShipping(null)} onDone={() => setTab("shipments")} />
     </div>
   );
 }

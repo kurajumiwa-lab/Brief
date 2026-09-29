@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { CalendarDays, Plus, MapPin, Users, Video, Ticket, Check, X, ClipboardList, Crown } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
+import { CalendarDays, Plus, MapPin, Users, Video, Ticket, Check, X, ClipboardList, Crown, DoorOpen, BarChart3 } from "lucide-react";
 import Tabs from "@/components/ui/Tabs";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
@@ -19,7 +20,7 @@ import { useGroupStore } from "@/stores/groupStore";
 import { useListStore } from "@/stores/listStore";
 import { useAuthStore } from "@/stores/authStore";
 import { EVENT_TYPES } from "@/config/constants";
-import { apiError } from "@/lib/api";
+import { apiError, eventAPI } from "@/lib/api";
 import { currency, num, dayLabel, shortDateTime, relativeTime, parseApiDate } from "@/lib/formatters";
 import { Check as CheckBox } from "@/components/forms/GroupForm";
 import { cn, titleCase } from "@/lib/utils";
@@ -31,14 +32,30 @@ const TABS = [
 const STATUS_BADGE = { upcoming: "brand", active: "blue", completed: "gray", cancelled: "red" };
 
 export default function EventsPage() {
-  const [tab, setTab] = useState("upcoming");
+  const [params, setParams] = useSearchParams();
+  const tab = TABS.some((t) => t.value === params.get("tab")) ? params.get("tab") : "upcoming";
+  const setTab = (v) => setParams(v === "upcoming" ? {} : { tab: v }, { replace: true });
   const [type, setType] = useState("");
   const [location, setLocation] = useState("");
   const [includePast, setIncludePast] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [open, setOpen] = useState(null);
+  const [openId, setOpenId] = useState(null);
+  const [fetched, setFetched] = useState(null); // event pulled for a ?event= deep link before the lists load
   const me = useAuthStore((s) => s.vendor);
   const { events, mine, loading, fetchEvents, fetchMine, register, cancelRegistration, setStatus } = useEventStore();
+  // the drawer reads from the store so check-ins / status changes show up without reopening
+  const open = openId ? [...events, ...mine].find((e) => e.id === openId) || (fetched?.id === openId ? fetched : null) : null;
+  const setOpen = (ev) => setOpenId(ev ? ev.id : null);
+
+  const deepLink = params.get("event");
+  useEffect(() => {
+    if (!deepLink) return;
+    setOpenId(deepLink);
+    eventAPI.get(deepLink).then(({ data }) => setFetched(data)).catch(() => {});
+    const next = new URLSearchParams(params);
+    next.delete("event");
+    setParams(next, { replace: true });
+  }, [deepLink]); // eslint-disable-line react-hooks/exhaustive-deps
   const groups = useGroupStore((s) => s.mine);
   const fetchGroups = useGroupStore((s) => s.fetchMine);
   const lists = useListStore((s) => s.mine);
@@ -202,7 +219,7 @@ export default function EventsPage() {
       <Modal open={creating} onClose={() => setCreating(false)} title="Organise an event" description="Optionally restrict registration to one of your groups or vendor lists.">
         <EventForm groups={groups.filter((g) => g.my_role === "admin")} lists={lists.filter((l) => l.i_run_it)} onDone={() => setCreating(false)} onCancel={() => setCreating(false)} />
       </Modal>
-      <EventDrawer event={open} onClose={() => setOpen(null)} organiser={open?.organizer === me?.vendor_handle} onStatus={onStatus} />
+      <EventDrawer event={open} onClose={() => setOpen(null)} organiser={open?.organizer === me?.vendor_handle} onStatus={onStatus} onPatch={(patch) => setFetched((f) => (f && f.id === open?.id ? { ...f, ...patch } : f))} />
     </div>
   );
 }
@@ -227,13 +244,58 @@ function DateTile({ date }) {
   );
 }
 
-function EventDrawer({ event: ev, onClose, organiser, onStatus }) {
-  const registrations = useEventStore((s) => s.registrations);
+// mirrors routes/events.py: the window opens on the event's calendar day
+const startsByToday = (iso) => {
+  const d = parseApiDate(iso);
+  if (!d) return false;
+  const endOfToday = new Date();
+  endOfToday.setHours(23, 59, 59, 999);
+  return d <= endOfToday;
+};
+
+function EventDrawer({ event: ev, onClose, organiser, onStatus, onPatch }) {
+  const { registrations, checkIn, checkInVendor, analytics } = useEventStore();
   const [rows, setRows] = useState([]);
+  const [stats, setStats] = useState(null);
+  const [busy, setBusy] = useState("");
+  const load = () => {
+    if (!ev || !organiser) return;
+    registrations(ev.id).then(setRows).catch(() => setRows([]));
+    analytics(ev.id).then(setStats).catch(() => setStats(null));
+  };
   useEffect(() => {
     setRows([]);
-    if (ev && organiser) registrations(ev.id).then(setRows).catch(() => setRows([]));
-  }, [ev?.id, organiser]); // eslint-disable-line react-hooks/exhaustive-deps
+    setStats(null);
+    load();
+  }, [ev?.id, organiser, ev?.status]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const registered = ev?.my_status === "registered" || ev?.my_status === "confirmed";
+  const checkInOpen = ev && (ev.status === "active" || (ev.status === "upcoming" && startsByToday(ev.start_date)));
+
+  const selfCheckIn = async () => {
+    setBusy("self");
+    try {
+      const res = await checkIn(ev);
+      onPatch?.({ my_status: "attended" });
+      toast.success(res?.message || "Checked in — enjoy the day");
+    } catch (e) {
+      toast.error(apiError(e, "Couldn't check you in"));
+    } finally {
+      setBusy("");
+    }
+  };
+  const doorCheckIn = async (r) => {
+    setBusy(r.vendor_id);
+    try {
+      await checkInVendor(ev.id, r.vendor_id);
+      toast.success(`@${r.vendor_handle} is in`);
+      load();
+    } catch (e) {
+      toast.error(apiError(e));
+    } finally {
+      setBusy("");
+    }
+  };
 
   return (
     <Drawer open={!!ev} onClose={onClose} title={ev?.title} description={ev ? `${dayLabel(ev.start_date)} · ${ev.is_virtual ? "virtual" : ev.location || "location tba"}` : ""}>
@@ -250,6 +312,43 @@ function EventDrawer({ event: ev, onClose, organiser, onStatus }) {
             <Row k="Organiser" v={`${ev.organizer_business} · @${ev.organizer}`} />
             {requirementChips(ev.vendor_requirements).length > 0 && <Row k="Requirements" v={requirementChips(ev.vendor_requirements).join(", ")} />}
           </dl>
+
+          {!organiser && registered && ev.status !== "cancelled" && ev.status !== "completed" && (
+            <div className="rounded-xl border border-edge-1 bg-surface-2 p-3 flex items-center justify-between gap-3">
+              <p className="text-xs text-ink-3">{checkInOpen ? "Check-in is open. Tap when you arrive." : "Check-in opens on the day of the event."}</p>
+              <Button size="sm" icon={DoorOpen} disabled={!checkInOpen} loading={busy === "self"} onClick={selfCheckIn}>
+                Check in
+              </Button>
+            </div>
+          )}
+          {!organiser && ev.my_status === "attended" && (
+            <Badge variant="brand" size="md">
+              <Check size={11} /> Checked in
+            </Badge>
+          )}
+
+          {organiser && stats && (
+            <section data-testid="event-analytics">
+              <h4 className="text-xs font-semibold text-ink-2 mb-2 inline-flex items-center gap-1.5">
+                <BarChart3 size={13} className="text-brand-400" /> At a glance
+              </h4>
+              <div className="grid grid-cols-4 gap-2 text-xs">
+                <Row k="Registered" v={`${num(stats.registered)} / ${num(stats.capacity)}`} />
+                <Row k="Fill rate" v={`${stats.fill_rate}%`} />
+                <Row k="Attended" v={num(stats.attended)} />
+                <Row k="Attendance" v={`${stats.attendance_rate}%`} />
+              </div>
+              {stats.categories?.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {stats.categories.slice(0, 8).map((c) => (
+                    <Badge key={c.category} variant="outline" size="xs">
+                      {c.category} · {c.vendors}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
 
           {organiser && (
             <>
@@ -285,10 +384,18 @@ function EventDrawer({ event: ev, onClose, organiser, onStatus }) {
                         <span className="font-mono text-ink-4 truncate">@{r.vendor_handle}</span>
                         <span className="ml-auto flex items-center gap-2 text-2xs text-ink-4">
                           {r.booth_assignment && <span>booth {r.booth_assignment}</span>}
-                          <Badge variant={r.status === "cancelled" ? "red" : "brand"} size="xs">
-                            {r.status}
+                          <Badge variant={r.status === "cancelled" || r.status === "no_show" ? "red" : r.status === "attended" ? "brand" : "blue"} size="xs">
+                            {r.status === "no_show" ? "no-show" : r.status}
                           </Badge>
-                          <span>{relativeTime(r.registered_at)}</span>
+                          {r.status === "attended" ? (
+                            <span title={r.checked_in_at ? `checked in ${relativeTime(r.checked_in_at)}` : undefined}>{relativeTime(r.checked_in_at || r.registered_at)}</span>
+                          ) : ev.status !== "completed" && ev.status !== "cancelled" && r.status !== "cancelled" ? (
+                            <Button size="xs" variant="secondary" icon={DoorOpen} loading={busy === r.vendor_id} onClick={() => doorCheckIn(r)}>
+                              Check in
+                            </Button>
+                          ) : (
+                            <span>{relativeTime(r.registered_at)}</span>
+                          )}
                         </span>
                       </li>
                     ))}

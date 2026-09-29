@@ -57,4 +57,12 @@ export const useEventStore = create((set, get) => ({
     return data;
   },
   registrations: (id) => eventAPI.registrations(id).then((r) => r.data),
+  // v2.1 check-in + analytics
+  checkIn: async (event) => {
+    const { data } = await eventAPI.checkIn(event.id);
+    get().patch(event.id, { my_status: "attended" });
+    return data;
+  },
+  checkInVendor: (eventId, vendorId) => eventAPI.checkInVendor(eventId, vendorId).then((r) => r.data),
+  analytics: (id) => eventAPI.analytics(id).then((r) => r.data),
 }));
