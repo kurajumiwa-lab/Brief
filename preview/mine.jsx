@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// MINE — shops, orders, held records. Failed reads are not empty shops.
+// MINE — the Shops door: shops, orders, held records. Failed reads are not empty shops.
 //
 // The Stitch "Mine & Ledger" invented KES 14,350 in escrow, ETAs, QR codes,
 // a vault-healthy badge and a Hubs tab. This suite pins the door as it is:
@@ -163,11 +163,14 @@ async function main() {
     assert.ok(!/Ledger Synchronized|Vault healthy|LIVE ESCROW|Audited/i.test(t), 'no Stitch ledger pulse');
     assert.ok(!/ETA|Receive Pass|Confirm & Release|TR-8921/i.test(t), 'no invented fulfilment');
     const doors = BOTTOM_BAR_ITEMS.filter((i) => i.type === 'destination').map((i) => i.label);
-    // Mall, market, trade, duka, you. The two seller doors this suite used to
-    // pin ('Selling' and 'Spaces') both opened MineSurface with a different
-    // section pre-selected, so they are one door now — and MineSurface is the
-    // screen behind it, which is why this suite still owns the assertion.
-    assert.deepEqual(doors, ['Home', 'Market', 'Trade', 'Shop', 'You'], 'the bar is the avenue’s five doors');
+    // Market, shops, trade, you. The two seller doors this suite used to pin
+    // ('Selling' and 'Spaces') both opened MineSurface with a different section
+    // pre-selected, so they became one door; then the Home atrium went and its
+    // slot became that door, labelled Shops. MineSurface is still the screen
+    // behind it, which is why this suite still owns the assertion.
+    assert.deepEqual(doors, ['Market', 'Shops', 'Trade', 'You'], 'the bar is the avenue’s four doors, market first');
+    assert.ok(t.includes('What needs your attention today?'), 'and the door opens on the attention read');
+    assert.ok(t.includes('Nairobi Boda'), 'above the shops themselves');
   }
   pass('Mine did not grow Hubs, a vault, or an ETA');
 

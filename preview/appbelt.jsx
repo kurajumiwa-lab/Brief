@@ -175,8 +175,8 @@ async function main() {
     const ids = items.map((item) => item.id);
     assert.equal(new Set(ids).size, ids.length, 'no destination is listed twice in the sheet');
     assert.ok(ids.length >= 30, 'the directory lists the building, not eight leftovers');
-    assert.deepEqual(SHEET_GROUPS.map((group) => group.id), ['market', 'trade', 'duka', 'you', 'services'],
-      'the directory is floored by wing, in the order of a walk through it');
+    assert.deepEqual(SHEET_GROUPS.map((group) => group.id), ['market', 'shops', 'trade', 'you', 'services'],
+      'the directory is floored by wing, in the order of the bar: market, shops, trade, you');
     assert.deepEqual(SHEET_GROUPS[0].items.map((item) => item.label).slice(0, 2),
       ['Everything on the board', 'Pulse'], 'the ground floor starts at the board and keeps Pulse, its numbers');
     assert.ok(SHEET_GROUPS.find((group) => group.id === 'trade').items.some((item) => item.id === 'trade-demand'),
@@ -187,7 +187,7 @@ async function main() {
     const sheetLabels = items.map((item) => item.label);
     const doorLabels = BOTTOM_BAR_ITEMS.filter((item) => item.type === 'destination').map((item) => item.label);
     assert.ok(doorLabels.every((label) => !sheetLabels.includes(label)), 'no primary door is repeated in the sheet');
-    assert.ok(!['Mine', 'Discover', 'Activity', 'Selling', 'Spaces', 'You'].some((label) => sheetLabels.includes(label)),
+    assert.ok(!['Mine', 'Discover', 'Activity', 'Selling', 'Spaces', 'You', 'Home', 'Shop'].some((label) => sheetLabels.includes(label)),
       'legacy and primary navigation labels are not reintroduced in the sheet');
     assert.ok(sheetLabels.every((label) => label.trim().length > 2 && !/\\d/.test(label)),
       'secondary entries are readable and carry no unsupported counts');
@@ -221,7 +221,7 @@ async function main() {
     assert.equal(shut.t, '', 'closed means nothing rendered, not a hidden tree');
     shut.root.unmount(); shut.host.remove();
   }
-  pass('The directory stays distinct from the five doors and closes cleanly');
+  pass('The directory stays distinct from the four doors and closes cleanly');
 
   // --- 5. what the sheet took over leaves the working screens -------------
   {

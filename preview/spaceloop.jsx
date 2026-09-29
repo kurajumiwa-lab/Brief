@@ -456,18 +456,17 @@ async function runTests() {
 
   // --- 12. AppShell Integration ---
   console.log('\n--- 12. AppShell Navigation ---');
+  window.location.hash = '';
   const host12 = document.createElement('div');
   document.body.appendChild(host12);
   const root12 = createRoot(host12);
   await act(async () => {
-    root12.render(React.createElement(AppShell, {
-      initialTab: 'home'
-    }));
+    root12.render(React.createElement(AppShell, {}));
   });
+  await act(async () => { await new Promise((r) => setTimeout(r, 60)); });
 
-  const text12 = host12.textContent;
-  check('renders AppShell Home tab by default',
-    Boolean(host12.querySelector('[data-testid="compact-home"]')) || /What’s moving/.test(text12));
+  check('renders the market as the first page by default',
+    Boolean(host12.querySelector('[data-door="market"][aria-selected="true"]')) && !host12.querySelector('[data-testid="seller-home"]'));
 
   await act(async () => { root12.unmount(); host12.remove(); });
 

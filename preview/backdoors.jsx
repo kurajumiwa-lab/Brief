@@ -122,8 +122,13 @@ async function main() {
     assert.equal(surfaces.shopIdFromHash('#shop/spc%201'), 'spc 1', 'a percent-encoded id decodes');
     assert.equal(surfaces.shopIdFromHash('#spaces'), null, 'the street is not a shop');
     assert.equal(surfaces.shopHref('spc 1'), '#shop/spc%201');
-    assert.equal(surfaces.TAB_HASH.pipeline, 'spaces', 'closing a sheet returns to the street hash, not to nothing');
-    assert.equal(surfaces.hrefForDest('shopbrief'), 'spaces', 'the morning brief has somewhere real to go');
+    assert.equal(surfaces.TAB_HASH.pipeline, 'shops', 'closing a sheet returns to the Shops door, not to nothing');
+    assert.equal(surfaces.hrefForDest('shopbrief'), 'shops', 'the morning brief has somewhere real to go');
+    assert.equal(surfaces.resolveTabHash('#spaces'), 'shops', 'the street\'s old address is the Shops door');
+    assert.equal(surfaces.resolveTabHash('#duka/selling'), 'shops', 'and so is the door it replaced');
+    assert.equal(surfaces.resolveTabHash('#home'), 'market', 'the atrium\'s address is the first page, the market');
+    assert.equal(surfaces.HASH_TAB.shops, 'shops', 'the door\'s own name wins over the legacy tabs that share its hash');
+    assert.equal(surfaces.HASH_TAB.market, 'market');
     assert.equal(surfaces.hrefForDest('entity:venue:KICC'), 'entity/venue%3AKICC');
     assert.equal(surfaces.hrefForDest('object:obj_9'), null,
       'this shell has no object detail, so a route to one would be invented');
@@ -289,6 +294,8 @@ async function main() {
     window.location.hash = '#mine';
     await flush();
     assert.ok(!text(host).includes('No space yet'), 'the shop screen is gone');
+    assert.ok(document.querySelector('[data-door="shops"][aria-selected="true"]'),
+      'the legacy #mine address lights the Shops door');
   }
   pass('a space opens at a URL, and leaving it is a step back, not a jump home');
 
@@ -305,10 +312,10 @@ async function main() {
     assert.ok(text(host).includes('Counter'), 'the shop is open');
     const beltBack = document.querySelector('[aria-label^="Back to"]');
     assert.ok(beltBack, 'and the band carries the way out');
-    assert.equal(beltBack.getAttribute('aria-label'), 'Back to Mine',
-      'named after the place it returns to, which is where this one was opened from');
+    assert.equal(beltBack.getAttribute('aria-label'), 'Back to your shops',
+      'named after the place it returns to — the Shops door, whatever legacy address opened it');
     await click(beltBack);
-    assert.equal(window.location.hash, '#mine', 'the tap moves the URL, the same way the gesture does');
+    assert.equal(window.location.hash, '#shops', 'the tap moves the URL to the door\'s own address, the same way the gesture does');
     await flush();
     assert.ok(!text(host).includes('Counter'), 'and the shop screen is gone');
 
@@ -331,103 +338,147 @@ async function main() {
   }
   pass('the unreachable create dialog is deleted, not decorated');
 
-  // --- 10. Home is Home. The market is a door you chose. --------------------
+  // --- 10. The market is the first page. Shops is the seller's door. -------
   // The bug that started this section: initialTab was 'city', the Home door
   // wrote an empty hash, and navigate() mapped the empty hash back to
   // initialTab — so tapping Home opened Discover and a cold load painted the
   // board first. Two surfaces, the wrong one on top.
   //
-  // Home is no longer the compact discovery surface (`compact-home`) — the
-  // restructure made Home the atrium: the operational read, the doors of the
-  // building, and the board's own rows under them. The claim this section
-  // protects is unchanged: a cold load is Home, the board is a place you walk
-  // to, and Home is a root screen with no Back toggle.
+  // The map has since moved: there is no Home door. The market IS the first
+  // page — a cold load with no hash lands on the board, on purpose — and the
+  // Home slot became the Shops door, which opens on the attention read the
+  // atrium used to carry. The claim this section protects is the same shape
+  // as before: an empty hash and the first door paint the same screen, a door
+  // writes its own hash (never '' and never a hash the bar no longer owns), the
+  // atrium's old address still opens a real screen, and a root screen has no
+  // Back toggle.
   {
     const { AppShell } = require('./src/app/AppShell.tsx');
     window.location.hash = '';
     const { host } = await mount(React.createElement(AppShell, {}));
     await flush(); await flush();
     const t = text(host);
-    assert.ok(host.querySelector('[data-testid="seller-home"]'),
-      'a cold load with no hash is Home — the atrium, not the board');
-    assert.ok(host.querySelector('[data-shelf="doors"]'),
-      'and the atrium holds the shelf of doors that used to be the compact surface\'s tiles');
-    assert.ok(!/What's happening nearby/.test(t) && !/What.s happening nearby/.test(t),
-      `Discover's heading is not on Home: ${t.slice(0, 180)}`);
+    assert.ok(!host.querySelector('[data-testid="seller-home"]'),
+      'a cold load with no hash is not the atrium — there is no Home door');
+    assert.ok(document.querySelector('[data-door="market"][aria-selected="true"]'),
+      'a cold load with no hash lights the Market door: the market is the first page');
+    assert.ok(!document.querySelector('[data-testid="attention-strip"]'),
+      `the seller's read is not sitting under the board: ${t.slice(0, 180)}`);
+    assert.ok(!document.querySelector('[aria-label^="Back to"]'), 'the first page is a root screen: no Back toggle');
+
+    window.location.hash = 'home';
+    await flush(); await flush();
+    assert.ok(document.querySelector('[data-door="market"][aria-selected="true"]'),
+      'the atrium\'s old address is answered, and it lights the Market door');
+    assert.ok(!host.querySelector('[data-testid="seller-home"]'), 'and the atrium is not what it opens');
 
     window.location.hash = 'city';
     await flush(); await flush();
     assert.ok(document.querySelector('[data-door="market"][aria-selected="true"]'),
       'the legacy board address is answered, and it lights the Market door');
-    assert.ok(!document.querySelector('[data-testid="seller-home"]'), 'and Home is not sitting under it');
 
     window.location.hash = 'market/bulk';
     await flush(); await flush();
     assert.ok(document.querySelector('[data-door="market"][aria-selected="true"]'),
       'a room of the market lights the market door, not nothing at all');
 
-    const homeDoor = Array.from(document.querySelectorAll('nav[aria-label="Primary"] button')).find((b) => /^Home/.test(text(b)));
-    assert.ok(homeDoor, 'the bar still has a Home door');
-    await click(homeDoor);
+    const doors = Array.from(document.querySelectorAll('nav[aria-label="Primary"] button[role="tab"]'));
+    assert.equal(doors.map((b) => b.getAttribute('data-door')).join(','), 'market,shops,trade,you',
+      'the bar is Market · Shops · Trade · You');
+    assert.ok(!doors.some((b) => /^Home/.test(text(b))), 'the bar has no Home door');
+
+    const shopsDoor = doors.find((b) => b.getAttribute('data-door') === 'shops');
+    await click(shopsDoor);
     await flush(); await flush();
-    assert.equal(window.location.hash, '#home', 'Home writes #home, not an empty hash that used to mean Discover');
-    assert.ok(document.querySelector('[data-testid="seller-home"]'), 'and the doors shelf is what you land on');
+    assert.equal(window.location.hash, '#shops', 'Shops writes #shops — not #duka, not #spaces, not an empty hash');
+    assert.ok(document.querySelector('[data-testid="attention-strip"]'),
+      'and the attention read — what the atrium used to open on — is what you land on');
+    assert.ok(/What needs your attention today\?/.test(text(document.body)), 'it asks the operational question');
+    assert.ok(!host.querySelector('[data-testid="seller-home"]'), 'without the atrium\'s shelves');
     assert.ok(!/happening nearby/i.test(text(document.body)), 'Discover did not come along');
-    assert.ok(!document.querySelector('[aria-label^="Back to"]'),
-      'Home is a root screen: no Back toggle');
+    assert.ok(!document.querySelector('[aria-label^="Back to"]'), 'Shops is a root screen: no Back toggle');
+
+    const marketDoor = doors.find((b) => b.getAttribute('data-door') === 'market');
+    await click(marketDoor);
+    await flush(); await flush();
+    assert.equal(window.location.hash, '#market', 'the first door writes its own hash');
+    assert.ok(!document.querySelector('[data-testid="attention-strip"]'), 'and the seller\'s read leaves with it');
+
+    // The atrium's other legacy addresses land on the seller's door.
+    for (const legacy of ['duka', 'spaces', 'mine', 'duka/selling', 'spaces/team']) {
+      window.location.hash = legacy;
+      await flush(); await flush();
+      assert.ok(document.querySelector('[data-door="shops"][aria-selected="true"]'), `#${legacy} lights the Shops door`);
+    }
   }
-  pass('tapping Home opens Home, and the board answers to both its addresses');
+  pass('a cold load is the market; Shops opens on the attention read; every old address still lands somewhere real');
 
   // --- 11. Events and Circles are destinations, not Errands ---------------
   // The old bug: Home's tiles all wrote `#city/<something>` through one handler,
-  // so Events landed on the errands empty state. The atrium's doors are separate
-  // controls, and this asserts each one writes its own address.
+  // so Events landed on the errands empty state. The atrium is gone from the
+  // bar; the directory is where those destinations live now, and this asserts
+  // each one still writes its own address and lands on its own screen.
   {
     const shell = codeLines(srcOf('src/app/AppShell.tsx'));
     assert.ok(!/setActiveSpace\(res\.data\.spaces\[0\]\)/.test(shell),
-      'listing shops is not opening the first one — that put Back on Home');
+      'listing shops is not opening the first one — that put Back on the seller\'s door');
+    assert.ok(!/<SellerHome/.test(shell), 'the shell no longer mounts the atrium');
+    assert.ok(/<AttentionStrip/.test(codeLines(srcOf('src/features/mine/MineSurface.tsx'))),
+      'the attention read is mounted on the Shops door');
     const city = codeLines(srcOf('src/features/city/CityFeedView.tsx'));
     assert.match(city, /initialSubTab === 'errands'/,
       'a leftover run signal cannot steal Events or Circles');
 
     const { AppShell } = require('./src/app/AppShell.tsx');
-    window.location.hash = '#home';
+    window.location.hash = '#shops';
     const { host } = await mount(React.createElement(AppShell, {}));
     await flush(); await flush();
-    const shelf = host.querySelector('[data-shelf="doors"]');
-    assert.ok(shelf, 'Home opens on its shelf of doors');
+    assert.ok(host.querySelector('[data-testid="attention-strip"]'), 'Shops opens on the attention read');
 
-    const eventsDoor = shelf.querySelector('[data-door-id="events"]');
-    const circlesDoor = shelf.querySelector('[data-door-id="circles"]');
-    const errandsDoor = shelf.querySelector('[data-door-id="errands"]');
-    const tradeDoor = shelf.querySelector('[data-door-id="trade"]');
-    assert.ok(eventsDoor && circlesDoor && errandsDoor && tradeDoor,
-      'Events, Circles, Errands and the trade desk are all on the shelf');
+    const openDirectory = async () => {
+      window.location.hash = '#menu';
+      await flush(); await flush();
+      const panel = document.querySelector('[data-testid="nav-sheet-panel"]');
+      assert.ok(panel, 'the directory opens from its hash');
+      return panel;
+    };
 
-    await click(eventsDoor);
+    let panel = await openDirectory();
+    await click(panel.querySelector('[data-testid="menu-tile-wanderly"]'));
     await flush(); await flush();
     assert.equal(window.location.hash, '#wanderly', 'Events writes its own route, not #market as errands');
     assert.ok(!/You cannot take errands yet/.test(text(document.body)),
       'Events did not land on the errands empty state');
     assert.ok(document.querySelector('[data-testid="wanderly"]'), 'Events opens the unified Wanderly product');
 
-    window.location.hash = '#home';
+    window.location.hash = '#shops';
     await flush(); await flush();
-    await click(document.querySelector('[data-shelf="doors"] [data-door-id="circles"]'));
+    panel = await openDirectory();
+    await click(panel.querySelector('[data-testid="menu-tile-market-circles"]'));
     await flush(); await flush();
     assert.equal(window.location.hash, '#market/circles', 'Circles writes its own room of the market');
     assert.ok(!/You cannot take errands yet/.test(text(document.body)),
       'Circles did not land on the errands empty state');
 
-    window.location.hash = '#home';
+    window.location.hash = '#shops';
     await flush(); await flush();
-    await click(document.querySelector('[data-shelf="doors"] [data-door-id="trade"]'));
+    panel = await openDirectory();
+    await click(panel.querySelector('[data-testid="menu-tile-trade-demand"]'));
     await flush(); await flush();
-    assert.equal(window.location.hash, '#trade', 'the trade door reaches the desk');
+    assert.equal(window.location.hash, '#trade/demand', 'the trade row reaches the desk');
     assert.ok(document.querySelector('[data-testid="trade-desk"]'), 'and the desk is the screen, with its six sections');
     assert.equal(document.querySelectorAll('[data-trade-tab]').length, 6, 'demand, matches, quotes, work, reorder, supply');
+
+    window.location.hash = '#shops';
+    await flush(); await flush();
+    panel = await openDirectory();
+    await click(panel.querySelector('[data-testid="menu-tile-shops-selling"]'));
+    await flush(); await flush();
+    assert.equal(window.location.hash, '#shops/selling', 'a shop section writes the door\'s own address');
+    assert.ok(/Offers and orders your business manages/.test(text(document.body)), 'and lands on Selling');
+    assert.ok(document.querySelector('[data-door="shops"][aria-selected="true"]'), 'with the Shops door lit');
   }
-  pass('Events, Circles and the desk each write their own address; Home has no Back');
+  pass('Events, Circles, the desk and the shop sections each write their own address; no root screen has a Back');
 
   console.log('\nPASS ' + count);
   process.exit(0);

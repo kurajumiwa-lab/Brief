@@ -90,13 +90,15 @@ async function mount(props = {}) {
 }
 
 async function main() {
-  // Navigation is the requested seller-workspace IA, plus one global action.
+  // Navigation is the requested IA — market first, the seller's own door
+  // second — plus one global action. The atrium this suite pins is no longer
+  // a door; it stays in the tree, and its attention read opens Shops.
   {
     const destinations = BOTTOM_BAR_ITEMS.filter((item) => item.type === 'destination').map((item) => item.label);
-    assert.deepEqual(destinations, ['Home', 'Market', 'Trade', 'Shop', 'You']);
+    assert.deepEqual(destinations, ['Market', 'Shops', 'Trade', 'You']);
     assert.equal(BOTTOM_BAR_ITEMS.filter((item) => item.type === 'action').length, 1);
   }
-  pass('primary navigation is Home · Selling · Spaces · You, plus Create');
+  pass('primary navigation is Market · Shops · Trade · You, plus Create');
 
   // The activity comes from the summary reads. The 12 inbox count intentionally
   // exceeds the ten conversation preview rows in this fixture.

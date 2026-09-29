@@ -17,10 +17,10 @@ test('two illustrated cards, manual entry and same-tab reload', async ({ page })
   await expect(page.getByRole('heading', { name: 'Good people. Great plans.' })).toBeVisible();
   await expect.poll(() => page.locator('.wairo-brand-art img').evaluate(el => el.complete && el.naturalWidth > 0)).toBe(true);
   await page.getByRole('button', { name: 'Enter Wairo' }).click();
-  await expect(page).toHaveURL(/\/#home$/);
-  await expect(page.getByTestId('compact-home')).toBeVisible();
+  await expect(page).toHaveURL(/\/#market$/);
+  await expect(page.locator('[data-door="market"][aria-selected="true"]').first()).toBeVisible();
   await page.reload();
-  await expect(page.getByTestId('compact-home')).toBeVisible();
+  await expect(page.locator('[data-door="market"][aria-selected="true"]').first()).toBeVisible();
   await expect(page.getByTestId('brand-intro')).toHaveCount(0);
   expect(errors).toEqual([]);
 });
@@ -32,7 +32,7 @@ test('plays both cards then reveals the real app', async ({ page }) => {
   await expect(page.getByTestId('brand-intro')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Good people. Great plans.' })).toBeVisible({ timeout: 10000 });
   await expect(page.getByTestId('brand-intro')).toHaveCount(0, { timeout: 10000 });
-  await expect(page.getByTestId('compact-home')).toBeVisible();
+  await expect(page.locator('[data-door="market"][aria-selected="true"]').first()).toBeVisible();
 });
 
 test('Skip and reduced motion do not trap the visitor', async ({ page }) => {
@@ -41,7 +41,7 @@ test('Skip and reduced motion do not trap the visitor', async ({ page }) => {
   await expect(page.getByText('Go at your pace')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Pause introduction' })).toHaveCount(0);
   await page.getByRole('button', { name: 'Skip intro' }).click();
-  await expect(page.getByTestId('compact-home')).toBeVisible();
+  await expect(page.locator('[data-door="market"][aria-selected="true"]').first()).toBeVisible();
   await expect(page.getByTestId('brand-intro')).toHaveCount(0);
 });
 

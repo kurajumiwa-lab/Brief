@@ -136,11 +136,11 @@ async function main() {
     const c = mount(React.createElement(Navigation, { activeTab: 'city', onSelectTab: () => {} }));
     const tabs = Array.from(c.querySelectorAll('nav[aria-label="Primary"] button[role="tab"]'));
     const labels = tabs.map((b) => text(b).replace(/\s+/g, ' ').trim());
-    assert.ok(['Home', 'Market', 'Trade', 'Shop', 'You'].every((label) => labels.includes(label)), 'the five doors render');
+    assert.deepEqual(labels.filter((l) => l !== 'Create'), ['Market', 'Shops', 'Trade', 'You'], 'the four doors render, market first');
     const lit = tabs.filter((b) => b.getAttribute('aria-selected') === 'true');
     assert.equal(lit.length, 1, 'the board lights exactly one door');
     assert.equal(lit[0].getAttribute('data-door'), 'market', 'and it is the market door');
-    assert.ok(!labels.some((l) => /^(Mine|Discover|Activity|Selling|Spaces)$/.test(l)), 'legacy and split labels do not render as primary destinations');
+    assert.ok(!labels.some((l) => /^(Home|Shop|Mine|Discover|Activity|Selling|Spaces)$/.test(l)), 'legacy and split labels do not render as primary destinations');
     const r = mount(React.createElement(Navigation, { activeTab: 'pulse', onSelectTab: () => {} }));
     assert.equal(Array.from(r.querySelectorAll('nav[aria-label="Primary"] button[role="tab"]')).filter((b) => b.getAttribute('aria-selected') === 'true').length, 0,
       'a room that is not a wing still lights nothing');
@@ -247,7 +247,7 @@ async function main() {
     assert.equal(window.location.hash, '#wanderly', 'Events opens the canonical Wanderly route instead of another event gallery');
     assert.ok(!/The case/.test(text(c)), 'and the marketing word is gone from the surface');
     assert.ok(!/WAIRO/.test(t), 'the rider card belongs to errands, not the gallery');
-    assert.ok(!/What's moving/.test(t), 'the signal line is Home’s job, not a browse header');
+    assert.ok(!/What's moving/.test(t), 'the signal line was the atrium’s job, not a browse header');
     assert.ok(!/shown\b/.test(t), 'no result counter anywhere on the browse screen');
     assert.ok(!/KES \d/.test(t), 'no fabricated money figure appears anywhere');
   }

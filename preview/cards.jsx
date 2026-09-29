@@ -233,12 +233,15 @@ async function main() {
       assert.ok(!/verified/i.test(row.textContent), 'no invented trust badge on a row');
     });
     assert.ok(!/featured/i.test(text(host)), 'no "featured" anywhere on Home');
-    // The atrium is what production mounts at #home, and it holds the same
-    // discipline. Its shelf structure is pinned in backdoors.jsx and doorways.jsx;
-    // pinned here is only the rule this suite owns: no second shout, no promotion.
+    // The atrium is no longer what production mounts — there is no Home door;
+    // the market is the first page and the atrium's attention read opens the
+    // Shops door (pinned in backdoors.jsx and doorways.jsx). The file stays in
+    // the tree, and holds the same discipline; pinned here is only the rule
+    // this suite owns: no second shout, no promotion.
     const atrium = fs.readFileSync(path.join(__dirname, 'src/features/home/SellerHome.tsx'), 'utf8');
     const shell = fs.readFileSync(path.join(__dirname, 'src/app/AppShell.tsx'), 'utf8');
-    assert.ok(/SellerHome/.test(shell), 'Home renders the atrium');
+    assert.ok(!/<SellerHome/.test(shell), 'the shell does not mount the atrium');
+    assert.ok(/<CityFeedView/.test(shell) && /<MineSurface/.test(shell), 'it mounts the board and the seller\'s door');
     assert.ok(!/gradient-banner|BannerButton/.test(atrium), 'the atrium adds no banner back');
     assert.ok(!/featured|promoted|PROMOTED/.test(atrium), 'the atrium promotes nothing');
     assert.ok(/id="doors"/.test(atrium) && /id="moving"/.test(atrium),

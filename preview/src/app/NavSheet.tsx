@@ -15,7 +15,7 @@
 // Workforce, Elevate and the admin rooms, and those five screens have no other
 // way in.
 //
-// The five doors of the mall are NOT repeated here as destinations with a
+// The four doors of the mall are NOT repeated here as destinations with a
 // different name; the rows below go into the parts of a wing a person does not
 // land on by tapping the door itself.
 // ---------------------------------------------------------------------------
@@ -27,7 +27,7 @@ import type { TradeSectionId } from '../features/trade/TradeDesk';
 import '../ui/mall.css';
 
 export type SheetTarget =
-  | { kind: 'tab'; tab: 'requests' | 'supply' | 'partners' | 'workforce' | 'pulse' | 'mine' | 'market' | 'trade' | 'duka' }
+  | { kind: 'tab'; tab: 'requests' | 'supply' | 'partners' | 'workforce' | 'pulse' | 'mine' | 'market' | 'trade' | 'shops' }
   | {
       kind: 'you';
       section:
@@ -37,7 +37,7 @@ export type SheetTarget =
     }
   | { kind: 'discover'; room: 'all' | 'events' | 'circles' | 'errands' | 'bulk' | 'direct' | 'group' | 'shops' | 'niche' }
   | { kind: 'trade'; section: TradeSectionId }
-  | { kind: 'duka'; section: 'spaces' | 'orders' | 'selling' | 'team' }
+  | { kind: 'shops'; section: 'spaces' | 'orders' | 'selling' | 'team' }
   | { kind: 'surface'; surface: 'groupbuys' }
   | { kind: 'storefront' }
   | { kind: 'moderation' }
@@ -76,6 +76,18 @@ export const SHEET_GROUPS: Array<{ id: string; label: string; kicker?: string; i
     ]
   },
   {
+    id: 'shops',
+    label: 'Your counter · the shops',
+    kicker: 'DUKA',
+    items: [
+      { id: 'shops-spaces', no: 'D-01', label: 'Your spaces', sub: 'Every shop, group-run counter and stall you operate', target: { kind: 'shops', section: 'spaces' } },
+      { id: 'shops-selling', no: 'D-02', label: 'Offers & prices', sub: 'What is listed, what buyers asked about, what is still draft', target: { kind: 'shops', section: 'selling' } },
+      { id: 'shops-orders', no: 'D-03', label: 'Orders & fulfilment', sub: 'Placed, marked in, settled, disputed', target: { kind: 'shops', section: 'orders' } },
+      { id: 'shops-team', no: 'D-04', label: 'Team & roles', sub: 'Who may write, who may only read', target: { kind: 'shops', section: 'team' } },
+      { id: 'you-tableBanking', no: 'D-05', label: 'Table banking circles', sub: 'The rotating savings group you are in, and the invites', target: { kind: 'you', section: 'tableBanking' } }
+    ]
+  },
+  {
     id: 'trade',
     label: 'The counting room · trade',
     kicker: 'BIASHARA',
@@ -90,18 +102,6 @@ export const SHEET_GROUPS: Array<{ id: string; label: string; kicker?: string; i
       { id: 'wanderly', no: 'T-08', label: 'Wanderly · parties & trips', sub: 'Gatherings, tickets and runs out of town', target: { kind: 'wanderly', dest: 'explore' } },
       { id: 'market-circles', no: 'T-09', label: 'Chamas & circles', sub: 'The rooms people pool money and work in', target: { kind: 'discover', room: 'circles' } },
       { id: 'market-errands', no: 'T-10', label: 'Errands & runs', sub: 'A bike is going that way anyway', target: { kind: 'discover', room: 'errands' } }
-    ]
-  },
-  {
-    id: 'duka',
-    label: 'Your counter · the shop',
-    kicker: 'DUKA',
-    items: [
-      { id: 'duka-spaces', no: 'D-01', label: 'Your spaces', sub: 'Every shop, group-run counter and stall you operate', target: { kind: 'duka', section: 'spaces' } },
-      { id: 'duka-selling', no: 'D-02', label: 'Offers & prices', sub: 'What is listed, what buyers asked about, what is still draft', target: { kind: 'duka', section: 'selling' } },
-      { id: 'duka-orders', no: 'D-03', label: 'Orders & fulfilment', sub: 'Placed, marked in, settled, disputed', target: { kind: 'duka', section: 'orders' } },
-      { id: 'duka-team', no: 'D-04', label: 'Team & roles', sub: 'Who may write, who may only read', target: { kind: 'duka', section: 'team' } },
-      { id: 'you-tableBanking', no: 'D-05', label: 'Table banking circles', sub: 'The rotating savings group you are in, and the invites', target: { kind: 'you', section: 'tableBanking' } }
     ]
   },
   {

@@ -37,6 +37,8 @@ const application = () => React.createElement(LaunchExperience, {}, React.create
 (async () => {
   assert.equal(BRAND_CARDS.length, 2);
   assert.ok(shouldPlayIntro('/', '', false));
+  assert.ok(shouldPlayIntro('/', '#market', false), 'the first page is the market, and the welcome plays there');
+  assert.ok(shouldPlayIntro('/', '#home', false), 'the atrium\'s old address resolves to the first page, so it plays there too');
   assert.ok(!shouldPlayIntro('/', '', true));
   for (const hash of ['#admin/members', '#wanderly/experience/real', '#shop/one', '#you', '#join/code']) assert.ok(!shouldPlayIntro('/', hash, false));
   for (const path of ['/c/real', '/s/shop', '/groups']) assert.ok(!shouldPlayIntro(path, '', false));
@@ -70,7 +72,7 @@ const application = () => React.createElement(LaunchExperience, {}, React.create
   await click(button('Play introduction')); assert.equal(timers.size, 1);
   await click(button('Meet your next plan→')); assert.ok(button('Enter Wairo→'));
   await click(button('Enter Wairo→'));
-  assert.equal(window.location.pathname, '/'); assert.equal(window.location.hash, '#home');
+  assert.equal(window.location.pathname, '/'); assert.equal(window.location.hash, '#market');
   assert.equal(by('brand-intro'), null);
   pass('replay, pause/play, numbered navigation, Next and Enter Wairo all work');
 

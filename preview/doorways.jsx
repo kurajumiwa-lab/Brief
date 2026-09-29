@@ -1,28 +1,32 @@
 // ---------------------------------------------------------------------------
 // DOORWAYS — the mall's floor plan, and the one action that is not a door.
 //
-// The bar is Home · Market · Trade · Shop · You, plus one action ([+]).
+// The bar is Market · Shops · Trade · You, plus one action ([+]).
 //
-// What this suite used to pin, and why the pin moved: the bar was
-// Home · Selling · Spaces · You, and the assertions below proved that the board
-// (`#city`), the demand desk (`#requests`), the supply shelf (`#supply`) and the
-// work desks were *not* doors. That was the IA of a seller dashboard with a
-// drawer bolted on. The restructure puts the two things people come to the
-// avenue for — the market and the deal — on the bar, merges the two doors that
-// both resolved to one screen with a different pre-selected section, and keeps
-// the drawer as the directory of everything else.
+// What this suite used to pin, and why the pin moved (twice): the bar was
+// Home · Selling · Spaces · You, then Home · Market · Trade · Shop · You. The
+// second map still opened on a Home atrium that mostly pointed at the market,
+// and kept a separate Shop door for the same person's business. Now the market
+// IS the first page — a cold load lands on the board — and the Home slot became
+// the Shops door, which opens on the one thing the atrium held that a seller
+// came back for: the read of what needs attention today. Two doors for one
+// person's business became one.
 //
 // What has NOT moved: the honesty of an unlit door. A screen that is not a
-// destination still lights nothing, and a directory row that opens nothing is
-// still a hard failure (check 3).
+// destination still lights nothing, a directory row that opens nothing is
+// still a hard failure (check 3), and every legacy address (`#home`, `#duka`,
+// `#spaces`, `#mine`) still lights the door that owns it now.
 //
-//   1. the bar is exactly five destinations + one action, in the mall's order;
+//   1. the bar is exactly four destinations + one action, market first;
 //   2. Pulse, Partners, Workforce and Elevate are rooms, not doors; the wings
-//      that ARE doors light from every legacy address that resolves into them;
+//      that ARE doors light from every legacy address that resolves into them,
+//      and `#home` lights the market;
 //   3. the directory carries every secondary destination, its rows all resolve,
 //      and Pulse is one of them;
-//   4. Home is the atrium: the operational read first, then the doors of the
-//      building and the board's own rows, with unavailable states said out loud;
+//   4. Shops opens on the operational read: the attention question first, the
+//      metrics as dashes when the reads fail, the failure said out loud — and
+//      the retired atrium still holds its own discipline while it stays in the
+//      tree;
 //   5. the bar is a solid anchored floor (fixed, bottom-0, 56px, no floating
 //      pill), the directory stops above it, and the create sheet holds eight
 //      real verbs with demand first.
@@ -44,12 +48,14 @@ global.localStorage = dom.window.localStorage;
 const React = require('react');
 const { createRoot } = require('react-dom/client');
 const { act } = require('react-dom/test-utils');
-const { Navigation, BOTTOM_BAR_ITEMS, DOOR_HASH, doorFor } = require('./src/app/Navigation.tsx');
+const { Navigation, BOTTOM_BAR_ITEMS, DOOR_HASH, FIRST_DOOR, doorFor } = require('./src/app/Navigation.tsx');
 const { NavSheet, SHEET_GROUPS } = require('./src/app/NavSheet.tsx');
 const { CreateSheet, CREATE_ACTIONS } = require('./src/app/CreateSheet.tsx');
 const { SellerHome } = require('./src/features/home/SellerHome.tsx');
+const { MineSurface } = require('./src/features/mine/MineSurface.tsx');
+const { AttentionStrip, deriveAttentionItems } = require('./src/features/home/AttentionStrip.tsx');
 const { TRADE_SECTIONS } = require('./src/features/trade/TradeDesk.tsx');
-const { SURFACE_KEYS, TAB_HASH } = require('./src/app/surfaces.ts');
+const { SURFACE_KEYS, TAB_HASH, HASH_ALIAS, resolveTabHash, backLabel } = require('./src/app/surfaces.ts');
 
 let passed = 0;
 let failed = 0;
@@ -74,23 +80,29 @@ async function mount(el) {
 }
 
 async function main() {
-  // ── 1. THE BAR: five doors, one action ──────────────────────────────────
+  // ── 1. THE BAR: four doors, one action, market first ────────────────────
   {
     const destinations = BOTTOM_BAR_ITEMS.filter((i) => i.type === 'destination');
     const actions = BOTTOM_BAR_ITEMS.filter((i) => i.type === 'action');
-    check('the bar has exactly five destinations', destinations.length === 5);
+    check('the bar has exactly four destinations', destinations.length === 4);
     check('and exactly one action', actions.length === 1);
-    check('the doors are Home · Market · Trade · Shop · You, in that order',
-      destinations.map((d) => d.label).join('·') === 'Home·Market·Trade·Shop·You');
+    check('the doors are Market · Shops · Trade · You, in that order',
+      destinations.map((d) => d.label).join('·') === 'Market·Shops·Trade·You');
+    check('the market is the first door, and the first page',
+      destinations[0].id === 'market' && FIRST_DOOR === 'market' && resolveTabHash('') === null && HASH_ALIAS.home === 'market');
+    check('there is no Home door and no second door for the same business',
+      !destinations.some((d) => /^(home|shop)$/i.test(d.label)) && destinations.filter((d) => doorFor(d.id) === 'shops').length === 1);
     check('every door writes a hash the shell resolves',
       destinations.every((d) => Boolean(DOOR_HASH[d.id]) && Boolean(TAB_HASH[DOOR_HASH[d.id]])));
+    check('the Shops door keeps the counter\'s own signage', destinations.find((d) => d.id === 'shops').kicker === 'Duka');
     check('the one action is the create', actions[0].id === 'create');
 
-    const { host, root } = await mount(React.createElement(Navigation, { activeTab: 'home', onSelectTab: () => {} }));
+    const { host, root } = await mount(React.createElement(Navigation, { activeTab: 'market', onSelectTab: () => {} }));
     const doors = Array.from(host.querySelectorAll('nav[aria-label="Primary"] button[role="tab"]'));
     const actionsRendered = Array.from(host.querySelectorAll('nav[aria-label="Primary"] button[aria-haspopup="dialog"]'));
-    check('the rendered bar has five destination buttons', doors.length === 5);
+    check('the rendered bar has four destination buttons', doors.length === 4);
     check('and one action button, marked as opening a dialog', actionsRendered.length === 1);
+    check('the first rendered door is the market', doors[0].getAttribute('data-door') === 'market');
     root.unmount(); host.remove();
   }
 
@@ -101,9 +113,17 @@ async function main() {
       doorFor('partners') === null && doorFor('workforce') === null && doorFor('pulse') === null);
     check('the legacy activity tab is not a door (it is the directory’s check-in)', doorFor('activity') === null);
     check('the board lights the Market door', doorFor('city') === 'market' && doorFor('market') === 'market');
+    check('the atrium\'s old address lights the Market door too — it is the first page now',
+      doorFor('home') === 'market' && resolveTabHash('#home') === 'market' && backLabel('home') === 'the market');
     check('demand and supply light the Trade door', doorFor('requests') === 'trade' && doorFor('supply') === 'trade' && doorFor('trade') === 'trade');
     check('the shop sections light one door, not two',
-      doorFor('mine') === 'duka' && doorFor('spaces') === 'duka' && doorFor('ledger') === 'duka' && doorFor('catalog') === 'duka');
+      doorFor('shops') === 'shops' && doorFor('mine') === 'shops' && doorFor('duka') === 'shops' && doorFor('spaces') === 'shops' && doorFor('ledger') === 'shops' && doorFor('catalog') === 'shops');
+    check('every legacy shop address resolves to the Shops door',
+      ['duka', 'spaces', 'mine', 'selling', 'orders', 'pipeline', 'catalog', 'ledger', 'shopbrief'].every((h) => resolveTabHash(h) === 'shops'));
+    check('the market\'s own shops room keeps its address; the bare #shops is the door',
+      resolveTabHash('#shops') === 'shops' && resolveTabHash('#market/shops') === 'market');
+    check('a step back from a shop section is named for the section',
+      backLabel('shops/selling') === 'Selling' && backLabel('spaces/orders') === 'Selling' && backLabel('shops') === 'your shops');
 
     const { host, root } = await mount(React.createElement(Navigation, { activeTab: 'pulse', onSelectTab: () => {} }));
     check('and nothing in the rendered bar lights while Pulse is open',
@@ -114,6 +134,11 @@ async function main() {
     const lit = Array.from(mHost.querySelectorAll('nav[aria-label="Primary"] button[role="tab"]')).filter((b) => b.getAttribute('aria-selected') === 'true');
     check('opening demand from a legacy address lights the Trade door', lit.length === 1 && lit[0].getAttribute('data-door') === 'trade');
     mRoot.unmount(); mHost.remove();
+
+    const { host: sHost, root: sRoot } = await mount(React.createElement(Navigation, { activeTab: 'mine', onSelectTab: () => {} }));
+    const litShops = Array.from(sHost.querySelectorAll('nav[aria-label="Primary"] button[role="tab"]')).filter((b) => b.getAttribute('aria-selected') === 'true');
+    check('the legacy mine tab lights the Shops door', litShops.length === 1 && litShops[0].getAttribute('data-door') === 'shops');
+    sRoot.unmount(); sHost.remove();
   }
 
   // ── 3. THE DIRECTORY CARRIES EVERY SECONDARY DESTINATION ────────────────
@@ -152,39 +177,70 @@ async function main() {
     root.unmount(); host.remove();
   }
 
-  // ── 4. HOME: THE ATRIUM ─────────────────────────────────────────────────
+  // ── 4. SHOPS OPENS ON THE OPERATIONAL READ ──────────────────────────────
   {
-    const { host, root } = await mount(React.createElement(SellerHome, {
+    const { host, root } = await mount(React.createElement(MineSurface, {
+      onOpenSpace: () => {}, onOpenCreateSpace: () => {}, onOpenEntity: () => {}, onRequireAuth: () => {}
+    }));
+    check('Shops opens on the operational question', text(host).includes('What needs your attention today?'));
+    const strip = host.querySelector('[data-testid="attention-strip"]');
+    check('the attention read is mounted on the Shops door', Boolean(strip));
+    check('and it sits above the list of shops',
+      Boolean(strip) && Boolean(host.querySelector('[aria-label="Your shops"]'))
+      && Boolean(strip.compareDocumentPosition(host.querySelector('[aria-label="Your shops"]')) & dom.window.Node.DOCUMENT_POSITION_FOLLOWING));
+    check('an offline read is said out loud', Boolean(strip && strip.querySelector('[role="alert"]')));
+    check('unavailable activity is a dash, not a sample zero',
+      host.querySelector('[data-testid="metric-orders-value"]')?.textContent === '—' &&
+      host.querySelector('[data-testid="metric-marked-in-value"]')?.textContent === '—' &&
+      host.querySelector('[data-testid="metric-inquiries-value"]')?.textContent === '—');
+    check('a failed shops read below it is a retry, never an empty stall',
+      text(host).includes('could not be read just now') && !/No spaces yet/.test(text(host)));
+    check('the operational page does not mount a discovery promo video', host.querySelector('video') === null);
+    check('the doors shelf did not come along — the bar and the directory are the floor plan now',
+      host.querySelectorAll('[data-shelf]').length === 0);
+    root.unmount(); host.remove();
+
+    // The read's rules, without a DOM: nothing waiting means nothing listed,
+    // and each kind of waiting is one row with a real action.
+    const noop = { onOpenSpace: () => {}, onOpenSelling: () => {}, onOpenTrade: () => {} };
+    const quiet = deriveAttentionItems({ activeSpaces: [], inboxCount: 0, openOrders: 0, agedOrders: 0, draftOffers: 0, flags: [], openGaps: 0 }, noop);
+    check('a quiet read lists nothing', quiet.length === 0);
+    const unread = deriveAttentionItems({ activeSpaces: [], inboxCount: null, openOrders: null, agedOrders: null, draftOffers: null, flags: [], openGaps: 0 }, noop);
+    check('an unreadable read invents nothing either', unread.length === 0);
+    let opened = null;
+    const busy = deriveAttentionItems({
+      activeSpaces: [{ id: 'spc_a', name: 'Counter A', status: 'active', metrics: { inquiriesAwaitingReply: 2 } }],
+      inboxCount: 2, openOrders: 3, agedOrders: 1, draftOffers: 1,
+      flags: [{ id: 'f1', kind: 'other', message: 'A record to check', detail: 'why', spaceId: 'spc_a', action: { label: 'Open', surface: 'ledger' } }],
+      openGaps: 4
+    }, { ...noop, onOpenSpace: (id, tab) => { opened = [id, tab]; } });
+    check('each kind of waiting is one row', busy.map((i) => i.id).join(',') === 'inquiries,orders,draft-offers,brief-f1,open-demand');
+    busy[0].onOpen();
+    check('the inbox row opens the exact Space pipeline', JSON.stringify(opened) === JSON.stringify(['spc_a', 'pipeline']));
+    busy[3].onOpen();
+    check('a brief flag opens the Space at the surface it names', JSON.stringify(opened) === JSON.stringify(['spc_a', 'ledger']));
+    check('aged orders are named as older, not as new', /older order/.test(busy[1].title));
+
+    // The strip on its own, wired to a host: the trade row writes the desk's hash
+    // when no host handler is given, so it is never a dead button.
+    const { host: aHost, root: aRoot } = await mount(React.createElement(AttentionStrip, { onOpenSpace: () => {}, onOpenSelling: () => {} }));
+    check('the strip stands alone and still says what it could not read',
+      Boolean(aHost.querySelector('[data-testid="attention-strip"] [role="alert"]')) && /Try again/.test(text(aHost)));
+    aRoot.unmount(); aHost.remove();
+
+    // The retired atrium stays in the tree (its own suites still pin it) and
+    // keeps its discipline; what changed is that no door opens it.
+    const { host: hHost, root: hRoot } = await mount(React.createElement(SellerHome, {
       onOpenSpace: () => {}, onOpenSelling: () => {}, onOpenSpaces: () => {},
       onCreateSpace: () => {}, onExplore: () => {}, onOpenWorkforce: () => {}
     }));
-    check('Home opens on the operational question', text(host).includes('What needs your attention today?'));
-    check('the seller workspace is the primary Home surface', Boolean(host.querySelector('[data-testid="seller-home"]')));
-    check('an offline read is said out loud', Boolean(host.querySelector('[role="alert"]')));
-    check('unavailable activity is a dash, not a sample zero',
-      host.querySelector('[data-testid="metric-orders-value"]')?.textContent === '—' &&
-      host.querySelector('[data-testid="metric-marked-in-value"]')?.textContent === '—');
-    check('the operational page does not mount a discovery promo video', host.querySelector('video') === null);
-
-    const shelves = Array.from(host.querySelectorAll('[data-shelf]'));
-    check('the atrium carries the doors shelf and the board’s own shelf',
-      shelves.length === 2 && shelves[0].getAttribute('data-shelf') === 'doors' && shelves[1].getAttribute('data-shelf') === 'moving');
-    const doorIds = Array.from(host.querySelectorAll('[data-door-id]')).map((d) => d.getAttribute('data-door-id'));
-    check('the shelf holds the wings, market and trade first',
-      doorIds.length >= 10 && doorIds[0] === 'market' && doorIds[1] === 'trade');
-    check('every wing the restructure promised a door to has one',
-      ['market', 'trade', 'demand', 'groupbuys', 'events', 'circles', 'errands', 'bulk', 'shops', 'work', 'track', 'food', 'reviews']
-        .filter((id) => !doorIds.includes(id)).length === 0);
-    check('an unreadable board paints no placeholder cards',
-      text(host).includes('could not be read') && host.querySelectorAll('[data-testid="activity-reel-item"]').length === 0);
-    check('group buys are reachable from Home, not only from a typed hash',
-      doorIds.includes('groupbuys'));
-    root.unmount(); host.remove();
+    check('the atrium, unmounted from the shell, still reports an offline read', Boolean(hHost.querySelector('[role="alert"]')));
+    hRoot.unmount(); hHost.remove();
   }
 
   // ── 5. THE FLOOR, THE GAP AND THE VERBS ─────────────────────────────────
   {
-    const { host, root } = await mount(React.createElement(Navigation, { activeTab: 'home', onSelectTab: () => {} }));
+    const { host, root } = await mount(React.createElement(Navigation, { activeTab: 'market', onSelectTab: () => {} }));
     const bar = host.querySelector('nav[aria-label="Primary"]');
     // jsdom has no layout engine: the geometry is asserted on the classes that
     // produce it (fixed + bottom-0) and the one inline height the bar sets.
@@ -193,8 +249,8 @@ async function main() {
     check('at 56px, a floor and not a hover', bar.style.height === '56px');
     check('not a floating pill: no rounded-full bar, no lifted shadow class',
       !bar.className.includes('rounded-full') && !/lift-4|shadow-2xl/.test(bar.className));
-    check('six slots in a row is still one row of square-enough targets',
-      host.querySelectorAll('nav[aria-label="Primary"] > button').length === 6);
+    check('five slots in a row: four doors and the action',
+      host.querySelectorAll('nav[aria-label="Primary"] > button').length === 5);
     root.unmount(); host.remove();
 
     const { host: sHost, root: sRoot } = await mount(React.createElement(NavSheet, {

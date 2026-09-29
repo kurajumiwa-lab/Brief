@@ -5,6 +5,49 @@ checks), `preview/backdoors.jsx` (11), `preview/appbelt.jsx`, `preview/cityfeed.
 `preview/mine.jsx`, `preview/sellerhome.jsx`, `preview/wairobrand.jsx`,
 `preview/dialogfocus.jsx`, `preview/businessfeed.jsx` (6), `preview/cards.jsx` (12).
 
+## Amendment — the market is the first page (`arena/01a0ecdc-brief`)
+
+The five-door map below has since been folded to **four doors + Create**, and the
+first page moved. This section is the one that matches the code; the rest of the
+report is kept as the record of the pass that built the doors.
+
+| Door | Hash | Holds |
+|---|---|---|
+| Market | `#market` | The board — and the first page: first in the bar, and where an empty hash lands |
+| Shops | `#shops` | The business, opening on the atrium's attention read (`AttentionStrip`), then spaces, offers, orders, team, ledger, catalogue, pipeline, tools, operating (`#shops/<section>`) |
+| Trade | `#trade` | The work loop, unchanged |
+| You | `#you` | Identity, standing, connections, money, settings, help, unchanged |
+| Create | `#create` | Unchanged |
+
+What moved, and where it went:
+
+* **Home left the bar.** `SellerHome` is kept in the tree and unmounted (the same
+  discipline as `HomeSurface.tsx`). Its first shelf — *what needs attention*, read from
+  `getMyPosition`, the inquiries/orders/offers counts and the shop-brief flags — is now
+  `features/home/AttentionStrip.tsx`, mounted at the top of the Shops door's spaces
+  section, above the list of your shops. It reads for itself, refreshes with the shops
+  list, and a failed read prints as one `role="alert"` with a *Try again*, not a zero.
+  The other shelves (own numbers, the doors shelf, what's moving) are not re-mounted:
+  the board is now the first page, so "what is moving" is one door to the left, and
+  the doors shelf duplicated the bar.
+* **Shop became Shops and took the atrium's address family.** `#duka` is an alias, as
+  are `#mine`, `#spaces`, `#selling`, `#orders`, `#pipeline`, `#catalog`, `#ledger`
+  and `#shopbrief` — each with its section (`#duka/orders` → `#shops/orders`). The
+  bare `#shops` is the door; the market's *shops* room stays at `#market/shops`.
+* **`#home` resolves to the market.** So do `#city` and `#discover`. The welcome intro
+  plays on `''`, `#`, `#market` and `#home`, and hands off to `/#market`.
+* **The directory** (`NavSheet.tsx`) is grouped Market · Shops · Trade · You ·
+  Services; the shop rows are `menu-tile-shops-<section>`.
+* **The first-run group invitation** moved with the seller: it renders under the Shops
+  door, not under a Home that no longer mounts.
+
+Pinned by `doorways.jsx` (60), `backdoors.jsx` (11), `mine.jsx`, `appbelt.jsx`,
+`sellerhome.jsx`, `spaceloop.jsx` §12, `brandlaunch.jsx`, `cards.jsx`, `wairobrand.jsx`,
+and the live-server suites `wanderly.jsx` / `adminwiring.jsx`. `tiles` and the one
+`townhubs` red are unchanged from before this amendment (both reproduce on `main`).
+
+---
+
 ## The problem, stated before any screen was touched
 
 The app did not have a styling problem. It had a **map** problem:
@@ -31,7 +74,7 @@ The app did not have a styling problem. It had a **map** problem:
 Each of those is a *discoverability* defect, not a missing feature — which is why the
 fix is structural and no capability was deleted.
 
-## The new map
+## The new map (as built by that pass — superseded by the amendment above)
 
 Five doors, in the order the loop actually runs, plus the create action:
 

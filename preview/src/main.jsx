@@ -65,7 +65,7 @@ function Root() {
   if (proof) return <EmailLinkLanding token={proof} />;
   const collection = /^\/collections\/([A-Za-z0-9_-]+)\/?$/.exec(window.location.pathname)?.[1];
   if (collection) return <CollectionPage collectionId={collection} mode="public"
-    onClose={() => window.location.assign('/#home')}
+    onClose={() => window.location.assign('/#market')}
     onOpenObject={(object) => { window.location.assign(`/#entity/${encodeURIComponent(object.id)}`); }} />;
   if (/^\/cloudbites\/?$/.test(window.location.pathname)) return <CloudBitesPage />;
   // /pillars is the public, mobile-fitted gallery for the three-pillar

@@ -252,10 +252,12 @@ const pass = (s) => { passed++; console.log('PASS ' + s); };
       await wait(() => document.querySelector('[data-testid="wanderly"]'), alias);
       assert.equal(document.querySelector('[data-testid="seller-home"]'), null);
     }
-    await go('home');
+    await go('shops');
     localStorage.setItem('brief.firstRunDismissed', '1');
-    await mount('home', host.token);
-    await wait(() => document.querySelector('[data-testid="seller-home"]'), 'home');
+    // The seller's door opens on the attention read; the atrium is no longer a door.
+    await mount('shops', host.token);
+    await wait(() => document.querySelector('[data-testid="attention-strip"]'), 'shops');
+    assert.equal(document.querySelector('[data-testid="seller-home"]'), null);
     assert.equal(document.querySelectorAll('.compact-work-entry').length, 0);
     await click(await wait(() => document.querySelector('[aria-label="Open all sections"]'), 'menu'));
     await click(await wait(() => by('menu-tile-wanderly'), 'Wanderly menu entry'));
@@ -265,7 +267,7 @@ const pass = (s) => { passed++; console.log('PASS ' + s); };
 
     localStorage.setItem('brief.firstRunDismissed', '1');
     await mount('you/orders', host.token);
-    await wait(() => window.location.hash === '#spaces/orders', 'legacy commerce redirect');
+    await wait(() => window.location.hash === '#shops/orders', 'legacy commerce redirect');
     await wait(() => text().includes('Offers and orders your business manages.'), 'legacy orders lands in the Selling workspace');
     assert.equal(document.querySelector('[aria-label="You"]'), null);
     await go('you');

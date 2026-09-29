@@ -1,3 +1,11 @@
+/**
+ * The seller's atrium. Not mounted by the shell since the market became the
+ * first page: the "needs attention" read that used to open this surface now
+ * lives in `AttentionStrip` at the top of the Shops door (`#shops`), and the
+ * seller's rooms are that door's sections. The component is kept as-is — its
+ * types (`SpaceWorkspaceTab`) are still imported and its cards can be revived
+ * by mounting it again — but `#home` resolves to the market, not to this file.
+ */
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   CircleAlert,

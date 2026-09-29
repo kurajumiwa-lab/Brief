@@ -182,10 +182,10 @@ export function HowBriefWorks({ className = '' }: { className?: string }) {
       lines: [
         'Seeded activity, demo crowds, “N buyers waiting”, verified badges nobody verified, counts of people viewing, urgency timers on a link that does not expire, leaderboards, streaks, tiers, badges for using the app, and QR codes for pages that do not resolve.',
         'A trust score out of 100, “Good Standing”, SACCO credit of KES 50,000, “3 Bids” on an errand nobody posted, a countdown on a bid, and a photograph of Unga that is not the seller’s file are mockups. They are not printed. Standing is counts over your rows. An empty errand board is empty.',
-        'There is no Trust tab and no Errands tab. The primary bar is Home · Selling · Spaces · You · [+]. Wairo is the network brand; it does not grow an invented trust score or pretend to own a payment rail.',
+        'There is no Trust tab and no Errands tab. The primary bar is Market · Shops · Trade · You · [+]: the market is the first page, and Shops opens on what needs your attention today. Wairo is the network brand; it does not grow an invented trust score or pretend to own a payment rail.',
         'Wairo is not a merchant. It does not take stock, promise a rider will arrive or lend. Standing is counts over your rows — not a score out of 100 or a SACCO offer.',
-        'KEEP: Home · Selling · Spaces · You · [+]. Spaces stay distinct from the public board. Errands stay gated by a real basis. Create lands on existing flows; empty boards stay empty. M-Pesa is a rail we do not pretend to own.',
-        'ENHANCE: the knot and wordmark, real seller activity on Home, and a small dismissible announcement after the working summary.',
+        'KEEP: Market · Shops · Trade · You · [+]. Spaces stay distinct from the public board. Errands stay gated by a real basis. Create lands on existing flows; empty boards stay empty. M-Pesa is a rail we do not pretend to own.',
+        'ENHANCE: the knot and wordmark, real seller activity at the top of Shops, and a small dismissible announcement after the working summary.',
         'NOT BUILT: voice-note listings, USSD *384#, STK escrow, a 2% cut, Wairo Pro, auto-filled speech, a demand line that invents three people in Ruiru. Each is named here so a mockup cannot land as a screen.',
         'Where a reference would have to be invented — a carrier’s phone number, a partner’s volume, a sector average — the field is empty and says why. An honest blank is the product.'
       ]

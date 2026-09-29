@@ -5,15 +5,29 @@ import { Plus, ArrowRight, Briefcase } from 'lucide-react';
 import type { PublicSpace, Space } from '../../api/types';
 import * as briefApi from '../../api/briefApi';
 import { splitSpaces } from '../home/spaceSignals';
+import { AttentionStrip } from '../home/AttentionStrip';
 import { Marketplace } from '../../components/Marketplace';
 import { soundEngine } from '../../utils/SoundEngine';
 import { EscrowRecords } from './EscrowRecords';
 
 // ---------------------------------------------------------------------------
-// SPACES — the community-and-commerce workspaces a person operates or joins.
-// Selling is a separate primary destination; this surface keeps Space identity,
-// operations and shared membership together without duplicating the seller desk.
+// SHOPS — the door for everything a person runs: the community-and-commerce
+// workspaces they operate or join, the offers and orders those workspaces
+// manage, and the team that may write to them.
+//
+// It opens on the attention read (`AttentionStrip`) — what is waiting across
+// the shops today — and then the shops themselves. That read used to be the
+// top of a separate Home door; the door went, the read stayed, because it is
+// the thing a seller opens the app to check.
+//
+// Every section is a hash under `#shops` (`#shops/selling`, `#shops/team`), and
+// the legacy `#spaces/…`, `#duka/…` and `#mine` addresses resolve here too.
 // ---------------------------------------------------------------------------
+
+/** The hash the Shops door and its sections answer to. */
+export const SHOPS_HASH = 'shops';
+export const shopsSectionHref = (section: 'spaces' | 'orders' | 'selling' | 'team'): string =>
+  section === 'spaces' ? SHOPS_HASH : `${SHOPS_HASH}/${section}`;
 
 export interface MineSurfaceProps {
   onOpenSpace: (spaceId: string, initialTab?: 'catalog' | 'pipeline' | 'ledger') => void;
@@ -21,6 +35,8 @@ export interface MineSurfaceProps {
   onOpenCreateSpace: () => void;
   onOpenEntity: (entityId: string) => void;
   onRequireAuth: () => void;
+  /** Open a section of the trade desk (the attention read points at open demand). */
+  onOpenTrade?: (section?: string) => void;
   /** Create “Post an offer” lands on Selling here, not on the city’s browse. */
   sellingSignal?: number;
   initialSection?: 'spaces' | 'orders' | 'selling' | 'team';
@@ -33,6 +49,7 @@ export const MineSurface: React.FC<MineSurfaceProps> = ({
   onOpenCreateSpace,
   onOpenEntity,
   onRequireAuth,
+  onOpenTrade,
   sellingSignal = 0,
   initialSection = 'spaces',
   className = ''
@@ -103,6 +120,15 @@ export const MineSurface: React.FC<MineSurfaceProps> = ({
   }, [shopsAttempt]);
 
   const { active } = splitSpaces(spaces);
+
+  /** The attention read's "Review orders / offers" lands on Selling, here. */
+  const openSelling = () => {
+    setSection('selling');
+    setMarketSection('selling');
+    setMarketKey((k) => k + 1);
+    if (typeof window !== 'undefined') window.location.hash = shopsSectionHref('selling');
+  };
+
   const createBtn = (
     <button
       type="button"
@@ -119,20 +145,35 @@ export const MineSurface: React.FC<MineSurfaceProps> = ({
     <div className={`compact-surface ${className}`}>
       <header className="compact-heading">
         <div>
-          <h1>{section === 'selling' ? 'Selling' : section === 'team' ? 'Shared Spaces' : 'Spaces'}</h1>
+          <h1>{section === 'selling' ? 'Selling' : section === 'team' ? 'Shared Spaces' : 'Shops'}</h1>
           {section === 'selling'
             ? <p>Offers and orders your business manages.</p>
             : section === 'team'
               ? <p>Spaces shared with you by their owners.</p>
-              : <p>Commerce and community, in one place.</p>}
+              : <p>What needs you today, and the counters you run.</p>}
         </div>
         {section === 'spaces' && createBtn}
       </header>
 
-      {section !== 'selling' && <nav className="compact-tabs" aria-label="Spaces sections">
-        {(['spaces', 'team'] as const).map(key => <button key={key} aria-pressed={key === section} onClick={() => { setSection(key); window.location.hash = key === 'spaces' ? 'spaces' : 'spaces/team'; }}>{key === 'spaces' ? 'Your spaces' : 'Shared with you'}</button>)}
+      {section !== 'selling' && <nav className="compact-tabs" aria-label="Shops sections">
+        {(['spaces', 'team'] as const).map(key => <button key={key} aria-pressed={key === section} onClick={() => { setSection(key); window.location.hash = shopsSectionHref(key); }}>{key === 'spaces' ? 'Your spaces' : 'Shared with you'}</button>)}
       </nav>}
+
+      {/* The operational read first: it is why a seller opens this door. It
+          reads for itself and says so when it cannot, so the list below can
+          never be mistaken for "nothing is waiting". */}
+      {section === 'spaces' && (
+        <AttentionStrip
+          onOpenSpace={onOpenSpace}
+          onOpenSelling={openSelling}
+          onOpenTrade={onOpenTrade}
+          onRequireAuth={onRequireAuth}
+          refreshSignal={shopsAttempt}
+        />
+      )}
+
       {section === 'spaces' && <section aria-label="Your shops" className="space-y-2.5">
+        <h2 className="text-sm font-extrabold" style={{ color: 'var(--color-text)' }}>Your spaces</h2>
         {loading ? (
           <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Reading your shops…</p>
         ) : shopsDenied ? (

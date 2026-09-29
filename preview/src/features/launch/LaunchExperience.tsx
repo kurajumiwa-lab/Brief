@@ -12,7 +12,7 @@ export function LaunchExperience({ children }: { children: React.ReactNode }) {
   const finish = useCallback((normalizeIntro = true) => {
     rememberIntro(); finished.current = true; setShow(false);
     if (normalizeIntro && isIntroPath(window.location.pathname)) {
-      window.history.replaceState(null, '', '/#home');
+      window.history.replaceState(null, '', '/#market');
       window.dispatchEvent(new Event('hashchange'));
     }
   }, []);

@@ -1,6 +1,6 @@
 import React from 'react';
 import { WairoMark } from '../components/WairoMark';
-import { Building2, Coins, Plus, ShoppingBag, Store, User } from 'lucide-react';
+import { Coins, Plus, ShoppingBag, Store, User } from 'lucide-react';
 import { soundEngine } from '../utils/SoundEngine';
 
 export type BriefNavigationTab =
@@ -8,6 +8,7 @@ export type BriefNavigationTab =
   | 'requests'
   | 'home'
   | 'mine'
+  | 'shops'
   | 'pulse'
   | 'spaces'
   | 'discover'
@@ -23,8 +24,8 @@ export type BriefNavigationTab =
   | 'workforce'
   | 'you';
 
-/** The five doors of the mall, plus the one global action. */
-export type PrimaryDestination = 'home' | 'market' | 'trade' | 'duka' | 'you';
+/** The four doors of the mall, plus the one global action. */
+export type PrimaryDestination = 'market' | 'shops' | 'trade' | 'you';
 
 export interface NavigationProps {
   activeTab: BriefNavigationTab;
@@ -38,30 +39,31 @@ export interface NavigationProps {
 }
 
 // ---------------------------------------------------------------------------
-// PRIMARY NAVIGATION — five doors and one global action.
+// PRIMARY NAVIGATION — four doors and one global action.
 //
-//   Home · Market · Trade · Shop · You   (+)
+//   Market · Shops · Trade · You   (+)
 //
 // The doors are the mall's floor plan, and they are in the order a person
 // actually uses the building:
 //
-//   * HOME is the atrium — what needs you today, what is moving, and the shelf
-//     of every other wing. It is the one screen that must work for a member who
-//     sells nothing and for a member who runs three shops.
-//   * MARKET is the board — every offer, shop, event, group, errand and bulk
-//     lot nearby. It was a room with no door: reachable from Home and the
-//     drawer, but never from the bar, while two bar doors opened the same
-//     seller screens.
+//   * MARKET is the board, and it is the first page — every offer, shop, event,
+//     group, errand and bulk lot nearby. A cold load with no hash lands here.
+//     It used to sit behind a Home atrium that mostly pointed at it.
+//   * SHOPS is everything you run: your spaces, offers, orders and team. It
+//     took the Home slot: the atrium's one load-bearing piece — the operational
+//     read of what needs attention today — now opens the Shops door, so the
+//     thing a seller came to check is the first thing the seller's own door
+//     shows. "Home" and "Shop" used to be two doors for one person's business.
 //   * TRADE is the economic spine — demand you raise, matches, quotes, work
-//     orders, procurement, your supply profile. This loop is the reason the
-//     product exists and it was drawer-only.
-//   * SHOP (duka) is everything you run: your spaces, offers, orders and team.
-//     "Selling" and "Spaces" used to be two doors onto one screen with a
-//     different section pre-selected, which read as two halves of a whole.
+//     orders, procurement, your supply profile.
 //   * YOU is the person: standing, follows, money rails, notifications,
 //     settings.
 //
 // The create action is global and never impersonates a destination.
+//
+// Legacy addresses (`#home`, `#duka`, `#spaces`, `#mine`, …) all keep resolving
+// — see `surfaces.ts` — because a restructure that breaks a link already sent
+// in WhatsApp is a restructure that lies about the past.
 //
 // Labels are English because a door you cannot read is not a door. Swahili is
 // used as signage INSIDE each wing (kickers, headings), where it colours the
@@ -81,41 +83,44 @@ export interface BottomBarItem {
 }
 
 export const BOTTOM_BAR_ITEMS: BottomBarItem[] = [
-  { id: 'home', type: 'destination', label: 'Home', kicker: 'Karibu', icon: <Building2 className="w-5 h-5" aria-hidden="true" /> },
   { id: 'market', type: 'destination', label: 'Market', kicker: 'Soko', icon: <ShoppingBag className="w-5 h-5" aria-hidden="true" /> },
+  { id: 'shops', type: 'destination', label: 'Shops', kicker: 'Duka', icon: <Store className="w-5 h-5" aria-hidden="true" /> },
   { id: 'trade', type: 'destination', label: 'Trade', kicker: 'Biashara', icon: <Coins className="w-5 h-5" aria-hidden="true" /> },
-  { id: 'duka', type: 'destination', label: 'Shop', kicker: 'Duka', icon: <Store className="w-5 h-5" aria-hidden="true" /> },
   { id: 'you', type: 'destination', label: 'You', kicker: 'Mimi', icon: <User className="w-5 h-5" aria-hidden="true" /> },
   { id: 'create', type: 'action', label: 'Create', icon: <Plus className="w-5 h-5" aria-hidden="true" /> }
 ];
 
 /** The hash each door writes. Every one of these is handled by AppShell. */
 export const DOOR_HASH: Record<PrimaryDestination, string> = {
-  home: 'home',
   market: 'market',
+  shops: 'shops',
   trade: 'trade',
-  duka: 'duka',
   you: 'you'
 };
+
+/** The door a cold load opens: the first page. `#home` resolves here too. */
+export const FIRST_DOOR: PrimaryDestination = 'market';
 
 /** Map internal screens to their primary doorway. Rooms that live in the
  * directory (Pulse, Partners, Workforce, Elevate) intentionally light no door:
  * they are a wing you walk into, not the floor plan. */
 export const doorFor = (tab: BriefNavigationTab): PrimaryDestination | null => {
   switch (tab) {
-    case 'home': return 'home';
+    // The atrium is gone; its address is the first page now.
+    case 'home':
     case 'market':
     case 'city':
     case 'discover': return 'market';
     case 'trade':
     case 'requests':
     case 'supply': return 'trade';
+    case 'shops':
     case 'mine':
     case 'duka':
     case 'pipeline':
     case 'spaces':
     case 'ledger':
-    case 'catalog': return 'duka';
+    case 'catalog': return 'shops';
     case 'you': return 'you';
     default: return null;
   }
@@ -146,9 +151,9 @@ export const Navigation: React.FC<NavigationProps> = ({
 
   const destinations = BOTTOM_BAR_ITEMS.filter((i) => i.type === 'destination');
 
-  // One button per item, in data order: five doors, then the action. Six slots
-  // is the honest cost of putting the economic spine on the bar; the row stays
-  // 56px and each slot is a 60px square at the narrowest phone we support.
+  // One button per item, in data order: four doors, then the action. Five
+  // slots on a 56px row; each slot is a 72px square at the narrowest phone we
+  // support.
   const barButtons = () =>
     BOTTOM_BAR_ITEMS.map((item) =>
       item.type === 'action' ? (
@@ -224,7 +229,7 @@ export const Navigation: React.FC<NavigationProps> = ({
         {barButtons()}
       </nav>
 
-      {/* ── DESKTOP SIDEBAR RAIL — the same five doors and one action, in a
+      {/* ── DESKTOP SIDEBAR RAIL — the same four doors and one action, in a
           column. The rail and the bar are one navigation with two shapes. ── */}
       <aside
         role="navigation"
@@ -249,7 +254,7 @@ export const Navigation: React.FC<NavigationProps> = ({
             </div>
             <button
               type="button"
-              onClick={() => goDoor('duka')}
+              onClick={() => goDoor('shops')}
               className="w-full p-2.5 rounded-2xl bg-[color:var(--color-paper)] border border-black/5 shadow-2xs flex items-center justify-between text-left cursor-pointer"
               aria-label={`Your shop — ${spaceName}`}
             >
@@ -312,7 +317,7 @@ export const Navigation: React.FC<NavigationProps> = ({
           </nav>
         </div>
         <p className="text-[11px] text-[color:var(--color-text-muted)]">
-          Home · Market · Trade · Shop · You — plus one action to create.
+          Market · Shops · Trade · You — plus one action to create.
         </p>
       </aside>
     </>

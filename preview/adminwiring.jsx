@@ -57,7 +57,7 @@ const pass = (s) => { passed++; console.log('PASS ' + s); };
     pass('anonymous direct link offers sign-in, never a user directory');
 
     localStorage.setItem('brief.firstRunDismissed', '1');
-    await mount('home', member.token);
+    await mount('market', member.token);
     await click(await wait(() => document.querySelector('[aria-label="Open all sections"]'), 'menu'));
     await wait(() => by('nav-sheet-panel'), 'drawer');
     assert.equal(by('menu-tile-admin-members'), null, 'non-admin has no drawer entry');

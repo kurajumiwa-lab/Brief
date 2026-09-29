@@ -35,21 +35,23 @@ success: an unconfigured payment rail returns `503` with a reason, not a fake
 ## The product surface
 
 Production enters through `preview/src/main.jsx` → `preview/src/app/AppShell.tsx`.
-The bar is **five doors and one action**, in the order the loop actually runs:
+The bar is **four doors and one action**. The market is the first page: it is the
+first door and where an empty hash lands.
 
 | Door | Hash | What it is |
 |---|---|---|
-| **Home** | `#home` | The atrium (`SellerHome`): what needs attention, your own numbers, a shelf of doors that exist, then what is moving on the board. |
-| **Market** | `#market` | The board. The mixed feed is its face; the taxonomy (bulk · direct · niche · groups · events · errands · shops · circles) sits behind one entry that opens the picker. |
+| **Market** | `#market` | The board, and the first page. The mixed feed is its face; the taxonomy (bulk · direct · niche · groups · events · errands · shops · circles) sits behind one entry that opens the picker. |
+| **Shops** | `#shops` | Your business. Opens on **what needs your attention today** (the `AttentionStrip`: inquiries, orders, offers, marked-in demand, brief flags — the read the old atrium used to make), then your spaces, offers, orders, team, ledger, catalogue, pipeline, tools, operating (`#shops/<section>`). |
 | **Trade** | `#trade` | The work loop as six deep-linkable sections: `demand · open · quotes · work · procurement · supply` (`#trade/<section>[/<id>]`). |
-| **Shop** | `#duka` | Your business: spaces, offers, orders, team, ledger, catalogue, pipeline, tools, operating (`#duka/<section>`). |
 | **You** | `#you` | Identity, standing, connections, money, settings, help (`#you/<section>`). |
 | **Create (+)** | `#create` | Eight verbs, "I need something done" first. Not a destination. |
 
 Legacy addresses keep working and light the door that now owns them:
-`#city` → Market, `#requests`/`#supply` → Trade,
-`#mine`/`#spaces`/`#selling`/`#orders`/`#ledger`/`#catalog`/`#pipeline` → Shop.
-Nothing 404s because the map changed.
+`#home`/`#city`/`#discover` → Market, `#requests`/`#supply` → Trade,
+`#duka`/`#mine`/`#spaces`/`#selling`/`#orders`/`#ledger`/`#catalog`/`#pipeline`/`#shopbrief`
+→ Shops (with their section, e.g. `#duka/orders` → `#shops/orders`).
+Nothing 404s because the map changed. `SellerHome` (the atrium) stays in the tree
+unmounted; its attention read moved into the Shops door.
 
 What the bar refuses to hold, the **directory** (`#menu`) does: Pulse, Partners,
 Workforce, Elevate, group-buy, table banking, the shop sections, notices, following,
@@ -303,7 +305,7 @@ The commerce side of Brief is organised as three pillars, recorded in
 
 They are put to work through the loop the platform already runs — request, match,
 quote, work order, repeat procurement, trust, payment — and they live inside the
-existing five doors (Home, Market, Trade, Shop, You) rather than adding new ones.
+existing doors (Market, Shops, Trade, You) rather than adding new ones.
 The document names what is reused, what is extended and what is genuinely new,
 together with the data model, API surface, USSD menus, money path, edge cases and
 the **mobile fit contract** every screen obeys.

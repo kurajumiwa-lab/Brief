@@ -622,3 +622,55 @@
   .seller-home__action-row > button { transition: none; }
   .seller-home__action-row > button:hover { transform: none; }
 }
+
+/* ── The attention read, on its own ───────────────────────────────────────
+   `AttentionStrip` is the top of the old atrium mounted at the top of the
+   Shops door. It reuses the metric and attention rules above, so it carries
+   the same tokens the atrium defined — without the atrium's width, gap or
+   header furniture. ── */
+.attention-strip {
+  --seller-ink: var(--brief-ink, #0A0E14);
+  --seller-muted: var(--brief-muted, #5A6472);
+  --seller-line: var(--brief-line, #DCE1E8);
+  --seller-blue: var(--wairo-blue, #2563EB);
+  --seller-green: var(--color-primary, #40916C);
+  display: grid;
+  gap: 12px;
+  color: var(--seller-ink);
+}
+
+.attention-strip__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.attention-strip__head h2 {
+  margin: 3px 0 0;
+  color: var(--seller-ink);
+  font-size: 19px;
+  font-weight: 820;
+  letter-spacing: -.04em;
+  line-height: 1.15;
+}
+
+.attention-strip__head > button {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 11px;
+  border: 1px solid var(--seller-line);
+  background: var(--color-paper, #fff);
+  color: var(--seller-muted);
+  cursor: pointer;
+}
+.attention-strip__head > button:hover { color: var(--seller-blue); }
+
+.attention-strip button:focus-visible {
+  outline: 3px solid var(--seller-blue);
+  outline-offset: 3px;
+  border-radius: 8px;
+}

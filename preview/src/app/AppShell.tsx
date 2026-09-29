@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import type { CampaignBanner, Space, Listing } from '../api/types';
 import * as briefApi from '../api/briefApi';
 import { Navigation, BriefNavigationTab, type PrimaryDestination } from './Navigation';
-import type { SpaceWorkspaceTab } from '../features/home/SellerHome';
+import type { AttentionWorkspaceTab as SpaceWorkspaceTab } from '../features/home/AttentionStrip';
 import { AppBelt, readPlace, PLACE_KEY } from './AppBelt';
 import { NavSheet, type SheetTarget } from './NavSheet';
 import { TAB_HASH, backLabel, shopHref, shopIdFromHash, surfaceFromHash } from './surfaces';
@@ -13,7 +13,6 @@ const GroupBuyPortal = React.lazy(() => import('../components/GroupBuyPortal').t
 const AdminWorkspace = React.lazy(() => import('../features/admin/AdminWorkspace').then(m => ({ default: m.AdminWorkspace })));
 const SpaceModerationPanel = React.lazy(() => import('../components/SpaceModerationPanel').then(m => ({ default: m.SpaceModerationPanel })));
 const SearchResults = React.lazy(() => import('../components/SearchResults').then(m => ({ default: m.SearchResults })));
-const SellerHome = React.lazy(() => import('../features/home/SellerHome').then(m => ({ default: m.SellerHome })));
 const SpaceShell = React.lazy(() => import('../features/spaces/SpaceShell').then(m => ({ default: m.SpaceShell })));
 import { SpaceMoney } from '../features/spaces/SpaceMoney';
 import { CatalogView } from '../features/spaces/CatalogView';
@@ -42,6 +41,7 @@ import { EntityDetail } from '../features/you/EntityDetail';
 import { FirstRunChecklist } from '../features/you/FirstRunChecklist';
 const PulseSurface = React.lazy(() => import('../features/pulse/PulseSurface').then(m => ({ default: m.PulseSurface })));
 const MineSurface = React.lazy(() => import('../features/mine/MineSurface').then(m => ({ default: m.MineSurface })));
+import { SHOPS_HASH, shopsSectionHref } from '../features/mine/MineSurface';
 import { ShopBrief } from '../features/spaces/ShopBrief';
 import { OverlayScreen } from '../ui/OverlayScreen';
 import { soundEngine } from '../utils/SoundEngine';
@@ -62,7 +62,8 @@ export interface AppShellProps {
 }
 
 export const AppShell: React.FC<AppShellProps> = ({
-  initialTab = 'home',
+  // The first page is the market. `#home` resolves here too (surfaces.ts).
+  initialTab = 'market',
   initialSpaceId = null,
   onNavigateLegacyTab,
   className = ''
@@ -153,7 +154,7 @@ export const AppShell: React.FC<AppShellProps> = ({
    * opened nothing is worse than no nav item.
    */
   const goSheetTarget = (target: SheetTarget) => {
-    if (target.kind === 'storefront') { window.location.hash = 'home'; setActiveTab('home'); setStorefrontOpen(false); return; }
+    if (target.kind === 'storefront') { window.location.hash = 'market'; setActiveTab('market'); setStorefrontOpen(false); return; }
     if (target.kind === 'elevate') { const page = target.page; window.location.hash = `elevate/${page}`; setElevatePage(page); return; }
     if (target.kind === 'wanderly') { window.location.hash = 'wanderly'; setWanderlyOpen(true); return; }
     if (target.kind === 'admin') { window.location.hash = 'admin/members'; return; }
@@ -167,7 +168,7 @@ export const AppShell: React.FC<AppShellProps> = ({
         setAdminRoute(null);
         setModerationOpen(false);
         setYouSection(null);
-        setActiveTab('home');
+        setActiveTab('market');
         window.location.hash = '';
         showToast('Signed out. The rows you wrote stay on the server.');
       })();
@@ -176,10 +177,10 @@ export const AppShell: React.FC<AppShellProps> = ({
     if (target.kind === 'tab') {
       // A drawer row that names a door goes through the door, so the shop's
       // sections and the market's rooms keep their own resolution.
-      if (target.tab === 'duka' || target.tab === 'mine') {
+      if (target.tab === 'shops' || target.tab === 'mine') {
         setMineSection('spaces');
-        setActiveTab('mine');
-        window.location.hash = 'duka';
+        setActiveTab('shops');
+        window.location.hash = SHOPS_HASH;
         return;
       }
       setActiveTab(target.tab);
@@ -198,10 +199,10 @@ export const AppShell: React.FC<AppShellProps> = ({
       window.location.hash = `trade/${target.section}`;
       return;
     }
-    if (target.kind === 'duka') {
+    if (target.kind === 'shops') {
       setMineSection(target.section);
-      setActiveTab('mine');
-      window.location.hash = target.section === 'spaces' ? 'duka' : `duka/${target.section}`;
+      setActiveTab('shops');
+      window.location.hash = shopsSectionHref(target.section);
       return;
     }
     if (target.kind === 'surface') {
@@ -232,8 +233,8 @@ export const AppShell: React.FC<AppShellProps> = ({
       window.location.hash = 'workforce/org';
     } else if (id === 'offer') {
       setMineSellingNonce(nextNonce);
-      setActiveTab('mine');
-      window.location.hash = 'spaces/selling';
+      setActiveTab('shops');
+      window.location.hash = shopsSectionHref('selling');
     } else if (id === 'event') {
       window.location.hash = 'wanderly/host';
     } else if (id === 'request') {
@@ -302,7 +303,7 @@ export const AppShell: React.FC<AppShellProps> = ({
 
   /** Open one Space at the most useful existing workspace tab, and name it in the URL. */
   const openSpace = (id: string, initialTab: SpaceWorkspaceTab = 'catalog') => {
-    if (activeSpaceIdRef.current !== id) spaceFromRef.current = tabHashRef.current || 'spaces';
+    if (activeSpaceIdRef.current !== id) spaceFromRef.current = tabHashRef.current || SHOPS_HASH;
     activeSpaceIdRef.current = id;
     setActiveSpaceInitialTab(initialTab);
     setActiveTab('pipeline');
@@ -345,8 +346,8 @@ export const AppShell: React.FC<AppShellProps> = ({
         : backLabel(tabHashRef.current || TAB_HASH[activeTab] || ''),
       onBack: () => {
         if (anySurfaceOpen) {
-          if (elevatePage) { setElevatePage(null); const back = tabHashRef.current || 'home'; window.location.hash = back; return; }
-          const back = tabHashRef.current || TAB_HASH[activeTab] || 'home';
+          if (elevatePage) { setElevatePage(null); const back = tabHashRef.current || 'market'; window.location.hash = back; return; }
+          const back = tabHashRef.current || TAB_HASH[activeTab] || 'market';
           if (window.location.hash.replace(/^#/, '') === back) {
             setCreateOpen(false);
             setGroupBuysOpen(false);
@@ -432,7 +433,7 @@ export const AppShell: React.FC<AppShellProps> = ({
         return;
       }
       setAdminRoute(null);
-      if (hash === 'you/orders' || hash === 'you/selling') { window.location.replace(`#spaces/${hash.slice(4)}`); return; }
+      if (hash === 'you/orders' || hash === 'you/selling') { window.location.replace(`#${SHOPS_HASH}/${hash.slice(4)}`); return; }
       // Wanderly owns Events and legacy Tokyo/destination entry points.
       const isWanderly = wanderlyRoute(hash) !== null;
       if (isWanderly) { setWanderlyOpen(true); setSheetOpen(false); setCreateOpen(false); setCreateFlowOpen(false); setGroupBuysOpen(false); setManualOrderOpen(false); return; }
@@ -451,10 +452,10 @@ export const AppShell: React.FC<AppShellProps> = ({
         return;
       }
       if (hash === 'storefront') {
-        // Storefront is Home now — merged, no overlay. The street IS the feed.
+        // The storefront is the market — merged, no overlay. The street IS the feed.
         setStorefrontOpen(false);
-        setActiveTab('home');
-        window.location.hash = 'home';
+        setActiveTab('market');
+        window.location.hash = 'market';
         return;
       }
       const shopId = shopIdFromHash(hash);
@@ -509,14 +510,16 @@ export const AppShell: React.FC<AppShellProps> = ({
         setRequestRoute(tail ? safeDecode(tail) : head === 'demand' ? '' : '');
         if (head === 'supply') setSupplyRoute(tail || 'mine');
         tabHashRef.current = hash;
-      } else if (hash === 'duka' || hash.startsWith('duka/')) {
-        // The shop door. `#spaces/…` and `#mine` below stay alive as the
-        // addresses people already have in their notification history.
+      } else if (hash === 'shops' || hash.startsWith('shops/') || hash === 'duka' || hash.startsWith('duka/')) {
+        // The Shops door, and the `#duka` address it replaced. `#spaces/…` and
+        // `#mine` below stay alive as the addresses people already have in
+        // their notification history.
         setJoinCode(''); setSearchQuery(''); setEntityId(null);
-        const rest = safeDecode(hash.startsWith('duka/') ? hash.slice(5) : '');
-        setMineSection((['orders', 'selling', 'team'].includes(rest) ? rest : 'spaces') as 'orders' | 'selling' | 'team' | 'spaces');
-        setActiveTab('mine');
-        tabHashRef.current = 'duka';
+        const rest = safeDecode(hash.includes('/') ? hash.slice(hash.indexOf('/') + 1) : '');
+        const section = (['orders', 'selling', 'team'].includes(rest) ? rest : 'spaces') as 'orders' | 'selling' | 'team' | 'spaces';
+        setMineSection(section);
+        setActiveTab('shops');
+        tabHashRef.current = shopsSectionHref(section);
         setBriefOpen(false);
       } else if (hash.startsWith('space/')) {
         try { setSpaceLink(decodeURIComponent(hash.slice(6))); } catch { setSpaceLink(''); }
@@ -549,17 +552,22 @@ export const AppShell: React.FC<AppShellProps> = ({
         setYouSection((YOU_SECTION_IDS as string[]).includes(rest) ? rest : null);
         setBriefOpen(false);
       } else if (hash === 'spaces' || hash.startsWith('spaces/') || hash === 'shopbrief' || hash === 'mine') {
+        // Legacy addresses of the Shops door. They render the same screen and
+        // are remembered under the door's own hash, so the back gesture from
+        // whatever opens next lands on `#shops/…`, not on an address the bar
+        // no longer writes.
         const nextSection = hash.slice(7);
-        setMineSection(['orders', 'selling', 'team'].includes(nextSection) ? nextSection as 'orders' | 'selling' | 'team' : 'spaces');
+        const section = (['orders', 'selling', 'team'].includes(nextSection) ? nextSection : 'spaces') as 'orders' | 'selling' | 'team' | 'spaces';
+        setMineSection(section);
         // The morning brief is a notification, not a Spaces shelf. Tapping it
-        // opens the read once; closing returns to Spaces.
+        // opens the read once; closing returns to Shops.
         setJoinCode('');
         setSearchQuery('');
         setEntityId(null);
-        setActiveTab('mine');
-        tabHashRef.current = hash === 'shopbrief' ? 'spaces' : hash;
+        setActiveTab('shops');
+        tabHashRef.current = shopsSectionHref(section);
         setBriefOpen(hash === 'shopbrief');
-      } else if (hash === 'city' || hash.startsWith('city/') || hash === 'market' || hash.startsWith('market/') || hash === 'discover' || hash === 'events' || hash === 'shops') {
+      } else if (hash === 'city' || hash.startsWith('city/') || hash === 'market' || hash.startsWith('market/') || hash === 'discover' || hash === 'events' || hash === 'home') {
         // Events and Circles are rooms of the board, not aliases of Errands.
         // `#city/events` and `#city/circles` are stable discovery-room links.
         setJoinCode('');
@@ -574,31 +582,31 @@ export const AppShell: React.FC<AppShellProps> = ({
           else if ((CITY_ROOMS as string[]).includes(rest)) room = rest as DiscoverRoom;
         } else if (hash === 'events') {
           room = 'events';
-        } else if (hash === 'shops') {
-          room = 'shops';
         }
         setDiscoverSubTab(room);
         if (room !== 'errands') setErrandSignal(null);
         // `#city/<room>` is remembered as the room it came from, so the back
         // gesture returns to the room and not to the front of the market.
-        tabHashRef.current = hash === 'discover' || hash === 'city' || hash === 'market' ? 'market' : hash;
+        // `#home` is the atrium's old address: it is the market now, and is
+        // remembered as the market so nothing writes `home` back.
+        tabHashRef.current = hash === 'discover' || hash === 'city' || hash === 'market' || hash === 'home' ? 'market' : hash;
         setBriefOpen(false);
       } else if (hash === '' || (hash && hash !== 'join')) {
         setJoinCode('');
         setSearchQuery('');
-        // `activity` is a legacy hash for the drawer's Pulse read. `mine` is
-        // retained as a legacy alias for Spaces; primary Selling and Spaces
-        // links resolve through `#spaces/selling` and `#spaces`.
-        const tabs: Record<string, BriefNavigationTab> = { home: 'home', market: 'market', trade: 'trade', duka: 'mine', spaces: 'mine', pipeline: 'pipeline', catalog: 'catalog', activity: 'pulse', mine: 'mine', pulse: 'pulse', ledger: 'ledger', partners: 'partners', workforce: 'workforce', 'workforce/org': 'workforce', you: 'you' };
+        // `activity` is a legacy hash for the drawer's Pulse read. The shop
+        // family (`duka`, `spaces`, `mine`, `shops`) resolved above.
+        const tabs: Record<string, BriefNavigationTab> = { pipeline: 'pipeline', catalog: 'catalog', activity: 'pulse', pulse: 'pulse', ledger: 'ledger', partners: 'partners', workforce: 'workforce', 'workforce/org': 'workforce', you: 'you' };
         if (hash.startsWith('workforce/program/')) { setEntityId(null); setActiveTab('workforce'); tabHashRef.current = hash; setBriefOpen(false); }
         else if (tabs[hash]) { setEntityId(null); setActiveTab(tabs[hash]); tabHashRef.current = hash; setBriefOpen(false); }
         else if (!hash) {
-          // Empty hash IS home. Mapping it to `initialTab` (once 'city') made
-          // the Home door — which writes hash '' — open Discover. A person
-          // tapping Home then saw the board, and the board painted first on
-          // a cold load. Home is the door labelled Home.
-          setActiveTab('home');
-          tabHashRef.current = 'home';
+          // Empty hash IS the first page, and the first page is the market.
+          // It is not mapped to `initialTab`: a cold load and a cleared URL
+          // must paint the same screen, whatever a host asked for.
+          setDiscoverSubTab('all');
+          setErrandSignal(null);
+          setActiveTab('market');
+          tabHashRef.current = 'market';
         }
       }
     };
@@ -728,9 +736,9 @@ export const AppShell: React.FC<AppShellProps> = ({
         onSelectTab={(tab: PrimaryDestination) => {
           // The bar writes the hash and this resolves it, which is the same
           // path a pasted link takes. Two ways into a door, one behaviour.
-          if (tab === 'duka') {
+          if (tab === 'shops') {
             setMineSection('spaces');
-            setActiveTab('mine');
+            setActiveTab('shops');
           } else if (tab === 'market') {
             setDiscoverSubTab('all');
             setActiveTab('market');
@@ -752,11 +760,10 @@ export const AppShell: React.FC<AppShellProps> = ({
             column so it behaves the same on a phone and on a desktop. */}
         <AppBelt
           minimal={(activeTab === 'market' || activeTab === 'city' || activeTab === 'discover') && businessFeedActive}
-          showAnnouncements={activeTab !== 'home'}
           onBannersChange={captureAnnouncements}
           backTo={backTo}
           onOpenSheet={() => setSheetOpen(true)}
-          onHome={() => { window.location.hash = 'home'; setActiveTab('home'); }}
+          onHome={() => { window.location.hash = 'market'; setDiscoverSubTab('all'); setActiveTab('market'); }}
           onSearch={(term) => { window.location.hash = `search/${encodeURIComponent(term)}`; }}
           className="-mx-4 sm:-mx-6 mb-3"
         />
@@ -785,7 +792,7 @@ export const AppShell: React.FC<AppShellProps> = ({
               slug={spaceLink}
               onBack={() => {
                 setSpaceLink('');
-                const back = tabHashRef.current || 'spaces';
+                const back = tabHashRef.current || SHOPS_HASH;
                 if (window.location.hash.replace(/^#/, '') === back) window.location.hash = `${back}`;
                 else window.location.hash = back;
               }}
@@ -797,15 +804,15 @@ export const AppShell: React.FC<AppShellProps> = ({
         {storefrontOpen && (
           <div className="fixed inset-0 z-40 bg-[color:var(--color-bg)] overflow-y-auto">
             <React.Suspense fallback={<p className="p-6 text-sm">Loading the street…</p>}>
-              <MarketStorefront onBack={() => { setStorefrontOpen(false); window.location.hash = 'home'; }} />
+              <MarketStorefront onBack={() => { setStorefrontOpen(false); window.location.hash = 'market'; }} />
             </React.Suspense>
           </div>
         )}
         {elevatePage && (
           <div className="fixed inset-0 z-40 bg-[color:var(--color-bg)] overflow-y-auto p-4 pb-24">
             <React.Suspense fallback={<p className="p-6 text-sm">Loading elevate…</p>}>
-              <OverlayScreen title={elevatePage === 'market' ? 'Elevate · Market' : elevatePage === 'ledger' ? 'Elevate · Ledger' : elevatePage === 'onboard' ? 'Elevate · Onboard' : 'Wairo Elevate'} onBack={() => { setElevatePage(null); const back = tabHashRef.current || 'home'; window.location.hash = back; }}>
-                {elevatePage === 'market' ? <WairoElevateMarket /> : elevatePage === 'ledger' ? <WairoElevateLedger /> : elevatePage === 'onboard' ? <WairoElevateOnboard onStart={() => { setElevatePage(null); setCreateFlowOpen(true); window.location.hash = 'home'; }} /> : <ElevateHub initial={elevatePage as any} />}
+              <OverlayScreen title={elevatePage === 'market' ? 'Elevate · Market' : elevatePage === 'ledger' ? 'Elevate · Ledger' : elevatePage === 'onboard' ? 'Elevate · Onboard' : 'Wairo Elevate'} onBack={() => { setElevatePage(null); const back = tabHashRef.current || 'market'; window.location.hash = back; }}>
+                {elevatePage === 'market' ? <WairoElevateMarket /> : elevatePage === 'ledger' ? <WairoElevateLedger /> : elevatePage === 'onboard' ? <WairoElevateOnboard onStart={() => { setElevatePage(null); setCreateFlowOpen(true); window.location.hash = SHOPS_HASH; }} /> : <ElevateHub initial={elevatePage as any} />}
               </OverlayScreen>
             </React.Suspense>
           </div>
@@ -816,70 +823,11 @@ export const AppShell: React.FC<AppShellProps> = ({
             {spaceError ? <><p role="alert" className="my-4">{spaceError}</p><button onClick={loadSpaces}>Retry</button><button className="ml-4 underline" onClick={() => requestPath()}>Sign in through My Requests</button></> : !loading && <><p className="my-4">No business space yet. Create a Request to describe what you need, or create a space for what you sell.</p><button className="px-4 py-3 rounded-xl bg-[color:var(--color-primary)] text-[color:var(--accent-ink)]" onClick={() => { setCreateFlowInitialStep(1); setCreateFlowOpen(true); }}>Create a space</button></>}
           </section>
         )}
-        {activeTab === 'home' ? (
-          <>
-          <SellerHome
-            onOpenSpace={openSpace}
-            onOpenSelling={() => {
-              setMineSection('selling');
-              setMineSellingNonce((n) => n + 1);
-              setActiveTab('mine');
-              window.location.hash = 'spaces/selling';
-            }}
-            onOpenSpaces={() => {
-              setMineSection('spaces');
-              setActiveTab('mine');
-              window.location.hash = 'spaces';
-            }}
-            onCreateSpace={() => {
-              setCreateFlowInitialStep(1);
-              setCreateFlowOpen(true);
-              window.location.hash = 'new-space';
-            }}
-            onExplore={() => {
-              setDiscoverSubTab('all');
-              setActiveTab('city');
-              window.location.hash = 'city';
-            }}
-            onOpenWorkforce={() => {
-              setActiveTab('workforce');
-              window.location.hash = 'workforce/org';
-            }}
-            onRequireAuth={() => {
-              setActiveTab('you');
-              window.location.hash = 'you';
-            }}
-            onOpenMarket={(room) => {
-              setDiscoverSubTab((room as DiscoverRoom) ?? 'all');
-              setActiveTab('market');
-              window.location.hash = room && room !== 'all' ? `market/${room}` : 'market';
-            }}
-            onOpenTrade={(section) => {
-              setTradeSection(isTradeSection(section) ? section : 'demand');
-              setActiveTab('trade');
-              window.location.hash = section ? `trade/${section}` : 'trade';
-            }}
-            onOpenGroupBuys={() => {
-              setGroupBuysOpen(true);
-              window.location.hash = 'groupbuys';
-            }}
-            onOpenYou={(section) => {
-              setYouSection(section ?? null);
-              setActiveTab('you');
-              window.location.hash = section ? `you/${section}` : 'you';
-            }}
-            place={place}
-            announcements={campaignAnnouncements}
-          />
-          {firstRun && <section data-testid="home-group-invitation" className="max-w-3xl mx-auto my-4" aria-label="Optional group setup">
-            <p className="text-sm mb-2">Want to organise a group? You can set one up whenever you’re ready. Browse the Wairo board from Quick actions.</p>
-            <FirstRunChecklist compact groups={[]}
-              onStartGroup={() => { setFirstRun(false); setActiveTab('you'); window.location.hash = '#you'; }}
-              onDismiss={() => { window.localStorage.setItem('brief.firstRunDismissed', '1'); setFirstRun(false); }} />
-          </section>}
-          </>
-        ) : (
-          <div>
+        {/* The atrium (`SellerHome`) is no longer a door. Its attention read
+            opens the Shops door (`AttentionStrip` inside `MineSurface`); its
+            shelf of doors is the bar and the directory; its board rows are the
+            market, which is the first page. */}
+        <div>
             {/* ── CITY (the board: what's happening nearby) ── */}
             {(activeTab === 'market' || activeTab === 'city' || activeTab === 'discover') && (
               <CityFeedView
@@ -911,20 +859,35 @@ export const AppShell: React.FC<AppShellProps> = ({
               <PulseSurface onOpenRequests={() => requestPath()} />
             )}
 
-            {/* ── MINE (the bar's second door: your shops, orders, saved) ── */}
-            {(activeTab === 'mine' || ((activeTab === 'pipeline' || activeTab === 'spaces') && !activeSpace)) && (
-              <MineSurface
-                onOpenSpace={openSpace}
-                onOpenPublicSpace={(slug) => { window.location.hash = `space/${encodeURIComponent(slug)}`; }}
-                onOpenCreateSpace={() => {
-                  setCreateFlowInitialStep(1);
-                  setCreateFlowOpen(true);
-                }}
-                onOpenEntity={(id) => { setEntityId(id); setActiveTab('you'); window.location.hash = `entity/${id}`; }}
-                onRequireAuth={() => showToast('Sign in to continue.')}
-                sellingSignal={mineSellingNonce}
-                initialSection={mineSection}
-              />
+            {/* ── SHOPS (the bar's second door: what needs you today, then
+                   your shops, offers, orders and team). `mine` is the legacy
+                   name a host may still pass as `initialTab`. ── */}
+            {(activeTab === 'shops' || activeTab === 'mine' || ((activeTab === 'pipeline' || activeTab === 'spaces') && !activeSpace)) && (
+              <>
+                <MineSurface
+                  onOpenSpace={openSpace}
+                  onOpenPublicSpace={(slug) => { window.location.hash = `space/${encodeURIComponent(slug)}`; }}
+                  onOpenCreateSpace={() => {
+                    setCreateFlowInitialStep(1);
+                    setCreateFlowOpen(true);
+                  }}
+                  onOpenEntity={(id) => { setEntityId(id); setActiveTab('you'); window.location.hash = `entity/${id}`; }}
+                  onOpenTrade={(section) => {
+                    setTradeSection(isTradeSection(section) ? section : 'demand');
+                    setActiveTab('trade');
+                    window.location.hash = section ? `trade/${section}` : 'trade';
+                  }}
+                  onRequireAuth={() => showToast('Sign in to continue.')}
+                  sellingSignal={mineSellingNonce}
+                  initialSection={mineSection}
+                />
+                {firstRun && mineSection === 'spaces' && <section data-testid="home-group-invitation" className="max-w-3xl mx-auto my-4" aria-label="Optional group setup">
+                  <p className="text-sm mb-2">Want to organise a group? You can set one up whenever you’re ready. Browse the Wairo board from the Market door.</p>
+                  <FirstRunChecklist compact groups={[]}
+                    onStartGroup={() => { setFirstRun(false); setActiveTab('you'); window.location.hash = '#you'; }}
+                    onDismiss={() => { window.localStorage.setItem('brief.firstRunDismissed', '1'); setFirstRun(false); }} />
+                </section>}
+              </>
             )}
 
             {/* ── OPERATOR: PARTNER DESK (distribution partners) ── */}
@@ -990,8 +953,7 @@ export const AppShell: React.FC<AppShellProps> = ({
                 }}
               />
             )}
-          </div>
-        )}
+        </div>
       </main>
 
 
@@ -1113,7 +1075,7 @@ export const AppShell: React.FC<AppShellProps> = ({
           stays short and the screens below stay uncluttered. */}
       {moderationOpen && <OverlayScreen title="Page moderation" onBack={() => { setModerationOpen(false); window.location.hash = activeTab; }}>{canModerate ? <SpaceModerationPanel /> : <p>This page requires the moderate capability. Sign in as an authorized reviewer.</p>}</OverlayScreen>}
 
-      {adminRoute && <AdminWorkspace memberId={adminRoute.memberId} onSession={handleAdminSession} onClose={() => { setAdminRoute(null); window.location.hash = tabHashRef.current || 'home'; }} />}
+      {adminRoute && <AdminWorkspace memberId={adminRoute.memberId} onSession={handleAdminSession} onClose={() => { setAdminRoute(null); window.location.hash = tabHashRef.current || 'market'; }} />}
       <NavSheet
         canAdmin={canAdmin}
         canModerate={canModerate}
@@ -1173,7 +1135,7 @@ export const AppShell: React.FC<AppShellProps> = ({
       )}
 
       {briefOpen && (
-        <OverlayScreen title="The morning brief" onBack={() => { setBriefOpen(false); window.location.hash = 'spaces'; }}>
+        <OverlayScreen title="The morning brief" onBack={() => { setBriefOpen(false); window.location.hash = SHOPS_HASH; }}>
           <ShopBrief onOpenSpace={(id) => { setBriefOpen(false); openSpace(id); }} />
         </OverlayScreen>
       )}

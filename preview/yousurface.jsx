@@ -102,7 +102,7 @@ async function main() {
       return title && title.classList.contains('font-semibold') && !desc;
     }));
   check('only three groups, collapsed by default', document.querySelectorAll('[data-testid=you-tile-grid] details').length === 3 && document.querySelectorAll('[data-testid=you-tile-grid] details[open]').length === 0);
-  check('profile is one identity row; Orders/Selling link to their single home', document.querySelectorAll('[data-testid=you-profile-head]').length === 1 && document.querySelector('a[href="#spaces/orders"]') && !document.querySelector('[data-testid=orders]'));
+  check('profile is one identity row; Orders/Selling link to their single home', document.querySelectorAll('[data-testid=you-profile-head]').length === 1 && document.querySelector('a[href="#shops/orders"]') && !document.querySelector('[data-testid=orders]'));
 
   // The settings group exists, in the drawer's order.
   const tileIdx = (id) => allTiles.findIndex((t) => t.getAttribute('data-testid') === id);

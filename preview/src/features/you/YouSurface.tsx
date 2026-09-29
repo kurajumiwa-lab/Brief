@@ -324,7 +324,7 @@ export function YouSurface({
         ))}
       </div>
 
-      <a className="compact-row" href="#spaces/orders">Orders & selling <span aria-hidden="true">→</span></a>
+      <a className="compact-row" href="#shops/orders">Orders & selling <span aria-hidden="true">→</span></a>
       </>}
       {section && <div className="space-y-4" data-testid="you-detail">
         <header className="compact-heading"><button type="button" onClick={() => { setSection(null); setNotice(''); }} aria-label="Back to You">← You</button><h1>{SECTION_TITLES[section]}</h1></header>

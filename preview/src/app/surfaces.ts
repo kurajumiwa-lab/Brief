@@ -35,22 +35,25 @@ export const SHOP_PREFIX = 'shop/';
 
 /** The hash each tab answers to, so closing a surface lands on the tab, not on
  *  a blank URL. Mirrors the shell's own table; asserted in `backdoors.jsx`.
- *  The five mall doors come first; the rest are the rooms a wing contains and
+ *  The four mall doors come first; the rest are the rooms a wing contains and
  *  the legacy addresses that must keep resolving (notifications, shared links,
- *  and the deep links the surfaces themselves write). */
+ *  and the deep links the surfaces themselves write). The shop's internal
+ *  screens (`pipeline`, the legacy `mine`/`spaces`/`duka` tabs) all return to
+ *  the Shops door, because that is the screen they were opened from. */
 export const TAB_HASH: Record<string, string> = {
-  home: 'home',
   market: 'market',
+  shops: 'shops',
   trade: 'trade',
-  duka: 'duka',
   you: 'you',
+  home: 'market',
   city: 'city',
   discover: 'discover',
-  pipeline: 'spaces',
+  pipeline: 'shops',
   ledger: 'ledger',
   catalog: 'catalog',
-  mine: 'mine',
-  spaces: 'spaces',
+  mine: 'shops',
+  spaces: 'shops',
+  duka: 'shops',
   pulse: 'pulse',
   partners: 'partners',
   workforce: 'workforce',
@@ -64,22 +67,29 @@ export const TAB_HASH: Record<string, string> = {
  * A restructure that renames a wing and leaves the old address dead is a
  * restructure that breaks every link someone already sent in WhatsApp. So the
  * aliases are data, in one place, and `resolveTabHash` is the only function
- * allowed to turn a hash into a door. Legacy `#spaces`, `#mine`, `#city`,
- * `#requests` and `#supply` all still open a real screen.
+ * allowed to turn a hash into a door. Legacy `#home`, `#duka`, `#spaces`,
+ * `#mine`, `#city`, `#requests` and `#supply` all still open a real screen.
+ *
+ * `#home` lands on the market because the market is the first page now: the
+ * atrium that used to answer to it is gone, and the one thing it held that a
+ * seller came back for — the attention read — opens the Shops door instead.
+ * The market's own "shops" room keeps its address at `#market/shops`; the bare
+ * `#shops` is the door.
  */
 export const HASH_ALIAS: Record<string, string> = {
+  home: 'market',
   city: 'market',
   discover: 'market',
-  shops: 'market',
   activity: 'pulse',
-  spaces: 'duka',
-  mine: 'duka',
-  selling: 'duka',
-  orders: 'duka',
-  pipeline: 'duka',
-  catalog: 'duka',
-  ledger: 'duka',
-  shopbrief: 'duka',
+  duka: 'shops',
+  spaces: 'shops',
+  mine: 'shops',
+  selling: 'shops',
+  orders: 'shops',
+  pipeline: 'shops',
+  catalog: 'shops',
+  ledger: 'shops',
+  shopbrief: 'shops',
   requests: 'trade',
   supply: 'trade',
   quotes: 'trade',
@@ -151,9 +161,12 @@ export function hrefForDest(dest: string | null | undefined): string | null {
   return null;
 }
 
-/** The tab a hash names, for a label that must not lag behind the screen. */
-export const HASH_TAB: Record<string, string> = Object.fromEntries(
-  Object.entries(TAB_HASH).map(([tab, href]) => [href, tab])
+/** The tab a hash names, for a label that must not lag behind the screen.
+ *  Several legacy tabs share one door's hash; the door's own name wins, which
+ *  is why the doors are listed first in `TAB_HASH`. */
+export const HASH_TAB: Record<string, string> = Object.entries(TAB_HASH).reduce<Record<string, string>>(
+  (acc, [tab, href]) => (href in acc ? acc : { ...acc, [href]: tab }),
+  {}
 );
 
 /**
@@ -162,18 +175,19 @@ export const HASH_TAB: Record<string, string> = Object.fromEntries(
  * the app invented for itself.
  */
 export const TAB_LABEL: Record<string, string> = {
-  home: 'Home',
   market: 'the market',
+  shops: 'your shops',
   trade: 'your deals',
-  duka: 'your shop',
+  you: 'You',
+  home: 'the market',
+  duka: 'your shops',
   city: 'the board',
   discover: 'the board',
-  spaces: 'Spaces',
+  spaces: 'your shops',
   ledger: 'the money',
   catalog: 'the catalog',
-  mine: 'Mine',
+  mine: 'your shops',
   pulse: 'Pulse',
-  you: 'You',
   partners: 'Partners',
   supply: 'your supply',
   requests: 'your requests'
@@ -181,7 +195,7 @@ export const TAB_LABEL: Record<string, string> = {
 
 export function backLabel(tabHash: string | null | undefined): string {
   const full = String(tabHash ?? '').replace(/^#/, '');
-  if (full === 'spaces/selling' || full === 'spaces/orders') return 'Selling';
+  if (/^(shops|spaces|duka)\/(selling|orders)$/.test(full)) return 'Selling';
   const want = full.split('/')[0];
   return TAB_LABEL[want] ?? 'where you came from';
 }

@@ -159,7 +159,7 @@ export const MarketStorefront: React.FC<{ onBack?: () => void }> = ({ onBack }) 
             </button>
           )}
           {/* Logo */}
-          <button type="button" onClick={() => go('home')} className="flex items-center gap-2 shrink-0 cursor-pointer">
+          <button type="button" onClick={() => go('market')} className="flex items-center gap-2 shrink-0 cursor-pointer">
             <WairoMark size={30} title="" />
             <span className="flex flex-col items-start leading-none">
               <span className="text-[17px] font-black tracking-tight" style={{ color: 'var(--wairo-slate)' }}>Wairo</span>
@@ -253,7 +253,7 @@ export const MarketStorefront: React.FC<{ onBack?: () => void }> = ({ onBack }) 
           <div className="relative">
             <button
               type="button" aria-label={`Orders ${openOrders.length}`}
-              onClick={() => go('mine')}
+              onClick={() => go('shops')}
               className="relative p-2 rounded-full hover:bg-[var(--color-well)] cursor-pointer"
               style={{ color: 'var(--brief-ink)' }}
             >

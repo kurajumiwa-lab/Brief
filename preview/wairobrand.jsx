@@ -75,7 +75,7 @@ async function main() {
 
   {
     const doors = BOTTOM_BAR_ITEMS.filter((i) => i.type === 'destination').map((d) => d.label);
-    check('the bar is Home · Market · Trade · Shop · You', doors.join('·') === 'Home·Market·Trade·Shop·You');
+    check('the bar is Market · Shops · Trade · You', doors.join('·') === 'Market·Shops·Trade·You');
     check('no Errands door, no Trust door, no Wallet door',
       !BOTTOM_BAR_ITEMS.some((i) => /errand|trust|wallet/i.test(i.label)));
     check('How Wairo works is the audit tile', SECTION_TITLES.how === 'How Wairo works' && YOU_SECTION_IDS.includes('how'));
@@ -118,8 +118,8 @@ async function main() {
     const audit = src('src/features/you/HowBriefWorks.tsx');
     check('the audit page names the mockups so they cannot sneak in as product',
       /trust score out of 100/.test(audit) && /KES 50,000/.test(audit) && /3 Bids/.test(audit));
-    check('the audit page names the four primary seller-workspace destinations',
-      /primary bar is Home · Selling · Spaces · You/.test(audit) && /There is no Trust tab and no Errands tab/.test(audit));
+    check('the audit page names the four primary destinations, market first',
+      /primary bar is Market · Shops · Trade · You/.test(audit) && /There is no Trust tab and no Errands tab/.test(audit));
   }
 
   console.log(`\nPASSED ${passed} / FAILED ${failed}`);

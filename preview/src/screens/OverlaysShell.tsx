@@ -2613,7 +2613,7 @@ export function OverlaysShell(props: OverlaysShellProps) {
               // shopfronts, which is a real route in the shell — so the tap has
               // somewhere to go instead of a shrug.
               setNotificationsOpen(false);
-              window.location.hash = 'spaces';
+              window.location.hash = 'shops';
               return;
             }
             if (dest?.startsWith('entity:')) {
