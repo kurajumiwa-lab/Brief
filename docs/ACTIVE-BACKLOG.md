@@ -170,6 +170,28 @@ Do not guess the payload, enable the unverified-transfer switch, replace manual
 settlement, or present “configured” as “working.” Contract receipt enables a
 separate implementation review, not an automatic live transfer.
 
+## Three-pillar commerce architecture — recorded, previewed locally
+
+Owner direction, 2026-09-29: the three feature pillars become the **primary
+architecture** of Brief's commerce side, and every screen is fitted to a phone
+first.
+
+- Record: `docs/THREE-PILLAR-PRIMARY-ARCHITECTURE.md` — the three pillars
+  (Supply, Shop, Gather), the reuse/extend/build split against the domains that
+  already exist, the additive data model, the API surface, the USSD menu tree,
+  the money path, the verification ladder, the comparison layer, twenty edge
+  cases, the implementation order and the mobile fit contract.
+- Preview: `/pillars` (`preview/src/features/pillars/`) — eighteen interactive
+  mobile-fitted screens with the spec for each beside the device, a working USSD
+  session, and disabled actions that state why they are disabled.
+- Client suite `preview/pillarspage.jsx` (32 checks) is registered in
+  `run-suites.sh`; `server/test/productionSafety.mjs` asserts the concept route
+  serves with an honest title.
+
+Status: local, unmerged. No vendor onboarding, border crossing, pool fill, stall
+sale, payout or payment was performed. Automated payouts, live rails, credit
+scoring and cross-border customs filing remain gated exactly as before.
+
 ## Secondary confirmed gaps — not ahead of the ordered queue
 
 - Rider/service-provider profiles: scope and sponsorship/availability semantics

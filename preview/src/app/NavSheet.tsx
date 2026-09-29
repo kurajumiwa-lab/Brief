@@ -10,7 +10,7 @@
 // point of this file: every row here resolves to a screen that exists in the
 // shell — a door, a wing's section, an overlay with its own hash, a You shelf,
 // or one of the three standalone pages the app actually serves (/track,
-// /reviews, /cloudbites). And anything that is reachable ONLY from this board
+// /reviews, /cloudbites, /pillars). And anything that is reachable ONLY from this board
 // is marked as such in the suites: the board is a door for Pulse, Partners,
 // Workforce, Elevate and the admin rooms, and those five screens have no other
 // way in.
@@ -129,7 +129,8 @@ export const SHEET_GROUPS: Array<{ id: string; label: string; kicker?: string; i
       { id: 'track-order', no: 'S-04', label: 'Track an order', sub: 'Where a parcel you are waiting on actually is', href: '/track' },
       { id: 'product-reviews', no: 'S-05', label: 'Product reviews', sub: 'What buyers said about the goods, unrounded', href: '/reviews' },
       { id: 'food-court', no: 'S-06', label: 'Food court · CloudBites', sub: 'The kitchen wing — a concept preview, not a live market', href: '/cloudbites' },
-      { id: 'signout', no: 'S-07', label: 'Sign out', sub: 'Your rows stay on the server', target: { kind: 'signout' } }
+      { id: 'trade-pillars', no: 'S-07', label: 'Trade floor · three pillars', sub: 'Supply, Shop and Gather — the commerce architecture, fitted to a phone', href: '/pillars' },
+      { id: 'signout', no: 'S-08', label: 'Sign out', sub: 'Your rows stay on the server', target: { kind: 'signout' } }
     ]
   }
 ];

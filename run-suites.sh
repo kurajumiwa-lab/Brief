@@ -23,7 +23,7 @@ ALL="access admin alerts moneyband utf8 apic menusheet shopbuilder dukabook trus
 # cannot fail — the same class of lie as a test that cannot fail.
 # Name this suite apart from the public route: preview/cloudbites.jsx would
 # shadow /cloudbites in Vite's extension resolver during development.
-ALL="$ALL discovery mine tiles activityreel wairobrand spacemoderation workforcedesk compacthome sellerhome adminwiring wanderly brandlaunch productreviews businessfeed offlineisolation dialogfocus collectionroute cloudbitespage"
+ALL="$ALL pillarspage discovery mine tiles activityreel wairobrand spacemoderation workforcedesk compacthome sellerhome adminwiring wanderly brandlaunch productreviews businessfeed offlineisolation dialogfocus collectionroute cloudbitespage"
 
 # Files that look like suites but are not, each with the reason it is excluded.
 # Keeping the reasons here is what stops the next reader from "fixing" the list

@@ -290,6 +290,32 @@ valid backup fails startup. Production refuses development authentication and
 requires an explicit durable data directory. See [DEPLOYMENT.md](DEPLOYMENT.md)
 for the first-boot gate, recovery drill, and incident response.
 
+### Three-pillar commerce architecture
+
+The commerce side of Brief is organised as three pillars, recorded in
+[`docs/THREE-PILLAR-PRIMARY-ARCHITECTURE.md`](docs/THREE-PILLAR-PRIMARY-ARCHITECTURE.md):
+
+| Pillar | Name | What it runs |
+|---|---|---|
+| **P1** | **Supply** | Cross-border supply chain: vendor onboarding and verification, border consolidation under the EAC Simplified Trade Regime, shipments, UGX/KES settlement. |
+| **P2** | **Shop** | Duka ordering on app **and** USSD, demand pooling, institutional accounts with POs and credit terms, family baskets. |
+| **P3** | **Gather** | Events and pop-ups, stall applications and the organiser desk, plus the Market Scout network that keeps the index of who-sells-what-where alive. |
+
+They are put to work through the loop the platform already runs — request, match,
+quote, work order, repeat procurement, trust, payment — and they live inside the
+existing five doors (Home, Market, Trade, Shop, You) rather than adding new ones.
+The document names what is reused, what is extended and what is genuinely new,
+together with the data model, API surface, USSD menus, money path, edge cases and
+the **mobile fit contract** every screen obeys.
+
+`/pillars` is the public, mobile-fitted screen gallery for that record
+(`preview/src/features/pillars/`): eighteen interactive screens — Trade Map,
+Find it for me, the consolidation desk, Pool & Save, a working USSD session, the
+institutional desk, stall passes, the organiser desk, the event blueprint and the
+scout's day — each beside its data model, API points and edge cases. It is a
+concept preview: no order, batch, pool, stall, payout or payment rail is live,
+and every button that would transact is disabled and says why.
+
 ### CloudBites local-food concept
 
 `/cloudbites` is a public, mobile-first demonstration of **CloudBites, a food concept on Brief**. Brief is the wider local work and commerce network; CloudBites shows how it could connect people with nearby hotels, restaurants and food inventory at the place and time they need it. Its suggested framing is “Food from where you’re going”: destination-led discovery, local pickup and preorders, date- or day-based offers, table requests, team meals and visitors finding businesses before arrival. Pickup is the default; workplace fulfillment could be an optional future path where locally available, not a promised citywide home-delivery fleet. Businesses would control their menus, prices, pickup terms and offers, with no exclusivity or requirement to leave Uber, Bolt, direct sales or other channels. “Free to join and list” describes an intended no-upfront-fee entry point, not a promise that all future services are free forever. Fees on completed business, promoted offers or paid workplace tools are possible strategic models, not implemented terms.
