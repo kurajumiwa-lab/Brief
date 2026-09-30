@@ -52,6 +52,9 @@ class NotificationType(str, PyEnum):
     BOOKING_REQUEST = "booking_request"      # A vendor wants your space / rooms / pitch
     BOOKING_UPDATE = "booking_update"        # Your booking was confirmed, declined or cancelled
     ROUTE_UPDATE = "route_update"            # A courier planned a run carrying your parcel
+    GOVERNANCE_UPDATE = "governance_update"  # Proposal, vote and council status
+    BENEFIT_UPDATE = "benefit_update"        # Non-cash network benefit statement
+    APPEAL_UPDATE = "appeal_update"          # Vendor appeal status change
     SYSTEM = "system"                        # Platform announcements
 
 

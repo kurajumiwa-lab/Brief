@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { Send, Package, HeartHandshake, MessageSquare } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Send, Package, HeartHandshake, MessageSquare, Mic, Square, Trash2, Loader2 } from "lucide-react";
 import Button from "@/components/ui/Button";
 import Select from "@/components/ui/Select";
 import Input from "@/components/ui/Input";
@@ -19,9 +19,12 @@ const MODES = [
 ];
 
 const blankDeal = { stock_item_id: "", quantity: "", price: "", delivery_terms: "pickup", payment_terms: "on_delivery" };
+const MAX_VOICE_SECONDS = 15;
+const MAX_VOICE_BYTES = 512 * 1024;
+const VOICE_MIME_PREFERENCES = ["audio/webm;codecs=opus", "audio/ogg;codecs=opus", "audio/mp4", "audio/webm", "audio/ogg"];
 
 /** Composer. `onSend(payload)` receives a full MessageCreate body. */
-export default function ChatInput({ onSend, disabled, sending, placeholder = "Message the room…" }) {
+export default function ChatInput({ onSend, onSendVoice, disabled, sending, placeholder = "Message the room…" }) {
   const [mode, setMode] = useState("text");
   const [text, setText] = useState("");
   const [stockId, setStockId] = useState("");
@@ -32,6 +35,41 @@ export default function ChatInput({ onSend, disabled, sending, placeholder = "Me
   const room = useChatStore((s) => s.activeRoom);
   const me = useAuthStore((s) => s.vendor);
   const ref = useRef(null);
+  const recorderRef = useRef(null);
+  const streamRef = useRef(null);
+  const mountedRef = useRef(false);
+  const recordingStartedRef = useRef(0);
+  const recordingTimerRef = useRef(null);
+  const chunksRef = useRef([]);
+  const [recording, setRecording] = useState(false);
+  const [requestingMic, setRequestingMic] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const [voiceClip, setVoiceClip] = useState(null);
+  const [voiceBusy, setVoiceBusy] = useState(false);
+  const [voiceError, setVoiceError] = useState("");
+  const previewUrl = useMemo(() => voiceClip ? URL.createObjectURL(voiceClip.blob) : null, [voiceClip]);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+      const recorder = recorderRef.current;
+      if (recorder) {
+        recorder.ondataavailable = null;
+        recorder.onstop = null;
+        recorder.onerror = null;
+        if (recorder.state === "recording") recorder.stop();
+      }
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+    };
+  }, []);
 
   useEffect(() => {
     if (mode === "stock_share" && mine.length === 0) fetchMine().catch(() => {});
@@ -74,6 +112,98 @@ export default function ChatInput({ onSend, disabled, sending, placeholder = "Me
 
   const dealTotal = Number(deal.quantity || 0) * Number(deal.price || 0);
   const dealItem = dealStock.find((i) => i.id === deal.stock_item_id);
+
+  const stopRecording = () => {
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
+    if (recorderRef.current?.state === "recording") recorderRef.current.stop();
+  };
+
+  const startRecording = async () => {
+    if (recording || requestingMic || sending || disabled || voiceClip) return;
+    if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+      return toast.error("Voice recording needs a supported browser and a secure connection");
+    }
+    setRequestingMic(true);
+    setVoiceError("");
+    setRecordingSeconds(0);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true },
+      });
+      if (!mountedRef.current) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
+      streamRef.current = stream;
+      const mimeType = VOICE_MIME_PREFERENCES.find((type) => window.MediaRecorder.isTypeSupported?.(type));
+      const recorder = mimeType
+        ? new window.MediaRecorder(stream, { mimeType, audioBitsPerSecond: 24000 })
+        : new window.MediaRecorder(stream, { audioBitsPerSecond: 24000 });
+      chunksRef.current = [];
+      recordingStartedRef.current = Date.now();
+      recorderRef.current = recorder;
+      recorder.ondataavailable = (event) => {
+        if (event.data?.size) chunksRef.current.push(event.data);
+      };
+      recorder.onerror = () => {
+        setVoiceError("Recording stopped unexpectedly. Try again.");
+        stopRecording();
+      };
+      recorder.onstop = () => {
+        const elapsedMs = Date.now() - recordingStartedRef.current;
+        const duration = Math.min(MAX_VOICE_SECONDS, Math.max(1, Math.round(elapsedMs / 1000)));
+        const blob = new Blob(chunksRef.current, { type: recorder.mimeType || chunksRef.current[0]?.type || "audio/webm" });
+        chunksRef.current = [];
+        stream.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
+        recorderRef.current = null;
+        setRecording(false);
+        if (elapsedMs < 500 || !blob.size) {
+          setVoiceError("That recording was too short. Hold the mic for a moment and try again.");
+        } else if (blob.size > MAX_VOICE_BYTES) {
+          setVoiceError("This recording is too large to send. Try a shorter voice note.");
+        } else {
+          setVoiceClip({ blob, duration, roomId: room?.id });
+        }
+      };
+      recorder.start(250);
+      setRecording(true);
+      recordingTimerRef.current = window.setInterval(() => {
+        const elapsed = Math.floor((Date.now() - recordingStartedRef.current) / 1000);
+        setRecordingSeconds(elapsed);
+        if (elapsed >= MAX_VOICE_SECONDS) stopRecording();
+      }, 250);
+    } catch (err) {
+      if (!mountedRef.current) return;
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+      recorderRef.current = null;
+      setRecording(false);
+      const message = err?.name === "NotAllowedError" ? "Allow microphone access to record a voice note" : "Couldn't start microphone recording";
+      setVoiceError(message);
+      toast.error(message);
+    } finally {
+      if (mountedRef.current) setRequestingMic(false);
+    }
+  };
+
+  const sendVoice = async () => {
+    if (!voiceClip || !onSendVoice || voiceBusy || sending) return;
+    if (voiceClip.roomId !== room?.id) return toast.error("The chat changed while recording. Discard this clip and record again.");
+    setVoiceBusy(true);
+    try {
+      await onSendVoice(voiceClip.blob, voiceClip.duration);
+      setVoiceClip(null);
+      setVoiceError("");
+    } catch (err) {
+      toast.error(apiError(err, "Voice note not sent"));
+    } finally {
+      setVoiceBusy(false);
+    }
+  };
 
   const submit = async () => {
     if (disabled || sending) return;
@@ -159,19 +289,49 @@ export default function ChatInput({ onSend, disabled, sending, placeholder = "Me
         </div>
       )}
 
+      {recording && (
+        <div className="flex items-center justify-between rounded-lg border border-red-900/60 bg-red-950/30 px-3 py-2 text-xs text-red-100" role="status" aria-live="polite">
+          <span className="inline-flex items-center gap-2"><span className="h-2 w-2 animate-pulse rounded-full bg-red-400" />Recording · 00:{String(Math.min(recordingSeconds, MAX_VOICE_SECONDS)).padStart(2, "0")} / 00:15</span>
+          <span className="text-2xs text-red-200/80">Tap the square to finish</span>
+        </div>
+      )}
+
+      {voiceClip && (
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-edge-1 bg-surface-2 p-2.5">
+          <audio className="h-9 min-w-[180px] flex-1" controls preload="metadata" src={previewUrl} aria-label="Preview voice note" />
+          <span className="text-2xs text-ink-4">{voiceClip.duration}s · {Math.max(1, Math.round(voiceClip.blob.size / 1024))} KB</span>
+          <button type="button" onClick={() => setVoiceClip(null)} disabled={voiceBusy || sending} className="inline-flex h-9 items-center gap-1 rounded-lg px-2 text-xs text-ink-3 hover:bg-surface-3 hover:text-ink-1 disabled:opacity-50" aria-label="Discard voice note">
+            <Trash2 size={14} /> Discard
+          </button>
+          <Button onClick={sendVoice} loading={voiceBusy || sending} disabled={disabled || !onSendVoice || voiceClip.roomId !== room?.id} icon={Send} size="sm" className="h-9 rounded-lg">Send voice</Button>
+        </div>
+      )}
+
+      {voiceError && !recording && !voiceClip && <p className="text-2xs text-red-300" role="alert">{voiceError}</p>}
+
       <div className="flex items-end gap-2">
         <textarea
           ref={ref}
           rows={1}
           value={text}
-          disabled={disabled}
+          disabled={disabled || recording}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={onKey}
           placeholder={mode === "text" ? placeholder : "Add a note (optional)"}
           aria-label="Message"
           className="flex-1 resize-none rounded-xl border border-edge-2 bg-surface-2 px-3.5 py-2 text-sm text-ink-1 placeholder:text-ink-4 focus:outline-none focus:border-brand-500 disabled:opacity-50"
         />
-        <Button onClick={submit} loading={sending} disabled={disabled} icon={Send} aria-label="Send" className="h-10 w-10 !px-0 rounded-xl" />
+        <button
+          type="button"
+          onClick={recording ? stopRecording : startRecording}
+          disabled={disabled || sending || voiceBusy || requestingMic || !!voiceClip}
+          className={cn("inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition-colors disabled:opacity-40", recording ? "border-red-700 bg-red-700 text-white hover:bg-red-600" : "border-edge-2 bg-surface-2 text-ink-2 hover:border-brand-500 hover:text-brand-300")}
+          aria-label={recording ? "Stop voice recording" : requestingMic ? "Requesting microphone access" : "Record a voice note"}
+          title={recording ? "Stop recording" : "Record a voice note (up to 15 seconds)"}
+        >
+          {recording ? <Square size={15} fill="currentColor" /> : requestingMic ? <Loader2 size={16} className="animate-spin" /> : <Mic size={17} />}
+        </button>
+        <Button onClick={submit} loading={sending} disabled={disabled || recording || !!voiceClip} icon={Send} aria-label="Send" className="h-10 w-10 !px-0 rounded-xl" />
       </div>
     </div>
   );

@@ -15,7 +15,7 @@ from app.middleware.metrics import MetricsMiddleware
 from app.middleware.rate_limiter import RateLimitMiddleware, configure_backend
 from app.middleware.vendor_only import VendorOnlyMiddleware
 from app.routes import (
-    analytics, auth, bookings, chat, collective, events, files, groups, notifications, ops as ops_routes,
+    analytics, auth, bookings, chat, collective, events, files, governance, groups, market_locks, notifications, ops as ops_routes,
     pos_bridge, reviews, route_planner, stock, tools, vendor_lists, vendors, verification,
 )
 from app.services import pos_sync
@@ -81,6 +81,8 @@ app.include_router(stock.router, prefix="/api/stock", tags=["Stock (Not Listings
 app.include_router(vendor_lists.router, prefix="/api/vendor-lists", tags=["Vendor Lists"])
 app.include_router(groups.router, prefix="/api/groups", tags=["Vendor Groups"])
 app.include_router(chat.router, prefix="/api/chat", tags=["Chat & Topics"])
+app.include_router(market_locks.router, prefix="/api/locks", tags=["Market Locks"])
+app.include_router(governance.router, prefix="/api/governance", tags=["Vendor Governance & Benefits"])
 app.include_router(tools.router, prefix="/api/tools", tags=["Vendor Tools"])
 app.include_router(events.router, prefix="/api/events", tags=["Events"])
 app.include_router(pos_bridge.router, prefix="/api/pos", tags=["POS Bridge"])
@@ -123,6 +125,8 @@ async def api_root():
             "notifications": "/api/notifications",
             "files": "/api/files",
             "collective": "/api/collective",
+            "market_locks": "/api/locks",
+            "governance": "/api/governance",
             "analytics": "/api/analytics",
             "ops": "/api/ops/status",
             "metrics": "/api/metrics",

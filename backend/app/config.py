@@ -110,6 +110,14 @@ class Settings(BaseSettings):
     BOOKING_MAX_DAYS: int = 365          # longest window a single booking may span
     ROUTE_DEFAULT_SPEED_KMH: float = 25.0
 
+    # Pilot market staff are explicitly allow-listed as role:vendor_handle pairs,
+    # e.g. admin:brief_admin,spotter:market_spotter,negotiator:market_negotiator.
+    MARKET_OPS_ROLES: str = ""
+    # Cooperative member votes are disabled unless a registered entity and its
+    # reviewed legal basis are configured explicitly.
+    GOVERNANCE_COOPERATIVE_ENABLED: bool = False
+    GOVERNANCE_LEGAL_BASIS: str = ""
+
     # Single-container deploys: serve the built frontend from here if it exists.
     FRONTEND_DIST: str = "../frontend/dist"
 
@@ -126,6 +134,11 @@ class Settings(BaseSettings):
     S3_PUBLIC_ACL: bool = False  # send ACL=public-read (only buckets with ACLs enabled accept it)
     UPLOAD_DIR: str = "./static"
     MAX_UPLOAD_MB: int = 10
+    # Voice notes live outside the public /static mount and are served only by
+    # the authenticated chat endpoint. In production, use a private S3 bucket.
+    VOICE_UPLOAD_DIR: str = "./voice_uploads"
+    VOICE_MAX_BYTES: int = 512 * 1024
+    VOICE_MAX_SECONDS: int = 15
 
     # Notifications & holds
     STOCK_LOW_THRESHOLD: int = 5        # units at or below which a STOCK_LOW alert fires
@@ -153,6 +166,15 @@ class Settings(BaseSettings):
     @property
     def allowed_pos_systems(self) -> List[str]:
         return self._split(self.ALLOWED_POS_SYSTEMS)
+
+    def market_ops_role(self, handle: str) -> Optional[str]:
+        """Resolve a configured market staff role without storing role grants in app sessions."""
+        valid_roles = {"admin", "clerk", "spotter", "negotiator"}
+        for assignment in self._split(self.MARKET_OPS_ROLES):
+            role, separator, vendor_handle = assignment.partition(":")
+            if separator and role.strip().lower() in valid_roles and vendor_handle.strip().lower() == (handle or "").lower():
+                return role.strip().lower()
+        return None
 
 
 settings = Settings()

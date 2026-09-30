@@ -21,7 +21,7 @@ export default function ChatPage() {
   const [params, setParams] = useSearchParams();
   const roomParam = params.get("room");
   const me = useAuthStore((s) => s.vendor);
-  const { rooms, activeRoom, messages, loading, sending, live, fetchRooms, selectRoom, leaveRoom, send, joinRoom, createTopic } = useChatStore();
+  const { rooms, activeRoom, messages, loading, sending, live, fetchRooms, selectRoom, leaveRoom, send, sendVoice, joinRoom, createTopic } = useChatStore();
   const [topicOpen, setTopicOpen] = useState(false);
   const bottomRef = useRef(null);
 
@@ -121,7 +121,7 @@ export default function ChatPage() {
             </div>
 
             {canPost ? (
-              <ChatInput onSend={send} sending={sending} placeholder={`Message ${activeRoom.room_type === "direct" ? activeRoom.name : "#" + activeRoom.name}`} />
+              <ChatInput onSend={send} onSendVoice={sendVoice} sending={sending} placeholder={`Message ${activeRoom.room_type === "direct" ? activeRoom.name : "#" + activeRoom.name}`} />
             ) : (
               <div className="border-t border-edge-1 bg-surface-1 p-3 flex items-center justify-between gap-3">
                 <p className="text-xs text-ink-4">You're reading an open topic. Join to post.</p>

@@ -162,6 +162,15 @@ export const chatAPI = {
   room: (id) => api.get(`/chat/${id}`),
   messages: (id, params) => api.get(`/chat/${id}/messages`, { params: noEmpty(params) }), // skip, limit
   send: (id, data) => api.post(`/chat/${id}/message`, data),
+  sendVoice: (id, blob, durationSeconds) => {
+    const form = new FormData();
+    const mime = blob.type.split(";", 1)[0].toLowerCase();
+    const extension = mime.includes("ogg") ? "ogg" : mime.includes("mp4") ? "m4a" : mime.includes("aac") ? "aac" : mime.includes("mpeg") ? "mp3" : mime.includes("wav") ? "wav" : "webm";
+    form.append("file", blob, `voice-note.${extension}`);
+    form.append("duration_seconds", String(durationSeconds));
+    return api.post(`/chat/${id}/voice`, form, { headers: { "Content-Type": "multipart/form-data" }, timeout: 60000 });
+  },
+  voice: (roomId, messageId) => api.get(`/chat/${roomId}/voice/${messageId}`, { responseType: "blob", timeout: 60000 }),
   join: (id) => api.post(`/chat/${id}/join`),
   createTopic: (data) => api.post("/chat/niche-topic", data), // { name, topic, topic_tags }
   directRoom: (vendorId) => api.post(`/chat/direct/${vendorId}`),
@@ -170,6 +179,57 @@ export const chatAPI = {
   acceptDeal: (roomId, messageId) => api.post(`/chat/${roomId}/deals/${messageId}/accept`),
   counterDeal: (roomId, messageId, data) => api.post(`/chat/${roomId}/deals/${messageId}/counter`, data), // { proposed_price_per_unit*, quantity, delivery_terms, payment_terms, notes }
   declineDeal: (roomId, messageId) => api.post(`/chat/${roomId}/deals/${messageId}/decline`),
+};
+
+// ── Daily Flash market Locks ───────────────────────────────────────────────
+export const locksAPI = {
+  home: () => api.get("/locks/me"),
+  zones: () => api.get("/locks/zones"),
+  assignZone: (zoneId) => api.post("/locks/me/zone", { zone_id: zoneId }),
+  submitPick: (windowId, data) => api.post(`/locks/windows/${windowId}/picks`, data),
+  withdrawPick: (pickId) => api.delete(`/locks/picks/${pickId}`),
+  opsMe: () => api.get("/locks/ops/me"),
+  opsBoard: () => api.get("/locks/ops/board"),
+  createZone: (data) => api.post("/locks/ops/zones", data),
+  updateZone: (id, data) => api.patch(`/locks/ops/zones/${id}`, data),
+  createProduct: (data) => api.post("/locks/ops/products", data),
+  updateProduct: (id, isActive) => api.patch(`/locks/ops/products/${id}`, { is_active: isActive }),
+  upsertOffer: (data) => api.post("/locks/ops/offers", data),
+  updateOffer: (id, isActive) => api.patch(`/locks/ops/offers/${id}`, { is_active: isActive }),
+  createWindow: (data) => api.post("/locks/ops/windows", data),
+  closeWindow: (id) => api.post(`/locks/ops/windows/${id}/close`),
+  addQuote: (clusterId, data) => api.post(`/locks/ops/clusters/${clusterId}/quotes`, data),
+  selectQuote: (clusterId, quoteId) => api.post(`/locks/ops/clusters/${clusterId}/select/${quoteId}`),
+};
+
+// ── Governance, appeals, transparent rules and non-cash benefits ─────────────
+export const governanceAPI = {
+  proposals: (params) => api.get("/governance/proposals", { params: noEmpty(params) }),
+  proposal: (id) => api.get(`/governance/proposals/${id}`),
+  createProposal: (data) => api.post("/governance/proposals", data),
+  vote: (id, vote) => api.post(`/governance/proposals/${id}/votes`, { vote }),
+  results: (id) => api.get(`/governance/proposals/${id}/results`),
+  council: (zoneId) => api.get("/governance/council", { params: noEmpty({ zone_id: zoneId }) }),
+  scoreRules: () => api.get("/governance/rules/biashara-score"),
+  myScore: () => api.get("/governance/score/me"),
+  myBenefits: () => api.get("/governance/benefits/me"),
+  allocationPolicy: () => api.get("/governance/benefits/allocation-policy"),
+  consents: () => api.get("/governance/consents"),
+  setConsent: (purpose, data) => api.put(`/governance/consents/${purpose}`, data),
+  submitAppeal: (data) => api.post("/governance/appeals", data),
+  myAppeals: () => api.get("/governance/appeals/me"),
+  opsAppeals: (status) => api.get("/governance/ops/appeals", { params: noEmpty({ status }) }),
+  resolveAppeal: (id, data) => api.post(`/governance/ops/appeals/${id}/resolve`, data),
+  audit: (limit = 100) => api.get("/governance/ops/audit", { params: { limit } }),
+  approvals: () => api.get("/governance/ops/approvals"),
+  requestPolicy: (data) => api.post("/governance/ops/allocation-policy-requests", data),
+  requestScoreRules: (data) => api.post("/governance/ops/rule-version-requests", data),
+  decideApproval: (id, data) => api.post(`/governance/ops/approvals/${id}/decision`, data),
+  recordRevenue: (data) => api.post("/governance/ops/revenue-events", data),
+  recordBenefitEvent: (data) => api.post("/governance/ops/benefit-events", data),
+  calculateBenefitPeriod: (data) => api.post("/governance/ops/benefit-periods/calculate", data),
+  createCouncilTerm: (data) => api.post("/governance/ops/council-terms", data),
+  recallCouncilTerm: (id, data) => api.post(`/governance/ops/council-terms/${id}/recall`, data),
 };
 
 // ── Tools ──────────────────────────────────────────────────────────────────

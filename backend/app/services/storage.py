@@ -5,7 +5,9 @@ File storage abstraction (Directive v2.1 §2.4).
     await storage.delete(url)
 
 S3 (or any S3-compatible endpoint — MinIO, R2, Spaces) when S3_BUCKET is set;
-otherwise local files under UPLOAD_DIR, which main.py serves at /static.
+otherwise ordinary files go under UPLOAD_DIR, which main.py serves at /static.
+Voice notes use a separate private directory or private S3 objects and are
+returned only through the authenticated chat playback route.
 
 Keys are `uploads/<uuid>/<safe-filename>`: unguessable, so the public URL is
 the access control — the same model a spec-sheet link needs when a patron on
@@ -32,7 +34,17 @@ ALLOWED_TYPES = {
     ".gif": "image/gif",
     ".csv": "text/csv",
 }
+VOICE_TYPES = {
+    "audio/webm": ".webm",
+    "audio/ogg": ".ogg",
+    "audio/mp4": ".m4a",
+    "audio/aac": ".aac",
+    "audio/mpeg": ".mp3",
+    "audio/wav": ".wav",
+    "audio/x-wav": ".wav",
+}
 _SAFE = re.compile(r"[^A-Za-z0-9._-]+")
+_VOICE_KEY = re.compile(r"^voice-notes/[0-9a-f-]{36}\.(webm|ogg|m4a|aac|mp3|wav)$")
 
 
 class StorageError(Exception):
@@ -73,6 +85,16 @@ class StorageService:
         return "s3" if self.use_s3 else "local"
 
     @property
+    def voice_root(self) -> Path:
+        return Path(settings.VOICE_UPLOAD_DIR).resolve()
+
+    def _ensure_voice_root_private(self) -> None:
+        # Prevent a configuration typo from placing supposedly private voice
+        # files underneath the directory mounted publicly at /static (or vice versa).
+        if self.voice_root == self.local_root or self.voice_root in self.local_root.parents or self.local_root in self.voice_root.parents:
+            raise StorageError("VOICE_UPLOAD_DIR must be separate from the public UPLOAD_DIR")
+
+    @property
     def s3(self):
         if self._s3 is None:
             try:
@@ -110,6 +132,64 @@ class StorageService:
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(file_bytes)
         return self.public_url(key)
+
+    async def upload_voice(self, file_bytes: bytes, content_type: str) -> str:
+        """Save a chat recording privately and return its opaque storage key.
+
+        Unlike ordinary product uploads, voice notes never receive a public URL
+        or the shared uploads ACL; reads go through the room-authorized API.
+        """
+        mime = (content_type or "").split(";", 1)[0].strip().lower()
+        ext = VOICE_TYPES.get(mime)
+        if not ext:
+            raise StorageError("Unsupported audio format")
+        key = f"voice-notes/{uuid.uuid4()}{ext}"
+        if self.use_s3:
+            # Intentionally omit ACL: audio remains private even when regular
+            # product assets are configured for public-read.
+            self.s3.put_object(
+                Bucket=self.bucket, Key=key, Body=file_bytes, ContentType=mime,
+                CacheControl="private, no-store",
+            )
+        else:
+            self._ensure_voice_root_private()
+            path = self.voice_root / key
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(file_bytes)
+        return key
+
+    async def read_voice(self, key: str) -> tuple[bytes, str]:
+        """Read one validated voice key. Never accept arbitrary object paths."""
+        if not key or not _VOICE_KEY.fullmatch(key):
+            raise StorageError("Invalid voice note key")
+        ext = Path(key).suffix
+        mime = next((mime for mime, suffix in VOICE_TYPES.items() if suffix == ext), "application/octet-stream")
+        if self.use_s3:
+            obj = self.s3.get_object(Bucket=self.bucket, Key=key)
+            return obj["Body"].read(), mime
+        self._ensure_voice_root_private()
+        path = (self.voice_root / key).resolve()
+        if self.voice_root not in path.parents:
+            raise StorageError("Invalid voice note path")
+        try:
+            return path.read_bytes(), mime
+        except FileNotFoundError as exc:
+            raise StorageError("Voice note not found") from exc
+
+    async def delete_voice(self, key: str) -> None:
+        """Best-effort rollback helper for an upload whose DB write failed."""
+        if not key or not _VOICE_KEY.fullmatch(key):
+            return
+        try:
+            if self.use_s3:
+                self.s3.delete_object(Bucket=self.bucket, Key=key)
+            else:
+                self._ensure_voice_root_private()
+                path = (self.voice_root / key).resolve()
+                if self.voice_root in path.parents:
+                    path.unlink(missing_ok=True)
+        except Exception:  # pragma: no cover - storage may be temporarily unavailable
+            log.warning("could not delete private voice note %s", key)
 
     def _key_from_url(self, url: str) -> Optional[str]:
         if not url:

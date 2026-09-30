@@ -20,7 +20,8 @@ there are the vendors who move it between each other.
 | **Parasitism engine** | Live score per vendor: fulfilment rate 40 % · reciprocity 30 % · network contribution 20 % · reliability 10 %, recomputed on every movement and nightly. Pair scores still feed the dashboard's "strongest links" and the `/graph`. |
 | **Patrons & Vendor Lists** | Any vendor can become a patron (starter → established → mogul → legend, promoted automatically by vendors sponsored, events run and reputation) and run curated lists with registration, approval, capacity and entry criteria. Groups can create lists without a patron. |
 | **Vendor Groups & collective sourcing** | niche / regional / trade / sourcing / event / open groups with roles, approval and an auto-created chat room. Members pool an order: open a collective request, pledge units, the organiser moves it `gathering → quota_met → negotiating → ordered → fulfilled`. |
-| **Chat** | group, vendor-list, deal, direct and open niche-topic rooms. Messages go over HTTP; a receive-only WebSocket broadcasts them (Redis fan-out across workers). Share a stock item straight into a room. |
+| **Daily Flash Locks** | Named market zones, a once-per-30-days vendor zone selection, canonical products, spotter-entered supplier MOQs and daily 15:00–20:00 EAT pick windows. SQL sums demand by product + zone; `ceil(MOQ × 0.85)` qualifies a cluster to bid. Unmet clusters roll once, then dissolve. Negotiators record supplier quotes at the exact pooled volume; a human negotiator compares them and selects the supplier. |
+| **Chat** | group, vendor-list, deal, direct and open niche-topic rooms. Messages go over HTTP; a receive-only WebSocket broadcasts them (Redis fan-out across workers). Share stock or send a previewable voice note (up to 15 seconds) straight into a room; voice audio is fetched only on tap and served through room-authorized endpoints. |
 | **Vendor Tools & couriers** | warehouse, cold storage, transport, courier, pop-up shop, hotel sourcing, equipment, packaging. Courier registration, warehouse booking, and **shipments**: book a courier for a movement, tracking number, forward-only status history, receiver rating. |
 | **Events** | market days, sourcing trips, trade fairs — capacity, fee, requirements, optionally scoped to a list or group. Vendors **check in** on the day (or the organiser does it at the door); organisers get fill rate, attendance and category analytics. |
 | **Notifications** | Every consequential action (sourcing steps, deals, list/group decisions, collective progress, shipments, reviews, bookings, routes, low stock, verification, promotions) lands in the bell — `GET /notifications`, polled every 30 s by the UI. |
@@ -162,6 +163,10 @@ POST /vendor-lists/create  /{id}/register  /{id}/approve/{vendor}  GET /vendor-l
 POST /groups/create  /{id}/join  /{id}/create-vendor-list           GET /groups/browse  /mine  /{id}  /{id}/members
 POST /collective/create  /{id}/pledge  /{id}/withdraw  /{id}/status   GET /collective?group_id=  /collective/{id}
 POST /chat/niche-topic  /chat/direct/{vendor}  /chat/deal/{stock}  /chat/{room}/message
+GET  /locks/me  /locks/zones  POST /locks/me/zone  POST /locks/windows/{id}/picks
+GET  /locks/ops/board   POST /locks/ops/{zones|products|offers|windows}  POST /locks/ops/clusters/{id}/quotes
+POST /chat/{room}/voice (multipart audio + duration_seconds; max 15s / 512 KiB)
+GET  /chat/{room}/voice/{message} (authenticated room member only)
 POST /chat/{room}/deals/{message}/{accept|counter|decline}
 GET  /chat/rooms  /chat/{room}/messages       WS /chat/{room}/ws?token=<jwt>   (frames: hello · message · message_update)
 POST /tools/list  /tools/courier/register  /tools/{id}/book-warehouse   GET /tools/browse  /mine  /couriers
@@ -199,9 +204,18 @@ limiter, login guard and single-process WebSocket fan-out (fine for one
 worker). `S3_BUCKET` empty → uploads land in `UPLOAD_DIR` and are served at
 `/static`; set it (plus `S3_ENDPOINT` for R2 / MinIO / Spaces) to use a bucket.
 `RUN_SCHEDULER=false` on the API when you run `python -m app.worker`
-separately. `AUTO_CREATE_TABLES=false` in production — migrations own the schema
+separately. Chat voice notes are capped by `VOICE_MAX_SECONDS` (15) and
+`VOICE_MAX_BYTES` (512 KiB); local files use `VOICE_UPLOAD_DIR`, separate from
+public `/static`. S3 voice objects omit public ACLs and are streamed only to
+room members, so configure the bucket itself as private. Voice notes are not
+transcribed in this release. Daily Flash staff access is allow-listed with
+`MARKET_OPS_ROLES=admin:handle,clerk:handle,spotter:handle,negotiator:handle`;
+set real, registered vendor handles to expose the staff desk. Supplier MOQs are
+entered from human-verified price sheets. Lock quotes do not move money; PSP,
+deposits, escrow and supplier settlement are deliberately not implemented.
+`AUTO_CREATE_TABLES=false` in production — migrations own the schema
 (`alembic upgrade head`; `0002_v21_upgrade` carries the v2.1 features,
-`0003_v22_marketplace` the reviews, bookings and route-plan tables).
+`0003_v22_marketplace` the reviews, bookings and route-plan tables, and `0004_market_locks` the Daily Flash schema).
 `METRICS_ENABLED=false` removes the timing middleware entirely; `METRICS_TOKEN`
 gates `/api/metrics` behind `?token=` or a bearer token;
 `SLOW_REQUEST_MS` (1000) is the threshold `/ops/slow` lists against;

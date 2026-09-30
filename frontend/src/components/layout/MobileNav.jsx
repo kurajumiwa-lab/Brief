@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { Home, Package, MessageSquare, Users, MoreHorizontal } from "lucide-react";
+import { Home, Package, MessageSquare, ShoppingBasket, MoreHorizontal } from "lucide-react";
 import { useUIStore } from "@/stores/uiStore";
 import { cn } from "@/lib/utils";
 
@@ -7,7 +7,7 @@ const TABS = [
   { to: "/", label: "Home", icon: Home, end: true },
   { to: "/stock", label: "Stock", icon: Package },
   { to: "/chat", label: "Chat", icon: MessageSquare },
-  { to: "/groups", label: "Groups", icon: Users },
+  { to: "/locks", label: "Locks", icon: ShoppingBasket },
 ];
 
 export default function MobileNav() {

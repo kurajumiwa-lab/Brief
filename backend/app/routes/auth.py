@@ -2,6 +2,7 @@ import re
 import uuid
 from datetime import datetime, timedelta
 from typing import Optional
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -9,10 +10,12 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 from pydantic import BaseModel, EmailStr, Field, field_validator
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.database import get_db
+from app.models.governance import VendorActivityDay
 from app.models.vendor import Vendor, VendorProfile, VendorRole
 from app.services import login_guard
 
@@ -137,10 +140,21 @@ async def get_current_vendor(
     if vendor is None:
         raise credentials_exception
 
-    # Update last active, at most once a minute so reads stay reads.
+    # Governance activity eligibility is distinct-day based, not request-volume
+    # based. Postgres uniqueness makes repeated reads/votes in one local day count once.
     now = datetime.utcnow()
-    if not vendor.last_active or (now - vendor.last_active).total_seconds() > 60:
+    local_day = datetime.now(ZoneInfo("Africa/Nairobi")).date()
+    inserted = await db.execute(
+        pg_insert(VendorActivityDay)
+        .values(vendor_id=vendor.id, local_day=local_day, created_at=now)
+        .on_conflict_do_nothing(index_elements=["vendor_id", "local_day"])
+        .returning(VendorActivityDay.id)
+    )
+    activity_added = inserted.scalar_one_or_none() is not None
+    last_active_changed = not vendor.last_active or (now - vendor.last_active).total_seconds() > 60
+    if last_active_changed:
         vendor.last_active = now
+    if activity_added or last_active_changed:
         await db.commit()
     return vendor
 
