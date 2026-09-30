@@ -95,6 +95,20 @@ export const useChatStore = create((set, get) => ({
     }
   },
 
+  sendVoice: async (blob, durationSeconds) => {
+    const room = get().activeRoom;
+    if (!room) return null;
+    set({ sending: true });
+    try {
+      const { data } = await chatAPI.sendVoice(room.id, blob, durationSeconds);
+      const sent = data?.sent || null;
+      if (sent) get().pushMessage(sent);
+      return sent;
+    } finally {
+      set({ sending: false });
+    }
+  },
+
   joinRoom: async (roomId) => {
     const { data } = await chatAPI.join(roomId);
     set((s) => ({ rooms: s.rooms.map((r) => (r.id === roomId ? { ...r, joined: true } : r)) }));

@@ -43,6 +43,7 @@ const iconFor = (type = "") => {
 /** Where a notification leads. Room-specific data wins over the type default. */
 export function routeFor(n) {
   const d = n.data || {};
+  if (d.market_lock_cluster_id || d.window_id && d.zone_id) return "/locks";
   if (d.room_id) return `/chat?room=${d.room_id}`;
   if (d.group_id && n.type?.startsWith("collective")) return `/groups?tab=mine&group=${d.group_id}&panel=collective`;
   if (d.group_id) return `/groups?tab=mine&group=${d.group_id}`;

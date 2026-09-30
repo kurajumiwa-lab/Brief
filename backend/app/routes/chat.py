@@ -2,10 +2,12 @@ import asyncio
 import json
 import logging
 from datetime import datetime, timedelta
+import math
 from typing import Dict, List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, WebSocket, WebSocketDisconnect
+from fastapi.responses import Response
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,6 +23,7 @@ from app.models.vendor import Vendor
 from app.models.vendor_list import VendorListMembership
 from app.routes.auth import get_current_vendor, vendor_id_from_token
 from app.services import notification_service, stock_engine
+from app.services.storage import StorageError, VOICE_TYPES, storage
 
 router = APIRouter()
 log = logging.getLogger("brief.chat")
@@ -253,12 +256,20 @@ async def _participant_ids(db: AsyncSession, room: ChatRoom) -> list[UUID]:
 
 
 def _message_out(m: ChatMessage, v: Vendor, shared_stock: Optional[dict]) -> dict:
+    # A private object key is stored alongside the voice metadata for the
+    # authenticated playback endpoint, but must never leave the API response.
+    attachments = []
+    for attachment in m.attachments or []:
+        if isinstance(attachment, dict) and attachment.get("kind") == "voice":
+            attachments.append({k: value for k, value in attachment.items() if k != "storage_key"})
+        else:
+            attachments.append(attachment)
     return MessageOut(
         id=str(m.id), room_id=str(m.room_id), sender_id=str(v.id),
         sender_handle=v.vendor_handle, sender_business=v.business_name,
         content=m.content, message_type=m.message_type,
         shared_stock=shared_stock, deal_data=m.deal_data,
-        attachments=m.attachments or [], is_pinned=m.is_pinned, sent_at=m.sent_at.isoformat(),
+        attachments=attachments, is_pinned=m.is_pinned, sent_at=m.sent_at.isoformat(),
     ).model_dump()
 
 
@@ -514,6 +525,103 @@ async def send_message(
     payload = _message_out(msg, vendor, await _stock_snippet(db, shared_id))
     await manager.broadcast(str(room_id), {"type": "message", "message": payload})
     return {"message": "Sent", "message_id": str(msg.id), "sent": payload}
+
+
+@router.post("/{room_id}/voice", status_code=201)
+async def send_voice_note(
+    room_id: UUID,
+    file: UploadFile = File(...),
+    duration_seconds: float = Form(...),
+    vendor: Vendor = Depends(get_current_vendor),
+    db: AsyncSession = Depends(get_db),
+):
+    """Upload a short voice note into an existing vendor chat room."""
+    room = await _get_room_for(db, room_id, vendor)
+    if room.room_type == ChatRoomType.NICHE_TOPIC:
+        joined = (await db.execute(select(chat_room_participants.c.vendor_id).where(
+            chat_room_participants.c.room_id == room.id, chat_room_participants.c.vendor_id == vendor.id,
+        ))).first()
+        if not joined:
+            raise HTTPException(403, "Join this topic before posting")
+    if not math.isfinite(duration_seconds) or not 0 < duration_seconds <= settings.VOICE_MAX_SECONDS:
+        raise HTTPException(400, f"Voice notes must be between 0 and {settings.VOICE_MAX_SECONDS} seconds")
+
+    mime_type = (file.content_type or "").split(";", 1)[0].strip().lower()
+    if mime_type not in VOICE_TYPES:
+        raise HTTPException(415, "Unsupported audio format. Record as WebM, Ogg, MP4, AAC, MP3 or WAV.")
+    data = await file.read(settings.VOICE_MAX_BYTES + 1)
+    if not data:
+        raise HTTPException(400, "Voice note is empty")
+    if len(data) > settings.VOICE_MAX_BYTES:
+        raise HTTPException(413, f"Voice note is larger than {settings.VOICE_MAX_BYTES // 1024} KB")
+
+    try:
+        storage_key = await storage.upload_voice(data, mime_type)
+    except StorageError as exc:
+        raise HTTPException(503, str(exc))
+    except Exception as exc:  # bucket or disk misconfiguration
+        log.error("voice upload failed (%s)", type(exc).__name__)
+        raise HTTPException(503, "Voice storage is temporarily unavailable")
+
+    msg = ChatMessage(
+        room_id=room_id, sender_id=vendor.id, content="", message_type="voice",
+        attachments=[{
+            "kind": "voice", "storage_key": storage_key, "content_type": mime_type,
+            "duration_seconds": round(duration_seconds, 1), "size_bytes": len(data),
+        }],
+    )
+    db.add(msg)
+    room.message_count += 1
+    if room.room_type == ChatRoomType.GROUP and room.group_id:
+        gm = (await db.execute(select(GroupMembership).where(
+            GroupMembership.group_id == room.group_id, GroupMembership.vendor_id == vendor.id,
+        ))).scalars().first()
+        if gm:
+            gm.messages_sent += 1
+        group = await db.get(VendorGroup, room.group_id)
+        if group is not None:
+            group.message_count += 1
+    try:
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        await storage.delete_voice(storage_key)
+        raise
+    await db.refresh(msg)
+
+    payload = _message_out(msg, vendor, None)
+    await manager.broadcast(str(room_id), {"type": "message", "message": payload})
+    return {"message": "Voice note sent", "message_id": str(msg.id), "sent": payload}
+
+
+@router.get("/{room_id}/voice/{message_id}")
+async def get_voice_note(
+    room_id: UUID,
+    message_id: UUID,
+    vendor: Vendor = Depends(get_current_vendor),
+    db: AsyncSession = Depends(get_db),
+):
+    """Stream a clip only to a vendor who can read the chat room."""
+    await _get_room_for(db, room_id, vendor)
+    msg = await db.get(ChatMessage, message_id)
+    if not msg or msg.room_id != room_id or msg.message_type != "voice":
+        raise HTTPException(404, "Voice note not found")
+    attachment = next((a for a in (msg.attachments or []) if isinstance(a, dict) and a.get("kind") == "voice"), None)
+    storage_key = attachment.get("storage_key") if attachment else None
+    if not storage_key:
+        raise HTTPException(404, "Voice note not found")
+    try:
+        content, content_type = await storage.read_voice(storage_key)
+    except StorageError:
+        raise HTTPException(404, "Voice note not found")
+    except Exception as exc:
+        log.error("voice playback failed (%s)", type(exc).__name__)
+        raise HTTPException(503, "Voice storage is temporarily unavailable")
+    extension = storage_key.rsplit(".", 1)[-1]
+    return Response(content=content, media_type=content_type, headers={
+        "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff",
+        "Content-Disposition": f'inline; filename="voice-note.{extension}"',
+    })
 
 
 # --- deal protocol (v2.1 §4.1 / §4.2) -----------------------------------------------------

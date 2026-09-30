@@ -1,5 +1,5 @@
 import { NavLink, Link } from "react-router-dom";
-import { LayoutDashboard, Package, Network, ListChecks, Users, MessageSquare, Wrench, CalendarDays, Plug, LogOut, PanelLeftClose, PanelLeftOpen, Crown, BarChart3, Gauge } from "lucide-react";
+import { LayoutDashboard, Package, Network, ListChecks, Users, MessageSquare, Wrench, CalendarDays, Plug, LogOut, PanelLeftClose, PanelLeftOpen, Crown, BarChart3, Gauge, ShoppingBasket, Vote } from "lucide-react";
 import Avatar from "@/components/ui/Avatar";
 import RoleSwitcher from "@/components/vendor/RoleSwitcher";
 import { useAuthStore } from "@/stores/authStore";
@@ -14,6 +14,8 @@ export const NAV = [
   { to: "/lists", label: "Vendor Lists", icon: ListChecks },
   { to: "/groups", label: "Groups", icon: Users },
   { to: "/chat", label: "Chat", icon: MessageSquare },
+  { to: "/locks", label: "Market Locks", icon: ShoppingBasket },
+  { to: "/governance", label: "Our Network", icon: Vote },
   { to: "/tools", label: "Tools", icon: Wrench },
   { to: "/events", label: "Events", icon: CalendarDays },
   { to: "/pos", label: "POS Bridge", icon: Plug },

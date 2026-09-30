@@ -34,7 +34,7 @@ _UUID_RE = re.compile(r"/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F
 # the rest but collapse the tail so ids don't explode the label space.
 _KNOWN_PREFIXES = (
     "/api/auth", "/api/vendors", "/api/stock", "/api/vendor-lists", "/api/groups", "/api/chat",
-    "/api/tools", "/api/events", "/api/pos", "/api/notifications", "/api/files", "/api/collective",
+    "/api/tools", "/api/events", "/api/pos", "/api/notifications", "/api/files", "/api/collective", "/api/locks", "/api/governance",
     "/api/analytics", "/api/metrics", "/api/ops", "/api/health",
 )
 

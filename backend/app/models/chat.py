@@ -68,7 +68,7 @@ class ChatMessage(Base):
     sender_id = Column(UUID(as_uuid=True), ForeignKey('vendors.id'), nullable=False)
 
     content = Column(Text, nullable=False)
-    message_type = Column(String(50), default="text", nullable=False)  # text, stock_share, deal_proposal, image
+    message_type = Column(String(50), default="text", nullable=False)  # text, stock_share, deal_proposal, image, voice
 
     # If sharing stock item
     shared_stock_id = Column(UUID(as_uuid=True), ForeignKey('stock_items.id'), nullable=True)

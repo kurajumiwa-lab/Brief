@@ -9,6 +9,8 @@ import Network from "@/pages/network/Network";
 import VendorLists from "@/pages/lists/VendorLists";
 import Groups from "@/pages/groups/Groups";
 import ChatPage from "@/pages/chat/ChatPage";
+import MarketLocks from "@/pages/locks/MarketLocks";
+import OurNetwork from "@/pages/governance/OurNetwork";
 import ToolsPage from "@/pages/tools/ToolsPage";
 import EventsPage from "@/pages/events/EventsPage";
 import POSBridge from "@/pages/pos/POSBridge";
@@ -52,6 +54,8 @@ export default function App() {
         <Route path="/lists" element={<VendorLists />} />
         <Route path="/groups" element={<Groups />} />
         <Route path="/chat" element={<ChatPage />} />
+        <Route path="/locks" element={<MarketLocks />} />
+        <Route path="/governance" element={<OurNetwork />} />
         <Route path="/tools" element={<ToolsPage />} />
         <Route path="/events" element={<EventsPage />} />
         <Route path="/pos" element={<POSBridge />} />

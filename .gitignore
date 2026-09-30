@@ -26,4 +26,5 @@ frontend/coverage/
 
 # local uploads (S3_BUCKET unset) and shop-side POS exports
 backend/static/
+backend/voice_uploads/
 pos-data/

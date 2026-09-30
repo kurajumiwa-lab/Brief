@@ -227,10 +227,12 @@ async def housekeeping(session_factory) -> None:
     """The other timed jobs of a single-container deploy (v2.1): lapse
     unconfirmed stock holds and send event reminders. Each in its own
     transaction so one failure does not block the other."""
-    from app.services import notification_service, stock_engine
+    from app.services import governance, market_locks, notification_service, stock_engine
 
     for name, job in (("hold expiry", stock_engine.expire_stale_holds),
-                      ("event reminders", notification_service.send_event_reminders)):
+                      ("event reminders", notification_service.send_event_reminders),
+                      ("market lock windows", market_locks.process_due_windows_in_session),
+                      ("governance proposals", governance.process_due_proposals)):
         try:
             async with session_factory() as db:
                 n = await job(db)

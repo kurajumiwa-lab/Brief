@@ -3,6 +3,7 @@ import { Pin } from "lucide-react";
 import Avatar from "@/components/ui/Avatar";
 import StockShare from "./StockShare";
 import DealProposalCard from "./DealProposalCard";
+import VoiceNote from "./VoiceNote";
 import { timeOnly } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 
@@ -42,6 +43,7 @@ export default function MessageBubble({ message: m, mine, showHeader = true }) {
           {m.content && <p className="whitespace-pre-wrap">{m.content}</p>}
           {m.message_type === "stock_share" && <StockShare stock={m.shared_stock} mine={mine} />}
           {m.message_type === "deal_proposal" && <DealProposalCard message={m} mine={mine} />}
+          {m.message_type === "voice" && <VoiceNote message={m} mine={mine} />}
         </div>
       </div>
     </div>

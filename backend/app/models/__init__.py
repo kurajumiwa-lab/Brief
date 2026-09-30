@@ -18,6 +18,13 @@ from app.models.pos_bridge import POSConnection, POSSyncLog
 from app.models.notification import Notification, NotificationType
 from app.models.performance import VendorPerformance
 from app.models.collective import CollectiveSourcingRequest, CollectivePledge
+from app.models.market_locks import MarketZone, LockProduct, SupplierMOQ, LockWindow, LockCluster, LockPick, SupplierQuote
+from app.models.governance import (
+    VendorActivityDay, GovernanceProposal, GovernanceVote, CouncilTerm, RuleVersion,
+    BiasharaScoreEvent, GovernanceAuditEvent, DualApprovalRequest, RevenueEvent,
+    AllocationPolicy, BenefitPeriod, NetworkBenefitEvent, VendorBenefitAllocation,
+    VendorCreditLedger, VendorAppeal, VendorDataConsent,
+)
 
 __all__ = [
     "Vendor", "VendorProfile", "VendorRole", "vendor_connections",
@@ -34,4 +41,9 @@ __all__ = [
     "POSConnection", "POSSyncLog",
     "Notification", "NotificationType",
     "VendorPerformance", "CollectiveSourcingRequest", "CollectivePledge",
+    "MarketZone", "LockProduct", "SupplierMOQ", "LockWindow", "LockCluster", "LockPick", "SupplierQuote",
+    "VendorActivityDay", "GovernanceProposal", "GovernanceVote", "CouncilTerm", "RuleVersion",
+    "BiasharaScoreEvent", "GovernanceAuditEvent", "DualApprovalRequest", "RevenueEvent",
+    "AllocationPolicy", "BenefitPeriod", "NetworkBenefitEvent", "VendorBenefitAllocation",
+    "VendorCreditLedger", "VendorAppeal", "VendorDataConsent",
 ]

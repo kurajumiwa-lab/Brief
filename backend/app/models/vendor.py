@@ -44,6 +44,8 @@ class Vendor(Base):
     vendor_handle = Column(String(100), unique=True, nullable=False, index=True)  # @handle
     email = Column(String(255), unique=True, nullable=False, index=True)
     phone = Column(String(20))
+    phone_verified_at = Column(DateTime, nullable=True)  # Set only by a real verification flow/provider.
+    fraud_suspended_at = Column(DateTime, nullable=True)  # Eligibility block after reviewed fraud finding.
     password_hash = Column(String(255), nullable=False)
 
     # Vendor Nature
@@ -51,6 +53,8 @@ class Vendor(Base):
     business_categories = Column(JSONB, default=list)  # ["electronics", "textiles"]
     business_description = Column(Text)
     physical_location = Column(String(500))
+    market_zone_id = Column(UUID(as_uuid=True), ForeignKey("market_zones.id", ondelete="SET NULL"), nullable=True, index=True)
+    market_zone_changed_at = Column(DateTime, nullable=True)
     geo_lat = Column(Float)
     geo_lng = Column(Float)
 
