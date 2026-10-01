@@ -2,9 +2,9 @@ import { cn } from "@/lib/utils";
 
 export default function EmptyState({ icon: Icon, title, description, action, className, compact }) {
   return (
-    <div className={cn("flex flex-col items-center justify-center text-center rounded-xl border border-dashed border-edge-2 bg-surface-1/40", compact ? "py-8 px-4" : "py-16 px-6", className)}>
+    <div className={cn("flex flex-col items-center justify-center text-center rounded-2xl glass", compact ? "py-8 px-4" : "py-16 px-6", className)}>
       {Icon && (
-        <div className="w-11 h-11 rounded-xl bg-surface-3 border border-edge-2 flex items-center justify-center text-ink-4 mb-3">
+        <div className="w-11 h-11 rounded-xl bg-white/[0.06] flex items-center justify-center text-ink-4 mb-3 shadow-glass">
           <Icon size={20} />
         </div>
       )}

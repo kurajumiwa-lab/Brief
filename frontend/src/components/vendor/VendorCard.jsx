@@ -1,10 +1,9 @@
 import { Link, useNavigate } from "react-router-dom";
-import { MapPin, MessageSquare, ShieldCheck, Crown, Plug, Gauge } from "lucide-react";
+import { MapPin, MessageSquare, ShieldCheck, Crown, Plug, Gauge, Leaf } from "lucide-react";
 import Card from "@/components/ui/Card";
 import Avatar from "@/components/ui/Avatar";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
-import ParasitismBadge from "./ParasitismBadge";
 import ConnectionButton from "./ConnectionButton";
 import { ROLE_BADGE, VENDOR_ROLES } from "@/config/constants";
 import { useChatStore } from "@/stores/chatStore";
@@ -99,12 +98,14 @@ export default function VendorCard({ vendor, compact = false, reasons, footer })
           <span>{num(vendor.total_supplied || 0)} supplied · {num(vendor.total_sourced || 0)} sourced</span>
         </div>
       )}
-      {!compact && (vendor.movements_completed > 0 || vendor.reliability_score > 0) && (
-        <ReliabilityChip rate={vendor.fulfillment_rate} score={vendor.reliability_score} completed={vendor.movements_completed} />
-      )}
-
       <div className="flex items-center justify-between gap-2 mt-auto pt-1">
-        <ParasitismBadge index={vendor.parasitism_index ?? vendor.parasitism_score ?? 0} showValue={!compact} />
+        {vendor.fulfillment_rate != null || vendor.movements_completed > 0 ? (
+          <ReliabilityChip rate={vendor.fulfillment_rate} score={vendor.reliability_score} completed={vendor.movements_completed} />
+        ) : (
+          <Badge variant="gray" size="xs" title="Fulfilment appears after your first completed movements">
+            <Leaf size={10} /> New to the network
+          </Badge>
+        )}
         <div className="flex items-center gap-1.5">
           <Button size="xs" variant="ghost" icon={MessageSquare} onClick={message} aria-label={`Message @${vendor.vendor_handle}`} />
           <ConnectionButton vendor={{ ...vendor, id }} size="xs" />

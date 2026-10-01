@@ -50,7 +50,7 @@ export default function MovementRow({ movement: m }) {
   const actions = movementActions(m);
 
   return (
-    <div className="rounded-xl border border-edge-1 bg-surface-1 p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center gap-3 animate-fade-in">
+    <div className="glass rounded-xl p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center gap-3 animate-fade-in glass-hover">
       <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center shrink-0", incoming ? "bg-blue-950/60 text-blue-300" : "bg-amber-950/60 text-amber-300")} title={incoming ? "Incoming — you are sourcing" : "Outgoing — you are supplying"}>
         {incoming ? <ArrowDownLeft size={16} /> : <ArrowUpRight size={16} />}
       </div>

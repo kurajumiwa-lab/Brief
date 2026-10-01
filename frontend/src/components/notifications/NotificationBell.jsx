@@ -25,6 +25,21 @@ const ICONS = {
   system: Info,
 };
 
+const TONES = {
+  source: "text-amber-300 bg-amber-500/10",
+  deal: "text-brand-300 bg-brand-500/10",
+  group: "text-purple-300 bg-purple-500/10",
+  list: "text-brand-300 bg-brand-500/10",
+  collective: "text-blue-300 bg-blue-500/10",
+  event: "text-purple-300 bg-purple-500/10",
+  stock_low: "text-amber-300 bg-amber-500/10",
+  stock_verified: "text-brand-300 bg-brand-500/10",
+  parasitism: "text-brand-300 bg-brand-500/10",
+  patron: "text-amber-300 bg-amber-500/10",
+  shipment: "text-blue-300 bg-blue-500/10",
+  system: "text-ink-3 bg-white/[0.06]",
+};
+
 const iconFor = (type = "") => {
   if (type.startsWith("source_")) return ICONS.source;
   if (type.startsWith("deal_")) return ICONS.deal;
@@ -38,6 +53,21 @@ const iconFor = (type = "") => {
   if (type === "patron_promotion") return ICONS.patron;
   if (type === "shipment_update") return ICONS.shipment;
   return ICONS.system;
+};
+
+const toneFor = (type = "") => {
+  if (type.startsWith("source_")) return TONES.source;
+  if (type.startsWith("deal_")) return TONES.deal;
+  if (type.startsWith("group_")) return TONES.group;
+  if (type.startsWith("list_")) return TONES.list;
+  if (type.startsWith("collective")) return TONES.collective;
+  if (type.startsWith("event_")) return TONES.event;
+  if (type === "stock_low") return TONES.stock_low;
+  if (type === "stock_verified") return TONES.stock_verified;
+  if (type === "parasitism_milestone") return TONES.parasitism;
+  if (type === "patron_promotion") return TONES.patron;
+  if (type === "shipment_update") return TONES.shipment;
+  return TONES.system;
 };
 
 /** Where a notification leads. Room-specific data wins over the type default. */
@@ -54,14 +84,16 @@ export function routeFor(n) {
 }
 
 /**
- * Top-bar bell (v2.1). Polls the unread count every 30s, loads the list when
- * opened, marks a notification read when it is clicked and follows it.
+ * Top-bar bell (v2.1, restyled v2.7). Polls the unread count, loads the list
+ * when opened, marks a notification read when it is clicked and follows it.
+ * v2.7: borderless glass panel, tinted icon tiles, pulsing count chip.
  */
 export default function NotificationBell({ pollMs = 30_000 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const navigate = useNavigate();
-  const { notifications, unreadCount, loading, loaded, fetch, markRead, markAllRead, startPolling, stopPolling } = useNotificationStore();
+  const { notifications, unreadCount, loading, loaded, fetch, markRead, markAllRead, startPolling, stopPolling } =
+    useNotificationStore();
 
   useEffect(() => {
     startPolling(pollMs);
@@ -95,22 +127,32 @@ export default function NotificationBell({ pollMs = 30_000 }) {
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen((o) => !o)}
-        className={cn("relative p-2 rounded-lg text-ink-3 hover:text-ink-1 hover:bg-surface-3", open && "bg-surface-3 text-ink-1")}
+        className={cn(
+          "relative p-2 rounded-xl text-ink-3 hover:text-ink-1 hover:bg-white/5 transition-colors",
+          open && "bg-white/[0.08] text-ink-1"
+        )}
         aria-label={unreadCount ? `${unreadCount} unread notifications` : "Notifications"}
         aria-expanded={open}
         title="Notifications"
       >
         <Bell size={17} />
         {unreadCount > 0 && (
-          <span className="absolute top-1 right-1 min-w-[1rem] h-4 px-1 rounded-full bg-brand-500 text-surface-0 text-2xs font-bold flex items-center justify-center" data-testid="unread-badge">
+          <span
+            className="absolute top-0.5 right-0.5 min-w-[1rem] h-4 px-1 rounded-full bg-brand-500 text-white text-2xs font-bold flex items-center justify-center shadow-[0_0_10px_rgba(34,168,103,0.7)]"
+            data-testid="unread-badge"
+          >
             {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-[22rem] max-w-[calc(100vw-2rem)] rounded-xl border border-edge-2 bg-surface-1 shadow-2xl shadow-black/40 z-50 overflow-hidden" role="dialog" aria-label="Notifications">
-          <div className="flex items-center justify-between px-3 py-2 border-b border-edge-1">
+        <div
+          className="absolute right-0 mt-2 w-[22rem] max-w-[calc(100vw-2rem)] glass-strong rounded-2xl shadow-glass-lg z-50 overflow-hidden animate-slide-up"
+          role="dialog"
+          aria-label="Notifications"
+        >
+          <div className="flex items-center justify-between px-3.5 py-2.5">
             <span className="text-xs font-semibold text-ink-1">
               Notifications {unreadCount > 0 && <span className="text-ink-4 font-normal">· {unreadCount} unread</span>}
             </span>
@@ -118,7 +160,7 @@ export default function NotificationBell({ pollMs = 30_000 }) {
               Mark all read
             </Button>
           </div>
-          <ul className="max-h-[26rem] overflow-y-auto divide-y divide-edge-1">
+          <ul className="max-h-[26rem] overflow-y-auto px-1.5 pb-1.5 space-y-0.5">
             {loading && !loaded ? (
               <li className="px-3 py-6 text-center text-xs text-ink-4">Loading…</li>
             ) : notifications.length === 0 ? (
@@ -128,8 +170,14 @@ export default function NotificationBell({ pollMs = 30_000 }) {
                 const Icon = iconFor(n.type);
                 return (
                   <li key={n.id}>
-                    <button onClick={() => follow(n)} className={cn("w-full text-left flex gap-3 px-3 py-2.5 hover:bg-surface-2 transition-colors", !n.is_read && "bg-brand-950/30")}>
-                      <span className={cn("mt-0.5 shrink-0 w-7 h-7 rounded-lg flex items-center justify-center", n.is_read ? "bg-surface-3 text-ink-4" : "bg-brand-950 text-brand-300")}>
+                    <button
+                      onClick={() => follow(n)}
+                      className={cn(
+                        "w-full text-left flex gap-3 px-2.5 py-2.5 rounded-xl transition-colors",
+                        n.is_read ? "hover:bg-white/[0.05]" : "bg-brand-500/[0.08] hover:bg-brand-500/[0.13]"
+                      )}
+                    >
+                      <span className={cn("mt-0.5 shrink-0 w-7 h-7 rounded-lg flex items-center justify-center backdrop-blur-md", toneFor(n.type))}>
                         <Icon size={14} />
                       </span>
                       <span className="min-w-0 flex-1">
@@ -140,7 +188,9 @@ export default function NotificationBell({ pollMs = 30_000 }) {
                           {n.sender_handle && <span className="font-mono"> · @{n.sender_handle}</span>}
                         </span>
                       </span>
-                      {!n.is_read && <span className="mt-2 w-1.5 h-1.5 rounded-full bg-brand-400 shrink-0" aria-hidden />}
+                      {!n.is_read && (
+                        <span className="mt-2 w-1.5 h-1.5 rounded-full bg-brand-400 shrink-0 shadow-[0_0_6px_rgba(70,194,132,0.9)]" aria-hidden />
+                      )}
                     </button>
                   </li>
                 );

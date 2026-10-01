@@ -154,7 +154,7 @@ function ProposalCard({ proposal, onVote }) {
           <p className="col-span-full text-ink-4">Quorum {result.quorum_met ? "met" : "not met"} · {result.implementation_status || "No implementation status recorded"}</p>
         </div>
       )}
-      {proposal.implementation_note && <p className="mt-3 border-l-2 border-brand-500 pl-3 text-xs text-ink-3">Implementation update: {proposal.implementation_note}</p>}
+      {proposal.implementation_note && <p className="mt-3 bg-brand-500/[0.08] rounded-lg py-2 px-3 text-xs text-ink-3">Implementation update: {proposal.implementation_note}</p>}
       {proposal.legal_basis && <p className="mt-2 text-2xs text-ink-4">Authority basis: {proposal.legal_basis}</p>}
     </Card>
   );
@@ -514,7 +514,7 @@ export default function OurNetwork() {
 
       <section>
         <SectionHeading icon={Vote} title="Zone proposals & votes" detail="A proposal is a transparent record of a question, authority label, ballot and outcome. A passed vote does not automatically execute its proposed changes." />
-        {!vendorZone && <div className="mb-3 rounded-lg border border-amber-700/30 bg-amber-950/20 p-3 text-xs text-amber-200">Choose an active market zone in <Link to="/locks" className="underline">Market Locks</Link> before opening or voting on zone proposals.</div>}
+        {!vendorZone && <div className="mb-3 rounded-lg bg-amber-500/[0.08] ring-2 ring-amber-500/15 p-3 text-xs text-amber-200 backdrop-blur-md">Choose an active market zone in <Link to="/locks" className="underline">Market Locks</Link> before opening or voting on zone proposals.</div>}
         <Card className="mb-3" padding="p-4"><CardHeader><CardTitle sub="Zone proposals are advisory in this release">Open a proposal</CardTitle><Badge variant="outline" size="xs">No binding power enabled</Badge></CardHeader><ProposalForm disabled={!vendorZone} onCreated={() => load(false)} /></Card>
         <div className="space-y-3">{openProposals.map((proposal) => <ProposalCard key={proposal.id} proposal={proposal} onVote={vote} />)}</div>
         {openProposals.length === 0 && <EmptyState icon={Vote} title="No open proposals" description="When a zone proposal is opened, it will appear here for eligible vendor review." compact />}
@@ -539,7 +539,7 @@ export default function OurNetwork() {
           <SectionHeading icon={WalletCards} title="Your Network Benefit view" detail="This is private to you. Other vendors' individual estimates and credits are never shown here." />
           <div className="grid grid-cols-2 gap-3"><div className="rounded-lg border border-edge-1 bg-surface-0 p-3"><p className="text-2xs text-ink-4">Spendable credit</p><p className="mt-1 text-lg font-semibold text-ink-1">{money(benefits?.available_credit_ksh)}</p><p className="text-2xs text-ink-4">Not enabled</p></div><div className="rounded-lg border border-edge-1 bg-surface-0 p-3"><p className="text-2xs text-ink-4">Review-only estimate</p><p className="mt-1 text-lg font-semibold text-ink-1">{money(benefits?.pending_estimate_ksh)}</p><p className="text-2xs text-ink-4">{labelize(benefits?.pool_status || "not configured")}</p></div></div>
           {benefits?.components && <div className="mt-3 grid grid-cols-2 gap-2 text-2xs">{Object.entries(benefits.components).map(([key, value]) => <p key={key} className="rounded bg-surface-0 p-2 text-ink-4">{labelize(key)} <b className="block text-ink-2">{Number(value).toFixed(3)}</b></p>)}</div>}
-          <div className="mt-3 rounded-lg border border-amber-700/30 bg-amber-950/20 p-3 text-2xs leading-relaxed text-amber-100">{benefits?.disclaimer || "No credit is issued or spendable. There is no guaranteed benefit, ownership claim, or payment balance."}</div>
+          <div className="mt-3 rounded-lg bg-amber-500/[0.07] p-3 text-2xs leading-relaxed text-amber-100 backdrop-blur-md">{benefits?.disclaimer || "No credit is issued or spendable. There is no guaranteed benefit, ownership claim, or payment balance."}</div>
           <div className="mt-3 rounded-lg border border-edge-1 bg-surface-0 p-3"><div className="flex items-center gap-2"><FileCheck2 size={14} className="text-brand-300" /><p className="text-xs font-semibold text-ink-2">Pool policy</p></div>{allocationPolicy?.active ? <p className="mt-1 text-2xs text-ink-4">Policy v{allocationPolicy.version}, effective {asDate(allocationPolicy.effective_from)} · vendor pool share {Number(allocationPolicy.rates.vendor_pool).toLocaleString("en-KE", { style: "percent", maximumFractionDigits: 2 })}</p> : <p className="mt-1 text-2xs text-ink-4">{allocationPolicy?.message || "No allocation policy is currently active."}</p>}</div>
         </Card>
       </section>

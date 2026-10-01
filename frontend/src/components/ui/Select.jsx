@@ -14,7 +14,7 @@ const Select = forwardRef(function Select({ label, error, hint, options = [], pl
           ref={ref}
           id={selectId}
           required={required}
-          className={cn(fieldBase, "h-9 pl-3 pr-8 appearance-none cursor-pointer", error && "border-red-500/60", className)}
+          className={cn(fieldBase, "h-9 pl-3 pr-8 appearance-none cursor-pointer", error && "bg-red-500/[0.08] ring-2 ring-red-500/30", className)}
           {...rest}
         >
           {placeholder !== undefined && <option value="">{placeholder}</option>}

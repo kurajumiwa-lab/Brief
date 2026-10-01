@@ -26,14 +26,14 @@ export default function Drawer({ open, onClose, title, description, side = "righ
             exit={{ x: fromX }}
             transition={{ type: "tween", duration: 0.22 }}
             className={cn(
-              "absolute top-0 bottom-0 w-full bg-surface-1 border-edge-1 shadow-2xl flex flex-col",
-              side === "left" ? "left-0 border-r" : "right-0 border-l",
+              "absolute top-0 bottom-0 w-full glass-strong shadow-2xl flex flex-col",
+              side === "left" ? "left-0" : "right-0",
               width,
               className
             )}
           >
             {(title || onClose) && (
-              <div className="flex items-start justify-between gap-4 px-5 py-4 border-b border-edge-1">
+              <div className="flex items-start justify-between gap-4 px-5 py-4">
                 <div className="min-w-0">
                   {title && <h2 className="text-sm font-semibold text-ink-1 truncate">{title}</h2>}
                   {description && <p className="text-xs text-ink-4 mt-0.5">{description}</p>}

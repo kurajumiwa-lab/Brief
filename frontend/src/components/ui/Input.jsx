@@ -1,9 +1,10 @@
 import { forwardRef, useId } from "react";
 import { cn } from "@/lib/utils";
 
+// v2.7: borderless glass fields — the fill, not a drawn box, marks the field
 export const fieldBase =
-  "w-full rounded-lg border border-edge-2 bg-surface-1 text-sm text-ink-1 placeholder:text-ink-4 transition-colors " +
-  "focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/40 disabled:opacity-50";
+  "w-full rounded-xl bg-white/[0.06] backdrop-blur-md text-sm text-ink-1 placeholder:text-ink-4 transition-all duration-200 " +
+  "hover:bg-white/[0.08] focus:outline-none focus:bg-white/[0.09] focus:ring-2 focus:ring-brand-500/40 disabled:opacity-50";
 
 export function FieldLabel({ htmlFor, children, required }) {
   if (!children) return null;
@@ -33,7 +34,7 @@ const Input = forwardRef(function Input({ label, error, hint, icon: Icon, prefix
           ref={ref}
           id={inputId}
           required={required}
-          className={cn(fieldBase, "h-9 px-3", Icon && "pl-9", prefix && "pl-10", error && "border-red-500/60 focus:border-red-500", className)}
+          className={cn(fieldBase, "h-9 px-3", Icon && "pl-9", prefix && "pl-10", error && "bg-red-500/[0.08] ring-2 ring-red-500/30 focus:ring-red-500/50", className)}
           {...rest}
         />
       </div>
