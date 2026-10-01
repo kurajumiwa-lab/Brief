@@ -11,6 +11,7 @@ import DigitalNumber from "@/components/ui/DigitalNumber";
 import Shelf, { ShelfItem } from "@/components/ui/Shelf";
 import VendorCard from "@/components/vendor/VendorCard";
 import MovementRow from "@/components/stock/MovementRow";
+import { routeFor } from "@/components/notifications/NotificationBell";
 import { useAuthStore } from "@/stores/authStore";
 import { useVendorStore } from "@/stores/vendorStore";
 import { useStockStore } from "@/stores/stockStore";
@@ -197,7 +198,7 @@ function Feed({ movements, todo, notifications, onOpenMovement, onOpenNotificati
                   {!n.is_read && <span className="w-1.5 h-1.5 rounded-full bg-brand-400 shrink-0 shadow-[0_0_6px_rgba(70,194,132,0.9)]" />}
                 </span>
                 {n.body && <span className="block text-xs text-ink-4 mt-0.5 line-clamp-2">{n.body}</span>}
-                <span className="block text-2xs text-ink-4/70 mt-1">{timeAgo(n.created_at)}</span>
+                <span className="block text-2xs text-ink-4/70 mt-1">{relativeTime(n.created_at)}</span>
               </span>
             </button>
           </li>

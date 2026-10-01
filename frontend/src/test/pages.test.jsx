@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
-import { MemoryRouter, Routes, Route } from "react-router-dom";
+import { MemoryRouter, Routes, Route, useLocation } from "react-router-dom";
 
 // ── API + socket doubles ────────────────────────────────────────────────────
 const ok = (data) => Promise.resolve({ data });
@@ -71,6 +71,7 @@ import * as api from "@/lib/api";
 import { useAuthStore } from "@/stores/authStore";
 import { useChatStore } from "@/stores/chatStore";
 import { useStockStore } from "@/stores/stockStore";
+import { useNotificationStore } from "@/stores/notificationStore";
 import App from "@/App";
 import Dashboard from "@/pages/dashboard/Dashboard";
 import StockRoom from "@/pages/stock/StockRoom";
@@ -87,11 +88,17 @@ const mount = (ui, path = "/") =>
     </MemoryRouter>
   );
 
+function LocationProbe() {
+  const { pathname, search } = useLocation();
+  return <output data-testid="current-location">{pathname}{search}</output>;
+}
+
 beforeEach(() => {
   window.localStorage.clear();
   useAuthStore.setState({ token: "tok", vendor: ME, ready: true, loading: false });
   useChatStore.setState({ rooms: [], activeRoom: null, messages: [], live: false });
   useStockStore.setState({ mine: [], network: [], movements: [], categories: [] });
+  useNotificationStore.setState({ notifications: [], unreadCount: 0, loading: false, loaded: false });
   vi.clearAllMocks();
 });
 
@@ -136,6 +143,33 @@ describe("Dashboard", () => {
     expect(await screen.findByText("Boda Express")).toBeInTheDocument();
     expect(screen.getByText(/they source what you stock/i)).toBeInTheDocument();
     expect(screen.getByText("4")).toBeInTheDocument(); // network pulse vendor count
+  });
+
+  it("renders notifications and routes market-lock notifications to the locks desk", async () => {
+    api.notificationAPI.list.mockResolvedValueOnce(ok({
+      unread_count: 1,
+      notifications: [{
+        id: "n-lock",
+        type: "market_lock_locked",
+        title: "Market lock reached",
+        body: "Your zone reached its buying threshold.",
+        is_read: false,
+        created_at: new Date().toISOString(),
+        data: { market_lock_cluster_id: "cluster-1" },
+      }],
+    }));
+
+    render(
+      <MemoryRouter initialEntries={["/"]}>
+        <Dashboard />
+        <LocationProbe />
+      </MemoryRouter>
+    );
+
+    const notification = await screen.findByRole("button", { name: /market lock reached/i });
+    expect(notification).toHaveTextContent("just now");
+    fireEvent.click(notification);
+    await waitFor(() => expect(screen.getByTestId("current-location")).toHaveTextContent("/locks"));
   });
 
   it("advances a movement from the dashboard", async () => {
