@@ -65,7 +65,7 @@ export default function POSBridge() {
       </div>
 
       {nextStep && (
-        <Card className="border-brand-800/60 bg-brand-950/30 flex items-start gap-3">
+        <Card className="bg-brand-500/[0.09] flex items-start gap-3">
           <Terminal size={16} className="text-brand-300 mt-0.5 shrink-0" />
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium text-brand-100">Connected — next step</p>

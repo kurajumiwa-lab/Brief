@@ -131,7 +131,7 @@ export default function MarketLocks() {
         <Button size="sm" variant="secondary" icon={RefreshCw} loading={refreshing} onClick={() => refresh(true)}>Refresh</Button>
       </header>
 
-      {error && <p className="rounded-lg border border-red-900/50 bg-red-950/30 px-3 py-2 text-xs text-red-200" role="alert">{error}</p>}
+      {error && <p className="rounded-lg bg-red-500/[0.08] ring-2 ring-red-500/20 px-3 py-2 text-xs text-red-200 backdrop-blur-md" role="alert">{error}</p>}
 
       <Card padding="p-4">
         <CardHeader>
@@ -164,7 +164,7 @@ export default function MarketLocks() {
         <EmptyState icon={MapPin} title="Pick your market first" description="Locks only combine orders from your selected market zone. Set it above to see eligible products and the Daily Flash window." />
       ) : (
         <>
-          <Card padding="p-4" className="border-brand-900/60">
+          <Card padding="p-4" className="bg-brand-500/[0.05]">
             <CardHeader>
               <CardTitle sub="Daily Flash · fixed market schedule">Current Lock window</CardTitle>
               {activeWindow && <Badge variant={stateBadge[activeWindow.status] || "gray"} size="xs">{readableState(activeWindow.status)}</Badge>}
@@ -230,7 +230,7 @@ export default function MarketLocks() {
                     );
                   })}
                 </div>
-              ) : <p className="rounded-lg border border-dashed border-edge-1 p-3 text-center text-2xs text-ink-4">No product requests in this window yet.</p>}
+              ) : <p className="rounded-lg bg-white/[0.03] p-3 text-center text-2xs text-ink-4">No product requests in this window yet.</p>}
             </section>
           ))}
         </>
@@ -306,7 +306,7 @@ function OperationsDesk({ role, board, onRefresh }) {
   const toggleZone = (zone) => perform(`zone-status-${zone.id}`, () => locksAPI.updateZone(zone.id, { is_active: !zone.is_active }), `Market zone ${zone.is_active ? "deactivated" : "reactivated"}`);
 
   return (
-    <Card padding="p-4" className="border-amber-900/40">
+    <Card padding="p-4" className="bg-amber-500/[0.04]">
       <button type="button" className="flex w-full items-start justify-between gap-3 text-left" onClick={() => setOpen((value) => !value)} aria-expanded={open}>
         <div>
           <div className="flex items-center gap-2"><ShieldCheck size={16} className="text-amber-300" /><h2 className="text-sm font-semibold text-ink-1">Market operations desk</h2><Badge variant="amber" size="xs">{role}</Badge></div>

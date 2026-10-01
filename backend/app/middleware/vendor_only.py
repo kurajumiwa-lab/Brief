@@ -13,7 +13,9 @@ from starlette.responses import JSONResponse
 
 # `/api/metrics` is the Prometheus scrape target (gate it with METRICS_TOKEN in
 # production — see app/routes/ops.py). Everything else under /api needs a vendor.
-OPEN_PREFIXES = ("/api/auth/", "/api/health", "/api/metrics", "/docs", "/redoc", "/openapi.json")
+# The PSP webhook is signed (HMAC-SHA256) instead of bearer-authenticated.
+OPEN_PREFIXES = ("/api/auth/", "/api/health", "/api/metrics", "/api/payments/webhook",
+                 "/docs", "/redoc", "/openapi.json")
 
 
 class VendorOnlyMiddleware(BaseHTTPMiddleware):

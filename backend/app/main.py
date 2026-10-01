@@ -15,10 +15,11 @@ from app.middleware.metrics import MetricsMiddleware
 from app.middleware.rate_limiter import RateLimitMiddleware, configure_backend
 from app.middleware.vendor_only import VendorOnlyMiddleware
 from app.routes import (
-    analytics, auth, bookings, chat, collective, events, files, governance, groups, market_locks, notifications, ops as ops_routes,
-    pos_bridge, reviews, route_planner, stock, tools, vendor_lists, vendors, verification,
+    analytics, auth, bookings, chamas, chat, collective, events, files, governance, groups, market_locks,
+    murabaha, notifications, ops as ops_routes, payments, pos_bridge, reviews, route_planner, stock,
+    tools, vendor_lists, vendors, verification,
 )
-from app.services import pos_sync
+from app.services import payment_worker, pos_sync
 from app.services.storage import local_root
 
 logging.basicConfig(level=logging.DEBUG if settings.DEBUG else logging.INFO,
@@ -33,8 +34,10 @@ async def lifespan(app: FastAPI):
     await configure_backend()
     await chat.manager.configure()
     scheduler = None
+    payments_scheduler = None
     if settings.RUN_SCHEDULER:
         scheduler = asyncio.create_task(pos_sync.scheduler_loop(async_session, settings.POS_SYNC_INTERVAL))
+        payments_scheduler = asyncio.create_task(payment_worker.scheduler_loop(async_session))
     else:
         log.info("scheduler disabled here (RUN_SCHEDULER=false) — run `python -m app.worker` once")
     log.info("🏪 Brief_ Vendor Network v%s initialized", settings.VERSION)
@@ -42,12 +45,13 @@ async def lifespan(app: FastAPI):
     try:
         yield
     finally:
-        if scheduler:
-            scheduler.cancel()
-            try:
-                await scheduler
-            except (asyncio.CancelledError, Exception):
-                pass
+        for task in (scheduler, payments_scheduler):
+            if task:
+                task.cancel()
+                try:
+                    await task
+                except (asyncio.CancelledError, Exception):
+                    pass
         await chat.manager.shutdown()
         await engine.dispose()
         log.info("👋 Shutting down vendor network")
@@ -82,6 +86,9 @@ app.include_router(vendor_lists.router, prefix="/api/vendor-lists", tags=["Vendo
 app.include_router(groups.router, prefix="/api/groups", tags=["Vendor Groups"])
 app.include_router(chat.router, prefix="/api/chat", tags=["Chat & Topics"])
 app.include_router(market_locks.router, prefix="/api/locks", tags=["Market Locks"])
+app.include_router(payments.router, prefix="/api/payments", tags=["Payments & Custody"])
+app.include_router(chamas.router, prefix="/api/chamas", tags=["Digital Chamas (Table Banking)"])
+app.include_router(murabaha.router, prefix="/api/murabaha", tags=["Murabaha Advances (Halal Trade)"])
 app.include_router(governance.router, prefix="/api/governance", tags=["Vendor Governance & Benefits"])
 app.include_router(tools.router, prefix="/api/tools", tags=["Vendor Tools"])
 app.include_router(events.router, prefix="/api/events", tags=["Events"])

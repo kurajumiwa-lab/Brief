@@ -107,6 +107,11 @@ class LockCluster(Base):
     locked_at = Column(DateTime, nullable=True)
     dissolved_reason = Column(String(240), nullable=True)
     evaluated_at = Column(DateTime, nullable=True)
+    # v2.5 escrow settlement state (see app/services/lock_settlement.py):
+    #   not_required → collecting → funded → settled
+    funds_status = Column(String(20), nullable=False, default="not_required", server_default="not_required")
+    paid_total_ksh = Column(Integer, nullable=False, default=0, server_default="0")
+    settled_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
     window = relationship("LockWindow", back_populates="clusters")

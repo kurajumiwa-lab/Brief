@@ -25,8 +25,10 @@ export default function FileUpload({ file, onFile, accept = { "text/csv": [".csv
       <div
         {...getRootProps()}
         className={cn(
-          "rounded-xl border-2 border-dashed px-4 py-8 text-center cursor-pointer transition-colors",
-          isDragActive ? "border-brand-500 bg-brand-950/30" : "border-edge-2 hover:border-edge-3 bg-surface-1"
+          "rounded-xl px-4 py-8 text-center cursor-pointer transition-all duration-300",
+          isDragActive
+            ? "bg-brand-500/[0.12] shadow-[0_0_32px_-6px_rgba(34,168,103,0.55)]"
+            : "bg-white/[0.05] hover:bg-white/[0.08] hover:shadow-[0_0_24px_-8px_rgba(34,168,103,0.35)] backdrop-blur-md"
         )}
       >
         <input {...getInputProps()} aria-label="Upload file" />

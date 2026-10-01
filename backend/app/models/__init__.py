@@ -25,6 +25,13 @@ from app.models.governance import (
     AllocationPolicy, BenefitPeriod, NetworkBenefitEvent, VendorBenefitAllocation,
     VendorCreditLedger, VendorAppeal, VendorDataConsent,
 )
+from app.models.payments import (
+    PaymentIntent, CustodyLedgerEntry, Disbursement, ReconciliationRun, DisputeHold,
+    ESCROW_PICK_HEDGING, DISPUTE_HOLD, PLATFORM_FEES,
+    SACCO_ADVANCES,
+)
+from app.models.halal import MurabahaContract
+from app.models.chamas import Chama, ChamaMember, ChamaDeposit, ChamaLoan, ChamaLoanVote, ChamaDividend
 
 __all__ = [
     "Vendor", "VendorProfile", "VendorRole", "vendor_connections",
@@ -46,4 +53,8 @@ __all__ = [
     "BiasharaScoreEvent", "GovernanceAuditEvent", "DualApprovalRequest", "RevenueEvent",
     "AllocationPolicy", "BenefitPeriod", "NetworkBenefitEvent", "VendorBenefitAllocation",
     "VendorCreditLedger", "VendorAppeal", "VendorDataConsent",
+    "PaymentIntent", "CustodyLedgerEntry", "Disbursement", "ReconciliationRun", "DisputeHold",
+    "MurabahaContract",
+    "ESCROW_PICK_HEDGING", "DISPUTE_HOLD", "PLATFORM_FEES",
+    "Chama", "ChamaMember", "ChamaDeposit", "ChamaLoan", "ChamaLoanVote", "ChamaDividend",
 ]

@@ -34,13 +34,12 @@ export default function Modal({ open, onClose, title, description, size = "md", 
             role="dialog"
             aria-modal="true"
             aria-label={typeof title === "string" ? title : undefined}
-            initial={{ opacity: 0, y: 16, scale: 0.98 }}
+            initial={{ opacity: 0, y: 28, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 8, scale: 0.98 }}
-            transition={{ duration: 0.18 }}
+            exit={{ opacity: 0, y: 16, scale: 0.97 }}
+            transition={{ type: "spring", stiffness: 380, damping: 32, mass: 0.9 }}
             className={cn(
-              "relative w-full bg-surface-2 border border-edge-2 shadow-2xl flex flex-col max-h-[92vh]",
-              "rounded-t-2xl sm:rounded-2xl",
+              "relative w-full glass-strong rounded-t-2xl sm:rounded-3xl flex flex-col max-h-[92vh] overflow-hidden",
               sizes[size],
               className
             )}
@@ -52,14 +51,14 @@ export default function Modal({ open, onClose, title, description, size = "md", 
                   {description && <p className="text-xs text-ink-4 mt-1">{description}</p>}
                 </div>
                 {onClose && (
-                  <button onClick={onClose} aria-label="Close" className="p-1.5 -mr-1.5 -mt-1.5 rounded-lg text-ink-4 hover:text-ink-1 hover:bg-surface-3">
+                  <button onClick={onClose} aria-label="Close" className="p-1.5 -mr-1.5 -mt-1.5 rounded-lg text-ink-4 hover:text-ink-1 hover:bg-white/5">
                     <X size={16} />
                   </button>
                 )}
               </div>
             )}
             <div className="px-5 pb-5 overflow-y-auto">{children}</div>
-            {footer && <div className="px-5 py-3 border-t border-edge-1 flex items-center justify-end gap-2 bg-surface-2 rounded-b-2xl">{footer}</div>}
+            {footer && <div className="px-5 py-3 flex items-center justify-end gap-2 bg-white/[0.03] rounded-b-2xl">{footer}</div>}
           </motion.div>
         </div>
       )}

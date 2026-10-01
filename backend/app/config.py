@@ -110,6 +110,47 @@ class Settings(BaseSettings):
     BOOKING_MAX_DAYS: int = 365          # longest window a single booking may span
     ROUTE_DEFAULT_SPEED_KMH: float = 25.0
 
+    # Payments & custody (v2.5) — PSP-as-abstraction model, no direct Daraja.
+    # PSP holds all float in segregated sub-accounts; this app holds the
+    # append-only ledger. Funds never touch the operating account.
+    #   mock      — in-process PSP with in-memory wallets (dev, tests, demo)
+    #   intasend  — real PSP (set PSP_API_KEY / PSP_API_SECRET)
+    PSP_PROVIDER: str = "mock"
+    PSP_API_KEY: str = ""
+    PSP_API_SECRET: str = ""
+    PSP_BASE_URL: str = ""   # override; provider default otherwise
+    # HMAC-SHA256 secret for the single inbound webhook (X-Webhook-Signature).
+    PSP_WEBHOOK_SECRET: str = "psp-webhook-secret-dev"
+    # Disbursements above this amount require two different approvers.
+    DUAL_APPROVAL_THRESHOLD_KSH: int = 10_000
+    # Platform facilitation fee on settled Lock clusters (supplier settlement).
+    PLATFORM_FEE_RATE: float = 0.04
+    # Pending payment intents expire after this long (the PSP may still deliver
+    # a late success, which is then treated as an orphan by reconciliation).
+    PAYMENT_INTENT_TTL_MINUTES: int = 30
+    # Reconciliation: run daily at this UTC hour (01:00 EAT) and flag any
+    # wallet whose PSP balance disagrees with the ledger by more than this.
+    DAILY_RECONCILIATION_HOUR_UTC: int = 22
+    RECONCILIATION_VARIANCE_TOLERANCE_KSH: int = 100
+    # When true, collections require vendor.phone_verified_at to be set.
+    PAYMENT_REQUIRE_VERIFIED_PHONE: bool = False
+    # Per-transaction and per-day collection caps (KSh).
+    COLLECT_PER_TRANSACTION_LIMIT_KSH: int = 150_000
+    COLLECT_DAILY_PER_VENDOR_LIMIT_KSH: int = 500_000
+    # Per-transaction disbursement cap (KSh).
+    DISBURSE_PER_TRANSACTION_LIMIT_KSH: int = 250_000
+    # Digital chamas (Layer 2, table banking).
+    CHAMA_MIN_MEMBERS: int = 5          # members required before a chama activates
+    CHAMA_MAX_MEMBERS: int = 30
+    CHAMA_MAX_POOL_KSH: int = 5_000_000  # per-chama pool cap
+    # Halal pools (v2.6): flat admin fee (KSh) netted from each zero-interest
+    # loan payout — covers PSP network charges; it is a disclosed cost, not
+    # interest. Loans must exceed it.
+    CHAMA_QARD_ADMIN_FEE_KSH: int = 50
+    # Murabaha (cost-plus) advances: grace days after the payment due date
+    # before the worker marks the contract defaulted.
+    MURABAHA_GRACE_DAYS: int = 3
+
     # Pilot market staff are explicitly allow-listed as role:vendor_handle pairs,
     # e.g. admin:brief_admin,spotter:market_spotter,negotiator:market_negotiator.
     MARKET_OPS_ROLES: str = ""

@@ -1,14 +1,17 @@
 import { cn } from "@/lib/utils";
 
+/**
+ * v2.7 look: borderless glass surface — separation comes from the blur,
+ * the gradient lift and the shadow (never from a drawn line).
+ */
 export default function Card({ className, hover, padding = "p-4", onClick, children, as: Tag = "div", ...rest }) {
   return (
     <Tag
       onClick={onClick}
       className={cn(
-        "rounded-xl border border-edge-1 bg-surface-1 animate-fade-in",
+        "glass rounded-2xl animate-fade-in",
         padding,
-        (hover || onClick) && "transition-colors hover:border-edge-2 hover:bg-surface-2/60",
-        onClick && "cursor-pointer text-left w-full",
+        (hover || onClick) && "glass-hover cursor-pointer text-left w-full",
         className
       )}
       {...rest}

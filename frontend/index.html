@@ -3,15 +3,24 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#09090b" />
+    <meta name="theme-color" content="#101216" />
     <meta name="description" content="Brief_ — the vendor network. No consumers. Only vendors." />
     <title>Brief_ · Vendor Network</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <!-- Non-blocking: the system font stack renders first, Inter swaps in when it arrives. -->
+    <link rel="preconnect" href="https://api.fontshare.com" />
+    <link rel="preconnect" href="https://fonts.cdnfonts.com" crossorigin />
+    <!-- Non-blocking: the system font stack renders first, webfonts swap in when they arrive. -->
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&family=Orbitron:wght@500;600;700&display=swap"
+      rel="stylesheet"
+      media="print"
+      onload="this.media='all'"
+    />
+    <!-- Seven-segment face for digital readouts (timer look); Orbitron is the fallback. -->
+    <link
+      href="https://fonts.cdnfonts.com/css/dseg7-classic"
       rel="stylesheet"
       media="print"
       onload="this.media='all'"

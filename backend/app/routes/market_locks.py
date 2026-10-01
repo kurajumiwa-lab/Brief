@@ -1,6 +1,9 @@
-"""Daily Flash vendor Locks: products, named market zones and supplier-MOQ bidding.
+"""Daily Flash vendor Locks: products, named market zones and supplier-MOQ
+bidding, plus the v2.5 escrow settlement (pay → funded → settle / dispute).
 
-No payments, consumer checkout, transcription or AI are part of this module.
+Payments run through the PSP abstraction and custody ledger
+(`app/services/lock_settlement.py`); no consumer checkout, transcription or
+AI is part of this module.
 """
 
 from datetime import date, datetime, timedelta, timezone
@@ -663,3 +666,101 @@ async def select_supplier_quote(
     return {"message": "Supplier quote selected; Lock price set", "cluster_id": str(cluster.id),
             "supplier_handle": supplier.vendor_handle, "quantity": cluster.locked_quantity,
             "unit_price": cluster.locked_unit_price, "status": cluster.status}
+
+
+# --- v2.5 escrow settlement: pay → funded → settle / dispute ---------------
+
+class DisputeIn(BaseModel):
+    reason: Optional[str] = Field(None, max_length=2000)
+
+
+@router.get("/clusters/{cluster_id}")
+async def get_cluster(
+    cluster_id: UUID,
+    vendor: Vendor = Depends(get_current_vendor),
+    db: AsyncSession = Depends(get_db),
+):
+    """Cluster detail for a vendor whose zone matches the window's zone."""
+    cluster = await db.get(LockCluster, cluster_id)
+    if not cluster:
+        raise HTTPException(404, "Cluster not found")
+    window = await db.get(LockWindow, cluster.window_id)
+    zone = await db.get(MarketZone, window.zone_id)
+    if not vendor.market_zone_id or vendor.market_zone_id != window.zone_id:
+        raise HTTPException(403, "This cluster is in another market zone")
+    summary = await _cluster_summary(db, cluster, my_vendor_id=vendor.id)
+    summary["funds_status"] = cluster.funds_status
+    summary["paid_total_ksh"] = cluster.paid_total_ksh
+    summary["settled_at"] = cluster.settled_at.isoformat() if cluster.settled_at else None
+    summary["zone"] = _zone_out(zone)
+    return summary
+
+
+@router.post("/clusters/{cluster_id}/pay", status_code=201)
+async def pay_for_lock_pick(
+    cluster_id: UUID,
+    vendor: Vendor = Depends(get_current_vendor),
+    db: AsyncSession = Depends(get_db),
+):
+    """Vendor pays their locked pick into escrow. A payment prompt (M-Pesa
+    PIN) is shown via the PSP; the money counts when the webhook lands."""
+    from app.services import lock_settlement
+    from app.services.payments import PaymentError
+
+    cluster = await db.get(LockCluster, cluster_id, with_for_update=True)
+    if not cluster:
+        raise HTTPException(404, "Cluster not found")
+    pick = (await db.execute(select(LockPick).where(
+        LockPick.cluster_id == cluster.id, LockPick.vendor_id == vendor.id,
+    ).with_for_update())).scalar_one_or_none()
+    if not pick:
+        raise HTTPException(404, "You have no pick in this cluster")
+    try:
+        result = await lock_settlement.pay_for_pick(db, cluster, pick, vendor)
+    except PaymentError as exc:
+        raise HTTPException(400, str(exc))
+    await db.commit()
+    return result
+
+
+@router.post("/clusters/{cluster_id}/settle", status_code=201)
+async def settle_lock_cluster(
+    cluster_id: UUID,
+    staff: tuple[Vendor, str] = Depends(require_market_ops("admin", "clerk", "negotiator")),
+    db: AsyncSession = Depends(get_db),
+):
+    """Ops settles a funded cluster: pay the supplier from escrow (fee
+    withheld). Payouts above the dual-approval threshold wait for two
+    market-ops approvals before the PSP moves anything."""
+    from app.services import lock_settlement
+
+    cluster = await db.get(LockCluster, cluster_id, with_for_update=True)
+    if not cluster:
+        raise HTTPException(404, "Cluster not found")
+    result = await lock_settlement.request_lock_settlement(db, cluster, staff[0])
+    await db.commit()
+    return result
+
+
+@router.post("/clusters/{cluster_id}/dispute", status_code=201)
+async def dispute_lock_pick(
+    cluster_id: UUID,
+    data: DisputeIn,
+    vendor: Vendor = Depends(get_current_vendor),
+    db: AsyncSession = Depends(get_db),
+):
+    """Vendor reports a delivery problem: their paid share is frozen in the
+    DISPUTE_HOLD sub-account until an operator resolves it."""
+    from app.services import lock_settlement
+
+    cluster = await db.get(LockCluster, cluster_id, with_for_update=True)
+    if not cluster:
+        raise HTTPException(404, "Cluster not found")
+    pick = (await db.execute(select(LockPick).where(
+        LockPick.cluster_id == cluster.id, LockPick.vendor_id == vendor.id,
+    ).with_for_update())).scalar_one_or_none()
+    if not pick:
+        raise HTTPException(404, "You have no pick in this cluster")
+    hold = await lock_settlement.open_lock_dispute(db, cluster, pick, vendor, data.reason or "Delivery problem")
+    await db.commit()
+    return {"dispute_id": str(hold.id), "amount_ksh": hold.amount_ksh, "status": hold.status}

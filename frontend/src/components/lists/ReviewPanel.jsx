@@ -165,7 +165,7 @@ export default function ReviewsDrawer({ list, onClose }) {
             </Button>
           )}
           {!data?.can_review && !mine && !writing && (
-            <p className="text-xs text-ink-4 rounded-lg border border-dashed border-edge-2 px-3 py-2">
+            <p className="text-xs text-ink-4 rounded-lg bg-white/[0.04] px-3 py-2">
               {data?.my_status === "approved"
                 ? "You've already reviewed this list — edit your review below."
                 : "Only vendors approved onto the list can review it. Register, then tell the network how it went."}

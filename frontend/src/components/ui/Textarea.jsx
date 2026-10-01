@@ -8,7 +8,7 @@ const Textarea = forwardRef(function Textarea({ label, error, hint, className, w
   return (
     <div className={wrapperClassName}>
       <FieldLabel htmlFor={areaId} required={required}>{label}</FieldLabel>
-      <textarea ref={ref} id={areaId} rows={rows} required={required} className={cn(fieldBase, "px-3 py-2 resize-y min-h-[2.5rem]", error && "border-red-500/60", className)} {...rest} />
+      <textarea ref={ref} id={areaId} rows={rows} required={required} className={cn(fieldBase, "px-3 py-2 resize-y min-h-[2.5rem]", error && "bg-red-500/[0.08] ring-2 ring-red-500/30", className)} {...rest} />
       <FieldMeta error={error} hint={hint} />
     </div>
   );

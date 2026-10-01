@@ -31,6 +31,8 @@ os.environ.setdefault("AUTO_CREATE_TABLES", "true")
 os.environ.setdefault("REDIS_URL", "redis://127.0.0.1:1/0")  # unreachable → memory limiter
 os.environ.setdefault("POS_SYNC_INTERVAL", "3600")
 os.environ.setdefault("SECRET_KEY", "test-secret-not-for-production")
+# Tests drive the scheduled jobs directly; the in-process loops must not run.
+os.environ.setdefault("RUN_SCHEDULER", "false")
 
 from httpx import AsyncClient  # noqa: E402
 

@@ -1,20 +1,21 @@
 import { cn } from "@/lib/utils";
 
+// v2.7: tinted glass chips — no border
 const variants = {
-  brand: "bg-brand-950 text-brand-300 border-brand-800/60",
-  blue: "bg-blue-950/60 text-blue-300 border-blue-800/50",
-  amber: "bg-amber-950/60 text-amber-300 border-amber-800/50",
-  red: "bg-red-950/60 text-red-300 border-red-800/50",
-  purple: "bg-purple-950/60 text-purple-300 border-purple-800/50",
-  gray: "bg-surface-3 text-ink-3 border-edge-2",
-  outline: "bg-transparent text-ink-3 border-edge-2",
+  brand: "bg-brand-500/15 text-brand-300",
+  blue: "bg-blue-500/15 text-blue-300",
+  amber: "bg-amber-500/15 text-amber-300",
+  red: "bg-red-500/15 text-red-300",
+  purple: "bg-purple-500/15 text-purple-300",
+  gray: "bg-white/[0.07] text-ink-3",
+  outline: "bg-white/[0.04] text-ink-3",
 };
 
 export default function Badge({ variant = "gray", size = "sm", dot, className, children, ...rest }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-full border font-medium whitespace-nowrap",
+        "inline-flex items-center gap-1 rounded-full backdrop-blur-md font-medium whitespace-nowrap",
         size === "xs" ? "px-1.5 py-px text-2xs" : size === "md" ? "px-2.5 py-0.5 text-xs" : "px-2 py-0.5 text-2xs",
         variants[variant] || variants.gray,
         className

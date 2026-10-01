@@ -11,9 +11,20 @@ import { slugify, splitList, cn } from "@/lib/utils";
 
 const PILLARS = [
   ["Stock, not listings", "Your shelf is live. Other vendors source from it; nobody browses it like a shop."],
-  ["Parasitism index", "The network scores how much you give back. Symbiotic vendors get seen first."],
+  ["Fulfilment over promises", "Your fulfilment rate — how reliably you deliver — is on your card. Vendors who deliver get seen first."],
   ["Patrons & lists", "Run curated vendor lists, gate them with criteria, and organise events around them."],
 ];
+
+function Wordmark() {
+  return (
+    <div className="flex items-center gap-2.5">
+      <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-400 to-brand-700 flex items-center justify-center shadow-[0_0_24px_-2px_rgba(34,168,103,0.55)]">
+        <span className="text-white font-bold text-sm">B</span>
+      </div>
+      <span className="text-sm font-semibold text-ink-2">Brief_ · vendor network</span>
+    </div>
+  );
+}
 
 export default function AuthPage() {
   const [params, setParams] = useSearchParams();
@@ -68,11 +79,11 @@ export default function AuthPage() {
 
   return (
     <div className="min-h-screen grid lg:grid-cols-[1.1fr_1fr] bg-surface-0">
-      <section className="hidden lg:flex flex-col justify-between p-12 border-r border-edge-1 bg-surface-1 relative overflow-hidden">
-        <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-brand-600/10 blur-3xl" />
-        <div className="relative flex items-center gap-2">
-          <span className="font-mono text-2xl font-bold text-brand-400">B_</span>
-          <span className="text-sm text-ink-3">Brief_ · vendor network</span>
+      <section className="hidden lg:flex flex-col justify-between p-12 relative overflow-hidden">
+        <div className="absolute -top-40 -left-32 w-[28rem] h-[28rem] rounded-full bg-brand-500/15 blur-3xl animate-glow-breathe" />
+        <div className="absolute bottom-0 right-0 w-80 h-80 rounded-full bg-blue-500/[0.07] blur-3xl" />
+        <div className="relative">
+          <Wordmark />
         </div>
         <div className="relative max-w-md">
           <h1 className="text-4xl font-bold tracking-tight text-ink-1 leading-tight">
@@ -100,18 +111,18 @@ export default function AuthPage() {
 
       <section className="flex items-center justify-center p-6 sm:p-10">
         <div className="w-full max-w-md animate-slide-up">
-          <div className="lg:hidden flex items-center gap-2 mb-8">
-            <span className="font-mono text-2xl font-bold text-brand-400">B_</span>
-            <span className="text-sm text-ink-3">Brief_ · vendor network</span>
+          <div className="lg:hidden mb-8">
+            <Wordmark />
           </div>
 
-          <div className="flex items-center gap-1 p-1 rounded-lg bg-surface-1 border border-edge-1 w-fit mb-6" role="tablist">
-            {["login", "register"].map((m) => (
-              <button key={m} role="tab" aria-selected={mode === m} onClick={() => switchMode(m)} className={cn("px-4 h-8 rounded-md text-sm font-medium transition-colors", mode === m ? "bg-surface-3 text-ink-1" : "text-ink-4 hover:text-ink-2")}>
-                {m === "login" ? "Enter" : "Join"}
-              </button>
-            ))}
-          </div>
+          <div className="glass rounded-3xl p-6 sm:p-7">
+            <div className="flex items-center gap-1 p-1 rounded-xl bg-white/[0.05] w-fit mb-6" role="tablist">
+              {["login", "register"].map((m) => (
+                <button key={m} role="tab" aria-selected={mode === m} onClick={() => switchMode(m)} className={cn("px-4 h-8 rounded-lg text-sm font-medium transition-all", mode === m ? "bg-brand-500/20 text-brand-200 shadow-[0_0_16px_-4px_rgba(34,168,103,0.5)]" : "text-ink-4 hover:text-ink-2")}>
+                  {m === "login" ? "Enter" : "Join"}
+                </button>
+              ))}
+            </div>
 
           <h2 className="text-xl font-semibold text-ink-1">{mode === "login" ? "Enter the network" : "Register your business"}</h2>
           <p className="text-sm text-ink-4 mt-1 mb-6">{mode === "login" ? "Use your email or @handle." : "One account per business. You choose your role afterwards."}</p>
@@ -154,9 +165,16 @@ export default function AuthPage() {
             </Button>
           </form>
 
+          {mode === "login" && (
+            <p className="mt-4 text-2xs text-ink-4 text-center bg-white/[0.04] rounded-lg px-3 py-2">
+              Demo network: <span className="font-mono text-ink-3">@mama_mboga</span> · <span className="font-mono text-ink-3">Brief-demo-2026</span>
+            </p>
+          )}
+          </div>
+
           <p className="mt-6 text-xs text-ink-4 text-center">
             {mode === "login" ? "New business? " : "Already registered? "}
-            <button onClick={() => switchMode(mode === "login" ? "register" : "login")} className="text-brand-400 hover:text-brand-300 font-medium">
+            <button onClick={() => switchMode(mode === "login" ? "register" : "login")} className="text-brand-300 hover:text-brand-200 font-medium">
               {mode === "login" ? "Join the network" : "Enter"}
             </button>
           </p>

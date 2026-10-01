@@ -3,14 +3,35 @@
 @tailwind utilities;
 
 @layer base {
-  * {
-    @apply border-edge-1;
-  }
   :root {
     color-scheme: dark;
   }
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+  /*
+   * v2.7 — lines are dead. The base border-color is transparent, so ANY
+   * border utility that doesn't name an explicit colour renders as nothing.
+   * (Border widths still occupy layout, so nothing shifts.) Surfaces are
+   * separated by glass, depth and glow instead. Only deliberately coloured
+   * indicators (e.g. a red error state) still draw.
+   */
+  *,
+  ::before,
+  ::after {
+    border-color: transparent;
+  }
   body {
-    @apply bg-surface-0 text-ink-1;
+    @apply bg-surface-0 text-ink-1 antialiased;
+    /* Ambient depth: soft brand + warm glows instead of a flat PC black */
+    background-image:
+      radial-gradient(1100px 480px at 8% -10%, rgba(34, 168, 103, 0.14), transparent 60%),
+      radial-gradient(900px 420px at 105% 12%, rgba(96, 165, 250, 0.07), transparent 55%),
+      radial-gradient(760px 500px at 85% 110%, rgba(251, 191, 36, 0.05), transparent 60%);
+    background-attachment: fixed;
+  }
+  ::selection {
+    @apply bg-brand-500/30 text-white;
   }
   ::-webkit-scrollbar {
     @apply w-1.5 h-1.5;
@@ -19,7 +40,7 @@
     @apply bg-transparent;
   }
   ::-webkit-scrollbar-thumb {
-    @apply bg-edge-2 rounded-full hover:bg-edge-3;
+    @apply bg-white/10 rounded-full hover:bg-white/20;
   }
   input[type="number"]::-webkit-inner-spin-button,
   input[type="number"]::-webkit-outer-spin-button {
@@ -31,10 +52,82 @@
 }
 
 @layer components {
+  /* Glass morphism — no border, surface separation by blur + lift */
   .glass {
-    @apply bg-surface-2/80 backdrop-blur-xl border border-edge-1;
+    background-image: linear-gradient(160deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02) 55%, rgba(255, 255, 255, 0.045));
+    @apply backdrop-blur-2xl shadow-glass;
   }
-  .glow-brand {
-    box-shadow: 0 0 20px -4px rgba(34, 168, 103, 0.25);
+  .glass-strong {
+    background-image: linear-gradient(160deg, rgba(30, 34, 42, 0.92), rgba(22, 25, 31, 0.88));
+    @apply backdrop-blur-2xl shadow-glass-lg;
+  }
+  .glass-hover {
+    @apply transition-all duration-300;
+  }
+  .glass-hover:hover {
+    background-image: linear-gradient(160deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.04) 55%, rgba(255, 255, 255, 0.06));
+    @apply shadow-lift -translate-y-0.5;
+  }
+
+  /* Digital readout — seven-segment glow, like a timer */
+  .digital {
+    font-family: theme("fontFamily.digital");
+    letter-spacing: 0.06em;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+  .digital-glow {
+    text-shadow:
+      0 0 12px rgba(70, 194, 132, 0.45),
+      0 0 32px rgba(34, 168, 103, 0.22);
+  }
+  .digital-glow-blue {
+    text-shadow:
+      0 0 12px rgba(96, 165, 250, 0.45),
+      0 0 32px rgba(59, 130, 246, 0.22);
+  }
+  .digital-glow-amber {
+    text-shadow:
+      0 0 12px rgba(251, 191, 36, 0.45),
+      0 0 32px rgba(245, 158, 11, 0.22);
+  }
+  /* subtle scanline sheen on readout panels */
+  .digital-sheen {
+    position: relative;
+    overflow: hidden;
+  }
+  .digital-sheen::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 30%);
+  }
+
+  /* Horizontal swipe shelf — hidden scrollbar, snap points */
+  .shelf {
+    @apply flex gap-3 overflow-x-auto snap-x snap-mandatory pb-1 -mx-1 px-1;
+    scrollbar-width: none;
+    scroll-padding-inline: 1rem;
+  }
+  .shelf::-webkit-scrollbar {
+    display: none;
+  }
+  .shelf-item {
+    @apply snap-start shrink-0;
+  }
+  .shelf-fade {
+    mask-image: linear-gradient(90deg, transparent, black 24px, black calc(100% - 24px), transparent);
+    -webkit-mask-image: linear-gradient(90deg, transparent, black 24px, black calc(100% - 24px), transparent);
+  }
+
+  /* Notification dot */
+  .notif-dot {
+    @apply absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-brand-400 animate-dot-pulse;
+    box-shadow: 0 0 8px rgba(70, 194, 132, 0.8);
+  }
+  .notif-dot-amber {
+    @apply bg-amber-400;
+    box-shadow: 0 0 8px rgba(251, 191, 36, 0.8);
   }
 }
