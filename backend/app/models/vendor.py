@@ -58,6 +58,10 @@ class Vendor(Base):
     geo_lat = Column(Float)
     geo_lng = Column(Float)
 
+    # Finance preference (v2.6 halal-trade brief): 'halal_sharia' vendors are
+    # gated out of interest-bearing products (Riba).
+    finance_mode = Column(String(20), nullable=False, default="conventional", server_default="conventional")
+
     # Network Stats
     network_score = Column(Float, default=0.0, nullable=False)  # How active/valuable in network
     total_stock_moved = Column(Integer, default=0, nullable=False)

@@ -142,7 +142,7 @@ check-in. Password for all four is `Brief-demo-2026`, email
 ### Tests
 
 ```bash
-cd backend && pytest            # boots an embedded Postgres, walks the whole vendor loop (incl. v2.1 and v2.2 flows)
+cd backend && pytest            # boots an embedded Postgres, walks the whole vendor loop (incl. v2.1, v2.2, v2.5 payment/chama and v2.6 halal flows)
 cd frontend && npm test         # renders every page against a fake API (37 specs)
 cd backend && alembic upgrade head && alembic check && alembic downgrade base   # migrations replay cleanly
 ```
@@ -259,11 +259,13 @@ docker compose exec backend python -m app.wait_for_db --timeout 5
 ## Repository layout
 
 ```
-backend/     app/{models,services,routes,middleware,worker.py,wait_for_db.py}, alembic/versions/{0001_initial,0002_v21_upgrade,0003_v22_marketplace}.py,
+backend/     app/{models,services,routes,middleware,worker.py,wait_for_db.py}, alembic/versions/{0001_initial…0007_halal_finance}.py,
              tests/, dev_local.py, seed_demo.py, entrypoint.sh
              models: bookings.py (tool bookings) · reviews.py (list reviews) · routing.py (route plans & stops)
-             services: analytics_service.py · discovery.py · routing.py · booking_service.py
-             routes: analytics.py · reviews.py · bookings.py · route_planner.py · ops.py
+                    payments.py (intents, custody ledger, payouts, reconciliation, dispute holds) · chamas.py (groups, pool, loans, dividends)
+                    halal.py (murabaha contracts)
+             services: psp_client.py (provider + mock) · payments.py · custody.py · chamas.py · lock_settlement.py · halal.py · biashara.py
+             routes: analytics.py · reviews.py · bookings.py · route_planner.py · ops.py · payments.py · chamas.py · murabaha.py
 frontend/    src/{config,lib,stores,components/{layout,ui,vendor,stock,chat,groups,tools,lists,notifications,forms},pages/*,test}
              pages/analytics/ (trade dashboard) · pages/ops/ (monitoring console)
              components/tools/{RoutePlanner,BookingPanel}.jsx · components/lists/ReviewPanel.jsx
@@ -286,6 +288,46 @@ UI and tests — not just named:
 | 4 | **Courier route optimisation** | `components/tools/RoutePlanner.jsx`, `services/routing.py`, `routes/route_planner.py`, `POST /api/tools/couriers/{id}/routes` |
 | 5 | **Warehouse calendar / pop-up / hotel flows** | `components/tools/BookingPanel.jsx`, `services/booking_service.py`, `routes/bookings.py`, `POST /api/tools/{id}/book` + `/availability-calendar` |
 | 6 | **Monitoring & load-test harnesses** | `middleware/metrics.py`, `routes/ops.py`, `pages/ops/Ops.jsx`, `deploy/monitoring/`, `loadtest/` |
+
+## What v2.5 added (payments & digital chamas — backend)
+
+The PSP payment stack and digital chama flows, implemented end to end in the
+backend (models, migration `0006_payments_chamas.py`, services, routes,
+worker jobs and 15 E2E tests). The corresponding member/admin UIs ship in
+Layer 3 of the roadmap; the briefs are saved under `docs/briefs/`.
+
+| # | feature | where |
+|---|---|---|
+| 1 | **PSP provider abstraction** (collections, payouts, balance, sub-accounts; HMAC webhook client + in-process **mock** with fail-mode and real-log **replay**) | `services/psp_client.py` |
+| 2 | **Payment intents + append-only custody ledger** (DB trigger blocks UPDATE/DELETE; corrections are reversal rows) | `models/payments.py`, `services/payments.py` |
+| 3 | **Webhook sink** — the only place money is booked; HMAC-verified, idempotent, safe-duplicate/stale handling, retry-safe | `POST /api/payments/webhook` (`routes/payments.py`) |
+| 4 | **Payouts with dual approval + in-flight freeze** (pending payouts can never be double-sent; freeze/unfreeze for disputes) | `services/payments.py`, `GET /api/payments/payouts/in-flight` |
+| 5 | **Daily reconciliation** (wallet per wallet, variance detection, resolution) | `services/custody.py`, `/api/payments/reconciliation/*` |
+| 6 | **Custody desk** (intent/disbursement status, holds, in-flight alerts, pending-approval queue) | `/api/payments/ops/*` |
+| 7 | **Digital chamas** (groups, pool, deposits, dual-approved loans + quorum, repayment, dividend payouts, Biashara Score events, overdue-worker flags) | `models/chamas.py`, `services/chamas.py`, `routes/chamas.py` |
+| 8 | **Lock settlement flow** (pay selected supplier from pick escrow, fee to platform wallet, dispute freeze/refund with dual approval, settle books + score) | `services/lock_settlement.py`, `routes/locks.py` |
+
+## What v2.6 added (Halal trade — backend)
+
+Halal-compliant money flows from the halal-trade brief
+(`docs/briefs/halal-trade-finance.md`): migration `0007_halal_finance.py`,
+services, routes and 8 E2E tests. Branding and the after-hours Vibe-Tag pins
+stay out of backend scope (Layer 3 / social layer).
+
+| # | feature | where |
+|---|---|---|
+| 1 | **Vendor `finance_mode`** (`halal_sharia` vendors are blocked from interest chamas and interest loans — Riba gate) | `PUT /api/vendors/me`, `services/chamas.py` |
+| 2 | **Halal chama pools** (`qard_hasan` / `musharakah_trade` / `murabaha_credit`): zero-interest loans, flat admin fee netted from the payout, dividend base = fees + remitted profits (never interest) | `chamas.model_type`, `services/chamas.py` (`pool_distributable`) |
+| 3 | **Musharakah profit remittance** (real PSP collection into the pool → distributable surplus) | `POST /api/chamas/{id}/profit` |
+| 4 | **Murabaha (cost-plus) stock advances** (fixed cost + disclosed margin at signing, staff desk, PSP repayment into `SACCO_ADVANCES`, default worker with grace — no late-payment interest) | `models/halal.py`, `services/halal.py`, `routes/murabaha.py` (`/api/murabaha/*`) |
+| 5 | **Pick hedging as Bay' al-Salam** | already satisfied by the v2.5 lock-escrow flow (physical goods, escrow, settle-on-delivery) |
+
+Ops notes: the webhook endpoint is public (PSPs can't authenticate as vendors)
+and verifies an `HMAC-SHA256` signature of the raw body against
+`PSP_WEBHOOK_SECRET`; unknown or not-yet-applicable events get a **502** so
+real PSPs retry. `PSP_PROVIDER=mock` (the default) keeps the whole stack
+self-contained in dev and tests. Architecture and invariants:
+`docs/briefs/payment-custody-architecture.md`.
 
 ## History
 

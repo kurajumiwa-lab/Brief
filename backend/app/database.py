@@ -26,3 +26,10 @@ async def init_db():
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+    # ORM cannot express the append-only guard on custody_ledger; install it
+    # here (dev) and in alembic 0006 (production) so both paths match.
+    from app.db_triggers import ensure_guardrails
+
+    async with engine.begin() as conn:
+        await ensure_guardrails(conn)

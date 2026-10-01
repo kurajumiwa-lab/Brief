@@ -33,6 +33,8 @@ class VendorOut(BaseModel):
     is_patron: bool
     is_verified: bool
     connected: bool = False
+    # v2.6 halal-trade: 'halal_sharia' vendors are gated out of interest products
+    finance_mode: str = "conventional"
     # SRM-lite (v2.1 §4.4)
     fulfillment_rate: Optional[float] = None   # % of confirmed movements delivered; None until there is a sample
     movements_completed: int = 0
@@ -48,6 +50,7 @@ class VendorUpdate(BaseModel):
     phone: Optional[str] = None
     geo_lat: Optional[float] = None
     geo_lng: Optional[float] = None
+    finance_mode: Optional[str] = None  # 'conventional' | 'halal_sharia'
 
 
 class ProfileUpdate(BaseModel):
@@ -82,6 +85,7 @@ def vendor_out(v: Vendor, connected: bool = False) -> VendorOut:
         is_patron=v.is_patron,
         is_verified=v.is_verified,
         connected=connected,
+        finance_mode=getattr(v, "finance_mode", None) or "conventional",
         fulfillment_rate=stock_engine.fulfillment_rate(v),
         movements_completed=int(getattr(v, "movements_completed", 0) or 0),
     )
@@ -98,7 +102,10 @@ async def update_profile(
     vendor: Vendor = Depends(get_current_vendor),
     db: AsyncSession = Depends(get_db),
 ):
-    for field, value in data.model_dump(exclude_none=True).items():
+    payload = data.model_dump(exclude_none=True)
+    if "finance_mode" in payload and payload["finance_mode"] not in ("conventional", "halal_sharia"):
+        raise HTTPException(400, "finance_mode must be 'conventional' or 'halal_sharia'")
+    for field, value in payload.items():
         setattr(vendor, field, value)
     await db.commit()
     await db.refresh(vendor)
