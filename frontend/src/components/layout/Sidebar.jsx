@@ -9,7 +9,6 @@ import {
   Calculator,
   CalendarDays,
   Terminal,
-  Handshake,
   ShoppingBasket,
   ShieldCheck,
   LogOut,
