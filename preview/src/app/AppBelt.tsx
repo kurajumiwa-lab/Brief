@@ -120,29 +120,29 @@ export const AppBelt: React.FC<AppBeltProps> = ({
         <button
           type="button"
           onClick={() => { soundEngine.play('tap'); onHome(); }}
-          aria-label="Wairo home"
+          aria-label="My Shop App home"
           className="flex items-center gap-1.5 shrink-0 cursor-pointer"
         >
           <WairoMark size={22} title="" />
           <span className="flex flex-col items-start leading-none">
             <span data-testid="wairo-wordmark" className="text-[15px] font-black tracking-tight" style={{ color: 'var(--wairo-slate)' }}>
-              Wairo
+              My Shop App
             </span>
             <span data-testid="wairo-avenue" className="text-[11px] font-bold uppercase tracking-[0.12em] mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
-              Blue Avenue
+              Trade info
             </span>
           </span>
         </button>
 
         <form onSubmit={submit} role="search" className="flex-1 min-w-0 flex items-center gap-1.5">
-          <label htmlFor="belt-search" className="sr-only">Search Wairo</label>
+          <label htmlFor="belt-search" className="sr-only">Search My Shop App</label>
           <input
             id="belt-search"
             type="search"
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Search listings, vendors, places"
-            aria-label="Search Wairo"
+            aria-label="Search My Shop App"
             className="min-w-0 flex-1 px-3 py-2 rounded-xl text-[13px] border"
             style={{ background: 'var(--color-bg)', borderColor: 'var(--brief-line)', color: 'var(--color-text)' }}
           />

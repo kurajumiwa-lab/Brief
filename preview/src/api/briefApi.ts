@@ -6102,3 +6102,73 @@ export function groupAdmissions(id: string): Promise<ApiResult<Array<{ id: strin
 export function decideGroupAdmission(groupId: string, id: string, approve: boolean, reason: string): Promise<ApiResult<unknown>> {
   return request(`/api/groups/${encodeURIComponent(groupId)}/admission/decide`, { method: 'POST', body: JSON.stringify({ id, approve, reason }) });
 }
+
+// ---------------------------------------------------------------------------
+// MY SHOP APP — the trade-information shelf. One function per section, each
+// answering a business question from real rows; nothing here is a feed.
+// ---------------------------------------------------------------------------
+
+export interface ShopHomeView {
+  newToday: number;
+  tiles: { news: number; suppliers: number; stock: number; shops: number; groups: number; brief: number };
+}
+
+export function getShopHome(): Promise<ApiResult<ShopHomeView>> {
+  return request('/api/shop-home', undefined, (r) =>
+    r && typeof r.newToday === 'number' && r.tiles ? r as ShopHomeView : undefined);
+}
+
+export interface MarketNewsItem {
+  id: string;
+  kind: 'listing' | 'price' | 'shop' | 'group' | 'event';
+  headline: string;
+  source: string;
+  location: string | null;
+  date: string;
+  price: number | null;
+  currency: string;
+  link: { type: 'space' | 'event'; slug: string } | null;
+}
+
+export interface MarketNewsView {
+  items: MarketNewsItem[];
+  windowDays: number;
+  signals: Array<{ type: string; count: number; currency: string; minPrice: number; avgPrice: number; maxPrice: number }>;
+}
+
+export function getMarketNews(days = 7): Promise<ApiResult<MarketNewsView>> {
+  return request(`/api/market-news?days=${days}`, undefined, (r) =>
+    r && Array.isArray(r.items) && Array.isArray(r.signals) ? r as MarketNewsView : undefined);
+}
+
+export interface PriceSignal {
+  type: string;
+  count: number;
+  currency: string;
+  minPrice: number;
+  avgPrice: number;
+  maxPrice: number;
+}
+
+export function getPriceSignals(): Promise<ApiResult<{ signals: PriceSignal[]; derivedAt: string; note: string }>> {
+  return request('/api/price-signals', undefined, (r) =>
+    r && Array.isArray(r.signals) ? { signals: r.signals as PriceSignal[], derivedAt: String(r.derivedAt ?? ''), note: String(r.note ?? '') } : undefined);
+}
+
+/** The active shelf across every seller — the Stock Index's rows. */
+export function listActiveListings(type?: string): Promise<ApiResult<Listing[]>> {
+  const q = type ? `?type=${encodeURIComponent(type)}&status=active` : '?status=active';
+  return request(`/api/listings${q}`, undefined, (r) => (areListings(r?.listings) ? (r.listings as Listing[]) : undefined));
+}
+
+export interface PublicSpaceDirectory {
+  spaces: PublicSpace[];
+  modes: Array<{ id: string; label: string }>;
+  filtered: { mode: string; modeLabel: string } | null;
+}
+
+export function listPublicSpaces(mode?: string): Promise<ApiResult<PublicSpaceDirectory>> {
+  const q = mode ? `?mode=${encodeURIComponent(mode)}&limit=100` : '?limit=100';
+  return request(`/api/public/spaces${q}`, undefined, (r) =>
+    r && Array.isArray(r.spaces) && Array.isArray(r.modes) ? r as PublicSpaceDirectory : undefined);
+}

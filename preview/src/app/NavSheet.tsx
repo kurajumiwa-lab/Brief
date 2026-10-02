@@ -108,7 +108,7 @@ export const SHEET_GROUPS: Array<{ id: string; label: string; items: SheetItem[]
     id: 'closing',
     label: '',
     items: [
-      { id: 'how', label: 'How Wairo works', sub: 'How a row becomes trust', target: { kind: 'you', section: 'how' } },
+      { id: 'how', label: 'How it works', sub: 'How a row becomes trust', target: { kind: 'you', section: 'how' } },
       { id: 'signout', label: 'Sign out', sub: 'End the session on this device', target: { kind: 'signout' } }
     ]
   }

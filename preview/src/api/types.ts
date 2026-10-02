@@ -2119,6 +2119,9 @@ export interface PublicSpace {
   sampleOffers: Array<{ title: string; price: number; currency: string; id?: string; featured?: boolean }>;
   /** The declared operating facts + how old they are. No economics, no rank. */
   operating?: SpaceOperating;
+  /** Which arm of the business the page is: the owner's own declaration. */
+  mode?: string | null;
+  modeLabel?: string | null;
   /** URL name, follower count, live updates, and the two operating lines. */
   slug?: string | null;
   followers?: number;

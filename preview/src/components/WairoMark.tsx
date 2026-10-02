@@ -16,7 +16,7 @@ export interface WairoMarkProps {
   className?: string;
 }
 
-export function WairoMark({ size = 28, title = 'Wairo', className = '' }: WairoMarkProps) {
+export function WairoMark({ size = 28, title = 'My Shop App', className = '' }: WairoMarkProps) {
   const decorative = title === '';
   const uid = React.useId().replace(/:/g, '');
   const g = `wairo-g-${uid}`;

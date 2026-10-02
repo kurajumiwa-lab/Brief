@@ -1,11 +1,11 @@
 {
-  "name": "Wairo",
-  "short_name": "Wairo",
-  "description": "A digital marketplace for what is actually happening around you — your shop, your records, your rows.",
+  "name": "My Shop App",
+  "short_name": "My Shop",
+  "description": "The trade information network for people who run shops — prices, suppliers, shops, groups and what is changing in your market.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#F7F8FA",
-  "theme_color": "#2563EB",
+  "theme_color": "#0A0E14",
   "icons": [
     {
       "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='42' fill='%23FFFFFF'/%3E%3Crect x='36' y='36' width='80' height='80' rx='22' fill='none' stroke='%232563EB' stroke-width='14'/%3E%3Crect x='76' y='36' width='80' height='80' rx='22' fill='none' stroke='%2310B981' stroke-width='14'/%3E%3Crect x='36' y='76' width='80' height='80' rx='22' fill='none' stroke='%232563EB' stroke-width='14'/%3E%3Crect x='76' y='76' width='80' height='80' rx='22' fill='none' stroke='%2310B981' stroke-width='14'/%3E%3C/svg%3E",

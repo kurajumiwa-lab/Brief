@@ -7,6 +7,7 @@ import { ContextMenu } from '../../ui/ContextMenu';
 import { ImageField } from '../../components/ImageField';
 import * as briefApi from '../../api/briefApi';
 import { PLASTER, plateGlow } from '../city/room';
+import { StockAddSheet } from './StockAddSheet';
 
 // ---------------------------------------------------------------------------
 // CATALOG VIEW — the seller's own offers, with REAL controls.
@@ -90,6 +91,12 @@ const moneyChangedIn = (offer: Listing, draft: ListingUpdate) => {
 export interface CatalogViewProps {
   offers: Listing[];
   onAddOffer: () => void;
+  /** The space the shelf belongs to. With it, the fast stock-add sheet (photo
+      + note, or a template) can write real rows; without it the full form is
+      the only honest path, so the button falls back to `onAddOffer`. */
+  spaceId?: string;
+  /** Re-read the shelf after the stock-add sheet wrote rows. */
+  onStockAdded?: () => void;
   onPublishOffer?: (offerId: string) => void;
   /**
    * The link was copied, or the browser refused to copy it. `false` means the
@@ -108,6 +115,8 @@ export interface CatalogViewProps {
 export const CatalogView: React.FC<CatalogViewProps> = ({
   offers = [],
   onAddOffer,
+  spaceId,
+  onStockAdded,
   onPublishOffer,
   onShareOffer,
   onOfferStatus,
@@ -115,6 +124,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
   featured,
   className = ''
 }) => {
+  const [stockSheetOpen, setStockSheetOpen] = useState(false);
   const [category, setCategory] = useState('all');
   const [search, setSearch] = useState('');
   const categories = [...new Set(offers.map(o => o.type).filter((t): t is Listing['type'] => typeof t === 'string' && t.length > 0))];
@@ -234,18 +244,42 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
             Catalog & Offers ({offers.length})
           </h3>
         </div>
-        <button
-          type="button"
-          onClick={() => {
-            soundEngine.play('heavyTap');
-            onAddOffer();
-          }}
-          className="px-3.5 py-1.5 rounded-full bg-[color:var(--color-text)] hover:bg-black text-white font-bold text-xs flex items-center space-x-1.5 transition-all cursor-pointer shadow-xs"
-        >
-          <Plus className="w-3.5 h-3.5" />
-          <span>+ Add Offer</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              soundEngine.play('heavyTap');
+              // The fast path is the stock sheet (photo + note, or a template).
+              // Without a space id the sheet has nowhere to write, so the full
+              // form stays the fallback rather than a dead button.
+              if (spaceId) setStockSheetOpen(true);
+              else onAddOffer();
+            }}
+            className="px-3.5 py-1.5 rounded-full bg-[color:var(--color-text)] hover:bg-black text-white font-bold text-xs flex items-center space-x-1.5 transition-all cursor-pointer shadow-xs"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>+ Add Stock</span>
+          </button>
+          {spaceId && (
+            <button
+              type="button"
+              onClick={() => { soundEngine.play('tap'); onAddOffer(); }}
+              className="px-3 py-1.5 rounded-full text-[color:var(--color-text-muted)] hover:text-[color:var(--color-text)] font-bold text-xs cursor-pointer"
+              title="The full offer form"
+            >
+              Full form
+            </button>
+          )}
+        </div>
       </div>
+
+      {stockSheetOpen && spaceId && (
+        <StockAddSheet
+          spaceId={spaceId}
+          onClose={() => setStockSheetOpen(false)}
+          onAdded={() => { onStockAdded?.(); }}
+        />
+      )}
 
       {offers.length > 0 && <div className="space-y-2">
         <input aria-label="Search shop catalog" placeholder="Search this shop" value={search} onChange={e => setSearch(e.target.value)} className="w-full p-3 rounded-2xl" />
@@ -261,10 +295,13 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
           </p>
           <button
             type="button"
-            onClick={onAddOffer}
+            onClick={() => {
+              if (spaceId) setStockSheetOpen(true);
+              else onAddOffer();
+            }}
             className="px-4 py-2 rounded-full bg-[color:var(--color-text)] text-white text-xs font-bold shadow-xs cursor-pointer"
           >
-            Create First Offer
+            Add your first stock
           </button>
         </div>
       ) : (

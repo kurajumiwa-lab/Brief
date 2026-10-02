@@ -106,7 +106,7 @@ export const Navigation: React.FC<NavigationProps> = ({
   activeTab,
   onSelectTab,
   onOpenCreate,
-  spaceName = 'Wairo',
+  spaceName = 'My Shop App',
   className = ''
 }) => {
   const activeDoor = doorFor(activeTab);
@@ -214,10 +214,10 @@ export const Navigation: React.FC<NavigationProps> = ({
               </span>
               <span className="flex flex-col items-start leading-none">
                 <span className="text-xl font-black tracking-tight" style={{ color: 'var(--wairo-slate)' }}>
-                  Wairo
+                  My Shop App
                 </span>
                 <span className="text-[11px] font-bold uppercase tracking-[0.12em] mt-1" style={{ color: 'var(--color-text-muted)' }}>
-                  Blue Avenue
+                  Trade info
                 </span>
               </span>
             </div>

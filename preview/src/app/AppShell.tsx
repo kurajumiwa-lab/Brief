@@ -11,7 +11,8 @@ import { HostEventSheet } from '../features/city/HostEventSheet';
 const GroupBuyPortal = React.lazy(() => import('../components/GroupBuyPortal').then(m => ({ default: m.GroupBuyPortal })));
 const SpaceModerationPanel = React.lazy(() => import('../components/SpaceModerationPanel').then(m => ({ default: m.SpaceModerationPanel })));
 const SearchResults = React.lazy(() => import('../components/SearchResults').then(m => ({ default: m.SearchResults })));
-const HomeSurface = React.lazy(() => import('../features/home/HomeSurface').then(m => ({ default: m.HomeSurface })));
+const ShopHome = React.lazy(() => import('../features/shopapp/ShopHome').then(m => ({ default: m.ShopHome })));
+const ShopSection = React.lazy(() => import('../features/shopapp/ShopSection').then(m => ({ default: m.ShopSection })));
 const SpaceShell = React.lazy(() => import('../features/spaces/SpaceShell').then(m => ({ default: m.SpaceShell })));
 import { SpaceMoney } from '../features/spaces/SpaceMoney';
 import { CatalogView } from '../features/spaces/CatalogView';
@@ -62,6 +63,10 @@ export const AppShell: React.FC<AppShellProps> = ({
   const [joinCode, setJoinCode] = useState('');
   const [spaceLink, setSpaceLink] = useState('');
   const [storefrontOpen, setStorefrontOpen] = useState(false);
+  // The trade-information section the home shelf opened (`#section/<id>`).
+  // The hash is the single source, exactly like the other overlays: back and
+  // X both write the URL, and closing lands on the tab underneath (Home).
+  const [shopSection, setShopSection] = useState<string | null>(null);
   const [spaceError, setSpaceError] = useState('');
   const [activeSpace, setActiveSpace] = useState<Space | null>(null);
   // Where the You tab opens. The ⓘ on a screen deep-links to the audit page
@@ -325,6 +330,20 @@ export const AppShell: React.FC<AppShellProps> = ({
       const hash = window.location.hash.slice(1);
       setModerationOpen(hash === 'moderation');
       if (hash === 'moderation') return;
+      // The home shelf's sections: `#section/<id>`. The hash is the whole
+      // story — valid ids open the overlay over Home, anything else closes it.
+      const sectionId = hash.startsWith('section/') ? hash.slice(8) : null;
+      setShopSection(sectionId && ['news', 'suppliers', 'stock', 'shops', 'groups'].includes(sectionId) ? sectionId : null);
+      if (sectionId && ['news', 'suppliers', 'stock', 'shops', 'groups'].includes(sectionId)) {
+        setJoinCode('');
+        setSearchQuery('');
+        setEntityId(null);
+        setStorefrontOpen(false);
+        if (spaceLinkRef.current) setSpaceLink('');
+        setActiveTab('home');
+        tabHashRef.current = 'home';
+        return;
+      }
       // An overlay's own hash: exactly the named one is open. This is the branch
       // the back gesture lands on, and it is the only place an overlay closes.
       const surface = surfaceFromHash(hash);
@@ -638,30 +657,16 @@ export const AppShell: React.FC<AppShellProps> = ({
             {spaceError ? <><p role="alert" className="my-4">{spaceError}</p><button onClick={loadSpaces}>Retry</button><button className="ml-4 underline" onClick={() => requestPath()}>Sign in through My Requests</button></> : !loading && <><p className="my-4">No business space yet. Create a Request to describe what you need, or create a space for what you sell.</p><button className="px-4 py-3 rounded-xl bg-[color:var(--color-primary)] text-[color:var(--accent-ink)]" onClick={() => { setCreateFlowInitialStep(1); setCreateFlowOpen(true); }}>Create a space</button></>}
           </section>
         )}
-        {/* Legacy Home Surface Compatibility for tests */}
+        {/* HOME — the trade-information shelf: six sections, one question
+            each, counts from real rows. Brief keeps its place as a feature,
+            opening the work-request workspace it was built on. */}
         {activeTab === 'home' ? (
-          <HomeSurface
-            userName="there"
-            onOpenSpace={openSpace}
-            onExploreDiscover={(sub, startRun) => {
-              const room = sub ?? 'all';
-              setDiscoverSubTab(room);
-              if (startRun) {
-                const nextNonce = signalCounter + 1;
-                setSignalCounter(nextNonce);
-                setErrandSignal({ nonce: nextNonce, kind: 'delivery' });
-              } else if (room !== 'errands') {
-                setErrandSignal(null);
-              }
-              setActiveTab('city');
-              window.location.hash = room === 'all' ? 'city' : `city/${room}`;
+          <ShopHome
+            onOpenBrief={() => {
+              setShopSection(null);
+              setActiveTab('requests');
+              window.location.hash = 'requests';
             }}
-            onOpenPulse={() => { setActiveTab('pulse'); window.location.hash = 'pulse'; }}
-            onOpenSpaces={() => { setActiveTab('mine'); window.location.hash = 'mine'; }}
-            onOpenGroupBuys={() => setGroupBuysOpen(true)}
-            onGetPaid={() => setActiveTab('ledger')}
-            onOpenHow={() => { window.location.hash = 'you/how'; }}
-            onOpenEarn={() => { window.location.hash = 'you/earn'; }}
           />
         ) : (
           <div>
@@ -743,6 +748,8 @@ export const AppShell: React.FC<AppShellProps> = ({
             {activeTab === 'catalog' && activeSpace && (
               <CatalogView
                 offers={activeSpace.offers}
+                spaceId={activeSpace.id}
+                onStockAdded={loadSpaces}
                 onAddOffer={() => {
                   setCreateFlowInitialStep(2);
                   setCreateFlowOpen(true);
@@ -961,7 +968,7 @@ export const AppShell: React.FC<AppShellProps> = ({
         <PublicOfferModal
           isOpen={publicOfferModalOpen}
           offer={activePublicOffer}
-          spaceName={activeSpace?.name ?? 'Wairo seller'}
+          spaceName={activeSpace?.name ?? 'My Shop App seller'}
           onClose={() => setPublicOfferModalOpen(false)}
           onInquirySent={() => showToast('Inquiry submitted to seller!')}
         />

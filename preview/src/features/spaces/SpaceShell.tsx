@@ -660,6 +660,8 @@ export const SpaceShell: React.FC<SpaceShellProps> = ({
         <div className="animate-fadeIn">
           <CatalogView
             offers={space.offers}
+            spaceId={space.id}
+            onStockAdded={loadSpace}
             onAddOffer={() => setCreateFlowOpen(true)}
             onPublishOffer={handlePublishOffer}
             onShareOffer={(o, copied) => showToast(copied
