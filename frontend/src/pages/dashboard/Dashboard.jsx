@@ -128,7 +128,7 @@ function NumberPopup({ which, onClose, data }) {
                     {r.emoji} {r.label}
                   </span>
                   <div className="flex-1 h-1.5 rounded-full bg-white/[0.07] overflow-hidden">
-                    <div className="h-full rounded-full bg-gradient-to-r from-brand-500 to-brand-300 shadow-[0_0_8px_rgba(34,168,103,0.6)]" style={{ width: `${pct}%` }} />
+                    <div className="h-full rounded-full bg-gradient-to-r from-brand-500 to-brand-300 shadow-[0_0_8px_rgba(245, 158, 11,0.6)]" style={{ width: `${pct}%` }} />
                   </div>
                   <span className="w-8 text-right digital text-ink-4">{n}</span>
                 </div>
@@ -195,7 +195,7 @@ function Feed({ movements, todo, notifications, onOpenMovement, onOpenNotificati
               <span className="min-w-0 flex-1">
                 <span className="flex items-center gap-2">
                   <span className={cn("text-sm truncate", n.is_read ? "text-ink-3" : "text-ink-1 font-medium")}>{n.title}</span>
-                  {!n.is_read && <span className="w-1.5 h-1.5 rounded-full bg-brand-400 shrink-0 shadow-[0_0_6px_rgba(70,194,132,0.9)]" />}
+                  {!n.is_read && <span className="w-1.5 h-1.5 rounded-full bg-brand-400 shrink-0 shadow-[0_0_6px_rgba(251, 191, 36,0.9)]" />}
                 </span>
                 {n.body && <span className="block text-xs text-ink-4 mt-0.5 line-clamp-2">{n.body}</span>}
                 <span className="block text-2xs text-ink-4/70 mt-1">{relativeTime(n.created_at)}</span>

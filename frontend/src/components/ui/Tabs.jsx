@@ -30,7 +30,7 @@ export default function Tabs({ tabs, value, onChange, variant = "underline", cla
                 ? cn(
                     "px-3 py-2 rounded-xl",
                     active
-                      ? "bg-brand-500/15 text-brand-200 shadow-[0_0_18px_-4px_rgba(34,168,103,0.45)]"
+                      ? "bg-brand-500/15 text-brand-200 shadow-[0_0_18px_-4px_rgba(245, 158, 11,0.45)]"
                       : "text-ink-4 hover:text-ink-2 hover:bg-white/[0.05]"
                   )
                 : cn("px-3 py-1.5 rounded-lg", active ? "bg-white/[0.1] text-ink-1 shadow-glass" : "text-ink-4 hover:text-ink-2")

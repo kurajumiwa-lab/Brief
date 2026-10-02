@@ -138,7 +138,7 @@ export default function NotificationBell({ pollMs = 30_000 }) {
         <Bell size={17} />
         {unreadCount > 0 && (
           <span
-            className="absolute top-0.5 right-0.5 min-w-[1rem] h-4 px-1 rounded-full bg-brand-500 text-white text-2xs font-bold flex items-center justify-center shadow-[0_0_10px_rgba(34,168,103,0.7)]"
+            className="absolute top-0.5 right-0.5 min-w-[1rem] h-4 px-1 rounded-full bg-brand-500 text-white text-2xs font-bold flex items-center justify-center shadow-[0_0_10px_rgba(245, 158, 11,0.7)]"
             data-testid="unread-badge"
           >
             {unreadCount > 99 ? "99+" : unreadCount}
@@ -189,7 +189,7 @@ export default function NotificationBell({ pollMs = 30_000 }) {
                         </span>
                       </span>
                       {!n.is_read && (
-                        <span className="mt-2 w-1.5 h-1.5 rounded-full bg-brand-400 shrink-0 shadow-[0_0_6px_rgba(70,194,132,0.9)]" aria-hidden />
+                        <span className="mt-2 w-1.5 h-1.5 rounded-full bg-brand-400 shrink-0 shadow-[0_0_6px_rgba(251, 191, 36,0.9)]" aria-hidden />
                       )}
                     </button>
                   </li>

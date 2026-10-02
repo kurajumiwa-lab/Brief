@@ -17,7 +17,7 @@ export function ToastProvider() {
           padding: "10px 14px",
           maxWidth: "380px",
         },
-        success: { iconTheme: { primary: "#22a867", secondary: "#09090b" } },
+        success: { iconTheme: { primary: "#F59E0B", secondary: "#09090b" } },
         error: { iconTheme: { primary: "#f87171", secondary: "#09090b" }, duration: 5000 },
       }}
     />

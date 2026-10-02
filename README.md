@@ -1,6 +1,6 @@
-# Brief_ — the vendor network
+# My Shop App — the trade information network
 
-**No consumers. Only vendors.** *You source today, you sell tomorrow.*
+**The information layer around the shop.** Home is a shelf — News, Suppliers, Stock, Rentals, Groups, Events — and the vendor workspace (Brief: stock, deals, chat, analytics, POS) lives inside as a feature. *You source today, you sell tomorrow.*
 
 Brief_ is a vendor-centric community commerce platform: distribution-and-economic
 infrastructure for people who already trade with each other — market women,

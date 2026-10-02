@@ -54,7 +54,7 @@ export default function Network() {
     <div className="space-y-4">
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-3">
         <div>
-          <h2 className="text-xl font-semibold text-ink-1 tracking-tight">Vendor Network</h2>
+          <h2 className="text-xl font-semibold text-ink-1 tracking-tight">Suppliers</h2>
           <p className="text-xs text-ink-4">Connect with the vendors you trade with. Connections make your stock — and theirs — easier to find.</p>
         </div>
         {stats && (

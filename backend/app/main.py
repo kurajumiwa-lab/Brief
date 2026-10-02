@@ -16,8 +16,8 @@ from app.middleware.rate_limiter import RateLimitMiddleware, configure_backend
 from app.middleware.vendor_only import VendorOnlyMiddleware
 from app.routes import (
     analytics, auth, bookings, chamas, chat, collective, events, files, governance, groups, market_locks,
-    murabaha, notifications, ops as ops_routes, payments, pos_bridge, reviews, route_planner, stock,
-    tools, vendor_lists, vendors, verification,
+    murabaha, news as news_routes, notifications, ops as ops_routes, payments, pos_bridge, reviews,
+    route_planner, stock, tools, vendor_lists, vendors, verification,
 )
 from app.services import payment_worker, pos_sync
 from app.services.storage import local_root
@@ -94,6 +94,7 @@ app.include_router(tools.router, prefix="/api/tools", tags=["Vendor Tools"])
 app.include_router(events.router, prefix="/api/events", tags=["Events"])
 app.include_router(pos_bridge.router, prefix="/api/pos", tags=["POS Bridge"])
 # v2.1
+app.include_router(news_routes.router, prefix="/api/news", tags=["Market News"])
 app.include_router(notifications.router, prefix="/api/notifications", tags=["Notifications"])
 app.include_router(files.router, prefix="/api/files", tags=["Files"])
 app.include_router(verification.router, prefix="/api/stock", tags=["Stock Verification"])

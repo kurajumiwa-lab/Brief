@@ -298,6 +298,11 @@ export const fileAPI = {
   limits: () => api.get("/files/limits"),
 };
 
+// ── Market news (derived from real rows; see backend/app/routes/news.py) ───
+export const newsAPI = {
+  feed: (days = 7) => api.get("/news", { params: { days } }), // { items, counts, new_today, window_days }
+};
+
 // ── Collective sourcing (v2.1) ─────────────────────────────────────────────
 export const collectiveAPI = {
   list: (params) => api.get("/collective", { params: noEmpty(params) }), // group_id, status

@@ -18,10 +18,10 @@ const PILLARS = [
 function Wordmark() {
   return (
     <div className="flex items-center gap-2.5">
-      <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-400 to-brand-700 flex items-center justify-center shadow-[0_0_24px_-2px_rgba(34,168,103,0.55)]">
-        <span className="text-white font-bold text-sm">B</span>
+      <div className="w-9 h-9 rounded-xl bg-[#0A0E14] ring-1 ring-brand-500/40 flex items-center justify-center shadow-[0_0_24px_-2px_rgba(245,158,11,0.45)]">
+        <Store size={17} className="text-brand-400" />
       </div>
-      <span className="text-sm font-semibold text-ink-2">Brief_ · vendor network</span>
+      <span className="text-sm font-semibold text-ink-2">My Shop App · trade info</span>
     </div>
   );
 }
@@ -87,12 +87,12 @@ export default function AuthPage() {
         </div>
         <div className="relative max-w-md">
           <h1 className="text-4xl font-bold tracking-tight text-ink-1 leading-tight">
-            No consumers.
+            Know your market
             <br />
-            <span className="text-brand-400">Only vendors.</span>
+            <span className="text-brand-400">before you move.</span>
           </h1>
           <p className="mt-4 text-sm text-ink-3 leading-relaxed">
-            A closed trade network for the people who actually move goods — mama mbogas, kibandas, wholesalers, couriers. Source from each other, keep your shelf live from your till, and build a reputation the network can measure.
+            The trade information network for people who run shops — check what's changing, find who has stock, source from vendors you can measure, and keep your shelf live from your till.
           </p>
           <ul className="mt-8 space-y-4">
             {PILLARS.map(([t, d]) => (
@@ -118,7 +118,7 @@ export default function AuthPage() {
           <div className="glass rounded-3xl p-6 sm:p-7">
             <div className="flex items-center gap-1 p-1 rounded-xl bg-white/[0.05] w-fit mb-6" role="tablist">
               {["login", "register"].map((m) => (
-                <button key={m} role="tab" aria-selected={mode === m} onClick={() => switchMode(m)} className={cn("px-4 h-8 rounded-lg text-sm font-medium transition-all", mode === m ? "bg-brand-500/20 text-brand-200 shadow-[0_0_16px_-4px_rgba(34,168,103,0.5)]" : "text-ink-4 hover:text-ink-2")}>
+                <button key={m} role="tab" aria-selected={mode === m} onClick={() => switchMode(m)} className={cn("px-4 h-8 rounded-lg text-sm font-medium transition-all", mode === m ? "bg-brand-500/20 text-brand-200 shadow-[0_0_16px_-4px_rgba(245, 158, 11,0.5)]" : "text-ink-4 hover:text-ink-2")}>
                   {m === "login" ? "Enter" : "Join"}
                 </button>
               ))}

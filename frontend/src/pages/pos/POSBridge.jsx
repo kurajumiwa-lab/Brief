@@ -160,10 +160,10 @@ export default function POSBridge() {
         <p className="text-sm font-medium text-ink-1">How the bridge works</p>
         <ul className="list-disc pl-4 space-y-1">
           <li>
-            <span className="text-ink-1">Pull</span> (Square, Shopify): Brief_ calls the POS on your schedule and upserts your shelf by SKU.
+            <span className="text-ink-1">Pull</span> (Square, Shopify): My Shop App calls the POS on your schedule and upserts your shelf by SKU.
           </li>
           <li>
-            <span className="text-ink-1">Push</span> (CSV, manual, custom API): you — or the <span className="font-mono">pos-extension</span> daemon watching your till's export folder — send items to the connection's push endpoint with your Brief_ token.
+            <span className="text-ink-1">Push</span> (CSV, manual, custom API): you — or the <span className="font-mono">pos-extension</span> daemon watching your till's export folder — send items to the connection's push endpoint with your app token.
           </li>
           <li>Items are matched by SKU, then by name. Nothing is ever deleted from your shelf by a sync; sold-out lines just drop to zero.</li>
         </ul>

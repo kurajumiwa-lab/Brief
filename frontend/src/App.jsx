@@ -3,6 +3,8 @@ import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import Shell from "@/components/layout/Shell";
 import { PageSpinner } from "@/components/ui/Spinner";
 import AuthPage from "@/pages/auth/AuthPage";
+import ShopHome from "@/pages/home/ShopHome";
+import News from "@/pages/news/News";
 import Dashboard from "@/pages/dashboard/Dashboard";
 import StockRoom from "@/pages/stock/StockRoom";
 import Network from "@/pages/network/Network";
@@ -47,7 +49,11 @@ export default function App() {
           </RequireVendor>
         }
       >
-        <Route path="/" element={<Dashboard />} />
+        {/* Home is the trade-information shelf; the vendor's own workspace
+            (numbers, feed, suggestions) lives under Brief, as a feature. */}
+        <Route path="/" element={<ShopHome />} />
+        <Route path="/news" element={<News />} />
+        <Route path="/brief" element={<Dashboard />} />
         <Route path="/stock" element={<StockRoom />} />
         <Route path="/network" element={<Network />} />
         <Route path="/analytics" element={<Analytics />} />

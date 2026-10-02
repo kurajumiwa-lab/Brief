@@ -1,14 +1,13 @@
 import { NavLink } from "react-router-dom";
-import { Home, Package, MessageSquare, ShoppingBasket, MoreHorizontal } from "lucide-react";
+import { Home, Newspaper, Package, MoreHorizontal } from "lucide-react";
 import { useUIStore } from "@/stores/uiStore";
 import { useStockStore } from "@/stores/stockStore";
 import { cn } from "@/lib/utils";
 
 const TABS = [
   { to: "/", label: "Home", icon: Home, end: true },
+  { to: "/news", label: "News", icon: Newspaper },
   { to: "/stock", label: "Stock", icon: Package },
-  { to: "/chat", label: "Chat", icon: MessageSquare },
-  { to: "/locks", label: "Locks", icon: ShoppingBasket },
 ];
 
 export default function MobileNav() {
@@ -30,7 +29,7 @@ export default function MobileNav() {
               {label === "Stock" && pending > 0 && <span className="notif-dot notif-dot-amber" aria-hidden="true" />}
               <Icon size={18} />
               {label}
-              {isActive && <span className="absolute top-0 w-8 h-0.5 rounded-full bg-brand-400 shadow-[0_0_8px_rgba(70,194,132,0.8)]" />}
+              {isActive && <span className="absolute top-0 w-8 h-0.5 rounded-full bg-brand-400 shadow-[0_0_8px_rgba(251,191,36,0.8)]" />}
             </>
           )}
         </NavLink>

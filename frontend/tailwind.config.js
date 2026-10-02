@@ -4,9 +4,10 @@ export default {
   theme: {
     extend: {
       colors: {
+        // My Shop App: ink + gold. The one action colour — trade, market, value.
         brand: {
-          50: "#eefbf3", 100: "#d6f5e1", 200: "#b0eac8", 300: "#7cd9a8", 400: "#46c284",
-          500: "#22a867", 600: "#158751", 700: "#116c43", 800: "#105637", 900: "#0e472e", 950: "#07281a",
+          50: "#FFFBEB", 100: "#FEF3C7", 200: "#FDE68A", 300: "#FCD34D", 400: "#FBBF24",
+          500: "#F59E0B", 600: "#D97706", 700: "#B45309", 800: "#92400E", 900: "#78350F", 950: "#451A03",
         },
         // v2.7 look: dark mode, but lighter and airier (was #09090b)
         surface: { 0: "#101216", 1: "#16191f", 2: "#1c2027", 3: "#242933", 4: "#2d3340" },

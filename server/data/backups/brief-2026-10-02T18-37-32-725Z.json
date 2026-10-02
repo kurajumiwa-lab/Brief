@@ -1,0 +1,292 @@
+{
+  "users": [],
+  "sessions": [],
+  "sources": [],
+  "sourceMemberships": [],
+  "rawItems": [],
+  "objects": [
+    {
+      "id": "obj_nb",
+      "type": "place",
+      "title": "Nairobi Cafe",
+      "publication": "public",
+      "verificationStatus": "community_confirmed",
+      "createdAt": "2026-09-01T15:51:00.962Z",
+      "metadata": {
+        "lat": -1.28,
+        "lng": 36.82
+      },
+      "updatedAt": "2026-09-01T15:51:00.963Z"
+    },
+    {
+      "id": "obj_ksm",
+      "type": "place",
+      "title": "Kisumu Spot",
+      "publication": "removed",
+      "verificationStatus": "unverified",
+      "createdAt": "2026-09-01T15:51:00.962Z",
+      "metadata": {
+        "lat": -0.09,
+        "lng": 34.76
+      },
+      "updatedAt": "2026-09-01T15:51:00.964Z"
+    },
+    {
+      "id": "obj_noloc",
+      "type": "place",
+      "title": "No Location",
+      "publication": "public",
+      "verificationStatus": "unverified",
+      "createdAt": "2026-09-01T15:51:00.962Z",
+      "metadata": {}
+    },
+    {
+      "id": "obj_old",
+      "type": "event",
+      "title": "Old Event",
+      "publication": "public",
+      "verificationStatus": "unverified",
+      "validityWindowDays": 1,
+      "createdAt": "2026-08-29T15:51:00.966Z",
+      "metadata": {},
+      "expiryStatus": "expired",
+      "updatedAt": "2026-09-01T15:51:00.966Z"
+    }
+  ],
+  "objectSources": [],
+  "relationships": [],
+  "syncRuns": [],
+  "errors": [],
+  "circles": [],
+  "members": [],
+  "blocks": [],
+  "votes": [],
+  "signals": [
+    {
+      "id": "sig_mtiugsiwwosnv3",
+      "type": "object_viewed",
+      "circleId": null,
+      "blockId": null,
+      "sourceId": null,
+      "objectId": "obj_nb",
+      "actorId": "usr_a",
+      "value": null,
+      "metadata": {},
+      "createdAt": "2026-09-01T15:51:00.968Z"
+    },
+    {
+      "id": "sig_mtiugsix1ltzos",
+      "type": "object_saved",
+      "circleId": null,
+      "blockId": null,
+      "sourceId": null,
+      "objectId": "obj_nb",
+      "actorId": "usr_b",
+      "value": null,
+      "metadata": {},
+      "createdAt": "2026-09-01T15:51:00.969Z"
+    }
+  ],
+  "ledgerTransactions": [],
+  "paymentIntents": [],
+  "paymentCallbacks": [],
+  "payouts": [],
+  "campaigns": [],
+  "registrations": [],
+  "arenaChallenges": [
+    {
+      "id": "chal_mtiugsiz776s1i",
+      "createdBy": "ply_mtiugsiypuknb8",
+      "gameId": "efootball",
+      "mode": "1v1",
+      "stake": "friendly",
+      "entryFeeKes": null,
+      "note": "",
+      "venue": null,
+      "status": "accepted",
+      "acceptedBy": "ply_mtiugsiynsmmkp",
+      "matchId": "mtch_mtiugsj02fq083",
+      "createdAt": "2026-09-01T15:51:00.971Z",
+      "openUntil": "2026-09-01T17:51:00.971Z",
+      "updatedAt": "2026-09-01T15:51:00.972Z"
+    }
+  ],
+  "arenaMatches": [
+    {
+      "id": "mtch_mtiugsj02fq083",
+      "challengeId": "chal_mtiugsiz776s1i",
+      "gameId": "efootball",
+      "mode": "1v1",
+      "stake": "friendly",
+      "entryFeeKes": null,
+      "playerAId": "ply_mtiugsiypuknb8",
+      "playerBId": "ply_mtiugsiynsmmkp",
+      "status": "confirmed",
+      "reportedBy": "ply_mtiugsiypuknb8",
+      "reportedWinnerId": "ply_mtiugsiypuknb8",
+      "reportedScore": null,
+      "confirmedByA": true,
+      "confirmedByB": true,
+      "winnerPlayerId": "ply_mtiugsiypuknb8",
+      "scoreLine": null,
+      "disputeReason": null,
+      "createdAt": "2026-09-01T15:51:00.972Z",
+      "updatedAt": "2026-09-01T15:51:00.973Z"
+    }
+  ],
+  "fantasyCompetitions": [],
+  "fantasyPlayers": [],
+  "fantasyEntries": [],
+  "fantasyStats": [],
+  "vendors": [],
+  "listings": [],
+  "orders": [],
+  "disputes": [],
+  "auctions": [],
+  "bids": [],
+  "vaults": [],
+  "vaultParticipants": [],
+  "vaultChannels": [],
+  "vaultRequests": [],
+  "footsteps": [],
+  "handoffs": [],
+  "confirmations": [
+    {
+      "id": "conf_mtiugsircr2hmn",
+      "objectId": "obj_nb",
+      "actorId": "usr_a",
+      "createdAt": "2026-09-01T15:51:00.963Z"
+    },
+    {
+      "id": "conf_mtiugsir4gyq83",
+      "objectId": "obj_nb",
+      "actorId": "usr_b",
+      "createdAt": "2026-09-01T15:51:00.963Z"
+    }
+  ],
+  "reports": [
+    {
+      "id": "rep_mtiugsispztv4k",
+      "objectId": "obj_ksm",
+      "actorId": "usr_c",
+      "reason": "spam",
+      "note": null,
+      "status": "resolved",
+      "createdAt": "2026-09-01T15:51:00.964Z",
+      "resolvedAt": "2026-09-01T15:51:00.965Z",
+      "resolvedBy": "usr_admin",
+      "action": "remove",
+      "updatedAt": "2026-09-01T15:51:00.965Z"
+    }
+  ],
+  "notifications": [
+    {
+      "id": "ntf_mtiugsiv936omy",
+      "userId": "usr_a",
+      "kind": "confirmed",
+      "title": "Someone confirmed your info",
+      "body": null,
+      "objectId": "obj_nb",
+      "challengeId": null,
+      "metadata": {},
+      "read": true,
+      "createdAt": "2026-09-01T15:51:00.967Z",
+      "updatedAt": "2026-09-01T15:51:00.968Z"
+    },
+    {
+      "id": "ntf_mtiugsiv4rj9wp",
+      "userId": "usr_a",
+      "kind": "challenge",
+      "title": "Challenge accepted",
+      "body": null,
+      "objectId": null,
+      "challengeId": null,
+      "metadata": {},
+      "read": true,
+      "createdAt": "2026-09-01T15:51:00.967Z",
+      "updatedAt": "2026-09-01T15:51:00.968Z"
+    }
+  ],
+  "auditLog": [],
+  "teaArticles": [],
+  "mediaLibrary": [],
+  "collections": [],
+  "pools": [],
+  "poolMembers": [],
+  "poolRotations": [],
+  "clickEvents": [],
+  "lobbyRooms": [],
+  "lobbyVouches": [],
+  "scoreboardReceipts": [],
+  "clanMatches": [],
+  "workflows": [],
+  "workflowRuns": [],
+  "partnershipRequests": [],
+  "subscriptions": [],
+  "people": [],
+  "personAliases": [],
+  "arenaPlayers": [
+    {
+      "id": "ply_mtiugsiypuknb8",
+      "userId": "usr_p1",
+      "gameId": "efootball",
+      "gamerTag": "P1",
+      "platform": null,
+      "region": null,
+      "verified": false,
+      "createdAt": "2026-09-01T15:51:00.970Z",
+      "updatedAt": "2026-09-01T15:51:00.970Z"
+    },
+    {
+      "id": "ply_mtiugsiynsmmkp",
+      "userId": "usr_p2",
+      "gameId": "efootball",
+      "gamerTag": "P2",
+      "platform": null,
+      "region": null,
+      "verified": false,
+      "createdAt": "2026-09-01T15:51:00.970Z",
+      "updatedAt": "2026-09-01T15:51:00.970Z"
+    }
+  ],
+  "arenaVenues": [
+    {
+      "id": "vnu_mtiugsiz1iyq9z",
+      "name": "GameHub Kilimani",
+      "gameIds": [
+        "efootball"
+      ],
+      "location": null,
+      "lat": -1.28,
+      "lng": 36.82,
+      "contact": null,
+      "createdAt": "2026-09-01T15:51:00.971Z"
+    }
+  ],
+  "arenaTournaments": [
+    {
+      "id": "trn_mtiugsizuziwb5",
+      "gameId": "efootball",
+      "title": "Kilimani Cup",
+      "startsAt": null,
+      "createdBy": "usr_admin",
+      "venueId": null,
+      "maxPlayers": null,
+      "status": "open",
+      "createdAt": "2026-09-01T15:51:00.971Z"
+    }
+  ],
+  "arenaResults": [
+    {
+      "id": "res_mtiugsj12b11ek",
+      "matchId": "mtch_mtiugsj02fq083",
+      "gameId": "efootball",
+      "winnerPlayerId": "ply_mtiugsiypuknb8",
+      "playerAId": "ply_mtiugsiypuknb8",
+      "playerBId": "ply_mtiugsiynsmmkp",
+      "scoreLine": null,
+      "confirmedAt": "2026-09-01T15:51:00.973Z"
+    }
+  ],
+  "__schemaVersion": 2
+}

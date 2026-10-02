@@ -52,7 +52,7 @@ export default function RoomList({ rooms = [], activeId, onSelect, onNewTopic, c
                     onClick={() => onSelect(r)}
                     className={cn(
                       "w-full text-left px-3 py-2 flex items-start gap-2.5 rounded-xl transition-colors",
-                      active ? "bg-brand-500/15 shadow-[inset_0_0_20px_-6px_rgba(34,168,103,0.4)]" : "hover:bg-white/[0.05]"
+                      active ? "bg-brand-500/15 shadow-[inset_0_0_20px_-6px_rgba(245, 158, 11,0.4)]" : "hover:bg-white/[0.05]"
                     )}
                   >
                     <div className={cn("mt-0.5 w-7 h-7 rounded-lg flex items-center justify-center shrink-0", active ? "bg-brand-900 text-brand-200" : "bg-surface-3 text-ink-4")}>

@@ -27,7 +27,7 @@ export default function Avatar({ name = "", size = "md", ring, className, online
       >
         {initials(name)}
       </div>
-        {online && <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-brand-500 shadow-[0_0_0_2px_var(--tw-shadow-color,rgba(16,18,22,1)),0_0_8px_rgba(70,194,132,0.7)]" style={{ "--tw-shadow-color": "rgb(16 18 22)" }} />}
+        {online && <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-brand-500 shadow-[0_0_0_2px_var(--tw-shadow-color,rgba(16,18,22,1)),0_0_8px_rgba(251, 191, 36,0.7)]" style={{ "--tw-shadow-color": "rgb(16 18 22)" }} />}
     </div>
   );
 }
