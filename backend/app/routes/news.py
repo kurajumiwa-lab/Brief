@@ -33,6 +33,7 @@ from app.models.market_locks import LockWindow, MarketZone
 from app.models.stock import StockItem, StockMovement
 from app.models.tools import ToolListing
 from app.models.vendor import Vendor
+from app.routes.auth import get_current_vendor
 
 router = APIRouter()
 
@@ -51,6 +52,7 @@ def _money(v):
 @router.get("")
 async def market_news(
     days: int = Query(7, ge=1, le=30),
+    vendor: Vendor = Depends(get_current_vendor),
     db: AsyncSession = Depends(get_db),
 ):
     now = datetime.utcnow()
