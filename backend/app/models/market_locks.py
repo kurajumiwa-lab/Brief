@@ -25,6 +25,14 @@ class MarketZone(Base):
     walkable_ring = Column(String(240), nullable=True)
     is_active = Column(Boolean, nullable=False, default=True, server_default="true")
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    # Where the zone actually is. NULL = not located yet: the open-data ingest
+    # geocodes the zone name on first run and fills these in, so a zone never
+    # gets a guessed position.
+    center_lat = Column(Float, nullable=True)
+    center_lng = Column(Float, nullable=True)
+    radius_km = Column(Float, nullable=True)
+    last_ingest_at = Column(DateTime, nullable=True)
+    last_ingest_count = Column(Integer, nullable=True)
 
 
 class LockProduct(Base):

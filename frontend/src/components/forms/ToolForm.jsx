@@ -6,7 +6,7 @@ import Button from "@/components/ui/Button";
 import { toast } from "@/components/ui/Toast";
 import { TOOL_CATEGORIES, PRICE_UNITS } from "@/config/constants";
 import { useToolStore } from "@/stores/toolStore";
-import { apiError } from "@/lib/api";
+import { apiError, geoAPI } from "@/lib/api";
 import { splitList, numOrNull } from "@/lib/utils";
 
 export default function ToolForm({ onDone, onCancel, defaultCategory = "warehouse" }) {
@@ -16,7 +16,24 @@ export default function ToolForm({ onDone, onCancel, defaultCategory = "warehous
     capacity_value: "", capacity_unit: "", vehicle_type: "", routes: "", foot_traffic: "", hotel_name: "", cuisine: "",
   });
   const [busy, setBusy] = useState(false);
+  const [locating, setLocating] = useState(false);
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  // Free geocode (Nominatim): the typed place name becomes real coordinates
+  // so "near you" and discovery can find this listing. The user's words stay.
+  const locate = async () => {
+    if (!form.location.trim()) return toast.error("Type a place first");
+    setLocating(true);
+    try {
+      const { data } = await geoAPI.geocode(form.location.trim());
+      setForm((f) => ({ ...f, geo_lat: data.lat, geo_lng: data.lng }));
+      toast.success(`Located: ${data.display_name.slice(0, 60)}`);
+    } catch (err) {
+      toast.error(apiError(err, "No match for that place"));
+    } finally {
+      setLocating(false);
+    }
+  };
 
   const submit = async (e) => {
     e.preventDefault();
@@ -27,6 +44,7 @@ export default function ToolForm({ onDone, onCancel, defaultCategory = "warehous
       title: form.title.trim(),
       description: form.description.trim() || null,
       location: form.location.trim() || null,
+      ...(form.geo_lat != null && form.geo_lng != null ? { geo_lat: form.geo_lat, geo_lng: form.geo_lng } : {}),
       price_per_unit: numOrNull(form.price_per_unit),
       price_unit: form.price_unit,
       capacity,
@@ -56,7 +74,19 @@ export default function ToolForm({ onDone, onCancel, defaultCategory = "warehous
       </div>
       <Textarea label="Description" value={form.description} onChange={set("description")} rows={2} />
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <Input label="Location" value={form.location} onChange={set("location")} placeholder="Gikomba" wrapperClassName="col-span-2" />
+        <div className="col-span-2">
+          <div className="flex items-center gap-1.5">
+            <Input label="Location" value={form.location} onChange={set("location")} placeholder="Gikomba" wrapperClassName="flex-1" />
+            <Button size="sm" variant="secondary" loading={locating} onClick={locate} className="shrink-0 mb-0.5" title="Turn the place name into coordinates (free geocoder)">
+              Locate
+            </Button>
+          </div>
+          {form.geo_lat != null && (
+            <p className="text-2xs text-brand-300 mt-1 px-1">
+              located · {Number(form.geo_lat).toFixed(4)}, {Number(form.geo_lng).toFixed(4)}
+            </p>
+          )}
+        </div>
         <Input label="Price" type="number" min="0" step="any" prefix="KES" value={form.price_per_unit} onChange={set("price_per_unit")} />
         <Select label="Per" value={form.price_unit} onChange={set("price_unit")} options={PRICE_UNITS} />
         <Input label="Capacity" type="number" min="0" step="any" value={form.capacity_value} onChange={set("capacity_value")} placeholder="40" />

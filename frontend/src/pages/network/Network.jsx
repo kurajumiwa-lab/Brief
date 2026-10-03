@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Users, Compass, Sparkles, Link2, SlidersHorizontal } from "lucide-react";
+import { Users, Compass, Sparkles, Link2, SlidersHorizontal, Globe } from "lucide-react";
 import Tabs from "@/components/ui/Tabs";
 import SearchInput from "@/components/ui/SearchInput";
 import Select from "@/components/ui/Select";
@@ -9,6 +9,7 @@ import EmptyState from "@/components/ui/EmptyState";
 import Badge from "@/components/ui/Badge";
 import { PageSpinner } from "@/components/ui/Spinner";
 import VendorCard from "@/components/vendor/VendorCard";
+import PublicPlaces from "@/components/network/PublicPlaces";
 import { useVendorStore } from "@/stores/vendorStore";
 import { useAuthStore } from "@/stores/authStore";
 import { VENDOR_ROLES } from "@/config/constants";
@@ -16,6 +17,7 @@ import { num } from "@/lib/formatters";
 
 const TABS = [
   { value: "discover", label: "Discover", icon: Compass },
+  { value: "public", label: "Public data", icon: Globe },
   { value: "connections", label: "Connections", icon: Link2 },
   { value: "suggested", label: "Suggested", icon: Sparkles },
 ];
@@ -96,6 +98,8 @@ export default function Network() {
           )}
         </>
       )}
+
+      {tab === "public" && <PublicPlaces />}
 
       {tab === "connections" &&
         (connections.length === 0 ? (

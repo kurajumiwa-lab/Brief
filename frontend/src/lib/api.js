@@ -303,6 +303,17 @@ export const newsAPI = {
   feed: (days = 7) => api.get("/news", { params: { days } }), // { items, counts, new_today, window_days }
 };
 
+// ── Geo + open data (free sources only: Nominatim + Overpass, both OSM) ────
+export const geoAPI = {
+  geocode: (query) => api.post("/geo/geocode", { query }),
+  nearby: (params) => api.get("/geo/nearby", { params: noEmpty(params) }),
+  zones: () => api.get("/geo/zones"),
+  publicPlaces: (params) => api.get("/geo/public-places", { params: noEmpty(params) }),
+  claim: (id) => api.post(`/geo/public-places/${id}/claim`),
+  ingestZone: (id) => api.post(`/geo/zones/${id}/ingest`),
+  ingestAll: () => api.post("/geo/ingest-all"),
+};
+
 // ── Collective sourcing (v2.1) ─────────────────────────────────────────────
 export const collectiveAPI = {
   list: (params) => api.get("/collective", { params: noEmpty(params) }), // group_id, status

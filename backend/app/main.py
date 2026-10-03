@@ -15,11 +15,12 @@ from app.middleware.metrics import MetricsMiddleware
 from app.middleware.rate_limiter import RateLimitMiddleware, configure_backend
 from app.middleware.vendor_only import VendorOnlyMiddleware
 from app.routes import (
-    analytics, auth, bookings, chamas, chat, collective, events, files, governance, groups, market_locks,
+    analytics, auth, bookings, chamas, chat, collective, events, files, geo as geo_routes,
+    governance, groups, market_locks,
     murabaha, news as news_routes, notifications, ops as ops_routes, payments, pos_bridge, reviews,
     route_planner, stock, tools, vendor_lists, vendors, verification,
 )
-from app.services import payment_worker, pos_sync
+from app.services import geo_data, payment_worker, pos_sync
 from app.services.storage import local_root
 
 logging.basicConfig(level=logging.DEBUG if settings.DEBUG else logging.INFO,
@@ -35,9 +36,11 @@ async def lifespan(app: FastAPI):
     await chat.manager.configure()
     scheduler = None
     payments_scheduler = None
+    open_data = None
     if settings.RUN_SCHEDULER:
         scheduler = asyncio.create_task(pos_sync.scheduler_loop(async_session, settings.POS_SYNC_INTERVAL))
         payments_scheduler = asyncio.create_task(payment_worker.scheduler_loop(async_session))
+        open_data = asyncio.create_task(geo_data.open_data_loop(async_session))
     else:
         log.info("scheduler disabled here (RUN_SCHEDULER=false) — run `python -m app.worker` once")
     log.info("🏪 Brief_ Vendor Network v%s initialized", settings.VERSION)
@@ -45,7 +48,7 @@ async def lifespan(app: FastAPI):
     try:
         yield
     finally:
-        for task in (scheduler, payments_scheduler):
+        for task in (scheduler, payments_scheduler, open_data):
             if task:
                 task.cancel()
                 try:
@@ -95,6 +98,7 @@ app.include_router(events.router, prefix="/api/events", tags=["Events"])
 app.include_router(pos_bridge.router, prefix="/api/pos", tags=["POS Bridge"])
 # v2.1
 app.include_router(news_routes.router, prefix="/api/news", tags=["Market News"])
+app.include_router(geo_routes.router, prefix="/api/geo", tags=["Geo & Open Data"])
 app.include_router(notifications.router, prefix="/api/notifications", tags=["Notifications"])
 app.include_router(files.router, prefix="/api/files", tags=["Files"])
 app.include_router(verification.router, prefix="/api/stock", tags=["Stock Verification"])
