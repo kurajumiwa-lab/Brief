@@ -18,7 +18,7 @@ from app.routes import (
     analytics, auth, bookings, chamas, chat, collective, events, files, geo as geo_routes,
     governance, groups, market_locks,
     murabaha, news as news_routes, notifications, ops as ops_routes, payments, pos_bridge, reviews,
-    route_planner, stock, tools, vendor_lists, vendors, verification,
+    route_planner, squad as squad_routes, stock, tools, vendor_lists, vendors, verification,
 )
 from app.services import geo_data, payment_worker, pos_sync
 from app.services.storage import local_root
@@ -99,6 +99,7 @@ app.include_router(pos_bridge.router, prefix="/api/pos", tags=["POS Bridge"])
 # v2.1
 app.include_router(news_routes.router, prefix="/api/news", tags=["Market News"])
 app.include_router(geo_routes.router, prefix="/api/geo", tags=["Geo & Open Data"])
+app.include_router(squad_routes.router, prefix="/api/squad", tags=["Hustle League"])
 app.include_router(notifications.router, prefix="/api/notifications", tags=["Notifications"])
 app.include_router(files.router, prefix="/api/files", tags=["Files"])
 app.include_router(verification.router, prefix="/api/stock", tags=["Stock Verification"])

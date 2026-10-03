@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Newspaper, Network, Package, Truck, Users, CalendarDays, Briefcase,
+  Newspaper, Network, Package, Truck, Users, CalendarDays, Briefcase, Trophy,
 } from "lucide-react";
 import DigitalNumber from "@/components/ui/DigitalNumber";
 import EmptyState from "@/components/ui/EmptyState";
-import { newsAPI, apiError } from "@/lib/api";
+import { newsAPI, squadAPI, apiError } from "@/lib/api";
 import { useAuthStore } from "@/stores/authStore";
 import { useStockStore } from "@/stores/stockStore";
 import { useNotificationStore } from "@/stores/notificationStore";
@@ -31,6 +31,7 @@ export default function ShopHome() {
   const { unreadCount, fetch: fetchNotifications } = useNotificationStore();
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
+  const [openCalls, setOpenCalls] = useState(null);
 
   useEffect(() => {
     fetchMovements().catch(() => {});
@@ -39,6 +40,8 @@ export default function ShopHome() {
       .feed(7)
       .then((r) => setData(r.data))
       .catch((e) => setError(apiError(e, "The board could not be loaded")));
+    // The Squad tile shows real open call-ups — a count that can never pad itself.
+    squadAPI.calls().then((r) => setOpenCalls(r.data.calls.length)).catch(() => {});
   }, [fetchMovements, fetchNotifications]);
 
   if (error) return <EmptyState icon={Newspaper} title="The board is down" description={error} />;
@@ -55,6 +58,7 @@ export default function ShopHome() {
     { to: "/groups", label: "Groups", icon: Users, count: counts?.groups, tint: "text-violet-300" },
     { to: "/events", label: "Events", icon: CalendarDays, count: counts?.events, tint: "text-brand-300" },
     { to: "/brief", label: "Brief", icon: Briefcase, count: briefCount, tint: "text-brand-300" },
+    { to: "/squad", label: "Squad", icon: Trophy, count: openCalls, tint: "text-brand-300" },
   ];
 
   return (

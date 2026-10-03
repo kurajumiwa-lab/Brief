@@ -33,6 +33,7 @@ from app.models.payments import (
 from app.models.halal import MurabahaContract
 from app.models.chamas import Chama, ChamaMember, ChamaDeposit, ChamaLoan, ChamaLoanVote, ChamaDividend
 from app.models.public_place import PublicPlace
+from app.models.hustle import HustleJobCall, HustleContract, HustleGoldLedger, HustleSquad, HustleSquadMember
 
 __all__ = [
     "Vendor", "VendorProfile", "VendorRole", "vendor_connections",
@@ -59,4 +60,5 @@ __all__ = [
     "ESCROW_PICK_HEDGING", "DISPUTE_HOLD", "PLATFORM_FEES",
     "Chama", "ChamaMember", "ChamaDeposit", "ChamaLoan", "ChamaLoanVote", "ChamaDividend",
     "PublicPlace",
+    "HustleJobCall", "HustleContract", "HustleGoldLedger", "HustleSquad", "HustleSquadMember",
 ]

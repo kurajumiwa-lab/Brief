@@ -5,6 +5,7 @@ import { PageSpinner } from "@/components/ui/Spinner";
 import AuthPage from "@/pages/auth/AuthPage";
 import ShopHome from "@/pages/home/ShopHome";
 import News from "@/pages/news/News";
+import SquadPage from "@/pages/squad/SquadPage";
 import Dashboard from "@/pages/dashboard/Dashboard";
 import StockRoom from "@/pages/stock/StockRoom";
 import Network from "@/pages/network/Network";
@@ -53,6 +54,7 @@ export default function App() {
             (numbers, feed, suggestions) lives under Brief, as a feature. */}
         <Route path="/" element={<ShopHome />} />
         <Route path="/news" element={<News />} />
+        <Route path="/squad" element={<SquadPage />} />
         <Route path="/brief" element={<Dashboard />} />
         <Route path="/stock" element={<StockRoom />} />
         <Route path="/network" element={<Network />} />

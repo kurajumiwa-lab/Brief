@@ -303,6 +303,24 @@ export const newsAPI = {
   feed: (days = 7) => api.get("/news", { params: { days } }), // { items, counts, new_today, window_days }
 };
 
+// ── Hustle League (Squad) — the real-work game ─────────────────────────────
+export const squadAPI = {
+  me: () => api.get("/squad/me"),
+  calls: (params) => api.get("/squad/job-calls", { params: noEmpty(params) }),
+  postCall: (body) => api.post("/squad/job-calls", body),
+  accept: (id) => api.post(`/squad/job-calls/${id}/accept`),
+  start: (id) => api.post(`/squad/contracts/${id}/start`),
+  complete: (id, body) => api.post(`/squad/contracts/${id}/complete`, body),
+  confirm: (id, body) => api.post(`/squad/contracts/${id}/confirm`, body),
+  rateClient: (id, stars) => api.post(`/squad/contracts/${id}/rate-client`, { stars }),
+  cancel: (id, reason) => api.post(`/squad/contracts/${id}/cancel`, { reason }),
+  league: (month) => api.get("/squad/league", { params: noEmpty({ month }) }),
+  squads: () => api.get("/squad/squads/mine"),
+  createSquad: (name) => api.post("/squad/squads", { name }),
+  invite: (id, handle) => api.post(`/squad/squads/${id}/invite`, { handle }),
+  leave: (id) => api.post(`/squad/squads/${id}/leave`),
+};
+
 // ── Geo + open data (free sources only: Nominatim + Overpass, both OSM) ────
 export const geoAPI = {
   geocode: (query) => api.post("/geo/geocode", { query }),
