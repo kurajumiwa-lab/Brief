@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Trophy, Zap, Coins, Flame, Plus, X, Star, MapPin, Image, Users, Swords, Medal,
+  Trophy, Zap, Coins, Flame, Plus, X, Star, MapPin, Image, Users, Swords, Medal, Map,
 } from "lucide-react";
 import Tabs from "@/components/ui/Tabs";
 import Button from "@/components/ui/Button";
@@ -10,6 +10,7 @@ import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import EmptyState from "@/components/ui/EmptyState";
 import { PageSpinner } from "@/components/ui/Spinner";
+import MyPage from "@/components/squad/MyPage";
 import { toast } from "@/components/ui/Toast";
 import { squadAPI, fileAPI, geoAPI, apiError } from "@/lib/api";
 import { num, relativeTime } from "@/lib/formatters";
@@ -40,6 +41,7 @@ const DIVISION_STYLE = {
   Gold: "text-brand-300", Elite: "text-violet-300",
 };
 const TABS = [
+  { value: "mypage", label: "My page", icon: Map },
   { value: "callups", label: "Call-ups", icon: Swords },
   { value: "matches", label: "My matches", icon: Medal },
   { value: "weekly", label: "Weekly", icon: Zap },
@@ -189,12 +191,8 @@ function Matches({ me, onChanged }) {
   const [uploading, setUploading] = useState(false);
   const [busy, setBusy] = useState(null);
   const [rating, setRating] = useState(5);
+  const [confirmed, setConfirmed] = useState(null);
   const fileRef = useRef(null);
-
-  const loadHistory = useCallback(() => {
-    // Completed contracts show via the player snapshot's active + a calls mine scan is
-    // out of scope; keep this tab on the live contract (the match in hand).
-  }, []);
 
   const c = me.active_contract;
   if (!c) {
@@ -228,7 +226,8 @@ function Matches({ me, onChanged }) {
         setPhoto(null);
       } else if (kind === "confirm") {
         const res = await squadAPI.confirm(c.id, { rating });
-        toast.success(`Match won! +${res.data.reward?.xp ?? c.xp_earned} XP · +${res.data.reward?.gold ?? 0} Gold`);
+        setConfirmed(res.data);
+        onChanged();
       } else if (kind === "rate") {
         await squadAPI.rateClient(c.id, rating);
         toast.success("Client rated");
@@ -299,6 +298,12 @@ function Matches({ me, onChanged }) {
                     Won: <span className="text-brand-300 font-mono">+{c.xp_earned} XP</span> · <span className="text-brand-300 font-mono">+{c.gold_earned} Gold</span>
                     {c.client_rating ? <> · client rated <Stars n={c.client_rating} /></> : ""}
                   </p>
+                  {c.payout && (
+                    <p className="text-2xs text-ink-3">
+                      Pay: <span className="text-brand-300 font-semibold">KES {num(c.payout.amount_kes)}</span> · {c.payout.method}
+                      {c.payout.recorded_at ? ` · recorded ${relativeTime(c.payout.recorded_at)}` : ""}
+                    </p>
+                  )}
                   {c.worker_client_rating == null ? (
                     <div className="flex items-center gap-3">
                       <p className="text-xs text-ink-4">Rate your client:</p>
@@ -331,7 +336,25 @@ function Matches({ me, onChanged }) {
                   </div>
                 </div>
               ) : c.status === "completed" ? (
-                <p className="text-xs text-ink-4">Settled — KES {num(c.pay_kes)} paid to the worker by mobile money. Record kept on this contract.</p>
+                <div className="space-y-3">
+                  {confirmed?.first_business && (
+                    <div className="rounded-2xl bg-brand-500/10 border border-brand-500/30 p-3">
+                      <p className="text-xs font-semibold text-brand-200">First business on the network ✓</p>
+                      <p className="text-2xs text-ink-3 mt-1">{confirmed.first_business_note}</p>
+                    </div>
+                  )}
+                  {c.payout && (
+                    <div className="rounded-2xl bg-white/[0.04] p-3.5 space-y-1.5">
+                      <p className="text-2xs uppercase tracking-[0.2em] text-ink-4 font-bold">Payout on this match</p>
+                      <div className="flex items-baseline justify-between">
+                        <span className="digital text-2xl text-brand-300">KES {num(c.payout.amount_kes)}</span>
+                        <span className="text-2xs text-ink-4">{c.payout.recorded_at ? relativeTime(c.payout.recorded_at) : "recorded"}</span>
+                      </div>
+                      <p className="text-2xs text-ink-3">via {c.payout.method}</p>
+                      <p className="text-2xs text-ink-4">to {c.payout.to || "the worker"} · record {c.payout.ref || "kept on this contract"}</p>
+                    </div>
+                  )}
+                </div>
               ) : (
                 <p className="text-xs text-ink-4">Contract signed. You can cancel while the match hasn't finished.</p>
               )}
@@ -583,6 +606,7 @@ export default function SquadPage() {
     <div className="space-y-4">
       <PlayerPlate me={me} />
       <Tabs tabs={TABS} value={tab} onChange={setTab} />
+      {tab === "mypage" && <MyPage />}
       {tab === "callups" && <CallUps me={me} onPost={() => setPostOpen(true)} onChanged={refresh} />}
       {tab === "matches" && <Matches me={me} onChanged={refresh} />}
       {tab === "weekly" && <Weekly me={me} />}

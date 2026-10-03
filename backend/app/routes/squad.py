@@ -119,10 +119,33 @@ async def _call_out(db: AsyncSession, call: HustleJobCall, me: Vendor) -> dict:
     }
 
 
+def _masked_phone(phone) -> str | None:
+    if not phone:
+        return None
+    p = phone.strip()
+    if len(p) <= 6:
+        return p[:2] + "•••"
+    return p[:5] + "•" * (len(p) - 7) + p[-2:]
+
+
 async def _contract_out(db: AsyncSession, c: HustleContract, me: Vendor) -> dict:
     call = await db.get(HustleJobCall, c.job_call_id)
     player = await db.get(Vendor, c.player_vendor_id)
     client = await db.get(Vendor, c.vendor_id) if call else None
+    # The payout, stated plainly the moment it exists: how much, how it moves,
+    # to whose number, and when it was recorded. "direct" on this deployment
+    # means the client settles the agreed KES by mobile money and this
+    # contract is the record — never a receipt the app invented.
+    payout = None
+    if c.status == "completed":
+        payout = {
+            "amount_kes": c.agreed_pay_kes,
+            "method": "M-Pesa / mobile money (client settles directly)",
+            "status": c.payout_status,
+            "to": _masked_phone(player.phone if player else None),
+            "recorded_at": c.completed_at.isoformat() if c.completed_at else None,
+            "ref": c.payout_ref,
+        }
     return {
         "id": str(c.id),
         "job_call_id": str(c.job_call_id),
@@ -138,6 +161,7 @@ async def _contract_out(db: AsyncSession, c: HustleContract, me: Vendor) -> dict
         "worker_client_rating": c.worker_client_rating,
         "xp_earned": c.xp_earned,
         "gold_earned": c.gold_earned,
+        "payout": payout,
         "payout_status": c.payout_status,
         "accepted_at": c.accepted_at.isoformat(),
         "started_at": c.started_at.isoformat() if c.started_at else None,
@@ -333,6 +357,18 @@ async def confirm_contract(contract_id: UUID, body: ContractConfirm,
     if not c.otp_verified:
         raise HTTPException(409, "The worker's proof code was never verified")
 
+    # Was this the client's FIRST completed business? Counted from rows before
+    # this one is written — the "first business" moment is real, not scripted.
+    prior = (await db.execute(
+        select(func.count(HustleContract.id)).join(
+            HustleJobCall, HustleJobCall.id == HustleContract.job_call_id
+        ).where(
+            HustleJobCall.vendor_id == vendor.id,
+            HustleContract.status == "completed",
+        )
+    )).scalar() or 0
+    first_business = prior == 0
+
     c.client_rating = body.rating
     c.client_note = body.note
     c.status = "completed"
@@ -348,11 +384,19 @@ async def confirm_contract(contract_id: UUID, body: ContractConfirm,
     await db.flush()
     reward = await hustle.award_on_completion(db, c)
     await db.commit()
-    return {
+    out = {
         **(await _contract_out(db, c, vendor)),
         "reward": {"xp": c.xp_earned, "gold": reward["gold"], "squad_split": reward["squad_split"]},
+        "first_business": first_business,
         "note": "The worker is paid the agreed KES by mobile money — this contract is the record.",
     }
+    if first_business:
+        out["first_business_note"] = (
+            f"That was your first settled business on this network: KES {c.agreed_pay_kes} to "
+            f"{player_name if (player_name := (await db.get(Vendor, c.player_vendor_id)).vendor_handle) else 'the worker'}. "
+            "The contract is kept as the record."
+        )
+    return out
 
 
 @router.post("/contracts/{contract_id}/rate-client")

@@ -303,6 +303,11 @@ export const newsAPI = {
   feed: (days = 7) => api.get("/news", { params: { days } }), // { items, counts, new_today, window_days }
 };
 
+// ── Onboarding — your shop page + your market radar ────────────────────────
+export const onboardingAPI = {
+  get: () => api.get("/onboarding"),
+};
+
 // ── Hustle League (Squad) — the real-work game ─────────────────────────────
 export const squadAPI = {
   me: () => api.get("/squad/me"),

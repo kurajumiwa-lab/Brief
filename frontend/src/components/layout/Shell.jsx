@@ -5,6 +5,7 @@ import TopBar from "./TopBar";
 import MobileNav from "./MobileNav";
 import Drawer from "@/components/ui/Drawer";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import OnboardingFlow from "@/components/onboarding/OnboardingFlow";
 import { useUIStore } from "@/stores/uiStore";
 
 /** Persistent app frame — rendered once as a layout route so navigation never remounts it. */
@@ -35,6 +36,7 @@ export default function Shell() {
         </div>
       </Drawer>
       <ConfirmDialog />
+      <OnboardingFlow />
     </div>
   );
 }
