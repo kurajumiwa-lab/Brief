@@ -179,7 +179,7 @@ async def market_news(
         "rentals": await count(
             select(func.count()).select_from(ToolListing).where(ToolListing.is_available.is_(True))
         ),
-        "groups": await count(select(func.count()).select_from(Group)),
+        "groups": await count(select(func.count()).select_from(VendorGroup)),
         "events": await count(select(func.count()).select_from(Event).where(Event.start_date >= now)),
     }
 
