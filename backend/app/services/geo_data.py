@@ -262,27 +262,85 @@ async def ingest_all_zones() -> list[dict]:
     return results
 
 
-# The five Nairobi markets every trader knows by name. Seeded ONLY when the
-# zone table is completely empty — a network that already has zones keeps
-# exactly what its operators created. Names are real places; coordinates come
-# from the geocoder on first ingest, never typed in by hand.
-_SEED_ZONES = ["Gikomba", "Eastleigh", "Kawangware", "Westlands", "Ngong Road"]
+# The East-African market catalog: the high-density, common town markets the
+# regional scan covers. Coordinates are best-effort seed values (good to a few
+# km — enough to rank "nearest market in a surrounding town" at 10s-of-km
+# scale); the open-data ingest uses them to pull each market's real rows.
+# (name, city, country, lat, lng)
+_MARKET_CATALOG = [
+    # Kenya
+    ("Gikomba", "Nairobi", "Kenya", -1.2653, 36.8240),
+    ("Eastleigh", "Nairobi", "Kenya", -1.2769, 36.8630),
+    ("Kawangware", "Nairobi", "Kenya", -1.2280, 36.8440),
+    ("Westlands", "Nairobi", "Kenya", -1.2660, 36.8080),
+    ("Ngong Road", "Nairobi", "Kenya", -1.3370, 36.7750),
+    ("Industrial Area", "Nairobi", "Kenya", -1.3020, 36.7860),
+    ("Kangemi", "Nairobi", "Kenya", -1.3150, 36.8060),
+    ("Mtwara", "Mombasa", "Kenya", -4.0520, 39.6680),
+    ("Kibuye", "Kisumu", "Kenya", -0.0900, 34.7600),
+    ("Nakuru Town Market", "Nakuru", "Kenya", -0.2980, 36.0750),
+    ("Kibet", "Eldoret", "Kenya", 0.5070, 35.2650),
+    ("Thika Town Market", "Thika", "Kenya", -1.0310, 37.0720),
+    ("Kitale Town Market", "Kitale", "Kenya", -0.6940, 35.0160),
+    ("Machakos Town Market", "Machakos", "Kenya", -1.5140, 37.2640),
+    ("Naivasha Town Market", "Naivasha", "Kenya", -0.6940, 36.0880),
+    ("Ruai", "Kajiado", "Kenya", -0.8770, 36.2100),
+    # Tanzania
+    ("Kariakoo", "Dar es Salaam", "Tanzania", -6.8225, 39.2700),
+    ("Arusha Central Market", "Arusha", "Tanzania", -3.3850, 36.5850),
+    ("Mwanza Market", "Mwanza", "Tanzania", -2.8800, 32.4100),
+    # Uganda
+    ("Owino Market", "Kampala", "Uganda", 0.3466, 32.5783),
+    ("Ntinda Market", "Kampala", "Uganda", 0.3520, 32.5830),
+    ("Jinja Market", "Jinja", "Uganda", 0.4231, 33.2072),
+    # Rwanda
+    ("Kimironko Market", "Kigali", "Rwanda", -1.9458, 30.0666),
+    ("Kigali Central Market", "Kigali", "Rwanda", -1.9480, 30.0620),
+    # Ethiopia
+    ("Merkato", "Addis Ababa", "Ethiopia", 9.0364, 38.7360),
+]
+
+
+def _zone_keys(name: str, city: str):
+    return name.lower().replace(" ", ""), city.lower().replace(" ", "")
+
+
+def _make_zone(name: str, city: str, country: str, lat, lng) -> MarketZone:
+    name_key, city_key = _zone_keys(name, city)
+    return MarketZone(
+        name=name, city=city, name_key=name_key, city_key=city_key,
+        country=country, is_active=True, center_lat=lat, center_lng=lng,
+    )
 
 
 async def ensure_seed_zones(db: AsyncSession) -> int:
-    """Create the standard zones when the table is empty. Returns count added."""
+    """Create the full catalog when the table is empty (fresh install)."""
     existing = (await db.execute(select(MarketZone.id).limit(1))).first()
     if existing:
         return 0
-    added = 0
-    for name in _SEED_ZONES:
-        key = name.lower().replace(" ", "")
-        zone = MarketZone(
-            name=name, city="Nairobi", name_key=key, city_key="nairobi", is_active=True,
-        )
-        db.add(zone)
-        added += 1
+    for name, city, country, lat, lng in _MARKET_CATALOG:
+        db.add(_make_zone(name, city, country, lat, lng))
     await db.commit()
+    return len(_MARKET_CATALOG)
+
+
+async def ensure_market_catalog(db: AsyncSession) -> int:
+    """Idempotently add any catalog market missing from the table. A live
+    network that already has zones keeps them exactly as-is; only NEW markets
+    are added. Returns the number added this pass."""
+    existing = dict((await db.execute(
+        select(MarketZone.name_key, MarketZone.city_key)
+    )).all())
+    added = 0
+    for name, city, country, lat, lng in _MARKET_CATALOG:
+        name_key, city_key = _zone_keys(name, city)
+        if (name_key, city_key) in existing:
+            continue
+        db.add(_make_zone(name, city, country, lat, lng))
+        existing[(name_key, city_key)] = True
+        added += 1
+    if added:
+        await db.commit()
     return added
 
 
@@ -298,8 +356,9 @@ async def open_data_loop(session_factory) -> None:
         try:
             async with async_session() as db:
                 added = await ensure_seed_zones(db)
+                added += await ensure_market_catalog(db)
             if added:
-                log.info("seeded %d standard market zones (table was empty)", added)
+                log.info("market catalog: %d zones added this pass", added)
             results = await ingest_all_zones()
             ok = [r for r in results if r.get("ok")]
             _LAST_FULL_PASS[0] = datetime.utcnow()

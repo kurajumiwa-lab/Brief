@@ -33,6 +33,24 @@ class MarketZone(Base):
     radius_km = Column(Float, nullable=True)
     last_ingest_at = Column(DateTime, nullable=True)
     last_ingest_count = Column(Integer, nullable=True)
+    # Regional market catalog: which country this market is in.
+    country = Column(String(80), nullable=True)
+    # The lead patron's onboarding / pace note for this market.
+    patron_welcome = Column(Text, nullable=True)
+    patron_welcome_by = Column(UUID(as_uuid=True), nullable=True)
+    patron_welcome_at = Column(DateTime, nullable=True)
+
+
+class MarketMember(Base):
+    """A vendor registered for a market. The 'first to register' order and a
+    member's real activity are what a market patron is derived from."""
+    __tablename__ = "market_members"
+    __table_args__ = (UniqueConstraint("vendor_id", "zone_id", name="uq_market_member"),)
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    vendor_id = Column(UUID(as_uuid=True), ForeignKey("vendors.id", ondelete="CASCADE"), nullable=False, index=True)
+    zone_id = Column(UUID(as_uuid=True), ForeignKey("market_zones.id", ondelete="CASCADE"), nullable=False, index=True)
+    joined_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
 
 class LockProduct(Base):

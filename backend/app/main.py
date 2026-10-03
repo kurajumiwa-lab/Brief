@@ -16,7 +16,7 @@ from app.middleware.rate_limiter import RateLimitMiddleware, configure_backend
 from app.middleware.vendor_only import VendorOnlyMiddleware
 from app.routes import (
     analytics, auth, bookings, chamas, chat, collective, events, files, geo as geo_routes,
-    governance, groups, market_locks, onboarding as onboarding_routes,
+    governance, groups, market_locks, markets as markets_routes, onboarding as onboarding_routes,
     murabaha, news as news_routes, notifications, ops as ops_routes, payments, pos_bridge, reviews,
     route_planner, squad as squad_routes, stock, tools, vendor_lists, vendors, verification,
 )
@@ -100,6 +100,7 @@ app.include_router(pos_bridge.router, prefix="/api/pos", tags=["POS Bridge"])
 app.include_router(news_routes.router, prefix="/api/news", tags=["Market News"])
 app.include_router(geo_routes.router, prefix="/api/geo", tags=["Geo & Open Data"])
 app.include_router(squad_routes.router, prefix="/api/squad", tags=["Hustle League"])
+app.include_router(markets_routes.router, prefix="/api/markets", tags=["Markets"])
 app.include_router(onboarding_routes.router, prefix="/api/onboarding", tags=["Onboarding"])
 app.include_router(notifications.router, prefix="/api/notifications", tags=["Notifications"])
 app.include_router(files.router, prefix="/api/files", tags=["Files"])

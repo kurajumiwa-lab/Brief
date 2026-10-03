@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Newspaper, Network, Package, Truck, Users, CalendarDays, Briefcase, Trophy,
+  Newspaper, Network, Package, Truck, Users, CalendarDays, Briefcase, Trophy, MapPin,
 } from "lucide-react";
 import DigitalNumber from "@/components/ui/DigitalNumber";
 import EmptyState from "@/components/ui/EmptyState";
-import { newsAPI, squadAPI, apiError } from "@/lib/api";
+import { newsAPI, squadAPI, marketsAPI, apiError } from "@/lib/api";
 import { useAuthStore } from "@/stores/authStore";
 import { useStockStore } from "@/stores/stockStore";
 import { useNotificationStore } from "@/stores/notificationStore";
@@ -32,6 +32,7 @@ export default function ShopHome() {
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
   const [openCalls, setOpenCalls] = useState(null);
+  const [myMarkets, setMyMarkets] = useState(null);
 
   useEffect(() => {
     fetchMovements().catch(() => {});
@@ -42,6 +43,8 @@ export default function ShopHome() {
       .catch((e) => setError(apiError(e, "The board could not be loaded")));
     // The Squad tile shows real open call-ups — a count that can never pad itself.
     squadAPI.calls().then((r) => setOpenCalls(r.data.calls.length)).catch(() => {});
+    // The Markets tile shows the real markets you're registered for.
+    marketsAPI.mine().then((r) => setMyMarkets(r.data.markets.length)).catch(() => {});
   }, [fetchMovements, fetchNotifications]);
 
   if (error) return <EmptyState icon={Newspaper} title="The board is down" description={error} />;
@@ -57,6 +60,7 @@ export default function ShopHome() {
     { to: "/tools", label: "Rentals", icon: Truck, count: counts?.rentals, tint: "text-blue-300" },
     { to: "/groups", label: "Groups", icon: Users, count: counts?.groups, tint: "text-violet-300" },
     { to: "/events", label: "Events", icon: CalendarDays, count: counts?.events, tint: "text-brand-300" },
+    { to: "/markets", label: "Markets", icon: MapPin, count: myMarkets, tint: "text-amber-300" },
     { to: "/brief", label: "Brief", icon: Briefcase, count: briefCount, tint: "text-brand-300" },
     { to: "/squad", label: "Squad", icon: Trophy, count: openCalls, tint: "text-brand-300" },
   ];

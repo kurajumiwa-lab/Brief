@@ -308,6 +308,17 @@ export const onboardingAPI = {
   get: () => api.get("/onboarding"),
 };
 
+// ── Markets — the East-African catalog, scan, multi-market data, patron ────
+export const marketsAPI = {
+  list: (params) => api.get("/markets", { params: noEmpty(params) }),
+  scan: (params) => api.get("/markets/scan", { params: noEmpty(params) }),
+  data: (zone_ids, params) => api.post("/markets/data", { zone_ids, ...noEmpty(params) }),
+  mine: () => api.get("/markets/mine"),
+  join: (id) => api.post(`/markets/${id}/join`),
+  leave: (id) => api.post(`/markets/${id}/leave`),
+  welcome: (id, text) => api.put(`/markets/${id}/welcome`, { text }),
+};
+
 // ── Hustle League (Squad) — the real-work game ─────────────────────────────
 export const squadAPI = {
   me: () => api.get("/squad/me"),
