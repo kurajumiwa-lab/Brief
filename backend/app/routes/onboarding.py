@@ -75,7 +75,7 @@ async def onboarding(vendor: Vendor = Depends(get_current_vendor), db: AsyncSess
                             "since": created.isoformat() if created else None})
 
     stock_lines = (await db.execute(
-        select(func.count(StockItem.id)).where(StockItem.vendor_id == vendor.id, StockItem.status != "archived")
+        select(func.count(StockItem.id)).where(StockItem.vendor_id == vendor.id)
     )).scalar() or 0
     places_claimed = (await db.execute(
         select(func.count(PublicPlace.id)).where(PublicPlace.claimed_by_vendor_id == vendor.id)

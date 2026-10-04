@@ -127,10 +127,11 @@ async def compute_market_patrons(db: AsyncSession, zone: MarketZone) -> dict:
             for vid, n in rows:
                 conn[vid] = conn.get(vid, 0) + n
 
-        # Stock lines (global).
+        # Stock lines (global). Stock has no lifecycle status — a line is on
+        # the shelf or it is deleted — so every row counts.
         rows = (await db.execute(
             select(StockItem.vendor_id, func.count(StockItem.id))
-            .where(StockItem.vendor_id.in_(member_ids), StockItem.status != "archived")
+            .where(StockItem.vendor_id.in_(member_ids))
             .group_by(StockItem.vendor_id)
         )).all()
         stock = {r[0]: r[1] for r in rows}
