@@ -35,6 +35,17 @@ async def lifespan(app: FastAPI):
         await init_db()
     await configure_backend()
     await chat.manager.configure()
+    # The East-African market catalog is static reference data, so it is
+    # applied at BOOT (idempotent, only adds missing markets) rather than
+    # relying on the background loop's first pass. A missing market here is a
+    # quiet, permanent gap — not a retried one.
+    try:
+        async with async_session() as db:
+            added = await geo_data.ensure_market_catalog(db)
+            if added:
+                log.info("boot: market catalog added %d markets", added)
+    except Exception:
+        log.exception("boot: market catalog seeding failed")
     scheduler = None
     payments_scheduler = None
     open_data = None

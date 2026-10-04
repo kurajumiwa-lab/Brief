@@ -21,7 +21,8 @@ router = APIRouter()
 
 @router.get("/diag/markets")
 async def diag_markets():
-    report = {}
+    from app.config import settings
+    report = {"run_scheduler": settings.RUN_SCHEDULER}
     try:
         async with async_session() as db:
             # step 1: zones + country column
