@@ -84,13 +84,22 @@ async def onboarding(vendor: Vendor = Depends(get_current_vendor), db: AsyncSess
         select(HustleSquad.name).join(HustleSquadMember, HustleSquadMember.squad_id == HustleSquad.id)
         .where(HustleSquadMember.vendor_id == vendor.id, HustleSquad.status == "active")
     )).first()
-    first_match = (await db.execute(
-        select(func.count(HustleContract.id)).where(HustleContract.status == "completed",
-            (HustleContract.player_vendor_id == vendor.id)
-        )).scalar() or 0) + (await db.execute(
-        select(func.count(HustleJobCall.id)).join(HustleContract, HustleContract.job_call_id == HustleJobCall.id)
-        .where(HustleJobCall.vendor_id == vendor.id, HustleContract.status == "completed")
-    )).scalar() or 0
+    # NOTE: executed as separate awaited statements. The compact
+    # `(await db.execute(...)).scalar()` one-liner is a Python precedence trap
+    # — attribute access binds tighter than await, and the coroutine reaches
+    # .scalar() unawaited. Never do this in one expression again.
+    res_a = await db.execute(
+        select(func.count(HustleContract.id)).where(
+            HustleContract.status == "completed",
+            HustleContract.player_vendor_id == vendor.id,
+        )
+    )
+    res_b = await db.execute(
+        select(func.count(HustleJobCall.id)).join(
+            HustleContract, HustleContract.job_call_id == HustleJobCall.id
+        ).where(HustleJobCall.vendor_id == vendor.id, HustleContract.status == "completed")
+    )
+    first_match = (res_a.scalar() or 0) + (res_b.scalar() or 0)
 
     # ── Steps — every one is a query over rows, so a step can't be faked ───
     steps = [
