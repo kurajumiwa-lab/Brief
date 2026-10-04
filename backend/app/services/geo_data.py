@@ -328,16 +328,21 @@ async def ensure_market_catalog(db: AsyncSession) -> int:
     """Idempotently add any catalog market missing from the table. A live
     network that already has zones keeps them exactly as-is; only NEW markets
     are added. Returns the number added this pass."""
-    existing = dict((await db.execute(
+    rows = (await db.execute(
         select(MarketZone.name_key, MarketZone.city_key)
-    )).all())
+    )).all()
+    # A set of (name_key, city_key) pairs. (dict() on 2-tuples would map
+    # name_key -> city_key, and a 2-tuple membership test would then never
+    # match — which is how this silently re-inserted the existing rows and
+    # died on the unique constraint.)
+    existing = {(r[0], r[1]) for r in rows}
     added = 0
     for name, city, country, lat, lng in _MARKET_CATALOG:
         name_key, city_key = _zone_keys(name, city)
         if (name_key, city_key) in existing:
             continue
         db.add(_make_zone(name, city, country, lat, lng))
-        existing[(name_key, city_key)] = True
+        existing.add((name_key, city_key))
         added += 1
     if added:
         await db.commit()
