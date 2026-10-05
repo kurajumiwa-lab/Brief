@@ -21,6 +21,7 @@ agreed pay recorded on the contract (paid by the client by mobile money on
 this deployment, which has no PSP float — the contract is the audit trail).
 """
 
+import math
 import secrets
 import string
 from datetime import datetime, timedelta
@@ -91,11 +92,20 @@ def _gen_otp() -> str:
     return "".join(secrets.choice(string.digits) for _ in range(6))
 
 
-async def _call_out(db: AsyncSession, call: HustleJobCall, me: Vendor) -> dict:
+async def _call_out(db: AsyncSession, call: HustleJobCall, me: Vendor, lat: Optional[float] = None, lng: Optional[float] = None) -> dict:
     client = await db.get(Vendor, call.vendor_id)
-    contract = (await db.execute(
+    contract_res = await db.execute(
         select(HustleContract).where(HustleContract.job_call_id == call.id)
-    )).scalars().first()
+    )
+    contract = contract_res.scalars().first()
+    worker_name = None
+    if contract:
+        worker = await db.get(Vendor, contract.player_vendor_id)
+        worker_name = worker.business_name if worker else None
+    distance = None
+    if lat is not None and lng is not None and call.geo_lat is not None and call.geo_lng is not None:
+        d = _dist_km(lat, lng, call.geo_lat, call.geo_lng)
+        distance = round(d, 1) if d is not None else None
     return {
         "id": str(call.id),
         "title": call.title,
@@ -111,10 +121,10 @@ async def _call_out(db: AsyncSession, call: HustleJobCall, me: Vendor) -> dict:
         "status": call.status,
         "mine": call.vendor_id == me.id,
         "client": client.business_name if client else "A client",
+        "distance_km": distance,
         # The OTP is shown ONLY to the client once someone has accepted.
         "otp": call.otp_code if (call.vendor_id == me.id and call.otp_code) else None,
-        "worker": (await db.get(Vendor, contract.player_vendor_id)).business_name
-                  if contract and await db.get(Vendor, contract.player_vendor_id) else None,
+        "worker": worker_name,
         "contract_id": str(contract.id) if contract else None,
     }
 
@@ -126,6 +136,15 @@ def _masked_phone(phone) -> str | None:
     if len(p) <= 6:
         return p[:2] + "•••"
     return p[:5] + "•" * (len(p) - 7) + p[-2:]
+
+
+def _dist_km(lat1, lng1, lat2, lng2):
+    """Great-circle distance, or None when either point is unknown."""
+    if None in (lat1, lng1, lat2, lng2):
+        return None
+    dlat, dlng = math.radians(lat2 - lat1), math.radians(lng2 - lng1)
+    a = math.sin(dlat / 2) ** 2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlng / 2) ** 2
+    return 6371 * 2 * math.asin(math.sqrt(a))
 
 
 async def _contract_out(db: AsyncSession, c: HustleContract, me: Vendor) -> dict:
@@ -191,6 +210,32 @@ async def squad_me(vendor: Vendor = Depends(get_current_vendor), db: AsyncSessio
     return snap
 
 
+@router.get("/recent")
+async def recent_wins(vendor: Vendor = Depends(get_current_vendor), db: AsyncSession = Depends(get_db)):
+    """My last completed matches — the 'reward' side of the loop, from rows."""
+    res = await db.execute(
+        select(HustleContract, HustleJobCall)
+        .join(HustleJobCall, HustleJobCall.id == HustleContract.job_call_id)
+        .where(HustleContract.status == "completed",
+               HustleContract.player_vendor_id == vendor.id)
+        .order_by(HustleContract.completed_at.desc())
+        .limit(5)
+    )
+    wins = []
+    for c, call in res.all():
+        wins.append({
+            "id": str(c.id),
+            "title": call.title,
+            "skill": call.skill,
+            "pay_kes": c.agreed_pay_kes,
+            "xp_earned": c.xp_earned,
+            "gold_earned": c.gold_earned,
+            "client_rating": c.client_rating,
+            "completed_at": c.completed_at.isoformat() if c.completed_at else None,
+        })
+    return {"wins": wins}
+
+
 # ── Job calls (call-ups) ─────────────────────────────────────────────────────
 @router.get("/job-calls")
 async def list_calls(
@@ -202,27 +247,29 @@ async def list_calls(
     vendor: Vendor = Depends(get_current_vendor),
     db: AsyncSession = Depends(get_db),
 ):
+    # The distance origin: explicit coordinates if sent, else the caller's
+    # own location — so distances show without the client having to ask.
+    olat = lat if lat is not None else vendor.geo_lat
+    olng = lng if lng is not None else vendor.geo_lng
     if mine:
         stmt = select(HustleJobCall).where(HustleJobCall.vendor_id == vendor.id)
-        rows = (await db.execute(stmt.order_by(HustleJobCall.created_at.desc()).limit(50))).scalars().all()
+        rows_res = await db.execute(stmt.order_by(HustleJobCall.created_at.desc()).limit(50))
+        rows = rows_res.scalars().all()
     else:
         now = datetime.utcnow()
         stmt = select(HustleJobCall).where(HustleJobCall.status == "open", HustleJobCall.expires_at >= now)
         if skill:
             stmt = stmt.where(HustleJobCall.skill == skill)
         stmt = stmt.where(HustleJobCall.vendor_id != vendor.id)  # never match your own call
-        rows = (await db.execute(stmt.order_by(HustleJobCall.expires_at.asc()).limit(50))).scalars().all()
-        if lat is not None and lng is not None:
+        rows_res = await db.execute(stmt.order_by(HustleJobCall.expires_at.asc()).limit(50))
+        rows = rows_res.scalars().all()
+        if olat is not None and olng is not None:
             def dist(call):
-                if call.geo_lat is None or call.geo_lng is None:
-                    return 1e9
-                from math import radians, sin, cos, asin, sqrt
-                dlat, dlng = radians(call.geo_lat - lat), radians(call.geo_lng - lng)
-                a = sin(dlat/2)**2 + cos(radians(lat)) * cos(radians(call.geo_lat)) * sin(dlng/2)**2
-                return 6371 * 2 * asin(sqrt(a))
+                d = _dist_km(olat, olng, call.geo_lat, call.geo_lng)
+                return 1e9 if d is None else d
             rows = sorted(rows, key=dist)
             rows = [r for r in rows if dist(r) <= radius_km] or rows  # empty radius keeps the list honest
-    return {"calls": [await _call_out(db, c, vendor) for c in rows]}
+    return {"calls": [await _call_out(db, c, vendor, olat, olng) for c in rows]}
 
 
 @router.post("/job-calls", status_code=201)

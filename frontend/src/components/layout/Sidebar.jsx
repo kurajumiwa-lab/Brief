@@ -1,7 +1,7 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import {
   Home, Newspaper, Package, Network, List, Users, MessageSquare, Terminal,
-  CalendarDays, Briefcase, Truck, ShoppingBasket, ShieldCheck, BarChart3, LogOut, Store, MapPin, Trophy,
+  CalendarDays, Briefcase, Truck, ShoppingBasket, ShieldCheck, BarChart3, LogOut, Store, MapPin, ListChecks,
 } from "lucide-react";
 import { useUIStore } from "@/stores/uiStore";
 import { useAuthStore } from "@/stores/authStore";
@@ -19,7 +19,8 @@ export const NAV = [
   { to: "/markets", label: "Markets", icon: MapPin },
   { to: "/groups", label: "Groups", icon: Users },
   { to: "/events", label: "Events", icon: CalendarDays },
-  { to: "/squad", label: "Squad", icon: Trophy },
+  // The one door into the task loops (Squad league + Brief workspace).
+  { to: "/tasks", label: "Tasks", icon: ListChecks },
 ];
 
 // Brief — the vendor's own workspace, kept as a feature inside My Shop App.

@@ -1,14 +1,12 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Newspaper, Network, Package, Truck, Users, CalendarDays, Briefcase, Trophy, MapPin,
+  Newspaper, Network, Package, Truck, Users, CalendarDays, MapPin, ListChecks,
 } from "lucide-react";
 import DigitalNumber from "@/components/ui/DigitalNumber";
 import EmptyState from "@/components/ui/EmptyState";
 import { newsAPI, squadAPI, marketsAPI, apiError } from "@/lib/api";
 import { useAuthStore } from "@/stores/authStore";
-import { useStockStore } from "@/stores/stockStore";
-import { useNotificationStore } from "@/stores/notificationStore";
 import { VENDOR_ROLES } from "@/config/constants";
 import { num, relativeTime } from "@/lib/formatters";
 
@@ -27,30 +25,25 @@ import { num, relativeTime } from "@/lib/formatters";
 export default function ShopHome() {
   const navigate = useNavigate();
   const vendor = useAuthStore((s) => s.vendor);
-  const { movements, actionable, fetchMovements } = useStockStore();
-  const { unreadCount, fetch: fetchNotifications } = useNotificationStore();
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
   const [openCalls, setOpenCalls] = useState(null);
   const [myMarkets, setMyMarkets] = useState(null);
 
   useEffect(() => {
-    fetchMovements().catch(() => {});
-    fetchNotifications({ limit: 1 }).catch(() => {});
     newsAPI
       .feed(7)
       .then((r) => setData(r.data))
       .catch((e) => setError(apiError(e, "The board could not be loaded")));
-    // The Squad tile shows real open call-ups — a count that can never pad itself.
+    // The Tasks tile shows real open call-ups — a count that can never pad itself.
     squadAPI.calls().then((r) => setOpenCalls(r.data.calls.length)).catch(() => {});
     // The Markets tile shows the real markets you're registered for.
     marketsAPI.mine().then((r) => setMyMarkets(r.data.markets.length)).catch(() => {});
-  }, [fetchMovements, fetchNotifications]);
+  }, []);
 
   if (error) return <EmptyState icon={Newspaper} title="The board is down" description={error} />;
 
   const counts = data?.counts ?? null;
-  const briefCount = (typeof unreadCount === "number" ? unreadCount : 0) + (actionable()?.length ?? 0);
   const role = VENDOR_ROLES.find((r) => r.value === vendor?.current_role);
 
   const tiles = [
@@ -61,8 +54,9 @@ export default function ShopHome() {
     { to: "/groups", label: "Groups", icon: Users, count: counts?.groups, tint: "text-violet-300" },
     { to: "/events", label: "Events", icon: CalendarDays, count: counts?.events, tint: "text-brand-300" },
     { to: "/markets", label: "Markets", icon: MapPin, count: myMarkets, tint: "text-amber-300" },
-    { to: "/brief", label: "Brief", icon: Briefcase, count: briefCount, tint: "text-brand-300" },
-    { to: "/squad", label: "Squad", icon: Trophy, count: openCalls, tint: "text-brand-300" },
+    // One door into the task loops (Squad league + Brief workspace) — the
+    // Tasks portal. Count is the real open call-ups, never padded.
+    { to: "/tasks", label: "Tasks", icon: ListChecks, count: openCalls, tint: "text-brand-300" },
   ];
 
   return (

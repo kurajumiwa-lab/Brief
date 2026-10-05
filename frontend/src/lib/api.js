@@ -322,6 +322,7 @@ export const marketsAPI = {
 // ── Hustle League (Squad) — the real-work game ─────────────────────────────
 export const squadAPI = {
   me: () => api.get("/squad/me"),
+  recent: () => api.get("/squad/recent"),
   calls: (params) => api.get("/squad/job-calls", { params: noEmpty(params) }),
   postCall: (body) => api.post("/squad/job-calls", body),
   accept: (id) => api.post(`/squad/job-calls/${id}/accept`),

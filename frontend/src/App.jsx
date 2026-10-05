@@ -7,6 +7,7 @@ import ShopHome from "@/pages/home/ShopHome";
 import News from "@/pages/news/News";
 import SquadPage from "@/pages/squad/SquadPage";
 import MarketsPage from "@/pages/markets/MarketsPage";
+import TasksPortal from "@/pages/tasks/TasksPortal";
 import Dashboard from "@/pages/dashboard/Dashboard";
 import StockRoom from "@/pages/stock/StockRoom";
 import Network from "@/pages/network/Network";
@@ -56,6 +57,7 @@ export default function App() {
         <Route path="/" element={<ShopHome />} />
         <Route path="/news" element={<News />} />
         <Route path="/squad" element={<SquadPage />} />
+        <Route path="/tasks" element={<TasksPortal />} />
         <Route path="/markets" element={<MarketsPage />} />
         <Route path="/brief" element={<Dashboard />} />
         <Route path="/stock" element={<StockRoom />} />
