@@ -10,7 +10,7 @@ export default function Tabs({ tabs, value, onChange, variant = "underline", cla
       role="tablist"
       className={cn(
         "flex items-center gap-1 overflow-x-auto",
-        variant !== "underline" && "bg-white/[0.04] rounded-xl p-1 w-fit backdrop-blur-md",
+        variant !== "underline" && "bg-white/[0.04] rounded-xl p-1 w-fit",
         className
       )}
     >

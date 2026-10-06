@@ -131,7 +131,7 @@ export default function MarketLocks() {
         <Button size="sm" variant="secondary" icon={RefreshCw} loading={refreshing} onClick={() => refresh(true)}>Refresh</Button>
       </header>
 
-      {error && <p className="rounded-lg bg-red-500/[0.08] ring-2 ring-red-500/20 px-3 py-2 text-xs text-red-200 backdrop-blur-md" role="alert">{error}</p>}
+      {error && <p className="rounded-lg bg-red-500/[0.08] ring-2 ring-red-500/20 px-3 py-2 text-xs text-red-200" role="alert">{error}</p>}
 
       <Card padding="p-4">
         <CardHeader>

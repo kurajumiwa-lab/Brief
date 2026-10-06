@@ -17,7 +17,7 @@ export default function Drawer({ open, onClose, title, description, side = "righ
     <AnimatePresence>
       {open && (
         <div className="fixed inset-0 z-50">
-          <motion.div className="absolute inset-0 bg-black/60 backdrop-blur-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} />
+          <motion.div className="absolute inset-0 bg-black/60" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} />
           <motion.aside
             role="dialog"
             aria-modal="true"

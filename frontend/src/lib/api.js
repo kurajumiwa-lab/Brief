@@ -308,6 +308,11 @@ export const onboardingAPI = {
   get: () => api.get("/onboarding"),
 };
 
+// ── Nearby (B2C) — businesses & professionals around a point ───────────────
+export const nearbyAPI = {
+  list: (params) => api.get("/nearby", { params: noEmpty(params) }),
+};
+
 // ── Surface — the mixed feed, the price index, and the map pins ────────────
 export const surfaceAPI = {
   feed: () => api.get("/surface/feed"),

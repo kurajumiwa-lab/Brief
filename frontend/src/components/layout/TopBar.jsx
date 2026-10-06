@@ -23,7 +23,7 @@ export default function TopBar() {
   const pending = movements.filter((m) => m.actionable);
 
   return (
-    <header className="sticky top-0 z-20 backdrop-blur-2xl bg-surface-0/55 shadow-[0_1px_0_0_rgba(255,255,255,0.03)]">
+    <header className="sticky top-0 z-20 bg-surface-0 shadow-[0_1px_0_0_rgba(255,255,255,0.05)]">
       <div className="flex items-center justify-between gap-3 h-14 px-4 sm:px-6 max-w-6xl mx-auto w-full">
         <div className="flex items-center gap-3 min-w-0">
           <button

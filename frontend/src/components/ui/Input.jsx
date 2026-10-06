@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 
 // v2.7: borderless glass fields — the fill, not a drawn box, marks the field
 export const fieldBase =
-  "w-full rounded-xl bg-white/[0.06] backdrop-blur-md text-sm text-ink-1 placeholder:text-ink-4 transition-all duration-200 " +
+  "w-full rounded-xl bg-white/[0.06] text-sm text-ink-1 placeholder:text-ink-4 transition-all duration-200 " +
   "hover:bg-white/[0.08] focus:outline-none focus:bg-white/[0.09] focus:ring-2 focus:ring-brand-500/40 disabled:opacity-50";
 
 export function FieldLabel({ htmlFor, children, required }) {

@@ -127,7 +127,7 @@ export default function MapPage() {
         {LAYERS.map((l) => (
           <button key={l.value} type="button"
             onClick={() => setActive((a) => ({ ...a, [l.value]: !a[l.value] }))}
-            className={cn("rounded-full px-3 h-8 text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer backdrop-blur",
+            className={cn("rounded-full px-3 h-8 text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer",
               active[l.value] ? "bg-black/70 text-white" : "bg-black/40 text-white/50")}>
             <span className="w-2 h-2 rounded-full" style={{ background: l.color, opacity: active[l.value] ? 1 : 0.4 }} />
             {l.label} <span className="font-mono text-2xs opacity-70">{num(counts[l.value])}</span>

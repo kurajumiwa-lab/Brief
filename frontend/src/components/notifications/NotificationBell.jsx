@@ -177,7 +177,7 @@ export default function NotificationBell({ pollMs = 30_000 }) {
                         n.is_read ? "hover:bg-white/[0.05]" : "bg-brand-500/[0.08] hover:bg-brand-500/[0.13]"
                       )}
                     >
-                      <span className={cn("mt-0.5 shrink-0 w-7 h-7 rounded-lg flex items-center justify-center backdrop-blur-md", toneFor(n.type))}>
+                      <span className={cn("mt-0.5 shrink-0 w-7 h-7 rounded-lg flex items-center justify-center", toneFor(n.type))}>
                         <Icon size={14} />
                       </span>
                       <span className="min-w-0 flex-1">

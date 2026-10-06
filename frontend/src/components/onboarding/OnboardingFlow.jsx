@@ -105,7 +105,7 @@ export default function OnboardingFlow() {
   };
 
   return (
-    <div className="fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-6" role="dialog" aria-modal="true" aria-label="Getting your shop on the map">
+    <div className="fixed inset-0 z-[70] bg-black/60 flex items-end sm:items-center justify-center p-0 sm:p-6" role="dialog" aria-modal="true" aria-label="Getting your shop on the map">
       <div className="w-full max-w-lg bg-surface-1 rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden animate-slide-up">
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-4 pb-3">

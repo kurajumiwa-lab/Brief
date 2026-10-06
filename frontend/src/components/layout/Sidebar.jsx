@@ -12,16 +12,17 @@ import { cn } from "@/lib/utils";
 
 // The shelf — the sections a shop checks every day, one question each.
 export const NAV = [
-  { to: "/", label: "Surfaces", icon: Home, end: true },
-  { to: "/news", label: "News", icon: Newspaper },
+  { to: "/", label: "Home", icon: Home, end: true },
   { to: "/search", label: "Search", icon: Search },
   { to: "/map", label: "Map", icon: Map },
+  { to: "/news", label: "News", icon: Newspaper },
   { to: "/network", label: "Suppliers", icon: Network },
   { to: "/stock", label: "Stock", icon: Package },
   { to: "/tools", label: "Rentals", icon: Truck },
   { to: "/markets", label: "Markets", icon: MapPin },
   { to: "/groups", label: "Groups", icon: Users },
   { to: "/events", label: "Events", icon: CalendarDays },
+  { to: "/feed", label: "Surfaces", icon: Newspaper },
   // The one door into the task loops (Squad league + Brief workspace).
   { to: "/tasks", label: "Tasks", icon: ListChecks },
 ];
@@ -121,7 +122,7 @@ export default function Sidebar() {
       {/* Mobile: slide-in drawer */}
       {mobileOpen && (
         <div className="lg:hidden fixed inset-0 z-50">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setMobileSidebar(false)} />
+          <div className="absolute inset-0 bg-black/60" onClick={() => setMobileSidebar(false)} />
           <aside className="absolute left-0 top-0 bottom-0 w-72 glass-strong animate-slide-right">
             <SidebarContent onNavigate={() => setMobileSidebar(false)} />
           </aside>

@@ -290,7 +290,7 @@ export default function ChatInput({ onSend, onSendVoice, disabled, sending, plac
       )}
 
       {recording && (
-        <div className="flex items-center justify-between rounded-lg bg-red-500/[0.09] ring-2 ring-red-500/25 px-3 py-2 text-xs text-red-100 backdrop-blur-md" role="status" aria-live="polite">
+        <div className="flex items-center justify-between rounded-lg bg-red-500/[0.09] ring-2 ring-red-500/25 px-3 py-2 text-xs text-red-100" role="status" aria-live="polite">
           <span className="inline-flex items-center gap-2"><span className="h-2 w-2 animate-pulse rounded-full bg-red-400" />Recording · 00:{String(Math.min(recordingSeconds, MAX_VOICE_SECONDS)).padStart(2, "0")} / 00:15</span>
           <span className="text-2xs text-red-200/80">Tap the square to finish</span>
         </div>

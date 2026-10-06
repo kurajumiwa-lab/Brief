@@ -15,7 +15,7 @@ export default function Badge({ variant = "gray", size = "sm", dot, className, c
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-full backdrop-blur-md font-medium whitespace-nowrap",
+        "inline-flex items-center gap-1 rounded-full font-medium whitespace-nowrap",
         size === "xs" ? "px-1.5 py-px text-2xs" : size === "md" ? "px-2.5 py-0.5 text-xs" : "px-2 py-0.5 text-2xs",
         variants[variant] || variants.gray,
         className

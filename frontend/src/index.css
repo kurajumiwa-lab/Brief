@@ -23,12 +23,12 @@
   }
   body {
     @apply bg-surface-0 text-ink-1 antialiased;
-    /* Ambient depth: soft brand + warm glows instead of a flat PC black */
+    /* v2.8 performance pass: background-attachment: fixed forced a fixed
+       composite layer on every scroll frame (Android jank). Static, lighter
+       glows keep the depth without the cost. */
     background-image:
-      radial-gradient(1100px 480px at 8% -10%, rgba(34, 168, 103, 0.14), transparent 60%),
-      radial-gradient(900px 420px at 105% 12%, rgba(96, 165, 250, 0.07), transparent 55%),
-      radial-gradient(760px 500px at 85% 110%, rgba(251, 191, 36, 0.05), transparent 60%);
-    background-attachment: fixed;
+      radial-gradient(900px 400px at 10% -10%, rgba(34, 168, 103, 0.10), transparent 60%),
+      radial-gradient(800px 380px at 110% 8%, rgba(96, 165, 250, 0.05), transparent 55%);
   }
   ::selection {
     @apply bg-brand-500/30 text-white;
@@ -52,21 +52,25 @@
 }
 
 @layer components {
-  /* Glass morphism — no border, surface separation by blur + lift */
+  /* v2.8 performance pass — the glass blur (backdrop-filter) was the
+     scroll-jank source on Android: every scroll frame re-rendered the blur
+     layer behind 50+ surfaces. Surfaces keep the same silhouette and depth
+     as solid OPAQUE fills — zero GPU blur. Class names unchanged, so every
+     existing usage goes fast at once. */
   .glass {
-    background-image: linear-gradient(160deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02) 55%, rgba(255, 255, 255, 0.045));
-    @apply backdrop-blur-2xl shadow-glass;
+    background-color: #1a1f29;
+    @apply shadow-glass;
   }
   .glass-strong {
-    background-image: linear-gradient(160deg, rgba(30, 34, 42, 0.92), rgba(22, 25, 31, 0.88));
-    @apply backdrop-blur-2xl shadow-glass-lg;
+    background-color: #202632;
+    @apply shadow-glass-lg;
   }
   .glass-hover {
-    @apply transition-all duration-300;
+    @apply transition-colors duration-150;
   }
   .glass-hover:hover {
-    background-image: linear-gradient(160deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.04) 55%, rgba(255, 255, 255, 0.06));
-    @apply shadow-lift -translate-y-0.5;
+    background-color: #232b38;
+    @apply shadow-lift;
   }
 
   /* Hide the scrollbar on snap feeds (the swipe gesture is the affordance) */
