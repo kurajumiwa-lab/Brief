@@ -85,19 +85,21 @@ def _median(values):
 
 
 # ── PRICE INDEX ──────────────────────────────────────────────────────────────
-def _price_index_rows(db_result_rows):
+def _price_index_rows(items):
     """Group stated prices by category. A category appears only with n >= 3 —
     below that the 'index' would be one or two vendors' prices, which is a
-    leak, not a statistic. No vendor identity is ever attached."""
+    leak, not a statistic. No vendor identity is ever attached.
+
+    Takes StockItem objects directly (a scalar select, not a tuple select)."""
     by_cat = {}
-    for row in db_result_rows:
-        price, _label = _stated_price(row.item)
+    for item in items:
+        price, _label = _stated_price(item)
         if price is None:
             continue
-        cat = (row.item.category or "uncategorised").lower().strip() or "uncategorised"
+        cat = (item.category or "uncategorised").lower().strip() or "uncategorised"
         entry = by_cat.setdefault(cat, {"prices": [], "as_of": None})
         entry["prices"].append(price)
-        updated = row.item.updated_at
+        updated = item.updated_at
         if updated is not None and (entry["as_of"] is None or updated > entry["as_of"]):
             entry["as_of"] = updated
     out = []
