@@ -8,6 +8,9 @@ import News from "@/pages/news/News";
 import SquadPage from "@/pages/squad/SquadPage";
 import MarketsPage from "@/pages/markets/MarketsPage";
 import TasksPortal from "@/pages/tasks/TasksPortal";
+import SurfaceFeed from "@/pages/surface/SurfaceFeed";
+import SearchHub from "@/pages/search/SearchHub";
+import MapPage from "@/pages/map/MapPage";
 import Dashboard from "@/pages/dashboard/Dashboard";
 import StockRoom from "@/pages/stock/StockRoom";
 import Network from "@/pages/network/Network";
@@ -54,7 +57,9 @@ export default function App() {
       >
         {/* Home is the trade-information shelf; the vendor's own workspace
             (numbers, feed, suggestions) lives under Brief, as a feature. */}
-        <Route path="/" element={<ShopHome />} />
+        <Route path="/" element={<SurfaceFeed />} />
+        <Route path="/search" element={<SearchHub />} />
+        <Route path="/map" element={<MapPage />} />
         <Route path="/news" element={<News />} />
         <Route path="/squad" element={<SquadPage />} />
         <Route path="/tasks" element={<TasksPortal />} />

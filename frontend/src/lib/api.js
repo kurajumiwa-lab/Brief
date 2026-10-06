@@ -308,6 +308,13 @@ export const onboardingAPI = {
   get: () => api.get("/onboarding"),
 };
 
+// ── Surface — the mixed feed, the price index, and the map pins ────────────
+export const surfaceAPI = {
+  feed: () => api.get("/surface/feed"),
+  index: (params) => api.get("/surface/index", { params: noEmpty(params) }),
+  map: () => api.get("/surface/map"),
+};
+
 // ── Markets — the East-African catalog, scan, multi-market data, patron ────
 export const marketsAPI = {
   list: (params) => api.get("/markets", { params: noEmpty(params) }),

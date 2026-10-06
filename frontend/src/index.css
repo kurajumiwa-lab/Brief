@@ -69,6 +69,14 @@
     @apply shadow-lift -translate-y-0.5;
   }
 
+  /* Hide the scrollbar on snap feeds (the swipe gesture is the affordance) */
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
   /* Digital readout — seven-segment glow, like a timer */
   .digital {
     font-family: theme("fontFamily.digital");

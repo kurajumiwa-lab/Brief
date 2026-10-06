@@ -2,6 +2,7 @@ import { NavLink, useNavigate } from "react-router-dom";
 import {
   Home, Newspaper, Package, Network, List, Users, MessageSquare, Terminal,
   CalendarDays, Briefcase, Truck, ShoppingBasket, ShieldCheck, BarChart3, LogOut, Store, MapPin, ListChecks,
+  Search, Map,
 } from "lucide-react";
 import { useUIStore } from "@/stores/uiStore";
 import { useAuthStore } from "@/stores/authStore";
@@ -11,8 +12,10 @@ import { cn } from "@/lib/utils";
 
 // The shelf — the sections a shop checks every day, one question each.
 export const NAV = [
-  { to: "/", label: "Home", icon: Home, end: true },
+  { to: "/", label: "Surfaces", icon: Home, end: true },
   { to: "/news", label: "News", icon: Newspaper },
+  { to: "/search", label: "Search", icon: Search },
+  { to: "/map", label: "Map", icon: Map },
   { to: "/network", label: "Suppliers", icon: Network },
   { to: "/stock", label: "Stock", icon: Package },
   { to: "/tools", label: "Rentals", icon: Truck },
