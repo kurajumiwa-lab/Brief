@@ -1,11 +1,12 @@
 import { Outlet, useLocation } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, Suspense } from "react";
 import Sidebar, { SidebarContent, Brand } from "./Sidebar";
 import TopBar from "./TopBar";
 import MobileNav from "./MobileNav";
 import Drawer from "@/components/ui/Drawer";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import OnboardingFlow from "@/components/onboarding/OnboardingFlow";
+import { PageSpinner } from "@/components/ui/Spinner";
 import { useUIStore } from "@/stores/uiStore";
 
 /** Persistent app frame — rendered once as a layout route so navigation never remounts it. */
@@ -24,7 +25,9 @@ export default function Shell() {
         <TopBar />
         <main className={fullBleed ? "flex-1 min-h-0 pb-14 lg:pb-0" : "flex-1 overflow-y-auto px-4 lg:px-6 py-5 pb-20 lg:pb-8"}>
           <div className={fullBleed ? "h-full" : "max-w-6xl mx-auto"}>
-            <Outlet />
+            <Suspense fallback={<PageSpinner />}>
+              <Outlet />
+            </Suspense>
           </div>
         </main>
       </div>

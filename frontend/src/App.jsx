@@ -1,4 +1,4 @@
-import { useEffect, lazy, Suspense } from "react";
+import { useEffect, lazy, Fragment } from "react";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import Shell from "@/components/layout/Shell";
 import { PageSpinner } from "@/components/ui/Spinner";
@@ -61,7 +61,7 @@ export default function App() {
           </RequireVendor>
         }
       >
-        <Suspense fallback={<PageSpinner />}>
+        <Fragment>
           {/* Home is the B2C local-business home (Nextdoor-style, GPS +
               categories). The B2B surfaces feed stays one tap away at /feed. */}
           <Route path="/" element={<LocalHome />} />
@@ -87,7 +87,7 @@ export default function App() {
           <Route path="/ops" element={<Ops />} />
           <Route path="/@:handle" element={<VendorProfile />} />
           <Route path="*" element={<Navigate to="/" replace />} />
-        </Suspense>
+        </Fragment>
       </Route>
     </Routes>
   );
