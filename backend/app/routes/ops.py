@@ -20,6 +20,7 @@ from app.middleware.metrics import registry
 from app.middleware.rate_limiter import current_backend
 from app.models.vendor import Vendor
 from app.routes.auth import get_current_vendor
+from app.services import map_viewport as mv
 from app.services.storage import storage_mode
 
 router = APIRouter()
@@ -86,6 +87,26 @@ async def ops_status(
         "counters": {
             "rate_limited_responses": registry.limiter_rejections,
             "requests_total": registry.total_requests,
+        },
+        # The map is the heaviest screen in the app, so its two failure modes
+        # are surfaced here: a dev-only tile backend in production, and a
+        # viewport cache that is never hitting (i.e. clients re-fetching the
+        # same streets on every pan).
+        "map": {
+            "tile_provider": settings.MAP_TILE_PROVIDER,
+            "tile_dev_only": settings.MAP_TILE_DEV_ONLY,
+            "tile_warning": (
+                "Public OpenStreetMap tiles are rate-limited and not licensed "
+                "for bulk or high-volume use — set MAP_TILE_URL before launch."
+                if settings.MAP_TILE_DEV_ONLY else None
+            ),
+            "point_zoom": {
+                "places": settings.MAP_PLACES_POINT_ZOOM,
+                "vendors": settings.MAP_VENDORS_POINT_ZOOM,
+                "markets": settings.MAP_MARKETS_POINT_ZOOM,
+            },
+            "viewport_cache": mv.viewport_cache.stats,
+            "counts_cache": mv.counts_cache.stats,
         },
     }
 

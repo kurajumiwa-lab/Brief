@@ -313,6 +313,24 @@ export const nearbyAPI = {
   list: (params) => api.get("/nearby", { params: noEmpty(params) }),
 };
 
+// ── Map (v2.7) — viewport queries, never the whole directory ───────────────
+// The phone asks for one screenful at a time and gets either clusters or a
+// capped list of pins. Details (phone, hours, claim state) are a second call
+// that fires when a pin is tapped — no images, no bulk transfers.
+export const mapAPI = {
+  /** Tile backend + zoom thresholds + limits, served from the server. */
+  config: () => api.get("/map/config"),
+  /** The headline chips: markets / vendors / places, plus filter facets. */
+  counts: () => api.get("/map/counts"),
+  /** bbox + zoom (+ q / filter / kind) → clusters or pins. `opts` carries
+      `signal` so a pan can cancel the request it just made. */
+  viewport: (params, opts) => api.get("/map/viewport", { params: noEmpty(params), ...opts }),
+  /** Lazy detail, on tap only (`opts` carries an AbortController signal). */
+  place: (id, opts) => api.get(`/map/places/${id}`, opts),
+  vendor: (id, opts) => api.get(`/map/vendors/${id}`, opts),
+  market: (id, opts) => api.get(`/map/markets/${id}`, opts),
+};
+
 // ── Surface — the mixed feed, the price index, and the map pins ────────────
 export const surfaceAPI = {
   feed: () => api.get("/surface/feed"),

@@ -21,7 +21,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -152,9 +152,21 @@ async def price_index(
 # ── MAP PINS ─────────────────────────────────────────────────────────────────
 @router.get("/map")
 async def map_pins(
+    limit: int = Query(500, ge=1, le=2000),
     vendor: Vendor = Depends(get_current_vendor),
     db: AsyncSession = Depends(get_db),
 ):
+    """The three map layers, nearest first — capped.
+
+    This endpoint is the *legacy* whole-network pin dump. It used to select
+    every public place in the directory, which is exactly what made the mobile
+    map hang: 7,640 pins, 7,640 markers. It survives for callers that need a
+    bounded list (the search hub's place tab), so it is now capped at `limit`
+    and says so (`truncated`) instead of pretending to be complete.
+
+    The map itself no longer calls this. It calls `GET /api/map/viewport`,
+    which returns only what is inside the screen rectangle.
+    """
     vlat, vlng = vendor.geo_lat, vendor.geo_lng
 
     zres = await db.execute(select(MarketZone).where(MarketZone.is_active.is_(True)))
@@ -178,7 +190,7 @@ async def map_pins(
     markets.sort(key=lambda m: (m["distance_km"] is None, m["distance_km"] or 0))
 
     pres = await db.execute(
-        select(PublicPlace).where(PublicPlace.status.in_(["active", "claimed"]))
+        select(PublicPlace).where(PublicPlace.status.in_(["active", "claimed"])).limit(limit)
     )
     places = []
     for p in pres.scalars().all():
@@ -193,7 +205,7 @@ async def map_pins(
         })
     places.sort(key=lambda p: (p["distance_km"] is None, p["distance_km"] or 0))
 
-    vres = await db.execute(select(Vendor).where(Vendor.geo_lat.is_not(None)))
+    vres = await db.execute(select(Vendor).where(Vendor.geo_lat.is_not(None)).limit(limit))
     vendors = []
     for v in vres.scalars().all():
         if v.id == vendor.id:
@@ -208,11 +220,22 @@ async def map_pins(
         })
     vendors.sort(key=lambda v: (v["distance_km"] is None, v["distance_km"] or 0))
 
+    place_total = (await db.execute(
+        select(func.count(PublicPlace.id)).where(PublicPlace.status.in_(["active", "claimed"]))
+    )).scalar() or 0
     return {
         "viewer": {"lat": vlat, "lng": vlng},
         "vendors": vendors,
         "markets": markets,
         "places": places,
+        "limit": limit,
+        "truncated": place_total > len(places),
+        "place_total": place_total,
+        "note": (
+            "Capped at %d rows nearest to you — %d places exist. The map uses "
+            "GET /api/map/viewport, which returns only the current rectangle."
+            % (limit, place_total)
+        ),
     }
 
 

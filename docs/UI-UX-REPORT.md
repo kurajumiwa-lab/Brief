@@ -76,6 +76,13 @@ implies space; a list with "4.2 km" numbers is a step removed from that.
 Show the 25 markets as dots, the user's pin, and the selected 1..N highlighted.
 This is the single biggest "wow" available cheaply because the data already exists.
 
+> **Shipped (v2.7).** A map now lives at `/map` (Leaflet + OSM tiles, ODbL
+> attribution). It is a *marketplace* map: viewport-based loading, server-side
+> clustering, counters that are filters, lazy details in a bottom sheet, and a
+> list view beside it. The first implementation pinned all 7,640 directory rows
+> at once and froze on mobile — see `docs/briefs/map-performance.md` for the
+> rewrite and its measurements.
+
 ### 2.5 No persistent "home market"
 Every scan starts from a radius around the caller. There is no saved
 "my market" (e.g. "Gikomba, 10 km") that the home shelf, news, and markets

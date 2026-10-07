@@ -33,3 +33,10 @@ async def init_db():
 
     async with engine.begin() as conn:
         await ensure_guardrails(conn)
+
+    # The map's bounding-box indexes (alembic 0011 in production). Without them
+    # every pan is a sequential scan of the whole directory.
+    from app.map_indexes import ensure_map_indexes
+
+    async with engine.begin() as conn:
+        await ensure_map_indexes(conn)
