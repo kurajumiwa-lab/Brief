@@ -322,18 +322,71 @@ async def test_market_detail_separates_mapped_places_from_members(client, me):
     assert body["distance_km"] is not None
 
 
-# ── the legacy endpoint is capped ──────────────────────────────────────────────
-async def test_legacy_surface_map_is_capped_and_says_so(client, me):
-    await _seed_places(60, prefix="Legacy")
-    r = await client.get("/api/surface/map", headers=me, params={"limit": 10})
-    assert r.status_code == 200
-    body = r.json()
-    assert len(body["places"]) <= 10
-    assert body["truncated"] is True
-    assert body["place_total"] >= 60
+# ── the legacy whole-directory endpoint is gone ────────────────────────────────
+async def test_the_legacy_whole_directory_endpoint_is_retired(client, me):
+    """`GET /api/surface/map` selected every place and shipped them to the
+    phone. It is deleted, not capped: leaving it in place means someone calls it
+    again in six months. The map uses /api/map/viewport."""
+    await _seed_places(20, prefix="Legacy")
+    gone = await client.get("/api/surface/map", headers=me)
+    assert gone.status_code == 404
+    # …and what replaced it still answers for the same area.
+    here = await client.get("/api/map/viewport", headers=me,
+                            params={"bbox": REGION_BBOX, "zoom": 6, "kind": "places"})
+    assert here.status_code == 200
+    assert here.json()["counts"]["places"] >= 20
 
 
-# ── indexes ────────────────────────────────────────────────────────────────────
+# ── tile backend ───────────────────────────────────────────────────────────────
+async def test_tile_config_serves_a_usable_backend_and_its_credit(client, me):
+    body = (await client.get("/api/map/config", headers=me)).json()["tiles"]
+    assert body["url"].startswith("http")
+    assert "OpenStreetMap" in body["attribution"]        # the ODbL credit travels with it
+    assert body["provider"] in {p["value"] for p in (await client.get("/api/map/config", headers=me)).json()["tile_providers"]}
+
+
+def test_auto_picks_a_keyed_provider_only_when_the_key_exists(monkeypatch):
+    from app.services import tile_providers as tp
+
+    assert tp.resolve("auto", api_key="").key == "osm"
+    assert tp.resolve("auto", api_key="").dev_only is True
+    chosen = tp.resolve("auto", api_key="test-key")
+    assert chosen.key == "maptiler"
+    assert chosen.dev_only is False
+
+
+def test_a_keyed_provider_without_a_key_falls_back_instead_of_401ing():
+    from app.services import tile_providers as tp
+
+    for name in ("maptiler", "stadia", "thunderforest"):
+        cfg = tp.tile_config(name, api_key="")
+        assert cfg["key_missing"] is True
+        assert cfg["dev_only"] is True                   # fell back to the dev tiles
+        assert cfg["warning"]
+        assert cfg["url"].startswith("http")
+
+
+def test_the_key_never_reaches_the_client_as_a_template_placeholder():
+    from app.services import tile_providers as tp
+
+    cfg = tp.tile_config("maptiler", api_key="secret-key")
+    assert "{key}" not in cfg["url"]
+    assert "secret-key" in cfg["url"]                    # it is a tile key, not a secret
+    assert tp.PROVIDERS["stadia"].resolved_url("k").endswith(".png?api_key=k")
+    assert "{r}" not in tp.PROVIDERS["stadia"].resolved_url("k")   # no retina tiles
+
+
+def test_an_unknown_provider_label_degrades_to_a_working_map():
+    from app.services import tile_providers as tp
+
+    assert tp.resolve("nonsense").key == "osm"
+    custom = tp.resolve("custom", url_override="https://tiles.example.com/{z}/{x}/{y}.png",
+                        attribution_override="© Example")
+    assert custom.url == "https://tiles.example.com/{z}/{x}/{y}.png"
+    assert custom.attribution == "© Example"
+
+
+# ── indexes ──────────────────────────────────────────────────────────────────
 async def test_bbox_indexes_exist_after_the_migration():
     """A viewport query is two range scans, not a sequential scan. The planner
     can only do that with an index on (lat, lng)."""

@@ -335,7 +335,9 @@ export const mapAPI = {
 export const surfaceAPI = {
   feed: () => api.get("/surface/feed"),
   index: (params) => api.get("/surface/index", { params: noEmpty(params) }),
-  map: () => api.get("/surface/map"),
+  // /surface/map is RETIRED — it returned the whole place directory. The map
+  // uses mapAPI.viewport (one screenful at a time) and the search hub uses
+  // mapAPI.viewport with scope=network.
 };
 
 // ── Markets — the East-African catalog, scan, multi-market data, patron ────

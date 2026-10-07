@@ -8,7 +8,11 @@
                              prices per category. n >= 3 or the category does
                              not appear (a median of one price is a price,
                              not an index). No vendor identity, ever.
-    GET /api/surface/map     the three map layers: vendors, markets, places.
+
+The map layer that used to live here (GET /api/surface/map) is RETIRED: it
+selected the whole public-place directory and shipped it to the phone, which is
+what made the mobile map hang. The map uses GET /api/map/viewport, which returns
+one screenful at a time. See docs/briefs/map-performance.md.
 
 The feed is the operating surface: every card is a row someone wrote, leads
 with the one number a trader acts on, and links to the place the action
@@ -146,96 +150,6 @@ async def price_index(
             f"with n >= {INDEX_MIN_N}; no vendor identity is ever attached"
         ),
         "generated_at": datetime.utcnow().isoformat(),
-    }
-
-
-# ── MAP PINS ─────────────────────────────────────────────────────────────────
-@router.get("/map")
-async def map_pins(
-    limit: int = Query(500, ge=1, le=2000),
-    vendor: Vendor = Depends(get_current_vendor),
-    db: AsyncSession = Depends(get_db),
-):
-    """The three map layers, nearest first — capped.
-
-    This endpoint is the *legacy* whole-network pin dump. It used to select
-    every public place in the directory, which is exactly what made the mobile
-    map hang: 7,640 pins, 7,640 markers. It survives for callers that need a
-    bounded list (the search hub's place tab), so it is now capped at `limit`
-    and says so (`truncated`) instead of pretending to be complete.
-
-    The map itself no longer calls this. It calls `GET /api/map/viewport`,
-    which returns only what is inside the screen rectangle.
-    """
-    vlat, vlng = vendor.geo_lat, vendor.geo_lng
-
-    zres = await db.execute(select(MarketZone).where(MarketZone.is_active.is_(True)))
-    zones = zres.scalars().all()
-    mres = await db.execute(
-        select(MarketMember.zone_id, func.count(MarketMember.id))
-        .group_by(MarketMember.zone_id)
-    )
-    member_counts = {r[0]: r[1] for r in mres.all()}
-    markets = []
-    for z in zones:
-        if z.center_lat is None:
-            continue
-        d = _dist_km(vlat, vlng, z.center_lat, z.center_lng)
-        markets.append({
-            "id": str(z.id), "name": z.name, "city": z.city, "country": z.country,
-            "lat": z.center_lat, "lng": z.center_lng, "radius_km": z.radius_km,
-            "member_count": member_counts.get(z.id, 0),
-            "distance_km": round(d, 1) if d is not None else None,
-        })
-    markets.sort(key=lambda m: (m["distance_km"] is None, m["distance_km"] or 0))
-
-    pres = await db.execute(
-        select(PublicPlace).where(PublicPlace.status.in_(["active", "claimed"])).limit(limit)
-    )
-    places = []
-    for p in pres.scalars().all():
-        if p.lat is None:
-            continue
-        d = _dist_km(vlat, vlng, p.lat, p.lng)
-        places.append({
-            "id": str(p.id), "name": p.name, "category": p.category,
-            "zone_name": p.zone_name, "lat": p.lat, "lng": p.lng,
-            "claimed_by_me": p.claimed_by_vendor_id == vendor.id,
-            "distance_km": round(d, 1) if d is not None else None,
-        })
-    places.sort(key=lambda p: (p["distance_km"] is None, p["distance_km"] or 0))
-
-    vres = await db.execute(select(Vendor).where(Vendor.geo_lat.is_not(None)).limit(limit))
-    vendors = []
-    for v in vres.scalars().all():
-        if v.id == vendor.id:
-            continue
-        d = _dist_km(vlat, vlng, v.geo_lat, v.geo_lng)
-        vendors.append({
-            "id": str(v.id), "name": v.business_name, "handle": v.vendor_handle,
-            "categories": list(v.business_categories or [])[:4],
-            "location": v.physical_location,
-            "lat": v.geo_lat, "lng": v.geo_lng,
-            "distance_km": round(d, 1) if d is not None else None,
-        })
-    vendors.sort(key=lambda v: (v["distance_km"] is None, v["distance_km"] or 0))
-
-    place_total = (await db.execute(
-        select(func.count(PublicPlace.id)).where(PublicPlace.status.in_(["active", "claimed"]))
-    )).scalar() or 0
-    return {
-        "viewer": {"lat": vlat, "lng": vlng},
-        "vendors": vendors,
-        "markets": markets,
-        "places": places,
-        "limit": limit,
-        "truncated": place_total > len(places),
-        "place_total": place_total,
-        "note": (
-            "Capped at %d rows nearest to you — %d places exist. The map uses "
-            "GET /api/map/viewport, which returns only the current rectangle."
-            % (limit, place_total)
-        ),
     }
 
 

@@ -33,9 +33,12 @@ problem — a thousand DOM nodes each with transforms, event listeners and layou
 is. And it is also the wrong product: a wall of identical pins tells a trader
 nothing.
 
-`/api/surface/map` still exists (the search hub's place tab and a few callers
-need a bounded list), but it is now **capped** and says so
-(`truncated`, `place_total`, `note`). The map no longer calls it.
+`/api/surface/map` has been **retired and deleted** — not capped, deleted.
+Capping it would have left an endpoint whose only reason to exist is to hand
+out the directory, and someone would call it again in six months. The search
+hub's place tab now searches server-side (`mapAPI.viewport({scope:"network"})`)
+and the map uses `/api/map/viewport`. The client method `surfaceAPI.map` is gone
+too, so nothing can call it by accident.
 
 ---
 
@@ -204,29 +207,63 @@ has to change: the query builders already emit a `WHERE` fragment per layer.
 
 ---
 
-## 5. Tiles: the public OSM server is a development default
+## 5. Tiles: MapTiler by default, everything else one setting away
 
-`MAP_TILE_URL` defaults to `https://tile.openstreetmap.org/{z}/{x}/{y}.png`.
-That server is community-funded, rate-limited, and its
+The public OpenStreetMap tile server is community-funded, rate-limited, and its
 [tile usage policy](https://operations.osmfoundation.org/policies/tiles/)
 explicitly prohibits bulk downloading and heavy use; the Foundation blocks
-applications that cause excessive load. It is fine for development. It is not a
-production backend for a marketplace with thousands of users.
+applications that cause excessive load. It is a fine development default and a
+bad production dependency.
 
-So the setting is explicit, and `/api/ops/status` reports:
+**Chosen backend: MapTiler** (`MAP_TILE_PROVIDER=maptiler`, or leave `auto` and
+set `MAP_TILE_KEY`). Why this one:
 
-```json
-"map": { "tile_provider": "openstreetmap", "tile_dev_only": true,
-         "tile_warning": "Public OpenStreetMap tiles are rate-limited …" }
+* **OSM-derived**, so the directory and the basemap share a licence (ODbL) and
+  the same attribution string is correct for both.
+* **Raster tiles that drop straight into Leaflet** — no renderer swap, no
+  MapLibre GL dependency, no style JSON to maintain.
+* **Keyed, with a free tier and a global CDN**, so it scales from pilot to
+  production without an infrastructure project.
+* **A documented exit** — the tiles are OpenMapTiles/OSM schema, so moving to a
+  self-hosted `tileserver-gl` later is a URL change, not a rewrite.
+
+The provider is resolved server-side (`app/services/tile_providers.py`) and
+served to the client by `/api/map/config`, together with the attribution its
+licence requires. The phone never hardcodes a tile URL.
+
+```
+MAP_TILE_PROVIDER=auto     # maptiler when MAP_TILE_KEY is set, else osm (dev)
+MAP_TILE_KEY=…             # fills {key} in the provider template
+MAP_TILE_URL=…             # optional override: your own tile stack
+MAP_TILE_ATTRIBUTION=…     # optional override: its licence credit
 ```
 
-Set `MAP_TILE_URL` (and `MAP_TILE_DEV_ONLY=false`) to one of:
-
-| option | when | notes |
+| provider | setting | notes |
 |---|---|---|
-| **Commercial OSM-derived provider** — Mapbox, MapTiler, Stadia, Thunderforest | fastest route to production | one env var; attribution is served from the same setting, so the ODbL credit cannot drift |
-| **Own tile stack** — `tileserver-gl`, `tegola` + OpenMapTiles | high volume, fixed cost | full control of caching and rate limits |
-| **Vector tiles** | densest datasets | the map and the marketplace layers render together — no per-marker DOM at all |
+| `osm` *(dev only)* | `MAP_TILE_PROVIDER=osm` | public OSM tiles — development |
+| **`maptiler`** *(default)* | `MAP_TILE_PROVIDER=maptiler` + key | chosen: OSM-derived raster, free tier |
+| `stadia` | `+ MAP_TILE_KEY` | OSM-derived, free for non-commercial/dev |
+| `thunderforest` | `+ MAP_TILE_KEY` | OSM-derived, several styles |
+| `custom` | `MAP_TILE_URL=…` | self-hosted `tileserver-gl` / `tegola` / Martin |
+| **vector tiles** | future | the most efficient at this density, but needs a GL renderer (MapLibre) — see below |
+
+Safety rails:
+
+* A keyed provider with **no key** falls back to the dev tiles and is reported as
+  `key_missing` with a `warning` — the client is never handed a URL that can only
+  401.
+* An **unknown** provider label degrades to `osm` (or `custom` when
+  `MAP_TILE_URL` is set) instead of 500-ing the map.
+* `{r}` (retina) placeholders are stripped: 4× the bytes for a map read on
+  mobile data.
+* `/api/ops/status` keeps reporting `tile_dev_only` / `tile_warning` until the
+  dev backend is replaced.
+
+**Vector tiles** are the better long-term answer at this density — the basemap
+and the marketplace layers render together, so there are no per-marker DOM nodes
+at all — but they need a GL renderer (MapLibre GL JS) rather than Leaflet's tile
+layer. That is an engine swap, not a config change, so it is deliberately not in
+this pass; the `custom` preset already points at whatever you serve.
 
 Attribution is not optional: the directory rows are derived from OpenStreetMap
 under the **ODbL**, which requires the credit wherever the data is shown. It is

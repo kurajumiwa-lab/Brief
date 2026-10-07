@@ -186,6 +186,7 @@ POST /tools/routes/{id}/status?status=  /tools/routes/{id}/stops/{stop_id}/solve
 # v2.7 — the marketplace map (see "The map" below)
 GET  /map/config  /map/counts           GET /map/viewport?bbox=minLng,minLat,maxLng,maxLat&zoom=&kind=&q=&filter=&scope=
 GET  /map/places/{id}  /map/vendors/{id}  /map/markets/{id}      (lazy detail, on tap)
+# retired: GET /api/surface/map — the whole-directory dump that hung the phone
 ```
 
 Auth returns an `access_token` (24 h) and a `refresh_token` (30 d); the frontend
@@ -242,21 +243,30 @@ python backend/seed_map_demo.py        # 7,640 places around 25 real markets
 # then: /map shows the directory at production scale
 ```
 
-### Tiles: development default vs production
+### Tiles: MapTiler by default, everything else one setting away
 
-`MAP_TILE_URL` defaults to the public OpenStreetMap tile server. It is
-community-funded, rate-limited, and its tile usage policy forbids bulk
-downloading and heavy commercial use — so it ships as a **development** default
-and `/api/ops/status` reports `"tile_warning"` until you change it. Before
-launch pick one of:
+The public OpenStreetMap tile server is community-funded, rate-limited, and its
+tile usage policy forbids bulk downloading and heavy use — so it is the
+**development** default only, and `/api/ops/status` keeps reporting
+`tile_dev_only: true` / `tile_warning` until it is replaced.
 
-* **OSM-derived commercial provider** — Mapbox / MapTiler / Stadia /
-  Thunderforest. One env var; attribution is served to the client from the same
-  setting, so the ODbL credit cannot drift.
-* **Your own tile stack** — e.g. `tileserver-gl` or `tegola` on OpenMapTiles.
-* **Vector tiles** — the most efficient option at this density, since the map
-  and the marketplace layers can be rendered together instead of as thousands of
-  individual markers.
+**Production default: MapTiler** — OSM-derived (so the basemap and the directory
+share the ODbL credit), raster tiles that drop straight into Leaflet, keyed with
+a free tier and a global CDN, and a self-host migration that is a URL change
+(OpenMapTiles + `tileserver-gl`) once volume makes hosting cheaper than paying
+per 1,000 tiles.
+
+```bash
+MAP_TILE_PROVIDER=auto     # maptiler when MAP_TILE_KEY is set, else osm (dev)
+MAP_TILE_KEY=…             # fills {key} in the provider template
+# or: MAP_TILE_PROVIDER=stadia|thunderforest|custom   MAP_TILE_URL=https://tiles.you/{z}/{x}/{y}.png
+```
+
+The provider is resolved server-side and served to the client by
+`GET /api/map/config` with the attribution its licence requires, so the phone
+never hardcodes a tile URL and the ODbL credit cannot drift. A keyed provider
+with no key falls back to the dev tiles and says so (`key_missing`, `warning`)
+rather than handing the client a URL that can only 401.
 
 Offline note: the app caches the last screenful of *its own* data for a dead
 connection, and never caches or pre-fetches tiles — bulk-downloading the public
@@ -429,6 +439,14 @@ self-contained in dev and tests. Architecture and invariants:
 11. **Spatial indexes** — `0011_map_viewport_indexes`: composite `(lat, lng)`
     btrees on places, vendors and markets, installed by both `init_db()` and
     `alembic upgrade head`. A bbox is now two range scans (0.8 ms on 7,640 rows).
+13. **A tile backend that is production-grade** — MapTiler by default
+    (`MAP_TILE_PROVIDER=auto` + `MAP_TILE_KEY`), with Stadia, Thunderforest and
+    self-hosted presets one setting away, resolved in
+    `app/services/tile_providers.py` and served to the client with its
+    attribution. The public OSM server stays development-only and keeps warning.
+14. **`GET /api/surface/map` retired** — deleted rather than capped, along with
+    `surfaceAPI.map`, so the whole-directory dump cannot be reintroduced by
+    accident.
 12. **Scale you can reproduce** — `backend/seed_map_demo.py` seeds 7,640 places
     around 25 real East-African markets.
 

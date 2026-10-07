@@ -39,6 +39,7 @@ from app.models.public_place import PublicPlace
 from app.models.vendor import Vendor
 from app.routes.auth import get_current_vendor
 from app.services import map_viewport as mv
+from app.services import tile_providers
 from app.services.routing import haversine_km
 
 router = APIRouter()
@@ -70,24 +71,20 @@ async def map_config(vendor: Vendor = Depends(get_current_vendor)):
     so swapping the public OSM tile server for a commercial one is a deploy-time
     change (one env var), not a frontend release.
     """
+    tiles = tile_providers.tile_config(
+        settings.MAP_TILE_PROVIDER,
+        api_key=settings.MAP_TILE_KEY,
+        url_override=settings.MAP_TILE_URL,
+        attribution_override=settings.MAP_TILE_ATTRIBUTION,
+        min_zoom=settings.MAP_TILE_MIN_ZOOM,
+        max_zoom=settings.MAP_TILE_MAX_ZOOM,
+    )
+    if settings.MAP_TILE_SUBDOMAINS:
+        tiles["subdomains"] = settings.MAP_TILE_SUBDOMAINS
+
     return {
-        "tiles": {
-            "provider": settings.MAP_TILE_PROVIDER,
-            "url": settings.MAP_TILE_URL,
-            "subdomains": settings.MAP_TILE_SUBDOMAINS,
-            "attribution": settings.MAP_TILE_ATTRIBUTION,
-            "min_zoom": settings.MAP_TILE_MIN_ZOOM,
-            "max_zoom": settings.MAP_TILE_MAX_ZOOM,
-            "dev_only": settings.MAP_TILE_DEV_ONLY,
-            "note": (
-                "The public OpenStreetMap tile server is community-funded and "
-                "rate-limited; it is a development default, not a production "
-                "backend. Set MAP_TILE_URL to a commercial OSM-derived provider "
-                "or your own tile server before launch — and never bulk-download "
-                "tiles." if settings.MAP_TILE_DEV_ONLY else
-                "Configured tile backend: %s." % settings.MAP_TILE_PROVIDER
-            ),
-        },
+        "tiles": tiles,
+        "tile_providers": tile_providers.available(),
         "thresholds": {
             "places": settings.MAP_PLACES_POINT_ZOOM,
             "vendors": settings.MAP_VENDORS_POINT_ZOOM,
@@ -268,7 +265,10 @@ async def map_viewport(
         "query": {"q": term, "filter": group, "category": cat, "scope": scope},
         "cell": {"lat": cell[0], "lng": cell[1]},
         "generated_at": datetime.utcnow().isoformat(),
-        "attribution": settings.MAP_TILE_ATTRIBUTION,
+        "attribution": tile_providers.resolve(
+            settings.MAP_TILE_PROVIDER, settings.MAP_TILE_KEY,
+            settings.MAP_TILE_URL, settings.MAP_TILE_ATTRIBUTION,
+        ).attribution,
     }
 
     etag = mv.etag_for(payload)
@@ -320,6 +320,7 @@ async def place_detail(
         "claimed": place.status == "claimed",
         "claimed_by_me": place.claimed_by_vendor_id == vendor.id,
         "distance_km": None if d is None else round(d, 1),
+        # ODbL: the directory row is derived data and travels with its credit.
         "attribution": "Data © OpenStreetMap contributors (ODbL)",
     }
 

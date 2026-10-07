@@ -186,22 +186,27 @@ class Settings(BaseSettings):
     # query that returns clusters below these zoom levels and individual pins
     # above them, capped at MAP_POINT_LIMIT.
     #
-    # Tile backend: the public OpenStreetMap tile server is a *development*
-    # default. It is community-funded, rate-limited and its policy forbids bulk
-    # downloading — do not ship it to a large audience. Point MAP_TILE_URL at a
-    # commercial OSM-derived provider (Mapbox / MapTiler / Stadia / Thunderforest)
-    # or at your own tile server before production. The URL template is the only
-    # thing that has to change; attribution is served to the client from here so
-    # the ODbL credit can never drift out of sync with the tiles.
-    MAP_TILE_PROVIDER: str = "openstreetmap"      # label shown in /api/map/config
-    MAP_TILE_URL: str = "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-    MAP_TILE_ATTRIBUTION: str = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors (ODbL)'
-    MAP_TILE_SUBDOMAINS: str = ""                 # e.g. "abc" for {s}-style CDNs
+    # Tile backend: chosen here, in one setting, and served to the client by
+    # GET /api/map/config together with the attribution its licence requires
+    # (see app/services/tile_providers.py).
+    #
+    #   auto      MapTiler when MAP_TILE_KEY is set, else the public OSM tiles
+    #             (dev only) — so a fresh checkout needs no signup
+    #   maptiler  OSM-derived raster, keyed  ← the production default
+    #   stadia / thunderforest   OSM-derived alternatives, keyed
+    #   osm       public OpenStreetMap tile server — DEVELOPMENT ONLY
+    #   custom    your own tile stack; set MAP_TILE_URL (+ attribution)
+    #
+    # The public OSM tile server is community-funded, rate-limited and its
+    # policy forbids bulk downloading. `/api/ops/status` and `/api/map/config`
+    # both keep warning until it is replaced.
+    MAP_TILE_PROVIDER: str = "auto"
+    MAP_TILE_KEY: str = ""                          # {key} in a provider template
+    MAP_TILE_URL: str = ""                          # override: self-hosted stack
+    MAP_TILE_ATTRIBUTION: str = ""                  # override: its licence credit
+    MAP_TILE_SUBDOMAINS: str = ""                   # e.g. "abc" for {s}-style CDNs
     MAP_TILE_MIN_ZOOM: int = 2
     MAP_TILE_MAX_ZOOM: int = 19
-    # True when the configured provider is the public OSM tile server, i.e. not
-    # fit for production traffic. Surfaced to the client and to /ops.
-    MAP_TILE_DEV_ONLY: bool = True
     # Zoom at or above which a layer stops clustering and returns real pins.
     MAP_PLACES_POINT_ZOOM: int = 15
     MAP_VENDORS_POINT_ZOOM: int = 12
