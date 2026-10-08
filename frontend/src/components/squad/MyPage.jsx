@@ -43,20 +43,20 @@ export default function MyPage() {
       {/* The card others open by handle */}
       <div className="glass-strong rounded-3xl p-5">
         <div className="flex items-center gap-3">
-          <span className="w-14 h-14 rounded-2xl bg-brand-500/15 text-brand-300 flex items-center justify-center text-2xl font-bold shrink-0">
+          <span className="w-14 h-14 rounded-2xl bg-brand-500/15 text-brand-600 dark:text-brand-400 flex items-center justify-center text-2xl font-bold shrink-0">
             {(page.name || "?").charAt(0).toUpperCase()}
           </span>
           <div className="min-w-0 flex-1">
             <p className="text-lg font-semibold text-ink-1 truncate">{page.name}</p>
             <p className="text-2xs text-ink-4 font-mono flex items-center gap-2">
               @{page.handle}
-              <button type="button" onClick={copyLink} className="text-ink-4 hover:text-brand-300 flex items-center gap-1 cursor-pointer" title="Copy your page link">
+              <button type="button" onClick={copyLink} className="text-ink-4 hover:text-brand-600 dark:hover:text-brand-400 flex items-center gap-1 cursor-pointer" title="Copy your page link">
                 {copied ? <Check size={11} /> : <Copy size={11} />} {copied ? "copied" : "copy link"}
               </button>
             </p>
           </div>
           <div className="w-24 shrink-0">
-            <div className="h-1.5 rounded-full bg-white/[0.08] overflow-hidden">
+            <div className="h-1.5 rounded-full bg-surface-2 overflow-hidden">
               <div className="h-full bg-gradient-to-r from-brand-500 to-brand-300" style={{ width: `${Math.round(data.completion * 100)}%` }} />
             </div>
             <p className="text-2xs text-ink-4 mt-1 text-right">{Math.round(data.completion * 100)}% complete</p>
@@ -66,7 +66,7 @@ export default function MyPage() {
         {(page.categories.length > 0 || page.location) && (
           <div className="mt-3 flex flex-wrap gap-1.5 items-center">
             {page.categories.map((c) => (
-              <span key={c} className="rounded-full bg-white/[0.05] px-2.5 py-1 text-2xs font-medium text-ink-2 capitalize">{c}</span>
+              <span key={c} className="rounded-full bg-surface-2 px-2.5 py-1 text-2xs font-medium text-ink-2 capitalize">{c}</span>
             ))}
             {page.location && <span className="text-2xs text-ink-4">{page.location}</span>}
           </div>
@@ -79,7 +79,7 @@ export default function MyPage() {
             { icon: Users, label: "connections", value: page.connection_count },
             { icon: Link2, label: "squad", value: page.squad ? 1 : 0 },
           ].map(({ icon: Icon, label, value }) => (
-            <div key={label} className="rounded-2xl bg-white/[0.04] py-2.5">
+            <div key={label} className="rounded-2xl bg-surface-2 py-2.5">
               <Icon size={14} className="mx-auto text-ink-4" />
               <p className="digital text-lg text-ink-1 mt-1">{value === 1 && label === "squad" ? "in" : num(value)}</p>
               <p className="text-2xs text-ink-4">{label}</p>
@@ -95,7 +95,7 @@ export default function MyPage() {
         <div className="space-y-2">
           {data.steps.map((s) => (
             <div key={s.key} className="flex items-center gap-2.5">
-              <span className={cn("w-5 h-5 rounded-full grid place-items-center shrink-0", s.done ? "bg-brand-500/25 text-brand-300" : "bg-white/[0.06] text-ink-4")}>
+              <span className={cn("w-5 h-5 rounded-full grid place-items-center shrink-0", s.done ? "bg-brand-500/25 text-brand-600 dark:text-brand-400" : "bg-surface-2 text-ink-4")}>
                 <Check size={11} />
               </span>
               <p className={cn("text-xs flex-1", s.done ? "text-ink-2" : "text-ink-4")}>

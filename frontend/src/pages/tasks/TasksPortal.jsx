@@ -22,8 +22,8 @@ import { cn } from "@/lib/utils";
 // ─────────────────────────────────────────────────────────────────────────────
 
 const STATUS_TONE = {
-  accepted: "text-amber-300", in_progress: "text-blue-300", proof_pending: "text-amber-300",
-  completed: "text-brand-300", cancelled: "text-red-300",
+  accepted: "text-accent-600 dark:text-accent-400", in_progress: "text-blue-600 dark:text-blue-400", proof_pending: "text-accent-600 dark:text-accent-400",
+  completed: "text-brand-600 dark:text-brand-400", cancelled: "text-red-600 dark:text-red-400",
 };
 
 const SKILL_LABEL = {
@@ -79,7 +79,7 @@ export default function TasksPortal() {
       {active ? (
         <div className="glass-strong rounded-3xl p-4 space-y-3">
           <div className="flex items-center gap-2">
-            <Medal size={14} className="text-brand-300" />
+            <Medal size={14} className="text-brand-600 dark:text-brand-400" />
             <p className="text-2xs uppercase tracking-[0.2em] text-ink-4 font-bold">Match in hand</p>
             <span className={cn("ml-auto text-2xs font-bold uppercase tracking-wide", STATUS_TONE[active.status] || "text-ink-4")}>
               {active.status.replaceAll("_", " ")}
@@ -114,9 +114,9 @@ export default function TasksPortal() {
       {/* ── Open call-ups near you ── */}
       <div className="space-y-2">
         <div className="flex items-center gap-2">
-          <Zap size={13} className="text-amber-300" />
+          <Zap size={13} className="text-accent-600 dark:text-accent-400" />
           <p className="text-2xs uppercase tracking-[0.2em] text-ink-4 font-bold">Open call-ups near you</p>
-          <button type="button" onClick={() => navigate("/tasks/squad")} className="ml-auto text-2xs font-bold text-brand-300 hover:text-brand-200 cursor-pointer">
+          <button type="button" onClick={() => navigate("/tasks/squad")} className="ml-auto text-2xs font-bold text-brand-600 dark:text-brand-400 hover:text-brand-600 dark:hover:text-brand-400 cursor-pointer">
             all call-ups
           </button>
         </div>
@@ -155,7 +155,7 @@ export default function TasksPortal() {
       {recent.length > 0 && (
         <div className="space-y-2">
           <p className="text-2xs uppercase tracking-[0.2em] text-ink-4 font-bold flex items-center gap-2">
-            <Trophy size={13} className="text-brand-300" /> Recent wins
+            <Trophy size={13} className="text-brand-600 dark:text-brand-400" /> Recent wins
           </p>
           {recent.map((w) => (
             <div key={w.id} className="glass rounded-2xl p-3 flex items-center gap-3">
@@ -163,7 +163,7 @@ export default function TasksPortal() {
                 <p className="text-sm font-medium text-ink-1 truncate">{w.title}</p>
                 <p className="text-2xs text-ink-4 mt-0.5">
                   {w.completed_at ? relativeTime(w.completed_at) : ""}
-                  {w.client_rating ? <span className="inline-flex items-center gap-0.5 ml-1 text-amber-300"><Star size={9} className="fill-amber-300" /> {w.client_rating}.0</span> : ""}
+                  {w.client_rating ? <span className="inline-flex items-center gap-0.5 ml-1 text-accent-600 dark:text-accent-400"><Star size={9} className="fill-amber-300" /> {w.client_rating}.0</span> : ""}
                 </p>
               </div>
               <div className="shrink-0 text-right">
@@ -179,13 +179,13 @@ export default function TasksPortal() {
       <div className="grid grid-cols-2 gap-3">
         <button type="button" onClick={() => navigate("/tasks/squad")}
           className="glass glass-hover rounded-3xl p-4 text-left cursor-pointer">
-          <Swords size={16} className="text-brand-300" />
+          <Swords size={16} className="text-brand-600 dark:text-brand-400" />
           <p className="text-sm font-semibold text-ink-1 mt-2">Squad</p>
           <p className="text-2xs text-ink-4 mt-0.5">League, divisions, squads & the full match controls</p>
         </button>
         <button type="button" onClick={() => navigate("/tasks/brief")}
           className="glass glass-hover rounded-3xl p-4 text-left cursor-pointer">
-          <Briefcase size={16} className="text-amber-300" />
+          <Briefcase size={16} className="text-accent-600 dark:text-accent-400" />
           <p className="text-sm font-semibold text-ink-1 mt-2">Brief</p>
           <p className="text-2xs text-ink-4 mt-0.5">Your workspace — numbers, feed & suggestions</p>
         </button>

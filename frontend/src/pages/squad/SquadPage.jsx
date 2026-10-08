@@ -31,14 +31,14 @@ const SKILLS = {
   shopper: "Shopper", queue: "Queue-jumper", errand: "Errand",
 };
 const TIER_STYLE = {
-  common: "text-ink-3 border-white/10",
-  rare: "text-blue-300 border-blue-400/40",
-  epic: "text-violet-300 border-violet-400/50",
-  legendary: "text-brand-300 border-brand-400/60",
+  common: "text-ink-3 border-edge-1",
+  rare: "text-blue-600 dark:text-blue-400 border-blue-400/40",
+  epic: "text-purple-600 dark:text-purple-400 border-violet-400/50",
+  legendary: "text-brand-600 dark:text-brand-400 border-brand-400/60",
 };
 const DIVISION_STYLE = {
   Rookie: "text-ink-3", Bronze: "text-[#CD7F32]", Silver: "text-[#C0C0C0]",
-  Gold: "text-brand-300", Elite: "text-violet-300",
+  Gold: "text-brand-600 dark:text-brand-400", Elite: "text-purple-600 dark:text-purple-400",
 };
 const TABS = [
   { value: "mypage", label: "My page", icon: Map },
@@ -53,7 +53,7 @@ const Stars = ({ n, onChange }) => (
   <div className="flex gap-0.5">
     {[1, 2, 3, 4, 5].map((i) => (
       <button key={i} type="button" disabled={!onChange} onClick={() => onChange?.(i)} className={cn(onChange ? "cursor-pointer" : "cursor-default")}>
-        <Star size={16} className={i <= (n || 0) ? "fill-brand-400 text-brand-400" : "text-ink-4"} />
+        <Star size={16} className={i <= (n || 0) ? "fill-brand-400 text-brand-600 dark:text-brand-400" : "text-ink-4"} />
       </button>
     ))}
   </div>
@@ -74,24 +74,24 @@ function PlayerPlate({ me }) {
             <span className="ml-3 font-mono">{num(me.xp)} XP</span>
           </p>
           {me.level_progress?.next != null && (
-            <div className="mt-2 max-w-xs h-1.5 rounded-full bg-white/[0.07] overflow-hidden">
+            <div className="mt-2 max-w-xs h-1.5 rounded-full bg-surface-2 overflow-hidden">
               <div className="h-full rounded-full bg-gradient-to-r from-brand-500 to-brand-300" style={{ width: `${me.level_progress.pct}%` }} />
             </div>
           )}
         </div>
         <div className="flex items-center gap-4 text-center shrink-0">
           <div>
-            <div className="digital text-2xl text-brand-300">{num(me.gold)}</div>
+            <div className="digital text-2xl text-brand-600 dark:text-brand-400">{num(me.gold)}</div>
             <p className="text-2xs text-ink-4 mt-1">Gold</p>
           </div>
           <div>
-            <div className="digital text-2xl text-amber-300">{num(me.streak)}</div>
+            <div className="digital text-2xl text-accent-600 dark:text-accent-400">{num(me.streak)}</div>
             <p className="text-2xs text-ink-4 mt-1">day streak</p>
           </div>
           <div>
             <div className="flex gap-1 justify-center">
               {Array.from({ length: e.limit }).map((_, i) => (
-                <span key={i} className={cn("w-2.5 h-4 rounded-sm", i < e.used ? "bg-brand-400" : "bg-white/[0.1]")} />
+                <span key={i} className={cn("w-2.5 h-4 rounded-sm", i < e.used ? "bg-brand-400" : "bg-surface-2")} />
               ))}
             </div>
             <p className="text-2xs text-ink-4 mt-1">energy · {e.used}/{e.limit} today</p>
@@ -144,9 +144,9 @@ function CallUps({ me, onPost, onChanged }) {
     <div className="space-y-3">
       <div className="flex items-center gap-2">
         <div className="flex-1 flex gap-1.5 overflow-x-auto pb-1">
-          <button onClick={() => setSkill("")} className={cn("shrink-0 rounded-full px-3 h-8 text-xs", !skill ? "bg-brand-500/20 text-brand-200" : "text-ink-4")}>All skills</button>
+          <button onClick={() => setSkill("")} className={cn("shrink-0 rounded-full px-3 h-8 text-xs", !skill ? "bg-brand-500/20 text-brand-600 dark:text-brand-400" : "text-ink-4")}>All skills</button>
           {Object.entries(SKILLS).map(([k, l]) => (
-            <button key={k} onClick={() => setSkill(k === skill ? "" : k)} className={cn("shrink-0 rounded-full px-3 h-8 text-xs", skill === k ? "bg-brand-500/20 text-brand-200" : "text-ink-4")}>{l}</button>
+            <button key={k} onClick={() => setSkill(k === skill ? "" : k)} className={cn("shrink-0 rounded-full px-3 h-8 text-xs", skill === k ? "bg-brand-500/20 text-brand-600 dark:text-brand-400" : "text-ink-4")}>{l}</button>
           ))}
         </div>
         <Button size="sm" icon={Plus} onClick={onPost} className="shrink-0">Post a call-up</Button>
@@ -162,8 +162,8 @@ function CallUps({ me, onPost, onChanged }) {
                 <div className="flex items-center gap-2 flex-wrap">
                   <p className="text-sm font-medium text-ink-1 truncate">{c.title}</p>
                   <Badge variant="outline" size="xs">{SKILLS[c.skill] || c.skill}</Badge>
-                  {c.required_tier !== "common" && <Badge variant="outline" size="xs" className="text-violet-300">{c.required_tier} card</Badge>}
-                  {c.squad_id && <Badge variant="outline" size="xs" className="text-blue-300">squad mission</Badge>}
+                  {c.required_tier !== "common" && <Badge variant="outline" size="xs" className="text-purple-600 dark:text-purple-400">{c.required_tier} card</Badge>}
+                  {c.squad_id && <Badge variant="outline" size="xs" className="text-blue-600 dark:text-blue-400">squad mission</Badge>}
                 </div>
                 <p className="text-2xs text-ink-4 mt-1">
                   {c.client}{c.location ? ` · ${c.location}` : ""} · expires {relativeTime(c.expires_at)}
@@ -254,7 +254,7 @@ function Matches({ me, onChanged }) {
               {c.location ? ` · ${c.location}` : ""} · agreed KES {num(c.pay_kes)}
             </p>
           </div>
-          <Badge variant="outline" size="sm" className={c.status === "proof_pending" ? "text-amber-300" : "text-brand-300"}>
+          <Badge variant="outline" size="sm" className={c.status === "proof_pending" ? "text-accent-600 dark:text-accent-400" : "text-brand-600 dark:text-brand-400"}>
             {c.status.replaceAll("_", " ")}
           </Badge>
         </div>
@@ -269,11 +269,11 @@ function Matches({ me, onChanged }) {
                 </div>
               )}
               {(c.status === "in_progress" || c.status === "accepted") && (
-                <div className="rounded-2xl bg-white/[0.04] p-3 space-y-2">
+                <div className="rounded-2xl bg-surface-2 p-3 space-y-2">
                   <p className="text-xs font-medium text-ink-2">Finish: photo proof + the client's 6-digit code</p>
                   <div className="flex gap-2 items-center">
                     <button type="button" onClick={() => fileRef.current?.click()}
-                      className="rounded-xl border border-dashed border-brand-500/40 px-3 h-10 text-xs text-ink-2 hover:bg-white/[0.04] flex items-center gap-2">
+                      className="rounded-xl border border-dashed border-brand-500/40 px-3 h-10 text-xs text-ink-2 hover:bg-surface-2 flex items-center gap-2">
                       <Image size={14} /> {photo ? "Photo attached ✓" : uploading ? "Uploading…" : "Add photo (optional)"}
                     </button>
                     <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={takePhoto} />
@@ -293,14 +293,14 @@ function Matches({ me, onChanged }) {
                 <p className="text-xs text-ink-4">Waiting for the client to confirm and rate. You'll be paid the agreed KES by mobile money — this contract is the record.</p>
               )}
               {c.status === "completed" && (
-                <div className="rounded-2xl bg-white/[0.04] p-3 space-y-2">
+                <div className="rounded-2xl bg-surface-2 p-3 space-y-2">
                   <p className="text-xs font-medium text-ink-2">
-                    Won: <span className="text-brand-300 font-mono">+{c.xp_earned} XP</span> · <span className="text-brand-300 font-mono">+{c.gold_earned} Gold</span>
+                    Won: <span className="text-brand-600 dark:text-brand-400 font-mono">+{c.xp_earned} XP</span> · <span className="text-brand-600 dark:text-brand-400 font-mono">+{c.gold_earned} Gold</span>
                     {c.client_rating ? <> · client rated <Stars n={c.client_rating} /></> : ""}
                   </p>
                   {c.payout && (
                     <p className="text-2xs text-ink-3">
-                      Pay: <span className="text-brand-300 font-semibold">KES {num(c.payout.amount_kes)}</span> · {c.payout.method}
+                      Pay: <span className="text-brand-600 dark:text-brand-400 font-semibold">KES {num(c.payout.amount_kes)}</span> · {c.payout.method}
                       {c.payout.recorded_at ? ` · recorded ${relativeTime(c.payout.recorded_at)}` : ""}
                     </p>
                   )}
@@ -320,9 +320,9 @@ function Matches({ me, onChanged }) {
 
           {c.i_am_client && (
             <>
-              <div className="rounded-2xl bg-white/[0.04] p-3">
+              <div className="rounded-2xl bg-surface-2 p-3">
                 <p className="text-2xs text-ink-4">Your code — give this to the worker at completion</p>
-                <p className="digital text-3xl text-brand-300 mt-1 tracking-[0.2em]">{c.otp || "—"}</p>
+                <p className="digital text-3xl text-brand-600 dark:text-brand-400 mt-1 tracking-[0.2em]">{c.otp || "—"}</p>
               </div>
               {c.status === "proof_pending" ? (
                 <div className="space-y-2">
@@ -339,15 +339,15 @@ function Matches({ me, onChanged }) {
                 <div className="space-y-3">
                   {confirmed?.first_business && (
                     <div className="rounded-2xl bg-brand-500/10 border border-brand-500/30 p-3">
-                      <p className="text-xs font-semibold text-brand-200">First business on the network ✓</p>
+                      <p className="text-xs font-semibold text-brand-600 dark:text-brand-400">First business on the network ✓</p>
                       <p className="text-2xs text-ink-3 mt-1">{confirmed.first_business_note}</p>
                     </div>
                   )}
                   {c.payout && (
-                    <div className="rounded-2xl bg-white/[0.04] p-3.5 space-y-1.5">
+                    <div className="rounded-2xl bg-surface-2 p-3.5 space-y-1.5">
                       <p className="text-2xs uppercase tracking-[0.2em] text-ink-4 font-bold">Payout on this match</p>
                       <div className="flex items-baseline justify-between">
-                        <span className="digital text-2xl text-brand-300">KES {num(c.payout.amount_kes)}</span>
+                        <span className="digital text-2xl text-brand-600 dark:text-brand-400">KES {num(c.payout.amount_kes)}</span>
                         <span className="text-2xs text-ink-4">{c.payout.recorded_at ? relativeTime(c.payout.recorded_at) : "recorded"}</span>
                       </div>
                       <p className="text-2xs text-ink-3">via {c.payout.method}</p>
@@ -378,7 +378,7 @@ function Weekly({ me }) {
               {ch.granted ? "rewarded" : ch.met ? "done" : `${ch.have}/${ch.need}`}
             </Badge>
           </div>
-          <div className="mt-2 h-1.5 rounded-full bg-white/[0.07] overflow-hidden">
+          <div className="mt-2 h-1.5 rounded-full bg-surface-2 overflow-hidden">
             <div className="h-full rounded-full bg-gradient-to-r from-brand-500 to-brand-300" style={{ width: `${Math.min(100, (ch.have / ch.need) * 100)}%` }} />
           </div>
           <p className="mt-1.5 text-2xs text-ink-4">+{ch.payout} Gold · resets Monday</p>
@@ -404,12 +404,12 @@ function League() {
       {data.standings.length === 0 ? (
         <EmptyState icon={Trophy} title="The season is starting" description="Complete matches to earn points. Top of the table climbs divisions." />
       ) : (
-        <div className="glass rounded-2xl divide-y divide-white/[0.05]">
+        <div className="glass rounded-2xl divide-y divide-edge-1">
           {data.standings.slice(0, 30).map((s) => (
             <div key={s.rank} className={cn("flex items-center gap-3 px-4 py-2.5", s.me && "bg-brand-500/10")}>
               <span className="w-7 digital text-sm text-ink-4">{s.rank}</span>
               <div className="min-w-0 flex-1">
-                <p className={cn("text-sm truncate", s.me ? "text-brand-200 font-semibold" : "text-ink-2")}>{s.name} {s.me && "· you"}</p>
+                <p className={cn("text-sm truncate", s.me ? "text-brand-600 dark:text-brand-400 font-semibold" : "text-ink-2")}>{s.name} {s.me && "· you"}</p>
                 <p className="text-2xs text-ink-4">{s.matches} matches{s.avg_rating ? ` · avg ${s.avg_rating}★` : ""}</p>
               </div>
               <span className={cn("text-2xs font-semibold", DIVISION_STYLE[s.division] || "text-ink-3")}>{s.division}</span>
@@ -477,7 +477,7 @@ function Squads({ onChanged }) {
           <div className="space-y-1.5">
             {s.members.map((m) => (
               <div key={m.vendor_id} className="flex items-center gap-2 text-xs">
-                <span className={cn("truncate flex-1", m.me ? "text-brand-200 font-medium" : "text-ink-2")}>{m.name} {m.me && "· you"}</span>
+                <span className={cn("truncate flex-1", m.me ? "text-brand-600 dark:text-brand-400 font-medium" : "text-ink-2")}>{m.name} {m.me && "· you"}</span>
                 <span className="text-2xs text-ink-4">{m.role} · {m.split_pct}%</span>
               </div>
             ))}
@@ -576,7 +576,7 @@ function PostCall({ open, onClose, squads, onChanged }) {
             <Input label="Location" value={form.location} onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))} placeholder="Gikomba" wrapperClassName="flex-1" />
             <Button size="sm" variant="secondary" loading={locating} onClick={locate} className="shrink-0 mb-0.5" title="Free geocode"><MapPin size={13} /> Locate</Button>
           </div>
-          {geo && <p className="text-2xs text-brand-300 mt-1 px-1">located · {Number(geo.lat).toFixed(4)}, {Number(geo.lng).toFixed(4)}</p>}
+          {geo && <p className="text-2xs text-brand-600 dark:text-brand-400 mt-1 px-1">located · {Number(geo.lat).toFixed(4)}, {Number(geo.lng).toFixed(4)}</p>}
         </div>
         <div className="flex justify-end gap-2 pt-1">
           <Button variant="ghost" onClick={onClose}>Cancel</Button>

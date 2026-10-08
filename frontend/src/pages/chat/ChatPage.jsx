@@ -96,7 +96,7 @@ export default function ChatPage() {
                   {activeRoom.topic_tags?.length ? ` · ${activeRoom.topic_tags.map((t) => `#${t}`).join(" ")}` : ""}
                 </p>
               </div>
-              <span className={cn("inline-flex items-center gap-1 text-2xs", live ? "text-brand-400" : "text-ink-4")} title={live ? "Live" : "Reconnecting…"}>
+              <span className={cn("inline-flex items-center gap-1 text-2xs", live ? "text-brand-600 dark:text-brand-400" : "text-ink-4")} title={live ? "Live" : "Reconnecting…"}>
                 {live ? <Wifi size={12} /> : <WifiOff size={12} />}
                 <span className="hidden sm:inline">{live ? "live" : "offline"}</span>
               </span>

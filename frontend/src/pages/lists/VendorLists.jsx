@@ -93,7 +93,7 @@ export default function VendorLists() {
 
       {isPatron && patron?.is_patron && (
         <Card padding="px-4 py-3" className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs">
-          <span className="inline-flex items-center gap-1.5 text-amber-300 font-medium">
+          <span className="inline-flex items-center gap-1.5 text-accent-600 dark:text-accent-400 font-medium">
             <Crown size={13} /> {titleCase(patron.tier || "starter")} patron
           </span>
           <span className="text-ink-4">
@@ -230,7 +230,7 @@ function ListCard({ list: l, onRegister, onManage, onReviews }) {
               <Check size={10} /> Member
             </Badge>
           ) : l.my_status === "pending" ? (
-            <span className="text-2xs text-amber-300">Awaiting approval</span>
+            <span className="text-2xs text-accent-600 dark:text-accent-400">Awaiting approval</span>
           ) : (
             <Button size="xs" onClick={() => onRegister(l)} disabled={!l.is_open || full}>
               {full ? "Full" : !l.is_open ? "Closed" : l.my_status === "rejected" ? "Re-apply" : "Register"}

@@ -136,7 +136,7 @@ export default function NearbyPage() {
             to="/nearby"
             className={cn(
               "shrink-0 rounded-full px-3 h-8 text-xs font-medium flex items-center",
-              !groupParam ? "bg-brand-500 text-white" : "bg-white/[0.06] text-ink-3 hover:text-ink-1"
+              !groupParam ? "bg-brand-500 text-white" : "bg-surface-2 text-ink-3 hover:text-ink-1"
             )}
           >
             All <span className="opacity-70 font-mono ml-1">{num(allCount)}</span>
@@ -147,7 +147,7 @@ export default function NearbyPage() {
               to={`/nearby/${g.group}`}
               className={cn(
                 "shrink-0 rounded-full px-3 h-8 text-xs font-medium flex items-center",
-                groupParam === g.group ? "bg-brand-500 text-white" : "bg-white/[0.06] text-ink-3 hover:text-ink-1"
+                groupParam === g.group ? "bg-brand-500 text-white" : "bg-surface-2 text-ink-3 hover:text-ink-1"
               )}
             >
               {g.label} <span className="opacity-70 font-mono ml-1">{num(g.count)}</span>
@@ -231,7 +231,7 @@ function BusinessCard({ b, onOpen }) {
           <a
             href={`tel:${b.phone.replace(/\s+/g, "")}`}
             onClick={(e) => e.stopPropagation()}
-            className="inline-flex items-center gap-1 text-2xs font-medium text-brand-300 hover:text-brand-200"
+            className="inline-flex items-center gap-1 text-2xs font-medium text-brand-600 dark:text-brand-400 hover:text-brand-600 dark:hover:text-brand-400"
           >
             <Phone size={10} /> Call
           </a>

@@ -45,7 +45,7 @@ export default function CollectivePanel({ group, canOpen }) {
     <section data-testid="collective-panel">
       <div className="flex items-center justify-between mb-2">
         <h4 className="text-xs font-semibold text-ink-2 inline-flex items-center gap-1.5">
-          <ShoppingBasket size={13} className="text-brand-400" /> Collective buys{" "}
+          <ShoppingBasket size={13} className="text-brand-600 dark:text-brand-400" /> Collective buys{" "}
           {requests.length > 0 && <span className="font-mono text-ink-4">{active.length}</span>}
         </h4>
         {canOpen && (
@@ -125,7 +125,7 @@ function RequestRow({ request: r, onChange, compact }) {
 
       <div className="mt-2">
         <div className="h-1.5 rounded-full bg-surface-3 overflow-hidden">
-          <div className={cn("h-full rounded-full transition-all", r.progress_pct >= 100 ? "bg-brand-500" : "bg-amber-500")} style={{ width: `${Math.min(100, r.progress_pct || 0)}%` }} />
+          <div className={cn("h-full rounded-full transition-all", r.progress_pct >= 100 ? "bg-brand-500" : "bg-accent-500")} style={{ width: `${Math.min(100, r.progress_pct || 0)}%` }} />
         </div>
         <div className="flex justify-between text-2xs text-ink-4 mt-1 font-mono">
           <span>
@@ -133,7 +133,7 @@ function RequestRow({ request: r, onChange, compact }) {
           </span>
           <span>
             {r.pledge_count} vendor{r.pledge_count === 1 ? "" : "s"}
-            {r.my_pledge && <span className="text-brand-300"> · you {num(r.my_pledge.pledged_quantity)}</span>}
+            {r.my_pledge && <span className="text-brand-600 dark:text-brand-400"> · you {num(r.my_pledge.pledged_quantity)}</span>}
           </span>
         </div>
       </div>

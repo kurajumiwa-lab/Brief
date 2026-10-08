@@ -12,7 +12,7 @@ export default function MessageBubble({ message: m, mine, showHeader = true }) {
     const kind = m.deal_data?.kind;
     return (
       <div className="px-4 mt-3 flex justify-center" data-testid="system-message">
-        <p className={cn("max-w-[85%] text-center text-2xs rounded-full border px-3 py-1", kind === "deal_accepted" ? "border-brand-800/60 bg-brand-950/40 text-brand-200" : kind === "deal_declined" ? "border-red-900/50 bg-red-950/30 text-red-200" : "border-edge-1 bg-surface-2 text-ink-3")} title={timeOnly(m.sent_at)}>
+        <p className={cn("max-w-[85%] text-center text-2xs rounded-full border px-3 py-1", kind === "deal_accepted" ? "border-brand-200 dark:border-brand-800 bg-brand-50 dark:bg-brand-500/15 text-brand-600 dark:text-brand-400" : kind === "deal_declined" ? "border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-500/15 text-red-600 dark:text-red-400" : "border-edge-1 bg-surface-2 text-ink-3")} title={timeOnly(m.sent_at)}>
           {m.content}
         </p>
       </div>
@@ -24,12 +24,12 @@ export default function MessageBubble({ message: m, mine, showHeader = true }) {
       <div className={cn("max-w-[78%] min-w-0 flex flex-col", mine ? "items-end" : "items-start")}>
         {showHeader && (
           <div className={cn("flex items-baseline gap-2 mb-1 text-2xs", mine && "flex-row-reverse")}>
-            <Link to={`/@${m.sender_handle}`} className="font-medium text-ink-2 hover:text-brand-300">
+            <Link to={`/@${m.sender_handle}`} className="font-medium text-ink-2 hover:text-brand-600 dark:hover:text-brand-400">
               {mine ? "You" : m.sender_business || `@${m.sender_handle}`}
             </Link>
             {!mine && <span className="font-mono text-ink-4">@{m.sender_handle}</span>}
             <span className="text-ink-4">{timeOnly(m.sent_at)}</span>
-            {m.is_pinned && <Pin size={10} className="text-amber-400" />}
+            {m.is_pinned && <Pin size={10} className="text-accent-600 dark:text-accent-400" />}
           </div>
         )}
         <div

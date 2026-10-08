@@ -171,7 +171,7 @@ export default function RoutePlanner({ onRegisterCourier }) {
               <div className="flex flex-wrap gap-1.5 text-2xs text-ink-4 font-mono">
                 <span className="rounded bg-surface-3 px-1.5 py-0.5">{p.total_stops} stops</span>
                 <span className="rounded bg-surface-3 px-1.5 py-0.5">{p.total_distance_km} km</span>
-                {p.saved_km > 0 && <span className="rounded bg-brand-950 text-brand-300 px-1.5 py-0.5">−{p.saved_km} km</span>}
+                {p.saved_km > 0 && <span className="rounded bg-brand-50 dark:bg-brand-500/15 text-brand-600 dark:text-brand-400 px-1.5 py-0.5">−{p.saved_km} km</span>}
                 <span className="rounded bg-surface-3 px-1.5 py-0.5">{Math.round(p.estimated_minutes / 60 * 10) / 10} h</span>
               </div>
             </Card>
@@ -210,10 +210,10 @@ function RouteDrawer({ plan, onClose, onStatus, onToggleStop }) {
             <li key={s.id} className={cn("flex items-start gap-3 rounded-lg border border-edge-1 bg-surface-1 px-3 py-2", s.solved && "opacity-60")}>
               <button
                 onClick={() => onToggleStop(plan, s)}
-                className="mt-0.5 text-ink-4 hover:text-brand-400 transition-colors"
+                className="mt-0.5 text-ink-4 hover:text-brand-600 dark:hover:text-brand-400 transition-colors"
                 title={s.solved ? "Mark as not done" : "Mark as done"}
               >
-                {s.solved ? <CheckCircle2 size={15} className="text-brand-400" /> : <Circle size={15} />}
+                {s.solved ? <CheckCircle2 size={15} className="text-brand-600 dark:text-brand-400" /> : <Circle size={15} />}
               </button>
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-medium text-ink-1 truncate">
@@ -256,7 +256,7 @@ function RouteDrawer({ plan, onClose, onStatus, onToggleStop }) {
 }
 
 function Stat({ label, value, hint, tone = "default" }) {
-  const tones = { default: "text-ink-1", brand: "text-brand-400" };
+  const tones = { default: "text-ink-1", brand: "text-brand-600 dark:text-brand-400" };
   return (
     <div className="rounded-lg border border-edge-1 bg-surface-1 px-3 py-2">
       <p className="text-2xs uppercase tracking-wider text-ink-4">{label}</p>

@@ -26,18 +26,18 @@ const ICONS = {
 };
 
 const TONES = {
-  source: "text-amber-300 bg-amber-500/10",
-  deal: "text-brand-300 bg-brand-500/10",
-  group: "text-purple-300 bg-purple-500/10",
-  list: "text-brand-300 bg-brand-500/10",
-  collective: "text-blue-300 bg-blue-500/10",
-  event: "text-purple-300 bg-purple-500/10",
-  stock_low: "text-amber-300 bg-amber-500/10",
-  stock_verified: "text-brand-300 bg-brand-500/10",
-  parasitism: "text-brand-300 bg-brand-500/10",
-  patron: "text-amber-300 bg-amber-500/10",
-  shipment: "text-blue-300 bg-blue-500/10",
-  system: "text-ink-3 bg-white/[0.06]",
+  source: "text-accent-600 dark:text-accent-400 bg-accent-500/10",
+  deal: "text-brand-600 dark:text-brand-400 bg-brand-500/10",
+  group: "text-purple-600 dark:text-purple-400 bg-purple-500/10",
+  list: "text-brand-600 dark:text-brand-400 bg-brand-500/10",
+  collective: "text-blue-600 dark:text-blue-400 bg-blue-500/10",
+  event: "text-purple-600 dark:text-purple-400 bg-purple-500/10",
+  stock_low: "text-accent-600 dark:text-accent-400 bg-accent-500/10",
+  stock_verified: "text-brand-600 dark:text-brand-400 bg-brand-500/10",
+  parasitism: "text-brand-600 dark:text-brand-400 bg-brand-500/10",
+  patron: "text-accent-600 dark:text-accent-400 bg-accent-500/10",
+  shipment: "text-blue-600 dark:text-blue-400 bg-blue-500/10",
+  system: "text-ink-3 bg-surface-2",
 };
 
 const iconFor = (type = "") => {
@@ -128,17 +128,17 @@ export default function NotificationBell({ pollMs = 30_000 }) {
       <button
         onClick={() => setOpen((o) => !o)}
         className={cn(
-          "relative p-2 rounded-xl text-ink-3 hover:text-ink-1 hover:bg-white/5 transition-colors",
-          open && "bg-white/[0.08] text-ink-1"
+          "relative p-2 rounded-xl text-ink-3 hover:text-ink-1 hover:bg-surface-2 transition-colors",
+          open && "bg-surface-2 text-ink-1"
         )}
         aria-label={unreadCount ? `${unreadCount} unread notifications` : "Notifications"}
         aria-expanded={open}
         title="Notifications"
       >
-        <Bell size={17} />
+        <Bell size={19} />
         {unreadCount > 0 && (
           <span
-            className="absolute top-0.5 right-0.5 min-w-[1rem] h-4 px-1 rounded-full bg-brand-500 text-white text-2xs font-bold flex items-center justify-center shadow-[0_0_10px_rgba(245, 158, 11,0.7)]"
+            className="absolute top-0.5 right-0.5 min-w-[1.125rem] h-[1.125rem] px-1 rounded-full bg-brand-600 text-white text-micro font-bold flex items-center justify-center tabular-nums ring-2 ring-surface-0"
             data-testid="unread-badge"
           >
             {unreadCount > 99 ? "99+" : unreadCount}
@@ -148,11 +148,11 @@ export default function NotificationBell({ pollMs = 30_000 }) {
 
       {open && (
         <div
-          className="absolute right-0 mt-2 w-[22rem] max-w-[calc(100vw-2rem)] glass-strong rounded-2xl shadow-glass-lg z-50 overflow-hidden animate-slide-up"
+          className="absolute right-0 mt-2 w-[22rem] max-w-[calc(100vw-2rem)] bg-surface-0 border border-edge-1 rounded-2xl shadow-xl z-50 overflow-hidden animate-scale-in origin-top-right"
           role="dialog"
           aria-label="Notifications"
         >
-          <div className="flex items-center justify-between px-3.5 py-2.5">
+          <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-edge-1">
             <span className="text-xs font-semibold text-ink-1">
               Notifications {unreadCount > 0 && <span className="text-ink-4 font-normal">· {unreadCount} unread</span>}
             </span>
@@ -174,7 +174,7 @@ export default function NotificationBell({ pollMs = 30_000 }) {
                       onClick={() => follow(n)}
                       className={cn(
                         "w-full text-left flex gap-3 px-2.5 py-2.5 rounded-xl transition-colors",
-                        n.is_read ? "hover:bg-white/[0.05]" : "bg-brand-500/[0.08] hover:bg-brand-500/[0.13]"
+                        n.is_read ? "hover:bg-surface-2" : "bg-brand-50 hover:bg-brand-100 dark:bg-brand-500/10 dark:hover:bg-brand-500/20"
                       )}
                     >
                       <span className={cn("mt-0.5 shrink-0 w-7 h-7 rounded-lg flex items-center justify-center", toneFor(n.type))}>
@@ -189,7 +189,7 @@ export default function NotificationBell({ pollMs = 30_000 }) {
                         </span>
                       </span>
                       {!n.is_read && (
-                        <span className="mt-2 w-1.5 h-1.5 rounded-full bg-brand-400 shrink-0 shadow-[0_0_6px_rgba(251, 191, 36,0.9)]" aria-hidden />
+                        <span className="mt-2 w-2 h-2 rounded-full bg-brand-500 shrink-0" aria-hidden />
                       )}
                     </button>
                   </li>

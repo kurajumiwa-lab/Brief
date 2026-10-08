@@ -141,7 +141,7 @@ export default function ToolsPage() {
                   <div className="mt-auto flex items-center justify-between text-xs text-ink-4 font-mono pt-1">
                     <span>{c.price_per_kg != null ? `${currency(c.price_per_kg)}/kg` : ""}{c.base_rate != null ? ` · base ${currency(c.base_rate)}` : ""}</span>
                     <span className="inline-flex items-center gap-1">
-                      <Star size={11} className="text-amber-400" /> {Number(c.rating || 0).toFixed(1)} · {num(c.total_deliveries || 0)} runs
+                      <Star size={11} className="text-accent-600 dark:text-accent-400" /> {Number(c.rating || 0).toFixed(1)} · {num(c.total_deliveries || 0)} runs
                     </span>
                   </div>
                   {c.vendor_handle !== me?.vendor_handle && (
@@ -192,7 +192,7 @@ function ToolCard({ tool: t, mine, onBook, onToggle }) {
   return (
     <Card className={cn("flex flex-col gap-3", !t.is_available && "opacity-70")}>
       <div className="flex items-start gap-3">
-        <div className="w-9 h-9 rounded-lg bg-surface-3 border border-edge-1 flex items-center justify-center text-brand-300 shrink-0">
+        <div className="w-9 h-9 rounded-lg bg-surface-3 border border-edge-1 flex items-center justify-center text-brand-600 dark:text-brand-400 shrink-0">
           <Icon size={16} />
         </div>
         <div className="min-w-0 flex-1">
@@ -320,7 +320,7 @@ function BookingModal({ tool, onClose }) {
                   title={`${d.committed} of ${d.capacity} ${calendar.unit} committed`}
                   className={cn(
                     "shrink-0 rounded-md border px-2 py-1 text-2xs font-mono",
-                    d.full ? "border-red-900/60 bg-red-950/20 text-red-300" : d.committed > 0 ? "border-amber-900/50 bg-amber-950/10 text-amber-300" : "border-edge-1 bg-surface-1 text-ink-4"
+                    d.full ? "border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-500/15 text-red-600 dark:text-red-400" : d.committed > 0 ? "border-accent-200 dark:border-accent-800 bg-accent-50 dark:bg-accent-500/15 text-accent-600 dark:text-accent-400" : "border-edge-1 bg-surface-1 text-ink-4"
                   )}
                 >
                   {d.date.slice(8)} · {d.free} free
@@ -354,7 +354,7 @@ function BookingModal({ tool, onClose }) {
 function Chip({ active, onClick, icon, children }) {
   const Icon = icon ? ICONS[icon] : null;
   return (
-    <button onClick={onClick} className={cn("shrink-0 inline-flex items-center gap-1 rounded-full border px-2.5 h-7 text-xs transition-colors", active ? "border-brand-700 bg-brand-950 text-brand-200" : "border-edge-1 bg-surface-1 text-ink-3 hover:border-edge-2 hover:text-ink-1")}>
+    <button onClick={onClick} className={cn("shrink-0 inline-flex items-center gap-1 rounded-full border px-2.5 h-7 text-xs transition-colors", active ? "border-brand-200 dark:border-brand-800 bg-brand-50 dark:bg-brand-500/15 text-brand-600 dark:text-brand-400" : "border-edge-1 bg-surface-1 text-ink-3 hover:border-edge-2 hover:text-ink-1")}>
       {Icon && <Icon size={11} />}
       {children}
     </button>

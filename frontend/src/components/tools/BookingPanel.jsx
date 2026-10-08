@@ -189,7 +189,7 @@ export default function BookingPanel() {
                       key={d.date}
                       className={cn(
                         "rounded-lg border p-2.5 space-y-1",
-                        d.full ? "border-red-900/60 bg-red-950/20" : d.committed > 0 ? "border-amber-900/50 bg-amber-950/10" : "border-edge-1 bg-surface-1"
+                        d.full ? "border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-500/15" : d.committed > 0 ? "border-accent-200 dark:border-accent-800 bg-accent-50 dark:bg-accent-500/15" : "border-edge-1 bg-surface-1"
                       )}
                     >
                       <p className="text-2xs text-ink-4">{dayLabel(d.date)}</p>
@@ -200,7 +200,7 @@ export default function BookingPanel() {
                       <div className="h-1 rounded-full bg-surface-3 overflow-hidden">
                         <div className={cn("h-full rounded-full", d.full ? "bg-red-500/70" : "bg-brand-600")} style={{ width: `${d.capacity ? (100 * d.committed) / d.capacity : 0}%` }} />
                       </div>
-                      {d.my_quantity > 0 && <p className="text-2xs text-brand-300 font-mono">yours: {d.my_quantity}</p>}
+                      {d.my_quantity > 0 && <p className="text-2xs text-brand-600 dark:text-brand-400 font-mono">yours: {d.my_quantity}</p>}
                     </div>
                   ))}
                 </div>
@@ -223,7 +223,7 @@ function BookingRow({ booking: b, isHost, onAct }) {
   return (
     <Card className="flex flex-col sm:flex-row sm:items-center gap-3">
       <div className="flex items-start gap-3 min-w-0 flex-1">
-        <div className="w-9 h-9 rounded-lg bg-surface-3 border border-edge-1 flex items-center justify-center text-brand-300 shrink-0">
+        <div className="w-9 h-9 rounded-lg bg-surface-3 border border-edge-1 flex items-center justify-center text-brand-600 dark:text-brand-400 shrink-0">
           <Icon size={16} />
         </div>
         <div className="min-w-0">
@@ -233,7 +233,7 @@ function BookingRow({ booking: b, isHost, onAct }) {
             {b.estimated_cost ? ` · ${currency(b.estimated_cost)}` : ""} · {isHost ? `@${b.booker_handle}` : `@${b.host_handle}`}
           </p>
           {b.notes && <p className="text-2xs text-ink-4 mt-0.5 truncate">“{b.notes}”</p>}
-          {b.decision_note && <p className="text-2xs text-brand-300 mt-0.5">host: {b.decision_note}</p>}
+          {b.decision_note && <p className="text-2xs text-brand-600 dark:text-brand-400 mt-0.5">host: {b.decision_note}</p>}
         </div>
       </div>
       <div className="flex items-center gap-2 shrink-0">

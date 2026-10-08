@@ -124,7 +124,7 @@ export default function Analytics() {
                 {trend.map((t) => (
                   <div key={t.period} className="flex-1 min-w-[36px] flex flex-col items-center gap-1" title={`${t.movements} movements · ${currency(t.value)}`}>
                     <div className="w-full flex flex-col justify-end gap-0.5 h-32">
-                      <div className="w-full rounded-t bg-amber-500/70" style={{ height: `${(t.supplied_value / maxTrend) * 100}%` }} />
+                      <div className="w-full rounded-t bg-accent-500/10" style={{ height: `${(t.supplied_value / maxTrend) * 100}%` }} />
                       <div className="w-full rounded-b bg-blue-500/70" style={{ height: `${(t.sourced_value / maxTrend) * 100}%` }} />
                     </div>
                     <span className="text-2xs text-ink-4 font-mono whitespace-nowrap">{shortDate(t.period).replace(/ \d{4}$/, "")}</span>
@@ -176,7 +176,7 @@ export default function Analytics() {
                       </div>
                       <div className="flex items-center justify-between text-2xs font-mono text-ink-4">
                         <span>you {currency(p.my_avg_price)}</span>
-                        <span className={cn(p.delta_pct > 0 ? "text-red-400" : p.delta_pct < 0 ? "text-brand-400" : "text-ink-4")}>
+                        <span className={cn(p.delta_pct > 0 ? "text-red-600 dark:text-red-400" : p.delta_pct < 0 ? "text-brand-600 dark:text-brand-400" : "text-ink-4")}>
                           {p.delta_pct > 0 ? "+" : ""}{p.delta_pct}%
                         </span>
                         <span>network {currency(p.network_avg_price)} · {p.network_vendors} vendor{p.network_vendors === 1 ? "" : "s"}</span>
@@ -257,9 +257,9 @@ export default function Analytics() {
                     <div key={h.period} className="flex items-center justify-between text-xs rounded-lg border border-edge-1 bg-surface-1 px-3 py-1.5">
                       <span className="text-ink-3 font-mono">{shortDate(h.period).replace(/^\d+ /, "")}</span>
                       <span className="font-mono text-ink-1">
-                        <span className="text-amber-400">+{currency(h.sold_value)}</span>
+                        <span className="text-accent-600 dark:text-accent-400">+{currency(h.sold_value)}</span>
                         <span className="text-ink-4"> / </span>
-                        <span className="text-blue-400">-{currency(h.bought_value)}</span>
+                        <span className="text-blue-600 dark:text-blue-400">-{currency(h.bought_value)}</span>
                       </span>
                       <span className="text-2xs text-ink-4">{h.movements} movements</span>
                     </div>

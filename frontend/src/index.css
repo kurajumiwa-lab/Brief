@@ -1,124 +1,138 @@
+@import "./styles/tokens.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   BASE
+   ═══════════════════════════════════════════════════════════════════════════ */
 @layer base {
-  :root {
-    color-scheme: dark;
-  }
   html {
     -webkit-tap-highlight-color: transparent;
+    scroll-behavior: smooth;
   }
-  /*
-   * v2.7 — lines are dead. The base border-color is transparent, so ANY
-   * border utility that doesn't name an explicit colour renders as nothing.
-   * (Border widths still occupy layout, so nothing shifts.) Surfaces are
-   * separated by glass, depth and glow instead. Only deliberately coloured
-   * indicators (e.g. a red error state) still draw.
-   */
+
+  /* v3: hairlines are back. Any bare `border` utility draws a real divider
+     using the token, so surfaces separate in daylight and in forced-colours
+     mode — not only by shadow. */
   *,
   ::before,
   ::after {
-    border-color: transparent;
+    border-color: rgb(var(--edge-1));
   }
+
   body {
-    @apply bg-surface-0 text-ink-1 antialiased;
-    /* v2.8 performance pass: background-attachment: fixed forced a fixed
-       composite layer on every scroll frame (Android jank). Static, lighter
-       glows keep the depth without the cost. */
-    background-image:
-      radial-gradient(900px 400px at 10% -10%, rgba(34, 168, 103, 0.10), transparent 60%),
-      radial-gradient(800px 380px at 110% 8%, rgba(96, 165, 250, 0.05), transparent 55%);
+    @apply bg-surface-0 text-ink-2 antialiased;
+    font-feature-settings: "cv05" 1, "ss01" 1;
+    text-rendering: optimizeLegibility;
   }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply text-ink-1 font-semibold tracking-tight;
+    text-wrap: balance;
+  }
+
+  /* Figures line up in columns everywhere — a trading app reads numbers. */
+  .tnum,
+  table,
+  output {
+    font-variant-numeric: tabular-nums;
+  }
+
   ::selection {
-    @apply bg-brand-500/30 text-white;
+    @apply bg-brand-500/25 text-ink-1;
   }
+
   ::-webkit-scrollbar {
-    @apply w-1.5 h-1.5;
+    @apply w-2 h-2;
   }
   ::-webkit-scrollbar-track {
     @apply bg-transparent;
   }
   ::-webkit-scrollbar-thumb {
-    @apply bg-white/10 rounded-full hover:bg-white/20;
+    @apply rounded-full;
+    background-color: rgb(var(--edge-3) / 0.7);
   }
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: rgb(var(--ink-4) / 0.6);
+  }
+
   input[type="number"]::-webkit-inner-spin-button,
   input[type="number"]::-webkit-outer-spin-button {
     -webkit-appearance: none;
+    margin: 0;
   }
-  input[type="datetime-local"]::-webkit-calendar-picker-indicator {
-    filter: invert(0.6);
+  .dark input[type="date"]::-webkit-calendar-picker-indicator,
+  .dark input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.75);
+  }
+
+  /* A visible focus ring on every interactive element, always. */
+  :focus-visible {
+    outline: 2px solid rgb(var(--brand-500));
+    outline-offset: 2px;
+    border-radius: 0.375rem;
   }
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   COMPONENT PRIMITIVES
+   Legacy class names (`glass`, `glass-strong`, `glass-hover`, `shelf`,
+   `notif-dot`, `digital`) are intentionally preserved so every screen written
+   against v2 picks up the new language without being rewritten.
+   ═══════════════════════════════════════════════════════════════════════════ */
 @layer components {
-  /* v2.8 performance pass — the glass blur (backdrop-filter) was the
-     scroll-jank source on Android: every scroll frame re-rendered the blur
-     layer behind 50+ surfaces. Surfaces keep the same silhouette and depth
-     as solid OPAQUE fills — zero GPU blur. Class names unchanged, so every
-     existing usage goes fast at once. */
+  /* ── Surfaces ──────────────────────────────────────────────────────── */
+  .panel,
   .glass {
-    background-color: #1a1f29;
-    @apply shadow-glass;
+    @apply bg-surface-0 border border-edge-1 shadow-xs;
   }
+  .panel-raised,
   .glass-strong {
-    background-color: #202632;
-    @apply shadow-glass-lg;
+    @apply bg-surface-0 border border-edge-1 shadow-sm;
+  }
+  .panel-sunken {
+    @apply bg-surface-2 border border-edge-1;
   }
   .glass-hover {
-    @apply transition-colors duration-150;
+    @apply transition-[box-shadow,border-color,transform] duration-2 ease-out;
   }
   .glass-hover:hover {
-    background-color: #232b38;
-    @apply shadow-lift;
+    @apply shadow-md -translate-y-px;
+    border-color: rgb(var(--edge-2));
   }
 
-  /* Hide the scrollbar on snap feeds (the swipe gesture is the affordance) */
+  /* ── Skeletons: loading looks like the content, never like a spinner ── */
+  .skeleton {
+    @apply rounded-lg bg-surface-2 relative overflow-hidden;
+  }
+  .skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: linear-gradient(
+      90deg,
+      transparent,
+      rgb(var(--surface-0) / 0.65),
+      transparent
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.4s linear infinite;
+  }
+
+  /* ── Horizontal rails ──────────────────────────────────────────────── */
   .no-scrollbar {
     scrollbar-width: none;
   }
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }
-
-  /* Digital readout — seven-segment glow, like a timer */
-  .digital {
-    font-family: theme("fontFamily.digital");
-    letter-spacing: 0.06em;
-    font-variant-numeric: tabular-nums;
-    line-height: 1;
-  }
-  .digital-glow {
-    text-shadow:
-      0 0 12px rgba(251, 191, 36, 0.45),
-      0 0 32px rgba(245, 158, 11, 0.22);
-  }
-  .digital-glow-blue {
-    text-shadow:
-      0 0 12px rgba(96, 165, 250, 0.45),
-      0 0 32px rgba(59, 130, 246, 0.22);
-  }
-  .digital-glow-amber {
-    text-shadow:
-      0 0 12px rgba(251, 191, 36, 0.45),
-      0 0 32px rgba(245, 158, 11, 0.22);
-  }
-  /* subtle scanline sheen on readout panels */
-  .digital-sheen {
-    position: relative;
-    overflow: hidden;
-  }
-  .digital-sheen::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 30%);
-  }
-
-  /* Horizontal swipe shelf — hidden scrollbar, snap points */
   .shelf {
-    @apply flex gap-3 overflow-x-auto snap-x snap-mandatory pb-1 -mx-1 px-1;
+    @apply flex gap-3 overflow-x-auto snap-x pb-1 -mx-1 px-1;
     scrollbar-width: none;
     scroll-padding-inline: 1rem;
   }
@@ -133,13 +147,101 @@
     -webkit-mask-image: linear-gradient(90deg, transparent, black 24px, black calc(100% - 24px), transparent);
   }
 
-  /* Notification dot */
+  /* ── Digital readout — now opt-in, for hero figures only ───────────── */
+  .digital {
+    font-family: theme("fontFamily.digital");
+    letter-spacing: 0.04em;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+  .digital-glow,
+  .digital-glow-amber {
+    text-shadow: 0 0 18px rgb(var(--accent-500) / 0.28);
+  }
+  .digital-glow-blue {
+    text-shadow: 0 0 18px rgb(59 130 246 / 0.28);
+  }
+  .digital-sheen {
+    position: relative;
+  }
+
+  /* ── Status dot ────────────────────────────────────────────────────── */
   .notif-dot {
-    @apply absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-brand-400 animate-dot-pulse;
-    box-shadow: 0 0 8px rgba(70, 194, 132, 0.8);
+    @apply absolute top-1 right-1 w-2 h-2 rounded-full bg-brand-500 animate-dot-pulse;
+    box-shadow: 0 0 0 2px rgb(var(--surface-0));
   }
   .notif-dot-amber {
-    @apply bg-amber-400;
-    box-shadow: 0 0 8px rgba(251, 191, 36, 0.8);
+    @apply bg-accent-500;
+  }
+
+  /* ── Skip link (keyboard users land here first) ────────────────────── */
+  .skip-link {
+    @apply sr-only;
+  }
+  .skip-link:focus {
+    @apply not-sr-only fixed left-4 top-4 z-[100] rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-lg;
+  }
+
+  /* ── Layout helpers ────────────────────────────────────────────────── */
+  .container-app {
+    @apply mx-auto w-full max-w-[1240px] px-4 sm:px-6;
+  }
+  .container-narrow {
+    @apply mx-auto w-full max-w-3xl px-4 sm:px-6;
+  }
+  .hairline {
+    @apply border-b border-edge-1;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   UTILITIES
+   ═══════════════════════════════════════════════════════════════════════════ */
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  .text-pretty {
+    text-wrap: pretty;
+  }
+  .line-clamp-1,
+  .line-clamp-2,
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .line-clamp-1 {
+    -webkit-line-clamp: 1;
+  }
+  .line-clamp-2 {
+    -webkit-line-clamp: 2;
+  }
+  .line-clamp-3 {
+    -webkit-line-clamp: 3;
+  }
+  /* Safe-area aware bottom padding for the mobile tab bar. */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   REDUCED MOTION — non-essential animation is a preference, not a given.
+   ═══════════════════════════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .skeleton::after {
+    display: none;
   }
 }

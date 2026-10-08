@@ -51,7 +51,7 @@ export default function BulkImport({ onDone }) {
             {result.errors?.length > 0 && <Badge variant="red">{result.errors.length} errors</Badge>}
           </div>
           {result.errors?.length > 0 && (
-            <ul className="text-2xs text-red-300 font-mono space-y-0.5 max-h-32 overflow-y-auto">
+            <ul className="text-2xs text-red-600 dark:text-red-400 font-mono space-y-0.5 max-h-32 overflow-y-auto">
               {result.errors.map((e, i) => (
                 <li key={i}>{typeof e === "string" ? e : JSON.stringify(e)}</li>
               ))}

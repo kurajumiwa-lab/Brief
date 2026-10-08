@@ -66,12 +66,12 @@ export default function POSBridge() {
 
       {nextStep && (
         <Card className="bg-brand-500/[0.09] flex items-start gap-3">
-          <Terminal size={16} className="text-brand-300 mt-0.5 shrink-0" />
+          <Terminal size={16} className="text-brand-600 dark:text-brand-400 mt-0.5 shrink-0" />
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium text-brand-100">Connected — next step</p>
+            <p className="text-sm font-medium text-brand-600 dark:text-brand-400">Connected — next step</p>
             <p className="text-xs text-brand-200/90 mt-1 font-mono break-all">{typeof nextStep === "string" ? nextStep : JSON.stringify(nextStep)}</p>
           </div>
-          <button onClick={() => setNextStep(null)} className="text-brand-300 hover:text-brand-100 text-xs">
+          <button onClick={() => setNextStep(null)} className="text-brand-600 dark:text-brand-400 hover:text-brand-600 dark:hover:text-brand-400 text-xs">
             dismiss
           </button>
         </Card>
@@ -99,7 +99,7 @@ export default function POSBridge() {
               <Card key={c.id} className="flex flex-col gap-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center shrink-0 border", c.is_active ? "bg-brand-950 border-brand-800 text-brand-300" : "bg-surface-3 border-edge-1 text-ink-4")}>
+                    <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center shrink-0 border", c.is_active ? "bg-brand-50 dark:bg-brand-500/15 border-brand-200 dark:border-brand-800 text-brand-600 dark:text-brand-400" : "bg-surface-3 border-edge-1 text-ink-4")}>
                       <Plug size={16} />
                     </div>
                     <div className="min-w-0">
@@ -234,7 +234,7 @@ function LogsDrawer({ connection, onClose }) {
   useEffect(() => {
     if (connection) fetchLogs(connection.id).catch(() => {});
   }, [connection?.id, fetchLogs]); // eslint-disable-line react-hooks/exhaustive-deps
-  const icon = (s) => (s === "success" || s === "completed" ? <CheckCircle2 size={13} className="text-brand-400" /> : s === "failed" || s === "error" ? <XCircle size={13} className="text-red-400" /> : <Clock size={13} className="text-amber-400" />);
+  const icon = (s) => (s === "success" || s === "completed" ? <CheckCircle2 size={13} className="text-brand-600 dark:text-brand-400" /> : s === "failed" || s === "error" ? <XCircle size={13} className="text-red-600 dark:text-red-400" /> : <Clock size={13} className="text-accent-600 dark:text-accent-400" />);
   return (
     <Drawer open={!!connection} onClose={onClose} title={connection ? `Sync log · ${connection.connection_name}` : ""} description="Most recent first">
       {!logs ? (
@@ -257,7 +257,7 @@ function LogsDrawer({ connection, onClose }) {
                 {num(l.items_processed || 0)} processed · {num(l.items_added || 0)} added · {num(l.items_updated || 0)} updated · {num(l.items_removed || 0)} removed
               </p>
               {l.errors?.length > 0 && (
-                <ul className="mt-1.5 text-2xs text-red-300 font-mono space-y-0.5">
+                <ul className="mt-1.5 text-2xs text-red-600 dark:text-red-400 font-mono space-y-0.5">
                   {l.errors.slice(0, 5).map((e, j) => (
                     <li key={j}>{typeof e === "string" ? e : JSON.stringify(e)}</li>
                   ))}

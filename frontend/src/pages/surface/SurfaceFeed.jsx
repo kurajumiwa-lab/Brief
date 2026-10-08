@@ -20,14 +20,14 @@ import { cn } from "@/lib/utils";
 // ─────────────────────────────────────────────────────────────────────────────
 
 const KIND_META = {
-  product: { icon: Package, tint: "text-amber-300", label: "Price on the shelf" },
-  callup: { icon: Zap, tint: "text-amber-300", label: "Call-up near you" },
-  movement: { icon: ArrowLeftRight, tint: "text-blue-300", label: "Stock moved" },
-  event: { icon: CalendarDays, tint: "text-brand-300", label: "Event coming up" },
-  market: { icon: MapPin, tint: "text-violet-300", label: "Market heat" },
-  place: { icon: Building2, tint: "text-blue-300", label: "Place near you" },
-  vendor: { icon: Store, tint: "text-brand-300", label: "Vendor near you" },
-  index: { icon: Sigma, tint: "text-amber-300", label: "Price index" },
+  product: { icon: Package, tint: "text-accent-600 dark:text-accent-400", label: "Price on the shelf" },
+  callup: { icon: Zap, tint: "text-accent-600 dark:text-accent-400", label: "Call-up near you" },
+  movement: { icon: ArrowLeftRight, tint: "text-blue-600 dark:text-blue-400", label: "Stock moved" },
+  event: { icon: CalendarDays, tint: "text-brand-600 dark:text-brand-400", label: "Event coming up" },
+  market: { icon: MapPin, tint: "text-purple-600 dark:text-purple-400", label: "Market heat" },
+  place: { icon: Building2, tint: "text-blue-600 dark:text-blue-400", label: "Place near you" },
+  vendor: { icon: Store, tint: "text-brand-600 dark:text-brand-400", label: "Vendor near you" },
+  index: { icon: Sigma, tint: "text-accent-600 dark:text-accent-400", label: "Price index" },
 };
 
 const DOORS = [
@@ -69,24 +69,24 @@ function Hero({ kind, d }) {
         <p className="text-2xs text-ink-4 mt-0.5 uppercase">{d.status}</p>
       </div>;
     case "event":
-      return <div className="text-center rounded-xl bg-white/[0.05] px-3 py-2 shrink-0">
+      return <div className="text-center rounded-xl bg-surface-2 px-3 py-2 shrink-0">
         <p className="text-2xs font-bold text-ink-4">{d.dow}</p>
         <p className="digital text-2xl text-ink-1 leading-tight">{d.day}</p>
         <p className="text-2xs font-bold text-ink-4">{d.mon}</p>
       </div>;
     case "market":
       return <div className="text-center rounded-xl bg-violet-400/10 px-3 py-2 shrink-0">
-        <p className="digital text-2xl text-violet-300 leading-tight">{num(d.members)}</p>
+        <p className="digital text-2xl text-purple-600 dark:text-purple-400 leading-tight">{num(d.members)}</p>
         <p className="text-2xs text-ink-4">registered</p>
       </div>;
     case "place":
     case "vendor":
       return typeof d.distance_km === "number"
-        ? <div className="text-center rounded-xl bg-white/[0.05] px-3 py-2 shrink-0">
+        ? <div className="text-center rounded-xl bg-surface-2 px-3 py-2 shrink-0">
             <p className="digital text-2xl text-ink-1 leading-tight">{d.distance_km}</p>
             <p className="text-2xs text-ink-4">km away</p>
           </div>
-        : <div className="text-center rounded-xl bg-white/[0.05] px-3 py-2 shrink-0">
+        : <div className="text-center rounded-xl bg-surface-2 px-3 py-2 shrink-0">
             <p className="text-xs font-bold text-ink-2 px-1 leading-tight">{d.category || d.name}</p>
           </div>;
     case "index":
@@ -207,7 +207,7 @@ function DoorsCard({ onGo }) {
         <div className="mt-5 grid grid-cols-3 gap-2.5 flex-1 content-start">
           {DOORS.map((d) => (
             <button key={d.to} type="button" onClick={() => onGo(d.to)}
-              className="rounded-2xl bg-white/[0.04] hover:bg-white/[0.07] p-3 text-left cursor-pointer">
+              className="rounded-2xl bg-surface-2 hover:bg-surface-2 p-3 text-left cursor-pointer">
               <d.icon size={15} className="text-ink-3" />
               <p className="text-xs font-bold text-ink-1 mt-2">{d.label}</p>
             </button>

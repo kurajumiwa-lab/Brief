@@ -255,7 +255,7 @@ export default function StockRoom() {
 
 function Chip({ active, onClick, children }) {
   return (
-    <button onClick={onClick} className={cn("shrink-0 rounded-full border px-2.5 h-7 text-xs transition-colors", active ? "border-brand-700 bg-brand-950 text-brand-200" : "border-edge-1 bg-surface-1 text-ink-3 hover:border-edge-2 hover:text-ink-1")}>
+    <button onClick={onClick} className={cn("shrink-0 rounded-full border px-2.5 h-7 text-xs transition-colors", active ? "border-brand-200 dark:border-brand-800 bg-brand-50 dark:bg-brand-500/15 text-brand-600 dark:text-brand-400" : "border-edge-1 bg-surface-1 text-ink-3 hover:border-edge-2 hover:text-ink-1")}>
       {children}
     </button>
   );

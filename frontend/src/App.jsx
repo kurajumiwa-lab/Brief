@@ -1,5 +1,5 @@
 import { useEffect, lazy, Fragment } from "react";
-import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation, useSearchParams } from "react-router-dom";
 import Shell from "@/components/layout/Shell";
 import { PageSpinner } from "@/components/ui/Spinner";
 import AuthPage from "@/pages/auth/AuthPage";
@@ -10,15 +10,16 @@ import MarketDetail from "@/pages/markets/MarketDetail";
 import TaskTrack from "@/pages/tasks/TaskTrack";
 import { useAuthStore } from "@/stores/authStore";
 
-// v2.8 performance pass: every page is lazy. The home screen downloads only
-// what it renders — Leaflet (map), chat, analytics, ops and the rest split
-// into chunks fetched on first navigation. This is what makes the first paint
-// fast on a phone; the previous build shipped one ~660 kB chunk for everything.
+// Every page is lazy. The home screen downloads only what it renders —
+// Leaflet (map), chat, analytics, ops and the rest split into chunks fetched
+// on first navigation.
+const BrowsePage = lazy(() => import("@/pages/browse/BrowsePage"));
+const ListingPage = lazy(() => import("@/pages/listing/ListingPage"));
+const OrdersPage = lazy(() => import("@/pages/orders/OrdersPage"));
 const SurfaceFeed = lazy(() => import("@/pages/surface/SurfaceFeed"));
 const SearchHub = lazy(() => import("@/pages/search/SearchHub"));
 const MapPage = lazy(() => import("@/pages/map/MapPage"));
 const News = lazy(() => import("@/pages/news/News"));
-const SquadPage = lazy(() => import("@/pages/squad/SquadPage"));
 const TasksPortal = lazy(() => import("@/pages/tasks/TasksPortal"));
 const MarketsPage = lazy(() => import("@/pages/markets/MarketsPage"));
 const Dashboard = lazy(() => import("@/pages/dashboard/Dashboard"));
@@ -46,6 +47,27 @@ function RequireVendor({ children }) {
   return children;
 }
 
+/**
+ * v3 promoted two tabs of the Stock Room into destinations of their own
+ * (/browse and /orders). Every v2 URL still resolves — a link in someone's
+ * WhatsApp thread from last month must still land on the right screen.
+ */
+function StockRoomRouter() {
+  const [params] = useSearchParams();
+  const tab = params.get("tab");
+  if (tab === "network") {
+    const next = new URLSearchParams(params);
+    next.delete("tab");
+    return <Navigate to={`/browse${next.toString() ? `?${next}` : ""}`} replace />;
+  }
+  if (tab === "movements") {
+    const next = new URLSearchParams(params);
+    next.delete("tab");
+    return <Navigate to={`/orders${next.toString() ? `?${next}` : ""}`} replace />;
+  }
+  return <StockRoom />;
+}
+
 export default function App() {
   const token = useAuthStore((s) => s.token);
   const ready = useAuthStore((s) => s.ready);
@@ -66,11 +88,17 @@ export default function App() {
         }
       >
         <Fragment>
-          {/* ── Home, and the screens that hang off it ──
-              Home is a hub: every tile opens a secondary screen, and each of
-              those has somewhere to go next (a category screen, a place, a
-              shop front, the map). Nothing on the hub is a dead end. */}
+          {/* ── The core loop ──────────────────────────────────────────
+              browse → listing → order → inbox. These four are the only
+              destinations in the header and the mobile tab bar. */}
           <Route path="/" element={<HomeHub />} />
+          <Route path="/browse" element={<BrowsePage />} />
+          <Route path="/listing/:id" element={<ListingPage />} />
+          <Route path="/orders" element={<OrdersPage />} />
+          <Route path="/chat" element={<ChatPage />} />
+          <Route path="/stock" element={<StockRoomRouter />} />
+
+          {/* ── Discovery: home's ten doors and the screens behind them ── */}
           <Route path="/nearby" element={<NearbyPage />} />
           <Route path="/nearby/:group" element={<NearbyPage />} />
           <Route path="/place/:id" element={<PlaceProfile />} />
@@ -80,29 +108,40 @@ export default function App() {
           <Route path="/map" element={<MapPage />} />
           <Route path="/news" element={<News />} />
           <Route path="/news/:kind" element={<News />} />
-          {/* /squad is now a track of the Tasks section — the old URL still resolves. */}
+          <Route path="/markets" element={<MarketsPage />} />
+          <Route path="/markets/:id" element={<MarketDetail />} />
+          <Route path="/network" element={<Network />} />
+          <Route path="/tools" element={<ToolsPage />} />
+          <Route path="/groups" element={<Groups />} />
+          <Route path="/events" element={<EventsPage />} />
+          <Route path="/lists" element={<VendorLists />} />
+          <Route path="/locks" element={<MarketLocks />} />
+
+          {/* ── Tasks (Squad league + Brief workspace) ─────────────────── */}
           <Route path="/squad" element={<Navigate to="/tasks/squad" replace />} />
           <Route path="/tasks" element={<TasksPortal />} />
           <Route path="/tasks/:track" element={<TaskTrack />} />
-          <Route path="/markets" element={<MarketsPage />} />
-          <Route path="/markets/:id" element={<MarketDetail />} />
+
+          {/* ── Your business ─────────────────────────────────────────── */}
           <Route path="/brief" element={<Dashboard />} />
-          <Route path="/stock" element={<StockRoom />} />
-          <Route path="/network" element={<Network />} />
           <Route path="/analytics" element={<Analytics />} />
-          <Route path="/lists" element={<VendorLists />} />
-          <Route path="/groups" element={<Groups />} />
-          <Route path="/chat" element={<ChatPage />} />
-          <Route path="/locks" element={<MarketLocks />} />
-          <Route path="/governance" element={<OurNetwork />} />
-          <Route path="/tools" element={<ToolsPage />} />
-          <Route path="/events" element={<EventsPage />} />
           <Route path="/pos" element={<POSBridge />} />
+          <Route path="/governance" element={<OurNetwork />} />
           <Route path="/ops" element={<Ops />} />
           <Route path="/@:handle" element={<VendorProfile />} />
+
+          {/* ── v2 URLs that moved ────────────────────────────────────── */}
+          <Route path="/movements" element={<Navigate to="/orders" replace />} />
+          <Route path="/stock/:id" element={<ListingRedirect />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Fragment>
       </Route>
     </Routes>
   );
 }
+
+function ListingRedirect() {
+  const { pathname } = useLocation();
+  return <Navigate to={pathname.replace(/^\/stock\//, "/listing/")} replace />;
+}
+

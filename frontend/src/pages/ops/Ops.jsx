@@ -127,7 +127,7 @@ export default function Ops() {
                 <dd className="font-mono text-ink-2">{String(v)}</dd>
               </div>
             ))}
-            {db.error && <p className="text-2xs text-red-400 font-mono">{db.error}</p>}
+            {db.error && <p className="text-2xs text-red-600 dark:text-red-400 font-mono">{db.error}</p>}
           </dl>
         </Card>
 
@@ -152,7 +152,7 @@ export default function Ops() {
       </div>
 
       {slow?.slow_routes?.length > 0 && (
-        <Card padding="p-4" className="bg-amber-500/[0.05]">
+        <Card padding="p-4" className="bg-accent-500/10">
           <CardHeader>
             <CardTitle sub={`p95 above ${slow.threshold_ms} ms — usually the first thing to look at`}>Slow endpoints</CardTitle>
           </CardHeader>
@@ -210,9 +210,9 @@ function RouteTable({ rows, highlight }) {
               <td className="py-1.5 text-right text-ink-3">{r.requests}</td>
               <td className="py-1.5 text-right text-ink-3">{r.avg_ms}</td>
               <td className="py-1.5 text-right text-ink-3">{r.p50_ms}</td>
-              <td className={cn("py-1.5 text-right", highlight ? "text-amber-300" : "text-ink-3")}>{r.p95_ms}</td>
+              <td className={cn("py-1.5 text-right", highlight ? "text-accent-600 dark:text-accent-400" : "text-ink-3")}>{r.p95_ms}</td>
               <td className="py-1.5 text-right text-ink-3">{r.max_ms}</td>
-              <td className={cn("py-1.5 text-right", r.errors > 0 ? "text-red-400" : "text-ink-4")}>{r.errors}</td>
+              <td className={cn("py-1.5 text-right", r.errors > 0 ? "text-red-600 dark:text-red-400" : "text-ink-4")}>{r.errors}</td>
             </tr>
           ))}
         </tbody>

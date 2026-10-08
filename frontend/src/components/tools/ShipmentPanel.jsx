@@ -60,7 +60,7 @@ export default function ShipmentPanel() {
             ["received", "Receiving"],
             ["courier", "I carry"],
           ].map(([v, l]) => (
-            <button key={v} onClick={() => setRole(v)} className={cn("shrink-0 rounded-full border px-2.5 h-7 text-xs transition-colors", role === v ? "border-brand-700 bg-brand-950 text-brand-200" : "border-edge-1 bg-surface-1 text-ink-3 hover:border-edge-2 hover:text-ink-1")}>
+            <button key={v} onClick={() => setRole(v)} className={cn("shrink-0 rounded-full border px-2.5 h-7 text-xs transition-colors", role === v ? "border-brand-200 dark:border-brand-800 bg-brand-50 dark:bg-brand-500/15 text-brand-600 dark:text-brand-400" : "border-edge-1 bg-surface-1 text-ink-3 hover:border-edge-2 hover:text-ink-1")}>
               {l}
             </button>
           ))}
@@ -131,7 +131,7 @@ function ShipmentCard({ shipment: s, onChange }) {
         <div className="min-w-0">
           <p className="text-sm font-semibold font-mono text-ink-1">{s.tracking_number}</p>
           <p className="text-2xs text-ink-4 truncate">
-            <Link to={`/@${s.sender_handle}`} className="font-mono hover:text-brand-300">@{s.sender_handle}</Link> → <Link to={`/@${s.receiver_handle}`} className="font-mono hover:text-brand-300">@{s.receiver_handle}</Link> · via {s.courier_name}
+            <Link to={`/@${s.sender_handle}`} className="font-mono hover:text-brand-600 dark:hover:text-brand-400">@{s.sender_handle}</Link> → <Link to={`/@${s.receiver_handle}`} className="font-mono hover:text-brand-600 dark:hover:text-brand-400">@{s.receiver_handle}</Link> · via {s.courier_name}
           </p>
         </div>
         <Badge variant={m.variant} size="xs">
@@ -141,7 +141,7 @@ function ShipmentCard({ shipment: s, onChange }) {
 
       <ol className="flex items-center gap-1" aria-label="Progress">
         {SHIPMENT_STATUSES.filter((x) => x.value !== "failed").map((x, i) => (
-          <li key={x.value} className={cn("h-1.5 flex-1 rounded-full", s.status === "failed" ? "bg-red-900/60" : i <= idx ? "bg-brand-500" : "bg-surface-3")} title={x.label} />
+          <li key={x.value} className={cn("h-1.5 flex-1 rounded-full", s.status === "failed" ? "bg-red-50 dark:bg-red-500/15" : i <= idx ? "bg-brand-500" : "bg-surface-3")} title={x.label} />
         ))}
       </ol>
 
@@ -197,7 +197,7 @@ function ShipmentCard({ shipment: s, onChange }) {
       )}
 
       {s.rating != null ? (
-        <p className="text-2xs text-amber-300 inline-flex items-center gap-1">
+        <p className="text-2xs text-accent-600 dark:text-accent-400 inline-flex items-center gap-1">
           <Star size={11} /> {s.rating}/5{s.review ? <span className="text-ink-3"> — {s.review}</span> : null}
         </p>
       ) : (
@@ -205,7 +205,7 @@ function ShipmentCard({ shipment: s, onChange }) {
           <div className="rounded-lg border border-edge-1 bg-surface-2 p-2.5 space-y-2" aria-label="Rate this delivery">
             <div className="flex items-center gap-1">
               {[1, 2, 3, 4, 5].map((n) => (
-                <button key={n} type="button" onClick={() => setRating(n)} aria-label={`${n} star${n === 1 ? "" : "s"}`} className={cn("p-0.5", n <= rating ? "text-amber-400" : "text-ink-4 hover:text-amber-300")}>
+                <button key={n} type="button" onClick={() => setRating(n)} aria-label={`${n} star${n === 1 ? "" : "s"}`} className={cn("p-0.5", n <= rating ? "text-accent-600 dark:text-accent-400" : "text-ink-4 hover:text-accent-600 dark:hover:text-accent-400")}>
                   <Star size={16} fill={n <= rating ? "currentColor" : "none"} />
                 </button>
               ))}

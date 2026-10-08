@@ -98,7 +98,7 @@ export default function MapSheet({ item, onClose, onFocus }) {
     <div className="absolute inset-x-0 bottom-0 z-[600] px-2 pb-2 animate-slide-up">
       <div className="glass-strong rounded-2xl p-3.5 shadow-[0_-8px_40px_-12px_rgba(0,0,0,0.8)]">
         <div className="flex items-start gap-3">
-          <span className="w-10 h-10 rounded-xl bg-white/[0.06] text-ink-2 flex items-center justify-center shrink-0">
+          <span className="w-10 h-10 rounded-xl bg-surface-2 text-ink-2 flex items-center justify-center shrink-0">
             <Icon size={17} />
           </span>
           <div className="min-w-0 flex-1">
@@ -130,13 +130,13 @@ export default function MapSheet({ item, onClose, onFocus }) {
                 {detail.address && <Line icon={MapPin}>{detail.address}</Line>}
                 {detail.phone && (
                   <Line icon={Phone}>
-                    <a href={`tel:${detail.phone}`} className="hover:text-brand-300">{detail.phone}</a>
+                    <a href={`tel:${detail.phone}`} className="hover:text-brand-600 dark:hover:text-brand-400">{detail.phone}</a>
                   </Line>
                 )}
                 {detail.opening_hours && <Line icon={Clock}>{detail.opening_hours}</Line>}
                 {detail.website && (
                   <Line icon={Globe}>
-                    <a href={detail.website} target="_blank" rel="noreferrer" className="hover:text-brand-300 truncate">{detail.website}</a>
+                    <a href={detail.website} target="_blank" rel="noreferrer" className="hover:text-brand-600 dark:hover:text-brand-400 truncate">{detail.website}</a>
                   </Line>
                 )}
                 <Line icon={Building2}>

@@ -53,7 +53,7 @@ export default function POSConnectForm({ onDone, onCancel }) {
               type="button"
               key={s.value}
               onClick={() => setForm((f) => ({ ...f, pos_type: s.value }))}
-              className={cn("rounded-lg border p-3 text-left transition-colors", form.pos_type === s.value ? "border-brand-600 bg-brand-950/50" : "border-edge-1 bg-surface-1 hover:border-edge-2")}
+              className={cn("rounded-lg border p-3 text-left transition-colors", form.pos_type === s.value ? "border-brand-200 dark:border-brand-800 bg-brand-50 dark:bg-brand-500/15" : "border-edge-1 bg-surface-1 hover:border-edge-2")}
             >
               <div className="flex items-center justify-between gap-2">
                 <span className="text-sm font-medium text-ink-1">{s.label}</span>

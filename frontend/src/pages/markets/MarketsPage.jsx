@@ -43,7 +43,7 @@ function PatronTag({ zo }) {
   if (!zo.lead_patron) return <span className="text-2xs text-ink-4">no patron yet</span>;
   return (
     <span className="text-2xs text-ink-3 flex items-center gap-1">
-      <Medal size={11} className="text-brand-300" />
+      <Medal size={11} className="text-brand-600 dark:text-brand-400" />
       {zo.lead_patron.name} · {zo.patron_count} patron{zo.patron_count === 1 ? "" : "s"} / {zo.patron_slots} seat{zo.patron_slots === 1 ? "" : "s"}
     </span>
   );
@@ -52,15 +52,15 @@ function PatronTag({ zo }) {
 function MarketRow({ m, onJoin, joining, selectable, selected, onSelect, withData }) {
   return (
     <div className="glass glass-hover rounded-2xl p-3.5 flex gap-3 items-center animate-fade-in">
-      <span className="w-10 h-10 rounded-xl bg-brand-500/12 text-brand-300 flex items-center justify-center shrink-0">
+      <span className="w-10 h-10 rounded-xl bg-brand-500/12 text-brand-600 dark:text-brand-400 flex items-center justify-center shrink-0">
         <Store size={16} />
       </span>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2 flex-wrap">
-          <Link to={`/markets/${m.id}`} className="text-sm font-medium text-ink-1 truncate hover:text-brand-300">{m.name}</Link>
+          <Link to={`/markets/${m.id}`} className="text-sm font-medium text-ink-1 truncate hover:text-brand-600 dark:hover:text-brand-400">{m.name}</Link>
           <span className="text-2xs text-ink-4">{m.city}{m.country ? ` · ${m.country}` : ""}</span>
           {typeof m.distance_km === "number" && (
-            <span className="digital text-2xs text-brand-300">{m.distance_km} km</span>
+            <span className="digital text-2xs text-brand-600 dark:text-brand-400">{m.distance_km} km</span>
           )}
         </div>
         <p className="text-2xs text-ink-4 mt-0.5">
@@ -81,7 +81,7 @@ function MarketRow({ m, onJoin, joining, selectable, selected, onSelect, withDat
             type="button"
             onClick={onSelect}
             className={cn("rounded-full px-3 h-7 text-2xs font-semibold flex items-center gap-1 cursor-pointer",
-              selected ? "bg-brand-500/25 text-brand-200" : "bg-white/[0.06] text-ink-3 hover:text-ink-1")}
+              selected ? "bg-brand-500/25 text-brand-600 dark:text-brand-400" : "bg-surface-2 text-ink-3 hover:text-ink-1")}
           >
             {selected ? <Check size={11} /> : <Plus size={11} />} {selected ? "picked" : "pick"}
           </button>
@@ -90,7 +90,7 @@ function MarketRow({ m, onJoin, joining, selectable, selected, onSelect, withDat
           type="button"
           onClick={onJoin}
           disabled={joining}
-          className="rounded-full px-3 h-7 text-2xs font-semibold bg-brand-500/20 text-brand-200 hover:bg-brand-500/30 disabled:opacity-50 cursor-pointer"
+          className="rounded-full px-3 h-7 text-2xs font-semibold bg-brand-500/20 text-brand-600 dark:text-brand-400 hover:bg-brand-500/30 disabled:opacity-50 cursor-pointer"
         >
           {joining ? "…" : "register"}
         </button>
@@ -232,9 +232,9 @@ function AllMarkets() {
   return (
     <div className="space-y-3">
       <div className="flex gap-1.5 overflow-x-auto pb-1">
-        <button onClick={() => setCountry("")} className={cn("shrink-0 rounded-full px-3 h-8 text-xs", !country ? "bg-brand-500/20 text-brand-200" : "text-ink-4")}>All</button>
+        <button onClick={() => setCountry("")} className={cn("shrink-0 rounded-full px-3 h-8 text-xs", !country ? "bg-brand-500/20 text-brand-600 dark:text-brand-400" : "text-ink-4")}>All</button>
         {(data.countries || []).map((c) => (
-          <button key={c} onClick={() => setCountry(c === country ? "" : c)} className={cn("shrink-0 rounded-full px-3 h-8 text-xs", country === c ? "bg-brand-500/20 text-brand-200" : "text-ink-4")}>{c}</button>
+          <button key={c} onClick={() => setCountry(c === country ? "" : c)} className={cn("shrink-0 rounded-full px-3 h-8 text-xs", country === c ? "bg-brand-500/20 text-brand-600 dark:text-brand-400" : "text-ink-4")}>{c}</button>
         ))}
       </div>
 
@@ -298,15 +298,15 @@ function MyMarkets() {
       ) : data.markets.map((m) => (
         <div key={m.id} className="glass-strong rounded-3xl p-4 space-y-3">
           <div className="flex items-center gap-2 flex-wrap">
-            <Link to={`/markets/${m.id}`} className="text-base font-semibold text-ink-1 hover:text-brand-300">{m.name}</Link>
+            <Link to={`/markets/${m.id}`} className="text-base font-semibold text-ink-1 hover:text-brand-600 dark:hover:text-brand-400">{m.name}</Link>
             <span className="text-2xs text-ink-4">{m.city}{m.country ? ` · ${m.country}` : ""}</span>
             {m.i_am_lead ? <Badge variant="brand" size="xs"><Medal size={9} /> Lead patron</Badge>
-              : m.i_am_patron ? <Badge variant="outline" size="xs" className="text-brand-300">Patron</Badge>
+              : m.i_am_patron ? <Badge variant="outline" size="xs" className="text-brand-600 dark:text-brand-400">Patron</Badge>
                 : <span className="text-2xs text-ink-4">{m.member_count} registered · you joined #{m.my_join_rank}</span>}
           </div>
 
           {m.i_am_lead && (
-            <div className="rounded-2xl bg-white/[0.04] p-3 space-y-2">
+            <div className="rounded-2xl bg-surface-2 p-3 space-y-2">
               <p className="text-2xs uppercase tracking-[0.2em] text-ink-4 font-bold flex items-center gap-1.5"><Pencil size={11} /> Your pace note for this market</p>
               <textarea
                 value={welcome[m.id] ?? m.welcome ?? ""}
@@ -321,7 +321,7 @@ function MyMarkets() {
             </div>
           )}
           {!m.i_am_lead && m.welcome && (
-            <div className="rounded-2xl bg-white/[0.04] p-3">
+            <div className="rounded-2xl bg-surface-2 p-3">
               <p className="text-2xs uppercase tracking-[0.2em] text-ink-4 font-bold mb-1">Market pace note</p>
               <p className="text-xs text-ink-2">{m.welcome}</p>
             </div>
@@ -331,7 +331,7 @@ function MyMarkets() {
           <div className="flex justify-end gap-2">
             <Link
               to={`/markets/${m.id}`}
-              className="inline-flex items-center gap-1 h-8 px-3 rounded-xl text-xs font-medium bg-white/[0.06] text-ink-2 hover:text-ink-1"
+              className="inline-flex items-center gap-1 h-8 px-3 rounded-xl text-xs font-medium bg-surface-2 text-ink-2 hover:text-ink-1"
             >
               Open <ChevronRight size={12} />
             </Link>

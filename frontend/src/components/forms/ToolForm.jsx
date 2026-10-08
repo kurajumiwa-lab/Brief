@@ -82,7 +82,7 @@ export default function ToolForm({ onDone, onCancel, defaultCategory = "warehous
             </Button>
           </div>
           {form.geo_lat != null && (
-            <p className="text-2xs text-brand-300 mt-1 px-1">
+            <p className="text-2xs text-brand-600 dark:text-brand-400 mt-1 px-1">
               located · {Number(form.geo_lat).toFixed(4)}, {Number(form.geo_lng).toFixed(4)}
             </p>
           )}

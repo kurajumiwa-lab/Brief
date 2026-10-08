@@ -68,7 +68,7 @@ export default function StockVerifyDialog({ item, open, onClose, onDone }) {
         <div className="flex items-center gap-2 text-xs text-ink-3">
           Currently <QualityBadge status={item.quality_status} showUnverified size="sm" />
           {item.spec_sheet_url && (
-            <a href={item.spec_sheet_url} target="_blank" rel="noreferrer" className="ml-auto text-brand-300 hover:underline">
+            <a href={item.spec_sheet_url} target="_blank" rel="noreferrer" className="ml-auto text-brand-600 dark:text-brand-400 hover:underline">
               Current sheet
             </a>
           )}

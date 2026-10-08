@@ -44,7 +44,7 @@ export default function RoleSwitcher({ compact = false, className }) {
             className={cn(
               "flex items-center gap-1.5 rounded-lg border text-xs transition-colors disabled:opacity-60",
               compact ? "justify-center h-8 w-8" : "px-2 py-1.5",
-              active ? "border-brand-700 bg-brand-950 text-brand-200" : "border-edge-1 bg-surface-2 text-ink-3 hover:border-edge-2 hover:text-ink-1",
+              active ? "border-brand-200 dark:border-brand-800 bg-brand-50 dark:bg-brand-500/15 text-brand-600 dark:text-brand-400" : "border-edge-1 bg-surface-2 text-ink-3 hover:border-edge-2 hover:text-ink-1",
               busy === r.value && "animate-pulse"
             )}
           >

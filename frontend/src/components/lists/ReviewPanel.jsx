@@ -26,7 +26,7 @@ export function Stars({ value = 0, size = 12, className }) {
   return (
     <span className={cn("inline-flex items-center gap-0.5", className)} title={`${Number(value || 0).toFixed(1)} / 5`}>
       {[1, 2, 3, 4, 5].map((n) => (
-        <Star key={n} size={size} className={n <= filled ? "text-amber-400 fill-amber-400" : "text-ink-4/50"} />
+        <Star key={n} size={size} className={n <= filled ? "text-accent-600 dark:text-accent-400 fill-amber-400" : "text-ink-4/50"} />
       ))}
     </span>
   );
@@ -151,7 +151,7 @@ export default function ReviewsDrawer({ list, onClose }) {
                 <div key={star} className="flex items-center gap-2">
                   <span className="text-2xs text-ink-4 font-mono w-3">{star}</span>
                   <div className="flex-1 h-1.5 rounded-full bg-surface-3 overflow-hidden">
-                    <div className="h-full rounded-full bg-amber-400/80" style={{ width: `${(100 * (distribution[String(star)] || 0)) / maxBar}%` }} />
+                    <div className="h-full rounded-full bg-accent-500/10" style={{ width: `${(100 * (distribution[String(star)] || 0)) / maxBar}%` }} />
                   </div>
                   <span className="text-2xs text-ink-4 font-mono w-4 text-right">{distribution[String(star)] || 0}</span>
                 </div>
@@ -165,7 +165,7 @@ export default function ReviewsDrawer({ list, onClose }) {
             </Button>
           )}
           {!data?.can_review && !mine && !writing && (
-            <p className="text-xs text-ink-4 rounded-lg bg-white/[0.04] px-3 py-2">
+            <p className="text-xs text-ink-4 rounded-lg bg-surface-2 px-3 py-2">
               {data?.my_status === "approved"
                 ? "You've already reviewed this list — edit your review below."
                 : "Only vendors approved onto the list can review it. Register, then tell the network how it went."}
@@ -185,7 +185,7 @@ export default function ReviewsDrawer({ list, onClose }) {
                       onClick={() => setForm({ ...form, rating: n })}
                       className="p-0.5"
                     >
-                      <Star size={20} className={n <= form.rating ? "text-amber-400 fill-amber-400" : "text-ink-4/50"} />
+                      <Star size={20} className={n <= form.rating ? "text-accent-600 dark:text-accent-400 fill-amber-400" : "text-ink-4/50"} />
                     </button>
                   ))}
                 </div>
@@ -210,13 +210,13 @@ export default function ReviewsDrawer({ list, onClose }) {
               <p className="text-xs text-ink-4 text-center py-6">No reviews yet — be the first member to write one.</p>
             )}
             {data?.reviews.map((r) => (
-              <div key={r.id} className={cn("rounded-xl border p-3 space-y-2", r.mine ? "border-brand-800/60 bg-brand-950/20" : "border-edge-1 bg-surface-1")}>
+              <div key={r.id} className={cn("rounded-xl border p-3 space-y-2", r.mine ? "border-brand-200 dark:border-brand-800 bg-brand-50 dark:bg-brand-500/15" : "border-edge-1 bg-surface-1")}>
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2 min-w-0">
                     <Avatar name={r.reviewer.business_name} size="xs" />
                     <div className="min-w-0">
                       <p className="text-xs font-medium text-ink-1 truncate">
-                        {r.reviewer.business_name} {r.mine && <span className="text-2xs text-brand-400">· you</span>}
+                        {r.reviewer.business_name} {r.mine && <span className="text-2xs text-brand-600 dark:text-brand-400">· you</span>}
                       </p>
                       <p className="text-2xs text-ink-4 font-mono truncate">@{r.reviewer.vendor_handle}{r.reviewer.is_patron ? " · patron" : ""}</p>
                     </div>
