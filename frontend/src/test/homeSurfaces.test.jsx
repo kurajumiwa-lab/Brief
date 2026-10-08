@@ -87,6 +87,14 @@ vi.mock("@/lib/api", () => {
       market: vi.fn((id) => { calls.market.push(id); return ok({ ...MARKET, id }); }),
     },
     geoAPI: { claim: vi.fn(() => ok({ changed: true })) },
+    /* v3 home pulls real listings and ranked suppliers into the hub so the
+       first screen is a marketplace, not a tile wall. Both are "nice to
+       have" blocks — the doors must still render if either is empty. */
+    stockAPI: {
+      network: vi.fn(() => ok([])),
+      movements: vi.fn(() => ok([])),
+    },
+    vendorAPI: { suggested: vi.fn(() => ok([])) },
     nearbyAPI: {
       list: vi.fn((params) => { calls.nearby.push(params); return ok(NEARBY); }),
     },

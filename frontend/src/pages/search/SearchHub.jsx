@@ -129,7 +129,7 @@ export default function SearchHub() {
         {TABS.map((t) => (
           <Link key={t.value} to={`/search/${t.value}`}
             className={cn("shrink-0 rounded-full px-3 h-8 text-xs font-medium inline-flex items-center gap-1.5",
-              tab === t.value ? "bg-brand-500/20 text-brand-200" : "text-ink-4 hover:text-ink-2")}>
+              tab === t.value ? "bg-brand-500/20 text-brand-600 dark:text-brand-400" : "text-ink-4 hover:text-ink-2")}>
             <t.icon size={12} /> {t.label}
           </Link>
         ))}

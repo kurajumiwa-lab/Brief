@@ -182,7 +182,7 @@ export default function MapPage() {
         />
         <button type="button" onClick={() => setMode((m) => (m === "map" ? "list" : "map"))}
           className={cn("h-9 px-3 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer",
-            mode === "list" ? "bg-brand-500/20 text-brand-200" : "bg-white/[0.07] text-ink-2")}
+            mode === "list" ? "bg-brand-500/20 text-brand-600 dark:text-brand-400" : "bg-surface-2 text-ink-2")}
           aria-label={mode === "list" ? "Show the map" : "Show the list"}>
           {mode === "list" ? <MapPin size={14} /> : <List size={14} />}
           {mode === "list" ? "Map" : "List"}
@@ -198,7 +198,7 @@ export default function MapPage() {
             <button key={value} type="button"
               onClick={() => setKind((k) => (k === value ? "all" : value))}
               className={cn("shrink-0 h-8 px-3 rounded-full text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer transition-colors",
-                active ? "bg-black/70 text-white" : "bg-white/[0.05] text-ink-3 hover:text-ink-1")}>
+                active ? "bg-ink-1/50 text-white" : "bg-surface-2 text-ink-3 hover:text-ink-1")}>
               <span className="w-2 h-2 rounded-full"
                 style={{ background: KIND_COLORS[value], opacity: active || kind === "all" ? 1 : 0.45 }} />
               <Icon size={12} />
@@ -224,7 +224,7 @@ export default function MapPage() {
             return (
               <button key={q.label} type="button" onClick={() => setFilter(q.value)}
                 className={cn("shrink-0 h-7 px-2.5 rounded-full text-2xs font-medium cursor-pointer transition-colors",
-                  active ? "bg-brand-500/20 text-brand-200" : "text-ink-4 hover:text-ink-2")}>
+                  active ? "bg-brand-500/20 text-brand-600 dark:text-brand-400" : "text-ink-4 hover:text-ink-2")}>
                 {q.label}
                 {facet && q.value ? <span className="ml-1 opacity-60 font-mono">{formatCount(facet.count)}</span> : null}
               </button>
@@ -251,7 +251,7 @@ export default function MapPage() {
 
             {/* status line — what the screen is actually showing */}
             <div className="absolute top-2 left-2 right-2 z-[500] flex items-start gap-1.5 pointer-events-none">
-              <p className="text-2xs px-2 py-1 rounded-full bg-black/60 text-white/80 backdrop-blur-sm">
+              <p className="text-2xs px-2 py-1 rounded-full bg-ink-1/50 text-white/80 backdrop-blur-sm">
                 {loading
                   ? (searching ? "Searching the network…" : "Loading this area…")
                   : searching
@@ -259,12 +259,12 @@ export default function MapPage() {
                     : areaSummary(shownCounts, kind)}
               </p>
               {offline && (
-                <p className="text-2xs px-2 py-1 rounded-full bg-amber-500/20 text-amber-200 inline-flex items-center gap-1">
+                <p className="text-2xs px-2 py-1 rounded-full bg-accent-500/10 text-accent-600 dark:text-accent-400 inline-flex items-center gap-1">
                   <CloudOff size={10} /> last loaded area
                 </p>
               )}
               {data?.truncated && (
-                <p className="text-2xs px-2 py-1 rounded-full bg-black/60 text-white/60">
+                <p className="text-2xs px-2 py-1 rounded-full bg-ink-1/50 text-white/60">
                   showing {num(points.length)} of {formatCount(shownCounts.places + shownCounts.vendors + shownCounts.markets)}
                 </p>
               )}
@@ -278,14 +278,14 @@ export default function MapPage() {
             </div>
 
             {viewError && !offline && (
-              <p className="absolute inset-x-3 top-10 z-[500] text-2xs text-red-300 bg-red-500/10 rounded-xl px-2.5 py-1.5">
+              <p className="absolute inset-x-3 top-10 z-[500] text-2xs text-red-600 dark:text-red-400 bg-red-500/10 rounded-xl px-2.5 py-1.5">
                 {viewError}
               </p>
             )}
 
             {!loading && !points.length && !clusters.length && (
               <div className="absolute inset-0 z-[450] flex items-center justify-center pointer-events-none">
-                <p className="text-xs text-white/60 bg-black/60 rounded-2xl px-4 py-3 text-center">
+                <p className="text-xs text-white/60 bg-ink-1/50 rounded-2xl px-4 py-3 text-center">
                   {searching ? "Nothing matches that search." : "Nothing mapped here yet."}
                   <span className="block text-2xs text-white/40 mt-0.5">
                     {searching ? "Try fewer words." : "Zoom out, or open Markets to map this area."}
@@ -298,7 +298,7 @@ export default function MapPage() {
               onFocus={(it) => mapRef.current?.flyTo(it.lat, it.lng, 17)} />
 
             {attribution && (
-              <p className="absolute bottom-1 left-2 z-[400] text-[10px] text-white/45 bg-black/40 rounded px-1.5 py-0.5"
+              <p className="absolute bottom-1 left-2 z-[400] text-[10px] text-white/45 bg-ink-1/50 rounded px-1.5 py-0.5"
                 style={{ display: selected ? "none" : "block" }}
                 dangerouslySetInnerHTML={{ __html: attribution }} />
             )}
@@ -315,7 +315,7 @@ export default function MapPage() {
 function MapButton({ children, onClick, label }) {
   return (
     <button type="button" onClick={onClick} aria-label={label} title={label}
-      className="w-9 h-9 rounded-xl bg-black/65 text-white/85 hover:text-white hover:bg-black/80 backdrop-blur-sm inline-flex items-center justify-center cursor-pointer">
+      className="w-9 h-9 rounded-xl bg-ink-1/50 text-white/85 hover:text-white hover:bg-ink-1/50 backdrop-blur-sm inline-flex items-center justify-center cursor-pointer">
       {children}
     </button>
   );
@@ -329,7 +329,7 @@ function NearbyList({ items, kind, loading, selectedId, onSelect, onOpenMarkets 
         <EmptyState icon={ZoomIn} title="Nothing listed in this area"
           description="Zoom out on the map, or clear the filters."
           action={<button type="button" onClick={onOpenMarkets}
-            className="text-xs text-brand-300 hover:text-brand-200 cursor-pointer">Open the market catalog</button>} />
+            className="text-xs text-brand-600 dark:text-brand-400 hover:text-brand-600 dark:hover:text-brand-400 cursor-pointer">Open the market catalog</button>} />
       </div>
     );
   }

@@ -33,9 +33,9 @@ const KIND_FILTERS = [
 ];
 
 const STATUS_TONE = {
-  pending: "text-amber-300", confirmed: "text-blue-300", in_transit: "text-blue-300",
-  shipped: "text-blue-300", received: "text-brand-300", completed: "text-brand-300",
-  cancelled: "text-red-300", failed: "text-red-300", open: "text-brand-300", rolling: "text-amber-300",
+  pending: "text-accent-600 dark:text-accent-400", confirmed: "text-blue-600 dark:text-blue-400", in_transit: "text-blue-600 dark:text-blue-400",
+  shipped: "text-blue-600 dark:text-blue-400", received: "text-brand-600 dark:text-brand-400", completed: "text-brand-600 dark:text-brand-400",
+  cancelled: "text-red-600 dark:text-red-400", failed: "text-red-600 dark:text-red-400", open: "text-brand-600 dark:text-brand-400", rolling: "text-accent-600 dark:text-accent-400",
 };
 
 const QualityLabel = { unverified: "unverified", self_declared: "self-declared", patron_verified: "patron-verified", lab_certified: "lab-certified" };
@@ -55,11 +55,11 @@ function CardShell({ open, onToggle, children, expanded, onOpenLink }) {
         </div>
       </button>
       {open && (
-        <div className="px-3.5 pb-3.5 pt-0.5 border-t border-white/[0.06] mt-0.5 animate-fade-in">
+        <div className="px-3.5 pb-3.5 pt-0.5 border-t border-edge-1 mt-0.5 animate-fade-in">
           {expanded}
           {onOpenLink && (
             <button type="button" onClick={onOpenLink}
-              className="mt-2.5 inline-flex items-center gap-1 text-2xs font-bold text-brand-300 hover:text-brand-200 cursor-pointer">
+              className="mt-2.5 inline-flex items-center gap-1 text-2xs font-bold text-brand-600 dark:text-brand-400 hover:text-brand-600 dark:hover:text-brand-400 cursor-pointer">
               Open <ArrowUpRight size={11} />
             </button>
           )}
@@ -164,7 +164,7 @@ function EventCard({ it, open, onToggle, onOpen }) {
         </div>
       }
     >
-      <div className="w-16 shrink-0 text-center rounded-xl bg-white/[0.05] py-1.5">
+      <div className="w-16 shrink-0 text-center rounded-xl bg-surface-2 py-1.5">
         <p className="text-2xs font-bold text-ink-4">{d.dow}</p>
         <p className="digital text-lg text-ink-1 leading-tight">{d.day}</p>
         <p className="text-2xs font-bold text-ink-4">{d.mon}</p>
@@ -173,7 +173,7 @@ function EventCard({ it, open, onToggle, onOpen }) {
         <p className="text-sm font-medium text-ink-1 truncate">{d.title}</p>
         <p className="text-2xs text-ink-4 mt-0.5 truncate">{d.time} · {d.location}</p>
         <div className="mt-1.5 flex items-center gap-2">
-          <div className="flex-1 h-1 rounded-full bg-white/[0.07] overflow-hidden max-w-[8rem]">
+          <div className="flex-1 h-1 rounded-full bg-surface-2 overflow-hidden max-w-[8rem]">
             <div className="h-full bg-gradient-to-r from-brand-500 to-brand-300" style={{ width: `${pct}%` }} />
           </div>
           <span className="text-2xs text-ink-4">{num(d.registered)}/{num(d.capacity)} in</span>
@@ -198,7 +198,7 @@ function GroupCard({ it, open, onToggle, onOpen }) {
       }
     >
       <div className="w-16 shrink-0 text-center rounded-xl bg-violet-400/10 py-1.5">
-        <p className="digital text-lg text-violet-300 leading-tight">{num(d.member_count)}</p>
+        <p className="digital text-lg text-purple-600 dark:text-purple-400 leading-tight">{num(d.member_count)}</p>
         <p className="text-2xs text-ink-4">members</p>
       </div>
       <div className="min-w-0 flex-1">
@@ -298,7 +298,7 @@ export default function News() {
             <Link key={f.value} to={f.value === "all" ? "/news" : `/news/${f.value}`}
               aria-disabled={f.value !== "all" && n === 0}
               className={cn("shrink-0 rounded-full px-3 h-8 text-xs font-medium inline-flex items-center gap-1.5",
-                filter === f.value ? "bg-brand-500/20 text-brand-200" : "text-ink-4 hover:text-ink-2",
+                filter === f.value ? "bg-brand-500/20 text-brand-600 dark:text-brand-400" : "text-ink-4 hover:text-ink-2",
                 f.value !== "all" && n === 0 && "opacity-40 pointer-events-none")}>
               {f.label}
               <span className="font-mono text-2xs opacity-70">{n || ""}</span>

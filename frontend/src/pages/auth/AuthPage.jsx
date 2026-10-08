@@ -19,7 +19,7 @@ function Wordmark() {
   return (
     <div className="flex items-center gap-2.5">
       <div className="w-9 h-9 rounded-xl bg-[#0A0E14] ring-1 ring-brand-500/40 flex items-center justify-center shadow-[0_0_24px_-2px_rgba(245,158,11,0.45)]">
-        <Store size={17} className="text-brand-400" />
+        <Store size={17} className="text-brand-600 dark:text-brand-400" />
       </div>
       <span className="text-sm font-semibold text-ink-2">My Shop App · trade info</span>
     </div>
@@ -89,7 +89,7 @@ export default function AuthPage() {
           <h1 className="text-4xl font-bold tracking-tight text-ink-1 leading-tight">
             Know your market
             <br />
-            <span className="text-brand-400">before you move.</span>
+            <span className="text-brand-600 dark:text-brand-400">before you move.</span>
           </h1>
           <p className="mt-4 text-sm text-ink-3 leading-relaxed">
             The trade information network for people who run shops — check what's changing, find who has stock, source from vendors you can measure, and keep your shelf live from your till.
@@ -116,9 +116,9 @@ export default function AuthPage() {
           </div>
 
           <div className="glass rounded-3xl p-6 sm:p-7">
-            <div className="flex items-center gap-1 p-1 rounded-xl bg-white/[0.05] w-fit mb-6" role="tablist">
+            <div className="flex items-center gap-1 p-1 rounded-xl bg-surface-2 w-fit mb-6" role="tablist">
               {["login", "register"].map((m) => (
-                <button key={m} role="tab" aria-selected={mode === m} onClick={() => switchMode(m)} className={cn("px-4 h-8 rounded-lg text-sm font-medium transition-all", mode === m ? "bg-brand-500/20 text-brand-200 shadow-[0_0_16px_-4px_rgba(245, 158, 11,0.5)]" : "text-ink-4 hover:text-ink-2")}>
+                <button key={m} role="tab" aria-selected={mode === m} onClick={() => switchMode(m)} className={cn("px-4 h-8 rounded-lg text-sm font-medium transition-all", mode === m ? "bg-brand-500/20 text-brand-600 dark:text-brand-400 shadow-[0_0_16px_-4px_rgba(245,158,11,0.5)]" : "text-ink-4 hover:text-ink-2")}>
                   {m === "login" ? "Enter" : "Join"}
                 </button>
               ))}
@@ -166,7 +166,7 @@ export default function AuthPage() {
           </form>
 
           {mode === "login" && (
-            <p className="mt-4 text-2xs text-ink-4 text-center bg-white/[0.04] rounded-lg px-3 py-2">
+            <p className="mt-4 text-2xs text-ink-4 text-center bg-surface-2 rounded-lg px-3 py-2">
               Demo network: <span className="font-mono text-ink-3">@mama_mboga</span> · <span className="font-mono text-ink-3">Brief-demo-2026</span>
             </p>
           )}
@@ -174,7 +174,7 @@ export default function AuthPage() {
 
           <p className="mt-6 text-xs text-ink-4 text-center">
             {mode === "login" ? "New business? " : "Already registered? "}
-            <button onClick={() => switchMode(mode === "login" ? "register" : "login")} className="text-brand-300 hover:text-brand-200 font-medium">
+            <button onClick={() => switchMode(mode === "login" ? "register" : "login")} className="text-brand-600 dark:text-brand-400 hover:text-brand-600 dark:hover:text-brand-400 font-medium">
               {mode === "login" ? "Join the network" : "Enter"}
             </button>
           </p>

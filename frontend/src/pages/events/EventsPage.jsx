@@ -142,7 +142,7 @@ export default function EventsPage() {
                   <DateTile date={ev.start_date} />
                   <div className="min-w-0 flex-1">
                     <button onClick={() => setOpen(ev)} className="text-left">
-                      <h3 className="text-sm font-semibold text-ink-1 leading-snug hover:text-brand-300">{ev.title}</h3>
+                      <h3 className="text-sm font-semibold text-ink-1 leading-snug hover:text-brand-600 dark:hover:text-brand-400">{ev.title}</h3>
                     </button>
                     <p className="text-2xs text-ink-4 mt-0.5">
                       {typeMeta?.label || titleCase(ev.event_type)} · by <span className="text-ink-3">{ev.organizer_business}</span>
@@ -330,7 +330,7 @@ function EventDrawer({ event: ev, onClose, organiser, onStatus, onPatch }) {
           {organiser && stats && (
             <section data-testid="event-analytics">
               <h4 className="text-xs font-semibold text-ink-2 mb-2 inline-flex items-center gap-1.5">
-                <BarChart3 size={13} className="text-brand-400" /> At a glance
+                <BarChart3 size={13} className="text-brand-600 dark:text-brand-400" /> At a glance
               </h4>
               <div className="grid grid-cols-4 gap-2 text-xs">
                 <Row k="Registered" v={`${num(stats.registered)} / ${num(stats.capacity)}`} />

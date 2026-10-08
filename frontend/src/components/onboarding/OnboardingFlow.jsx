@@ -105,13 +105,13 @@ export default function OnboardingFlow() {
   };
 
   return (
-    <div className="fixed inset-0 z-[70] bg-black/60 flex items-end sm:items-center justify-center p-0 sm:p-6" role="dialog" aria-modal="true" aria-label="Getting your shop on the map">
+    <div className="fixed inset-0 z-[70] bg-ink-1/50 flex items-end sm:items-center justify-center p-0 sm:p-6" role="dialog" aria-modal="true" aria-label="Getting your shop on the map">
       <div className="w-full max-w-lg bg-surface-1 rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden animate-slide-up">
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-4 pb-3">
           <div className="flex items-center gap-2">
             {[0, 1].map((i) => (
-              <span key={i} className={cn("h-1.5 rounded-full transition-all", (i === 0 && (step1Done || step2Done ? false : true)) || (i === 1 && activeStep === 1) ? "w-8 bg-brand-400" : "w-4 bg-white/[0.15]")} />
+              <span key={i} className={cn("h-1.5 rounded-full transition-all", (i === 0 && (step1Done || step2Done ? false : true)) || (i === 1 && activeStep === 1) ? "w-8 bg-brand-400" : "w-4 bg-surface-2")} />
             ))}
             <span className="text-2xs text-ink-4 ml-2">{Math.round(data.completion * 100)}% of your first week</span>
           </div>
@@ -123,13 +123,13 @@ export default function OnboardingFlow() {
         {activeStep === 0 && (
           <div className="px-5 pb-6 space-y-4">
             <div>
-              <p className="text-2xs uppercase tracking-[0.2em] text-brand-400 font-bold flex items-center gap-1.5"><Map size={13} /> Step 1 · Your shop page</p>
+              <p className="text-2xs uppercase tracking-[0.2em] text-brand-600 dark:text-brand-400 font-bold flex items-center gap-1.5"><Map size={13} /> Step 1 · Your shop page</p>
               <h3 className="text-xl font-semibold text-ink-1 mt-2 tracking-tight">This page is your face in the market</h3>
               <p className="text-xs text-ink-4 mt-1">Others open it by <span className="font-mono text-ink-3">@{data.my_page.handle}</span>. A name, what you trade, and where you are — that's the whole page. Nothing more is asked.</p>
             </div>
 
             <div className="glass rounded-2xl p-3.5 flex items-center gap-3">
-              <span className="w-10 h-10 rounded-xl bg-brand-500/15 text-brand-300 flex items-center justify-center text-base font-bold">
+              <span className="w-10 h-10 rounded-xl bg-brand-500/15 text-brand-600 dark:text-brand-400 flex items-center justify-center text-base font-bold">
                 {(data.my_page.name || "?").charAt(0).toUpperCase()}
               </span>
               <div className="min-w-0">
@@ -137,7 +137,7 @@ export default function OnboardingFlow() {
                 <p className="text-2xs text-ink-4 font-mono">@{data.my_page.handle}</p>
               </div>
               <div className="ml-auto w-20">
-                <div className="h-1.5 rounded-full bg-white/[0.08] overflow-hidden">
+                <div className="h-1.5 rounded-full bg-surface-2 overflow-hidden">
                   <div className="h-full bg-gradient-to-r from-brand-500 to-brand-300" style={{ width: `${Math.round(data.completion * 100)}%` }} />
                 </div>
                 <p className="text-2xs text-ink-4 mt-1 text-right">{Math.round(data.completion * 100)}%</p>
@@ -162,7 +162,7 @@ export default function OnboardingFlow() {
                     key={c}
                     type="button"
                     onClick={() => setCats((m) => m.includes(c) ? m.filter((x) => x !== c) : [...m, c])}
-                    className={cn("rounded-full px-3 h-8 text-xs font-medium capitalize transition-colors", cats.includes(c) ? "bg-brand-500/25 text-brand-200" : "bg-white/[0.05] text-ink-3 hover:text-ink-1")}
+                    className={cn("rounded-full px-3 h-8 text-xs font-medium capitalize transition-colors", cats.includes(c) ? "bg-brand-500/25 text-brand-600 dark:text-brand-400" : "bg-surface-2 text-ink-3 hover:text-ink-1")}
                   >
                     {c}
                   </button>
@@ -182,7 +182,7 @@ export default function OnboardingFlow() {
         {activeStep === 1 && (
           <div className="px-5 pb-6 space-y-4">
             <div>
-              <p className="text-2xs uppercase tracking-[0.2em] text-brand-400 font-bold flex items-center gap-1.5"><Compass size={13} /> Step 2 · Walk your market</p>
+              <p className="text-2xs uppercase tracking-[0.2em] text-brand-600 dark:text-brand-400 font-bold flex items-center gap-1.5"><Compass size={13} /> Step 2 · Walk your market</p>
               <h3 className="text-xl font-semibold text-ink-1 mt-2 tracking-tight">Here is what's real within 3 km</h3>
               <p className="text-xs text-ink-4 mt-1">Not a feed — the actual market around your pin: named suppliers, public places, open call-ups. Do one real thing per row and it counts.</p>
             </div>
@@ -191,7 +191,7 @@ export default function OnboardingFlow() {
             </div>
             <div className="flex items-center gap-2">
               {data.steps.filter((s) => s.done).length > 0 && (
-                <p className="text-2xs text-ink-4 flex items-center gap-1"><Check size={11} className="text-brand-300" /> {data.steps.filter((s) => s.done).length} of {data.steps.length} first-week steps done</p>
+                <p className="text-2xs text-ink-4 flex items-center gap-1"><Check size={11} className="text-brand-600 dark:text-brand-400" /> {data.steps.filter((s) => s.done).length} of {data.steps.length} first-week steps done</p>
               )}
               <Button variant="ghost" onClick={dismiss} className="ml-auto">Done for now</Button>
             </div>

@@ -1,32 +1,58 @@
 <!doctype html>
-<html lang="en" class="dark">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#101216" />
-    <meta name="description" content="My Shop App — the trade information network for people who run shops. Prices, suppliers, stock, rentals, groups and what is changing in your market." />
-    <title>My Shop App</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0b0d10" media="(prefers-color-scheme: dark)" />
+    <meta
+      name="description"
+      content="Brief — the trade network with receipts. Source stock from vendors whose fulfilment record you can actually see: live shelves, stated prices with timestamps, and orders tracked end to end."
+    />
+    <meta property="og:title" content="Brief — the trade network with receipts" />
+    <meta
+      property="og:description"
+      content="Browse what the network has on its shelves right now, compare alternatives on price and reliability, and source in two taps."
+    />
+    <meta property="og:type" content="website" />
+    <title>Brief — the trade network with receipts</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+
+    <!--
+      Theme bootstrap. Runs before paint so a returning user never sees a flash
+      of the wrong theme. Stored preference wins; otherwise follow the OS.
+    -->
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem("brief-theme");
+          var dark = saved ? saved === "dark" : window.matchMedia("(prefers-color-scheme: dark)").matches;
+          document.documentElement.classList.toggle("dark", dark);
+        } catch (e) {}
+      })();
+    </script>
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="preconnect" href="https://api.fontshare.com" />
-    <link rel="preconnect" href="https://fonts.cdnfonts.com" crossorigin />
-    <!-- Non-blocking: the system font stack renders first, webfonts swap in when they arrive. -->
+    <!--
+      Two families, not four. The seven-segment and Orbitron faces were dropped
+      in v3: they cost two extra requests and hurt legibility below 24px.
+      `font-display: swap` means the system stack paints first either way.
+    -->
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&family=Orbitron:wght@500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
       rel="stylesheet"
       media="print"
       onload="this.media='all'"
     />
-    <!-- Seven-segment face for digital readouts (timer look); Orbitron is the fallback. -->
-    <link
-      href="https://fonts.cdnfonts.com/css/dseg7-classic"
-      rel="stylesheet"
-      media="print"
-      onload="this.media='all'"
-    />
+    <noscript>
+      <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet"
+      />
+    </noscript>
   </head>
-  <body class="bg-surface-0 text-ink-1 antialiased">
+  <body class="bg-surface-0 text-ink-2 antialiased">
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

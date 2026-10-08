@@ -87,7 +87,7 @@ export default function VendorProfile() {
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-2xl font-semibold text-ink-1 tracking-tight">{vendor.business_name}</h2>
-            {vendor.is_verified && <ShieldCheck size={16} className="text-brand-400" title="Verified" />}
+            {vendor.is_verified && <ShieldCheck size={16} className="text-brand-600 dark:text-brand-400" title="Verified" />}
             {vendor.is_patron && (
               <Badge variant="amber" size="xs">
                 <Crown size={10} /> Patron
@@ -159,7 +159,7 @@ export default function VendorProfile() {
 
       <section>
         <h3 className="text-sm font-semibold text-ink-1 mb-3 inline-flex items-center gap-2">
-          <Package size={14} className="text-brand-400" /> {own ? "Visible on your shelf" : "On the shelf"} <span className="font-mono text-ink-4 text-xs">{stock.length}</span>
+          <Package size={14} className="text-brand-600 dark:text-brand-400" /> {own ? "Visible on your shelf" : "On the shelf"} <span className="font-mono text-ink-4 text-xs">{stock.length}</span>
         </h3>
         {stock.length === 0 ? (
           <EmptyState compact icon={Package} title={own ? "Nothing visible to the network" : "Nothing visible right now"} description={own ? "Mark items visible in the Stock Room so vendors can source from you." : "Message them — stock might be off-network or reserved."} />

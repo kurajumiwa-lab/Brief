@@ -61,8 +61,8 @@ export default function DealProposalCard({ message, mine }) {
   };
 
   return (
-    <div className={cn("mt-1.5 rounded-lg border p-2.5 min-w-[15rem]", status === "accepted" ? "border-brand-800/60 bg-brand-950/30" : status === "declined" ? "border-red-900/50 bg-red-950/20" : status === "countered" ? "border-edge-2 bg-surface-2/60" : "border-amber-800/50 bg-amber-950/30")} data-testid="deal-card" data-status={status}>
-      <div className="flex items-center gap-2 text-amber-200">
+    <div className={cn("mt-1.5 rounded-lg border p-2.5 min-w-[15rem]", status === "accepted" ? "border-brand-200 dark:border-brand-800 bg-brand-50 dark:bg-brand-500/15" : status === "declined" ? "border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-500/15" : status === "countered" ? "border-edge-2 bg-surface-2/60" : "border-accent-200 dark:border-accent-800 bg-accent-50 dark:bg-accent-500/15")} data-testid="deal-card" data-status={status}>
+      <div className="flex items-center gap-2 text-accent-600 dark:text-accent-400">
         <HeartHandshake size={13} />
         <span className="text-xs font-semibold">{deal.round > 1 ? `Counter-offer · round ${deal.round}` : "Deal proposal"}</span>
         <Badge variant={DEAL_STATUS_BADGE[status] || "gray"} size="xs" className="ml-auto">
@@ -85,7 +85,7 @@ export default function DealProposalCard({ message, mine }) {
         {total != null && (
           <>
             <dt className="text-ink-4">Total</dt>
-            <dd className="font-mono text-amber-200 font-semibold">{currency(total)}</dd>
+            <dd className="font-mono text-accent-600 dark:text-accent-400 font-semibold">{currency(total)}</dd>
           </>
         )}
         <dt className="text-ink-4">Delivery</dt>
@@ -96,7 +96,7 @@ export default function DealProposalCard({ message, mine }) {
       {deal.notes && <p className="mt-2 text-2xs text-ink-3 italic">{deal.notes}</p>}
 
       {status === "accepted" && deal.movement_id && (
-        <p className="mt-2 inline-flex items-center gap-1 text-2xs text-brand-300">
+        <p className="mt-2 inline-flex items-center gap-1 text-2xs text-brand-600 dark:text-brand-400">
           <Truck size={11} /> Movement confirmed — track it under Stock → Movements
         </p>
       )}

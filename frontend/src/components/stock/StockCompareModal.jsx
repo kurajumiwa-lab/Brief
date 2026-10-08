@@ -46,7 +46,7 @@ export default function StockCompareModal({ item, open, onClose, onSource }) {
       {loading ? (
         <PageSpinner />
       ) : error ? (
-        <p className="text-sm text-red-300">{error}</p>
+        <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
       ) : (
         <div className="overflow-x-auto -mx-1">
           <table className="w-full text-xs">
@@ -69,10 +69,10 @@ export default function StockCompareModal({ item, open, onClose, onSource }) {
                   <tr key={r.id} className={cn(idx === 0 && "bg-surface-2/60")} data-testid={idx === 0 ? "compare-base" : "compare-alt"}>
                     <td className="py-2 pl-1 min-w-[12rem]">
                       <div className="text-ink-1 font-medium truncate">{r.name}</div>
-                      <Link to={`/@${r.vendor_handle}`} className="text-2xs text-ink-4 hover:text-brand-300 font-mono">
+                      <Link to={`/@${r.vendor_handle}`} className="text-2xs text-ink-4 hover:text-brand-600 dark:hover:text-brand-400 font-mono">
                         @{r.vendor_handle}
                       </Link>
-                      {r.vendor_is_patron && <Crown size={10} className="inline ml-1 text-purple-300" title="Patron" />}
+                      {r.vendor_is_patron && <Crown size={10} className="inline ml-1 text-purple-600 dark:text-purple-400" title="Patron" />}
                       {idx === 0 && (
                         <Badge variant="outline" size="xs" className="ml-1.5">
                           this item
@@ -80,12 +80,12 @@ export default function StockCompareModal({ item, open, onClose, onSource }) {
                       )}
                     </td>
                     <td className="py-2 font-mono tabular-nums whitespace-nowrap">
-                      <span className={cn(p != null && p === cheapest ? "text-brand-300 font-semibold" : "text-ink-1")}>{p != null ? currency(p) : "—"}</span>
-                      {delta != null && delta !== 0 && <span className={cn("ml-1 text-2xs", delta < 0 ? "text-brand-400" : "text-amber-300")}>{delta > 0 ? "+" : ""}{delta.toFixed(0)}%</span>}
+                      <span className={cn(p != null && p === cheapest ? "text-brand-600 dark:text-brand-400 font-semibold" : "text-ink-1")}>{p != null ? currency(p) : "—"}</span>
+                      {delta != null && delta !== 0 && <span className={cn("ml-1 text-2xs", delta < 0 ? "text-brand-600 dark:text-brand-400" : "text-accent-600 dark:text-accent-400")}>{delta > 0 ? "+" : ""}{delta.toFixed(0)}%</span>}
                       <div className="text-2xs text-ink-4">/ {r.unit_of_measure || "unit"}</div>
                     </td>
                     <td className="py-2 font-mono tabular-nums">
-                      <span className={cn(avail <= 0 ? "text-red-300" : "text-ink-1")}>{num(avail)}</span>
+                      <span className={cn(avail <= 0 ? "text-red-600 dark:text-red-400" : "text-ink-1")}>{num(avail)}</span>
                       <div className="text-2xs text-ink-4">min {num(r.min_order_quantity || 1)}</div>
                     </td>
                     <td className="py-2">
@@ -93,7 +93,7 @@ export default function StockCompareModal({ item, open, onClose, onSource }) {
                     </td>
                     <td className="py-2 font-mono tabular-nums">
                       {r.vendor_fulfillment_rate != null ? (
-                        <span className={cn(r.vendor_fulfillment_rate >= 90 ? "text-brand-300" : r.vendor_fulfillment_rate >= 70 ? "text-amber-300" : "text-red-300")}>{r.vendor_fulfillment_rate.toFixed(0)}%</span>
+                        <span className={cn(r.vendor_fulfillment_rate >= 90 ? "text-brand-600 dark:text-brand-400" : r.vendor_fulfillment_rate >= 70 ? "text-accent-600 dark:text-accent-400" : "text-red-600 dark:text-red-400")}>{r.vendor_fulfillment_rate.toFixed(0)}%</span>
                       ) : (
                         <span className="text-ink-4">new</span>
                       )}

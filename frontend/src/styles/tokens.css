@@ -1,0 +1,111 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   BRIEF_ DESIGN TOKENS — v3
+   ---------------------------------------------------------------------------
+   One source of truth for colour, elevation, radius and motion.
+
+   Every token is a space-separated RGB triplet so Tailwind can apply an alpha
+   channel (`rgb(var(--x) / <alpha-value>)`). The whole product re-skins by
+   editing this file; no component hard-codes a colour.
+
+   Light is the default (a daylight marketplace), `.dark` is a full peer theme,
+   not an afterthought. Both are tuned for WCAG AA body text.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  color-scheme: light;
+
+  /* ── Surfaces ────────────────────────────────────────────────────────── */
+  --surface-0: 255 255 255; /* page                       */
+  --surface-1: 250 251 252; /* raised card                */
+  --surface-2: 243 245 247; /* sunken / hover / field     */
+  --surface-3: 233 236 239; /* strong fill                */
+  --surface-4: 219 224 229; /* heaviest fill              */
+  --surface-inverse: 15 20 25;
+
+  /* ── Ink (text) ──────────────────────────────────────────────────────── */
+  --ink-1: 15 20 25;        /* headings, primary text  — 16.1:1 on white */
+  --ink-2: 54 63 73;        /* body                    —  9.3:1          */
+  --ink-3: 90 101 113;      /* secondary               —  5.4:1          */
+  --ink-4: 110 122 135;     /* meta (12px floor)       —  4.6:1          */
+  --ink-inverse: 255 255 255;
+
+  /* ── Edges (hairlines are back) ──────────────────────────────────────── */
+  --edge-1: 226 231 235;    /* default divider */
+  --edge-2: 209 215 222;    /* hover / emphasis */
+  --edge-3: 184 192 201;    /* strong / focus-adjacent */
+
+  /* ── Brand: trade green — go, confirm, source ────────────────────────── */
+  --brand-50: 236 252 243;
+  --brand-100: 209 247 226;
+  --brand-200: 165 238 203;
+  --brand-300: 109 223 173;
+  --brand-400: 57 201 142;
+  --brand-500: 22 164 106;
+  --brand-600: 13 134 85;
+  --brand-700: 10 107 69;
+  --brand-800: 11 85 57;
+  --brand-900: 10 70 48;
+  --brand-950: 3 40 26;
+
+  /* ── Accent: the heritage amber — money, markets, stated prices ──────── */
+  --accent-50: 255 251 235;
+  --accent-100: 254 243 199;
+  --accent-200: 253 230 138;
+  --accent-300: 252 211 77;
+  --accent-400: 251 191 36;
+  --accent-500: 245 158 11;
+  --accent-600: 217 119 6;
+  --accent-700: 180 83 9;
+  --accent-800: 146 64 14;
+  --accent-900: 120 53 15;
+  --accent-950: 69 26 3;
+
+  /* ── Elevation ───────────────────────────────────────────────────────── */
+  --shadow-xs: 0 1px 2px 0 rgb(15 20 25 / 0.05);
+  --shadow-sm: 0 1px 3px 0 rgb(15 20 25 / 0.07), 0 1px 2px -1px rgb(15 20 25 / 0.06);
+  --shadow-md: 0 4px 12px -2px rgb(15 20 25 / 0.08), 0 2px 4px -2px rgb(15 20 25 / 0.05);
+  --shadow-lg: 0 12px 28px -8px rgb(15 20 25 / 0.14), 0 4px 10px -4px rgb(15 20 25 / 0.07);
+  --shadow-xl: 0 24px 56px -12px rgb(15 20 25 / 0.20), 0 8px 20px -8px rgb(15 20 25 / 0.10);
+
+  /* ── Motion ──────────────────────────────────────────────────────────── */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.26, 0.64, 1);
+  --dur-1: 120ms;
+  --dur-2: 180ms;
+  --dur-3: 260ms;
+
+  /* ── Chrome heights (used by sticky offsets) ─────────────────────────── */
+  --header-h: 60px;
+  --rail-h: 48px;
+}
+
+.dark {
+  color-scheme: dark;
+
+  --surface-0: 11 13 16;
+  --surface-1: 19 22 27;
+  --surface-2: 25 29 36;
+  --surface-3: 34 39 48;
+  --surface-4: 45 52 63;
+  --surface-inverse: 247 248 250;
+
+  --ink-1: 247 248 250;
+  --ink-2: 209 214 222;
+  --ink-3: 162 170 181;
+  --ink-4: 134 143 155;
+  --ink-inverse: 11 13 16;
+
+  --edge-1: 35 40 48;
+  --edge-2: 48 55 65;
+  --edge-3: 68 77 89;
+
+  /* Green lifts slightly in the dark so it keeps its "go" energy. */
+  --brand-500: 35 183 120;
+  --brand-600: 22 164 106;
+
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.4);
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.45), 0 1px 2px -1px rgb(0 0 0 / 0.4);
+  --shadow-md: 0 4px 14px -2px rgb(0 0 0 / 0.5);
+  --shadow-lg: 0 14px 32px -10px rgb(0 0 0 / 0.6);
+  --shadow-xl: 0 28px 60px -14px rgb(0 0 0 / 0.7);
+}

@@ -102,7 +102,7 @@ function PhotoNoteForm({ onDone }) {
             </>
           ) : (
             <>
-              <span className="w-14 h-14 rounded-xl bg-brand-500/10 text-brand-300 flex items-center justify-center shrink-0">
+              <span className="w-14 h-14 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center shrink-0">
                 <Image size={20} />
               </span>
               <span>
@@ -121,7 +121,7 @@ function PhotoNoteForm({ onDone }) {
         <Select label="Unit" value={form.unit} onChange={(e) => setForm((f) => ({ ...f, unit: e.target.value }))} options={STOCK_UNITS.map((u) => ({ value: u, label: u }))} />
       </div>
 
-      {error && <p className="text-xs text-red-400 font-medium" role="alert">{error}</p>}
+      {error && <p className="text-xs text-red-600 dark:text-red-400 font-medium" role="alert">{error}</p>}
       <Button type="submit" loading={saving || uploading} fullWidth>
         Add to my stock
       </Button>
@@ -201,7 +201,7 @@ function TemplateForm({ onDone }) {
           Change
         </button>
       </div>
-      <div className="rounded-2xl bg-surface-1 divide-y divide-white/[0.04] max-h-72 overflow-y-auto">
+      <div className="rounded-2xl bg-surface-1 divide-y divide-edge-1 max-h-72 overflow-y-auto">
         {tpl.items.map((name) => (
           <div key={name} className="flex items-center gap-2 px-3 py-2">
             <p className="flex-1 text-xs text-ink-2 truncate">{name}</p>
@@ -222,7 +222,7 @@ function TemplateForm({ onDone }) {
           </div>
         ))}
       </div>
-      {error && <p className="text-xs text-red-400 font-medium" role="alert">{error}</p>}
+      {error && <p className="text-xs text-red-600 dark:text-red-400 font-medium" role="alert">{error}</p>}
       <Button onClick={submit} loading={busy} disabled={pricedCount === 0} icon={Check} fullWidth>
         Add {pricedCount} priced item{pricedCount === 1 ? "" : "s"}
       </Button>
@@ -363,7 +363,7 @@ export default function StockForm({ item, onDone, onCancel }) {
   return (
     <div className="space-y-4">
       {isCreate && (
-        <div className="flex items-center gap-1 p-1 rounded-xl bg-white/[0.05] w-fit" role="tablist">
+        <div className="flex items-center gap-1 p-1 rounded-xl bg-surface-2 w-fit" role="tablist">
           {MODES.map(({ id, label, icon: Icon }) => (
             <button
               key={id}
@@ -372,7 +372,7 @@ export default function StockForm({ item, onDone, onCancel }) {
               onClick={() => setMode(id)}
               className={cn(
                 "px-3.5 h-8 rounded-lg text-xs font-medium inline-flex items-center gap-1.5 transition-all",
-                mode === id ? "bg-brand-500/20 text-brand-200" : "text-ink-4 hover:text-ink-2"
+                mode === id ? "bg-brand-500/20 text-brand-600 dark:text-brand-400" : "text-ink-4 hover:text-ink-2"
               )}
             >
               <Icon size={13} />
@@ -385,7 +385,7 @@ export default function StockForm({ item, onDone, onCancel }) {
             onClick={() => setMode("full")}
             className={cn(
               "px-3.5 h-8 rounded-lg text-xs font-medium transition-all",
-              mode === "full" ? "bg-brand-500/20 text-brand-200" : "text-ink-4 hover:text-ink-2"
+              mode === "full" ? "bg-brand-500/20 text-brand-600 dark:text-brand-400" : "text-ink-4 hover:text-ink-2"
             )}
           >
             Full form

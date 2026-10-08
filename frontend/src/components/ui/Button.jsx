@@ -2,49 +2,82 @@ import { forwardRef } from "react";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// v2.7: borderless — secondary/outline are glass tints, not outlined boxes
+/**
+ * v3 — one button, seven intents, four sizes.
+ *
+ * Rules the whole product obeys:
+ *   · exactly one `primary` per view (the core action)
+ *   · `secondary` carries a real hairline — a light UI needs the edge
+ *   · touch targets are ≥40px from `md` up, ≥44px at `lg`
+ *   · the focus ring is a token, never removed
+ */
 const variants = {
   primary:
-    "bg-gradient-to-b from-brand-500 to-brand-600 text-white hover:from-brand-400 hover:to-brand-600 active:from-brand-600 active:to-brand-700 shadow-[0_8px_24px_-8px_rgba(245, 158, 11,0.55)] disabled:hover:from-brand-500 disabled:hover:to-brand-600",
-  secondary: "bg-white/[0.07] text-ink-1 hover:bg-white/[0.12]",
-  outline: "bg-white/[0.04] text-ink-2 hover:text-ink-1 hover:bg-white/[0.08]",
-  ghost: "text-ink-3 hover:text-ink-1 hover:bg-white/[0.06]",
-  danger: "bg-red-600/90 text-white hover:bg-red-600",
-  dangerGhost: "text-red-400 hover:bg-red-500/10",
+    "bg-brand-600 text-white shadow-xs hover:bg-brand-700 active:bg-brand-800 " +
+    "disabled:hover:bg-brand-600",
+  secondary:
+    "bg-surface-0 text-ink-1 border border-edge-2 shadow-xs hover:bg-surface-2 hover:border-edge-3 active:bg-surface-3",
+  outline:
+    "bg-transparent text-ink-2 border border-edge-2 hover:bg-surface-2 hover:text-ink-1 active:bg-surface-3",
+  ghost: "bg-transparent text-ink-3 hover:bg-surface-2 hover:text-ink-1 active:bg-surface-3",
+  subtle: "bg-brand-50 text-brand-700 hover:bg-brand-100 dark:bg-brand-500/15 dark:text-brand-300 dark:hover:bg-brand-500/25",
+  danger: "bg-red-600 text-white shadow-xs hover:bg-red-700 active:bg-red-800",
+  dangerGhost: "bg-transparent text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10",
 };
 
 const sizes = {
-  xs: "h-7 px-2 text-xs gap-1 rounded-md",
-  sm: "h-8 px-3 text-xs gap-1.5 rounded-lg",
-  md: "h-9 px-4 text-sm gap-2 rounded-lg",
+  xs: "h-7 px-2.5 text-2xs gap-1 rounded-lg",
+  sm: "h-9 px-3 text-xs gap-1.5 rounded-lg",
+  md: "h-10 px-4 text-sm gap-2 rounded-xl",
   lg: "h-11 px-5 text-sm gap-2 rounded-xl",
-  icon: "h-8 w-8 rounded-lg",
+  xl: "h-12 px-6 text-base gap-2.5 rounded-xl",
+  icon: "h-9 w-9 rounded-lg",
+  iconLg: "h-11 w-11 rounded-xl",
 };
 
+const ICON = { xs: 13, sm: 14, md: 16, lg: 17, xl: 18, icon: 16, iconLg: 18 };
+
 const Button = forwardRef(function Button(
-  { variant = "primary", size = "md", loading = false, icon: Icon, iconRight: IconRight, fullWidth, className, children, disabled, type = "button", ...rest },
+  {
+    variant = "primary",
+    size = "md",
+    loading = false,
+    icon: Icon,
+    iconRight: IconRight,
+    fullWidth,
+    className,
+    children,
+    disabled,
+    type = "button",
+    ...rest
+  },
   ref
 ) {
-  const iconSize = size === "xs" ? 12 : size === "lg" ? 16 : 14;
+  const iconSize = ICON[size] ?? 16;
   return (
     <button
       ref={ref}
       type={type}
       disabled={disabled || loading}
+      aria-busy={loading || undefined}
       className={cn(
-        "inline-flex items-center justify-center font-medium whitespace-nowrap transition-colors select-none",
-        "focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/60 focus-visible:ring-offset-1 focus-visible:ring-offset-surface-0",
-        "disabled:opacity-50 disabled:cursor-not-allowed",
-        variants[variant],
-        sizes[size],
+        "inline-flex items-center justify-center font-semibold whitespace-nowrap select-none",
+        "transition-[background-color,border-color,color,box-shadow,transform] duration-1 ease-out",
+        "active:scale-[0.985] disabled:pointer-events-none disabled:opacity-45",
+        variants[variant] || variants.primary,
+        sizes[size] || sizes.md,
         fullWidth && "w-full",
         className
       )}
       {...rest}
     >
-      {loading ? <Loader2 size={iconSize} className="animate-spin" /> : Icon ? <Icon size={iconSize} /> : null}
+      {loading ? (
+        <Loader2 size={iconSize} className="animate-spin shrink-0" aria-hidden="true" />
+      ) : Icon ? (
+        <Icon size={iconSize} className="shrink-0" aria-hidden="true" />
+      ) : null}
       {children}
-      {IconRight && !loading ? <IconRight size={iconSize} /> : null}
+      {IconRight && !loading ? <IconRight size={iconSize} className="shrink-0" aria-hidden="true" /> : null}
     </button>
   );
 });

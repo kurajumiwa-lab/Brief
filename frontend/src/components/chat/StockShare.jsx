@@ -8,7 +8,7 @@ export default function StockShare({ stock, mine }) {
   return (
     <div className="mt-1.5 rounded-lg border border-edge-2 bg-surface-1/80 p-2.5 min-w-[14rem]">
       <div className="flex items-center gap-2">
-        <div className="w-7 h-7 rounded-md bg-brand-950 text-brand-300 flex items-center justify-center shrink-0">
+        <div className="w-7 h-7 rounded-md bg-brand-50 dark:bg-brand-500/15 text-brand-600 dark:text-brand-400 flex items-center justify-center shrink-0">
           <Package size={13} />
         </div>
         <div className="min-w-0 flex-1">
@@ -25,7 +25,7 @@ export default function StockShare({ stock, mine }) {
         <Cell label="min" value={num(stock.min_order_quantity || 1)} />
       </div>
       {!mine && (
-        <Link to={`/stock?tab=network&search=${encodeURIComponent(stock.name)}`} className="mt-2 inline-flex items-center gap-1 text-2xs text-brand-300 hover:text-brand-200">
+        <Link to={`/stock?tab=network&search=${encodeURIComponent(stock.name)}`} className="mt-2 inline-flex items-center gap-1 text-2xs text-brand-600 dark:text-brand-400 hover:text-brand-600 dark:hover:text-brand-400">
           <ArrowDownToLine size={11} /> Source it in the Stock Room
         </Link>
       )}

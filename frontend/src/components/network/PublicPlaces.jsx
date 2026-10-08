@@ -110,7 +110,7 @@ export default function PublicPlaces() {
       <div className="flex flex-wrap items-center gap-1.5">
         <button
           onClick={() => setZoneId("")}
-          className={cn("rounded-full px-3 h-8 text-xs font-medium transition-colors", !zoneId ? "bg-brand-500/20 text-brand-200" : "text-ink-4 hover:text-ink-2")}
+          className={cn("rounded-full px-3 h-8 text-xs font-medium transition-colors", !zoneId ? "bg-brand-500/20 text-brand-600 dark:text-brand-400" : "text-ink-4 hover:text-ink-2")}
         >
           All zones
         </button>
@@ -118,7 +118,7 @@ export default function PublicPlaces() {
           <button
             key={z.id}
             onClick={() => setZoneId(z.id)}
-            className={cn("rounded-full px-3 h-8 text-xs font-medium transition-colors", zoneId === z.id ? "bg-brand-500/20 text-brand-200" : "text-ink-4 hover:text-ink-2")}
+            className={cn("rounded-full px-3 h-8 text-xs font-medium transition-colors", zoneId === z.id ? "bg-brand-500/20 text-brand-600 dark:text-brand-400" : "text-ink-4 hover:text-ink-2")}
             title={z.located ? `${z.places} places · last ingest ${z.last_ingest_at ? relativeTime(z.last_ingest_at) : "never"}` : "not located yet"}
           >
             {z.name}
@@ -145,7 +145,7 @@ export default function PublicPlaces() {
         <div className="space-y-2">
           {filtered.map((p) => (
             <div key={p.id} className="glass glass-hover rounded-2xl p-3.5 flex gap-3 animate-fade-in">
-              <span className="w-9 h-9 rounded-xl bg-white/[0.05] text-ink-3 flex items-center justify-center shrink-0">
+              <span className="w-9 h-9 rounded-xl bg-surface-2 text-ink-3 flex items-center justify-center shrink-0">
                 <Building2 size={15} />
               </span>
               <div className="min-w-0 flex-1">
@@ -179,11 +179,11 @@ export default function PublicPlaces() {
 
       {categories.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
-          <button onClick={() => setCategory("")} className={cn("rounded-full px-2.5 h-7 text-2xs font-medium", !category ? "bg-brand-500/20 text-brand-200" : "text-ink-4")}>
+          <button onClick={() => setCategory("")} className={cn("rounded-full px-2.5 h-7 text-2xs font-medium", !category ? "bg-brand-500/20 text-brand-600 dark:text-brand-400" : "text-ink-4")}>
             All
           </button>
           {categories.map((c) => (
-            <button key={c} onClick={() => setCategory(c === category ? "" : c)} className={cn("rounded-full px-2.5 h-7 text-2xs font-medium", category === c ? "bg-brand-500/20 text-brand-200" : "text-ink-4")}>
+            <button key={c} onClick={() => setCategory(c === category ? "" : c)} className={cn("rounded-full px-2.5 h-7 text-2xs font-medium", category === c ? "bg-brand-500/20 text-brand-600 dark:text-brand-400" : "text-ink-4")}>
               {CAT_LABEL(c)}
             </button>
           ))}

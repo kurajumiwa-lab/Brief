@@ -254,7 +254,7 @@ export default function ChatInput({ onSend, onSendVoice, disabled, sending, plac
           <button
             key={m.value}
             onClick={() => setMode(m.value)}
-            className={cn("inline-flex items-center gap-1 rounded-md px-2 py-1 text-2xs font-medium transition-colors", mode === m.value ? "bg-brand-950 text-brand-200" : "text-ink-4 hover:text-ink-2 hover:bg-surface-3")}
+            className={cn("inline-flex items-center gap-1 rounded-md px-2 py-1 text-2xs font-medium transition-colors", mode === m.value ? "bg-brand-50 dark:bg-brand-500/15 text-brand-600 dark:text-brand-400" : "text-ink-4 hover:text-ink-2 hover:bg-surface-3")}
           >
             <m.icon size={11} /> {m.label}
           </button>
@@ -282,7 +282,7 @@ export default function ChatInput({ onSend, onSendVoice, disabled, sending, plac
           <Input type="number" min="0" step="any" placeholder="Price / unit" prefix="KES" value={deal.price} onChange={(e) => setDeal({ ...deal, price: e.target.value })} aria-label="Deal price per unit" />
           <Select value={deal.delivery_terms} onChange={(e) => setDeal({ ...deal, delivery_terms: e.target.value })} options={DELIVERY_TERMS} aria-label="Delivery terms" />
           <Select value={deal.payment_terms} onChange={(e) => setDeal({ ...deal, payment_terms: e.target.value })} options={PAYMENT_TERMS} aria-label="Payment terms" />
-          <div className="col-span-2 sm:col-span-4 h-8 flex items-center justify-between px-2 rounded-lg bg-surface-2 border border-edge-1 text-2xs font-mono text-amber-200">
+          <div className="col-span-2 sm:col-span-4 h-8 flex items-center justify-between px-2 rounded-lg bg-surface-2 border border-edge-1 text-2xs font-mono text-accent-600 dark:text-accent-400">
             <span className="text-ink-4">{dealItem ? `list ${currency(dealItem.wholesale_price ?? dealItem.unit_price ?? 0)} / ${dealItem.unit_of_measure || "unit"}` : "the API reserves stock when the other side accepts"}</span>
             <span>{dealTotal ? `total ${currency(dealTotal)}` : "total —"}</span>
           </div>
@@ -290,7 +290,7 @@ export default function ChatInput({ onSend, onSendVoice, disabled, sending, plac
       )}
 
       {recording && (
-        <div className="flex items-center justify-between rounded-lg bg-red-500/[0.09] ring-2 ring-red-500/25 px-3 py-2 text-xs text-red-100" role="status" aria-live="polite">
+        <div className="flex items-center justify-between rounded-lg bg-red-500/[0.09] ring-2 ring-red-500/25 px-3 py-2 text-xs text-red-600 dark:text-red-400" role="status" aria-live="polite">
           <span className="inline-flex items-center gap-2"><span className="h-2 w-2 animate-pulse rounded-full bg-red-400" />Recording · 00:{String(Math.min(recordingSeconds, MAX_VOICE_SECONDS)).padStart(2, "0")} / 00:15</span>
           <span className="text-2xs text-red-200/80">Tap the square to finish</span>
         </div>
@@ -307,7 +307,7 @@ export default function ChatInput({ onSend, onSendVoice, disabled, sending, plac
         </div>
       )}
 
-      {voiceError && !recording && !voiceClip && <p className="text-2xs text-red-300" role="alert">{voiceError}</p>}
+      {voiceError && !recording && !voiceClip && <p className="text-2xs text-red-600 dark:text-red-400" role="alert">{voiceError}</p>}
 
       <div className="flex items-end gap-2">
         <textarea
@@ -325,7 +325,7 @@ export default function ChatInput({ onSend, onSendVoice, disabled, sending, plac
           type="button"
           onClick={recording ? stopRecording : startRecording}
           disabled={disabled || sending || voiceBusy || requestingMic || !!voiceClip}
-          className={cn("inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition-colors disabled:opacity-40", recording ? "border-red-700 bg-red-700 text-white hover:bg-red-600" : "border-edge-2 bg-surface-2 text-ink-2 hover:border-brand-500 hover:text-brand-300")}
+          className={cn("inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition-colors disabled:opacity-40", recording ? "border-red-200 dark:border-red-800 bg-red-700 text-white hover:bg-red-600" : "border-edge-2 bg-surface-2 text-ink-2 hover:border-brand-500 hover:text-brand-600 dark:hover:text-brand-400")}
           aria-label={recording ? "Stop voice recording" : requestingMic ? "Requesting microphone access" : "Record a voice note"}
           title={recording ? "Stop recording" : "Record a voice note (up to 15 seconds)"}
         >

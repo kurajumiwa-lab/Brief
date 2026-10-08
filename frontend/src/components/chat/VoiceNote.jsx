@@ -42,7 +42,7 @@ export default function VoiceNote({ message, mine }) {
           disabled={loading}
           className={cn(
             "flex w-full items-center gap-2 rounded-xl border px-3 py-2 text-left transition-colors disabled:opacity-70",
-            mine ? "border-white/20 bg-white/10 hover:bg-white/15" : "border-edge-1 bg-surface-2 hover:bg-surface-1"
+            mine ? "border-edge-1 bg-surface-2 hover:bg-surface-2" : "border-edge-1 bg-surface-2 hover:bg-surface-1"
           )}
           aria-label={loading ? "Loading voice note" : `Load voice note, ${duration} seconds, ${prettySize(details.size_bytes)}`}
         >
@@ -50,7 +50,7 @@ export default function VoiceNote({ message, mine }) {
           <span className="min-w-0">
             <span className="block text-xs font-semibold">{loading ? "Loading voice note…" : error ? "Try loading again" : "Load voice note"}</span>
             <span className="block text-2xs opacity-75">{duration}s · {prettySize(details.size_bytes)} · tap to download</span>
-            {error && <span className="block text-2xs text-red-200">{error}</span>}
+            {error && <span className="block text-2xs text-red-600 dark:text-red-400">{error}</span>}
           </span>
           <Mic size={14} className="ml-auto shrink-0 opacity-70" />
         </button>

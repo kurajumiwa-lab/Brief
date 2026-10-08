@@ -110,7 +110,7 @@ export default function Groups() {
             <Card key={g.id} className="flex flex-col gap-3">
               <div className="flex items-start justify-between gap-2">
                 <button onClick={() => setOpen(g)} className="min-w-0 text-left">
-                  <h3 className="text-sm font-semibold text-ink-1 truncate hover:text-brand-300">{g.name}</h3>
+                  <h3 className="text-sm font-semibold text-ink-1 truncate hover:text-brand-600 dark:hover:text-brand-400">{g.name}</h3>
                   <p className="text-2xs text-ink-4 mt-0.5">
                     {titleCase(g.group_type)}
                     {g.region ? ` · ${g.region}` : ""}
@@ -148,7 +148,7 @@ export default function Groups() {
                       <Button size="xs" variant="ghost" icon={LogOut} onClick={() => onLeave(g)} aria-label="Leave group" />
                     </>
                   ) : g.my_role === "pending" ? (
-                    <span className="text-2xs text-amber-300">Awaiting approval</span>
+                    <span className="text-2xs text-accent-600 dark:text-accent-400">Awaiting approval</span>
                   ) : (
                     <Button size="xs" onClick={() => onJoin(g)}>
                       {g.requires_approval ? "Request to join" : "Join"}

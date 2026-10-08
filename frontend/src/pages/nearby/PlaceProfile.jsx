@@ -89,8 +89,8 @@ export default function PlaceProfile() {
 
       <div className="glass-strong rounded-3xl p-5 space-y-3">
         <div className="flex items-start gap-3">
-          <span className="w-12 h-12 rounded-2xl bg-white/[0.05] flex items-center justify-center shrink-0">
-            <Building2 size={20} className="text-blue-300" />
+          <span className="w-12 h-12 rounded-2xl bg-surface-2 flex items-center justify-center shrink-0">
+            <Building2 size={20} className="text-blue-600 dark:text-blue-400" />
           </span>
           <div className="min-w-0 flex-1">
             <h2 className="text-xl font-semibold text-ink-1 tracking-tight">{place.name}</h2>
@@ -130,7 +130,7 @@ export default function PlaceProfile() {
             href={`https://www.openstreetmap.org/directions?to=${place.lat}%2C${place.lng}`}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-xl text-xs font-medium bg-white/[0.06] text-ink-2 hover:text-ink-1"
+            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-xl text-xs font-medium bg-surface-2 text-ink-2 hover:text-ink-1"
           >
             <Navigation size={13} /> Directions
           </a>
@@ -143,7 +143,7 @@ export default function PlaceProfile() {
       </div>
 
       {/* What the source actually gave us */}
-      <div className="glass rounded-3xl divide-y divide-white/[0.06]">
+      <div className="glass rounded-3xl divide-y divide-edge-1">
         {rows.length === 0 ? (
           <p className="p-4 text-xs text-ink-4">The source gave us a name and a location, and nothing else.</p>
         ) : (
@@ -153,7 +153,7 @@ export default function PlaceProfile() {
               <div className="min-w-0">
                 <p className="text-2xs uppercase tracking-wider text-ink-4">{label}</p>
                 {href ? (
-                  <a href={href} target={href.startsWith("tel:") ? undefined : "_blank"} rel="noreferrer" className="text-sm text-brand-300 hover:text-brand-200 break-words">
+                  <a href={href} target={href.startsWith("tel:") ? undefined : "_blank"} rel="noreferrer" className="text-sm text-brand-600 dark:text-brand-400 hover:text-brand-600 dark:hover:text-brand-400 break-words">
                     {value}
                   </a>
                 ) : (

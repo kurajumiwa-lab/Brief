@@ -1,17 +1,19 @@
 import { cn } from "@/lib/utils";
 
 /**
- * v2.7 look: borderless glass surface — separation comes from the blur,
- * the gradient lift and the shadow (never from a drawn line).
+ * v3 surface: a real card — hairline + elevation + a hover lift that only
+ * fires when the card is actually interactive.
  */
 export default function Card({ className, hover, padding = "p-4", onClick, children, as: Tag = "div", ...rest }) {
+  const interactive = hover || onClick;
   return (
     <Tag
       onClick={onClick}
       className={cn(
-        "glass rounded-2xl animate-fade-in",
+        "bg-surface-0 border border-edge-1 rounded-2xl shadow-xs",
         padding,
-        (hover || onClick) && "glass-hover cursor-pointer text-left w-full",
+        interactive &&
+          "glass-hover cursor-pointer text-left w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50",
         className
       )}
       {...rest}
@@ -25,16 +27,16 @@ export function CardHeader({ className, children, action }) {
   return (
     <div className={cn("flex items-start justify-between gap-3 mb-3", className)}>
       <div className="min-w-0">{children}</div>
-      {action}
+      {action && <div className="shrink-0">{action}</div>}
     </div>
   );
 }
 
-export function CardTitle({ className, children, sub }) {
+export function CardTitle({ className, children, sub, as: Tag = "h3" }) {
   return (
-    <div>
-      <h3 className={cn("text-sm font-semibold text-ink-1 leading-tight", className)}>{children}</h3>
-      {sub && <p className="text-xs text-ink-4 mt-0.5">{sub}</p>}
+    <div className="min-w-0">
+      <Tag className={cn("text-sm font-semibold text-ink-1 leading-snug", className)}>{children}</Tag>
+      {sub && <p className="text-2xs text-ink-4 mt-0.5">{sub}</p>}
     </div>
   );
 }

@@ -87,7 +87,7 @@ export default function MarketDetail() {
 
       <div className="glass-strong rounded-3xl p-5 space-y-4">
         <div className="flex items-start gap-3">
-          <span className="w-12 h-12 rounded-2xl bg-brand-500/12 text-brand-300 flex items-center justify-center shrink-0">
+          <span className="w-12 h-12 rounded-2xl bg-brand-500/12 text-brand-600 dark:text-brand-400 flex items-center justify-center shrink-0">
             <Store size={20} />
           </span>
           <div className="min-w-0 flex-1">
@@ -108,7 +108,7 @@ export default function MarketDetail() {
             { label: "mapped places", value: market.places, icon: Building2, tone: "" },
             { label: "claimed", value: market.claimed, icon: BadgeCheck, tone: "" },
           ].map(({ label, value, icon: Icon }) => (
-            <div key={label} className="rounded-2xl bg-white/[0.04] p-3 text-center">
+            <div key={label} className="rounded-2xl bg-surface-2 p-3 text-center">
               <Icon size={13} className="mx-auto text-ink-4 mb-1.5" />
               <DigitalNumber value={num(value)} size="md" />
               <p className="text-2xs text-ink-4 mt-1">{label}</p>
@@ -117,7 +117,7 @@ export default function MarketDetail() {
         </div>
 
         {market.welcome && (
-          <div className="rounded-2xl bg-white/[0.04] p-3">
+          <div className="rounded-2xl bg-surface-2 p-3">
             <p className="text-2xs uppercase tracking-[0.2em] text-ink-4 font-bold mb-1 flex items-center gap-1.5">
               <Medal size={11} /> Market pace note
             </p>

@@ -45,11 +45,11 @@ function NumberPopup({ which, onClose, data }) {
             Grows with every movement you receive — the network's simple measure of how much value moves through you.
           </p>
           <div className="mt-4 grid grid-cols-2 gap-2">
-            <div className="rounded-xl bg-white/[0.05] p-3">
+            <div className="rounded-xl bg-surface-2 p-3">
               <DigitalNumber value={num(vendor.total_supplied || 0)} size="md" />
               <p className="text-2xs text-ink-4 mt-1.5">units supplied</p>
             </div>
-            <div className="rounded-xl bg-white/[0.05] p-3">
+            <div className="rounded-xl bg-surface-2 p-3">
               <DigitalNumber value={num(vendor.total_sourced || 0)} size="md" />
               <p className="text-2xs text-ink-4 mt-1.5">units sourced</p>
             </div>
@@ -69,7 +69,7 @@ function NumberPopup({ which, onClose, data }) {
           <p className="text-xs text-ink-3 mt-3 leading-relaxed">
             Your fulfilment rate — how reliably moves you confirm actually get delivered. It feeds your reliability and how the network ranks you.
           </p>
-          <div className="mt-4 rounded-xl bg-white/[0.05] p-3">
+          <div className="mt-4 rounded-xl bg-surface-2 p-3">
             <DigitalNumber value={num(vendor.movements_completed || 0)} size="md" />
             <p className="text-2xs text-ink-4 mt-1.5">movements completed{vendor.movements_completed < 3 ? " — complete a few more to set a rate" : ""}</p>
           </div>
@@ -83,7 +83,7 @@ function NumberPopup({ which, onClose, data }) {
           </div>
           <ul className="mt-4 space-y-1.5">
             {connections.slice(0, 5).map((c) => (
-              <li key={c.vendor_id} className="flex items-center justify-between rounded-lg bg-white/[0.04] px-3 py-2">
+              <li key={c.vendor_id} className="flex items-center justify-between rounded-lg bg-surface-2 px-3 py-2">
                 <span className="text-xs text-ink-2 truncate">{c.business_name}</span>
                 <span className="text-2xs font-mono text-ink-4">@{c.vendor_handle}</span>
               </li>
@@ -103,7 +103,7 @@ function NumberPopup({ which, onClose, data }) {
           </p>
           <ul className="mt-4 space-y-1.5">
             {mine.slice(0, 6).map((i) => (
-              <li key={i.id} className="flex items-center justify-between rounded-lg bg-white/[0.04] px-3 py-2 text-xs">
+              <li key={i.id} className="flex items-center justify-between rounded-lg bg-surface-2 px-3 py-2 text-xs">
                 <span className="text-ink-2 truncate">{i.name}</span>
                 <span className="digital text-ink-3">{num(i.quantity_available ?? i.quantity_in_stock ?? 0)} {i.unit_of_measure}</span>
               </li>
@@ -127,8 +127,8 @@ function NumberPopup({ which, onClose, data }) {
                   <span className="w-20 text-ink-3">
                     {r.emoji} {r.label}
                   </span>
-                  <div className="flex-1 h-1.5 rounded-full bg-white/[0.07] overflow-hidden">
-                    <div className="h-full rounded-full bg-gradient-to-r from-brand-500 to-brand-300 shadow-[0_0_8px_rgba(245, 158, 11,0.6)]" style={{ width: `${pct}%` }} />
+                  <div className="flex-1 h-1.5 rounded-full bg-surface-2 overflow-hidden">
+                    <div className="h-full rounded-full bg-gradient-to-r from-brand-500 to-brand-300" style={{ width: `${pct}%` }} />
                   </div>
                   <span className="w-8 text-right digital text-ink-4">{n}</span>
                 </div>
@@ -189,13 +189,13 @@ function Feed({ movements, todo, notifications, onOpenMovement, onOpenNotificati
                 n.is_read && "opacity-80"
               )}
             >
-              <span className="w-9 h-9 rounded-lg bg-brand-500/10 text-brand-300 flex items-center justify-center shrink-0">
+              <span className="w-9 h-9 rounded-lg bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center shrink-0">
                 <Bell size={15} />
               </span>
               <span className="min-w-0 flex-1">
                 <span className="flex items-center gap-2">
                   <span className={cn("text-sm truncate", n.is_read ? "text-ink-3" : "text-ink-1 font-medium")}>{n.title}</span>
-                  {!n.is_read && <span className="w-1.5 h-1.5 rounded-full bg-brand-400 shrink-0 shadow-[0_0_6px_rgba(251, 191, 36,0.9)]" />}
+                  {!n.is_read && <span className="w-1.5 h-1.5 rounded-full bg-brand-400 shrink-0" />}
                 </span>
                 {n.body && <span className="block text-xs text-ink-4 mt-0.5 line-clamp-2">{n.body}</span>}
                 <span className="block text-2xs text-ink-4/70 mt-1">{relativeTime(n.created_at)}</span>
@@ -269,7 +269,7 @@ export default function Dashboard() {
         title="Your numbers"
         sub="Swipe the shelf · tap a number for the full picture"
         action={
-          <Link to="/analytics" className="text-xs text-brand-300 hover:text-brand-200 inline-flex items-center gap-1 transition-colors">
+          <Link to="/analytics" className="text-xs text-brand-600 dark:text-brand-400 hover:text-brand-600 dark:hover:text-brand-400 inline-flex items-center gap-1 transition-colors">
             Analytics <ArrowRight size={12} />
           </Link>
         }
@@ -308,7 +308,7 @@ export default function Dashboard() {
                   {unreadCount} new
                 </Badge>
               )}
-              <Link to="/stock?tab=movements" className="text-xs text-brand-300 hover:text-brand-200 inline-flex items-center gap-1 transition-colors">
+              <Link to="/stock?tab=movements" className="text-xs text-brand-600 dark:text-brand-400 hover:text-brand-600 dark:hover:text-brand-400 inline-flex items-center gap-1 transition-colors">
                 All movements <ArrowRight size={12} />
               </Link>
             </div>
@@ -333,7 +333,7 @@ export default function Dashboard() {
         title="Vendors who complement you"
         sub="The network's matching for your profile"
         action={
-          <Link to="/network" className="text-xs text-brand-300 hover:text-brand-200 inline-flex items-center gap-1 transition-colors">
+          <Link to="/network" className="text-xs text-brand-600 dark:text-brand-400 hover:text-brand-600 dark:hover:text-brand-400 inline-flex items-center gap-1 transition-colors">
             Open the network <ArrowRight size={12} />
           </Link>
         }
