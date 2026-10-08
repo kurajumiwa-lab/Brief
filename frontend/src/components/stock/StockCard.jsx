@@ -8,7 +8,7 @@ import Button from "@/components/ui/Button";
 import Avatar from "@/components/ui/Avatar";
 import QualityBadge from "./QualityBadge";
 import StockThumb from "./StockThumb";
-import { LevelBadge } from "@/components/trust/TrustSignals";
+import { FulfilmentChip } from "@/components/trust/TrustSignals";
 import { currency, num, relativeTime, shortDate } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 
@@ -107,7 +107,7 @@ export default function StockCard({
             <Link to={`/@${item.vendor_handle}`} className="text-2xs font-semibold text-ink-2 hover:underline underline-offset-2 truncate">
               {item.vendor_business}
             </Link>
-            <LevelBadge vendor={{ fulfillment_rate: item.vendor_fulfillment_rate, movements_completed: item.vendor_fulfillment_rate != null ? 3 : 0 }} size="xs" className="ml-auto shrink-0" />
+            <FulfilmentChip rate={item.vendor_fulfillment_rate} className="ml-auto shrink-0" />
           </div>
         )}
 

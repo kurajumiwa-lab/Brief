@@ -52,6 +52,25 @@ export function LevelBadge({ vendor, size = "sm", className }) {
   );
 }
 
+/**
+ * The rate on its own, for surfaces where the API gives a fulfilment rate but
+ * NOT the completed-movement count (stock listings carry
+ * `vendor_fulfillment_rate` and nothing else). A level needs both numbers, so
+ * those surfaces show the number they actually have rather than guessing a
+ * level — an unknown sample size must never be rendered as a badge.
+ */
+export function FulfilmentChip({ rate, size = "xs", className }) {
+  if (rate == null) return null;
+  const r = Number(rate);
+  const tone = r >= 90 ? "brand" : r >= 70 ? "blue" : r >= 50 ? "amber" : "red";
+  return (
+    <Badge variant={tone} size={size} className={className} title="Share of confirmed movements this vendor delivered">
+      <Gauge size={11} aria-hidden="true" />
+      {r.toFixed(0)}% fulfilled
+    </Badge>
+  );
+}
+
 // Static class pairs (Tailwind can only see literal class names).
 const RATE_TONES = {
   none: { text: "text-ink-4", bar: "bg-edge-3" },

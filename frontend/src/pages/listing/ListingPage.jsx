@@ -388,7 +388,7 @@ export default function ListingPage() {
               <TrustRow
                 vendor={{
                   fulfillment_rate: item.vendor_fulfillment_rate,
-                  movements_completed: vendor?.movements_completed ?? (item.vendor_fulfillment_rate != null ? 3 : 0),
+                  movements_completed: vendor?.movements_completed,
                   is_patron: item.vendor_is_patron,
                   is_verified: vendor?.is_verified,
                   has_pos_connected: item.source === "pos_sync",
