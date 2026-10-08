@@ -13,6 +13,7 @@ import StockCard from "@/components/stock/StockCard";
 import SourceDialog from "@/components/stock/SourceDialog";
 import VendorCard from "@/components/vendor/VendorCard";
 import MovementRow from "@/components/stock/MovementRow";
+import SetupChecklist from "@/components/onboarding/SetupChecklist";
 import { DISCOVERY_NAV } from "@/config/navigation";
 import { useAuthStore } from "@/stores/authStore";
 import { useStockStore, needsMyAction } from "@/stores/stockStore";
@@ -130,7 +131,10 @@ export default function HomeHub() {
         </div>
       </section>
 
-      {/* ══ 2 · the reason to open the app ════════════════════════════ */}
+      {/* ══ 2 · first-run setup, until the loop has run once ════════ */}
+      <SetupChecklist />
+
+      {/* ══ 3 · the reason to open the app ════════════════════════════ */}
       {actionable.length > 0 && (
         <section aria-labelledby="needs-you">
           <SectionHeader
@@ -153,7 +157,7 @@ export default function HomeHub() {
         </section>
       )}
 
-      {/* ══ 3 · the ten doors ════════════════════════════════════════ */}
+      {/* ══ 4 · the ten doors ════════════════════════════════════════ */}
       <section aria-labelledby="doors">
         <SectionHeader
           as="h2"
@@ -194,7 +198,7 @@ export default function HomeHub() {
         </div>
       </section>
 
-      {/* ══ 4 · real listings, straight into the loop ════════════════ */}
+      {/* ══ 5 · real listings, straight into the loop ════════════════ */}
       <section aria-labelledby="fresh">
         <SectionHeader
           as="h2"
@@ -231,7 +235,7 @@ export default function HomeHub() {
         )}
       </section>
 
-      {/* ══ 5 · discovery, already ranked by the API ═════════════════ */}
+      {/* ══ 6 · discovery, already ranked by the API ═════════════════ */}
       {suppliers?.length > 0 && (
         <section aria-labelledby="suppliers">
           <SectionHeader

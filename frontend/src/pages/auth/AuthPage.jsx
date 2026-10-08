@@ -1,30 +1,39 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
-import { ArrowRight, AtSign, Lock, Mail, Store, MapPin, Phone } from "lucide-react";
+import { ArrowRight, AtSign, ChevronDown, Lock, Mail, MapPin, Phone, Receipt, Store, Truck } from "lucide-react";
 import Input from "@/components/ui/Input";
 import Textarea from "@/components/ui/Textarea";
 import Button from "@/components/ui/Button";
 import { toast } from "@/components/ui/Toast";
+import { LogoMark } from "@/components/layout/Logo";
 import { useAuthStore } from "@/stores/authStore";
 import { apiError } from "@/lib/api";
 import { slugify, splitList, cn } from "@/lib/utils";
 
-const PILLARS = [
-  ["Stock, not listings", "Your shelf is live. Other vendors source from it; nobody browses it like a shop."],
-  ["Fulfilment over promises", "Your fulfilment rate — how reliably you deliver — is on your card. Vendors who deliver get seen first."],
-  ["Patrons & lists", "Run curated vendor lists, gate them with criteria, and organise events around them."],
-];
+/* ═══════════════════════════════════════════════════════════════════════════
+   AUTH — the first screen, and the only one a non-member ever sees.
+   ---------------------------------------------------------------------------
+   WHAT CHANGED   The pitch panel now explains the LOOP (publish → source →
+                  deliver → the record follows you) instead of listing three
+                  features, and the form groups the eight registration fields
+                  into "the account" and "what you trade", the second of which
+                  is collapsed by default.
+   WHY            Eight required-looking fields is the single biggest drop-off
+                  in a B2B signup. Only four are actually needed; the rest
+                  improve suggestions and can be filled in later from the shop
+                  front.
+   PRESERVED      Exactly the same payload to POST /auth/register, the same
+                  client-side validation (handle pattern, 8-char password),
+                  the same auto-slug from business name, the same login by
+                  email OR handle, the same demo-credentials hint, and the
+                  same ?mode=register deep link.
+   ═══════════════════════════════════════════════════════════════════════════ */
 
-function Wordmark() {
-  return (
-    <div className="flex items-center gap-2.5">
-      <div className="w-9 h-9 rounded-xl bg-[#0A0E14] ring-1 ring-brand-500/40 flex items-center justify-center shadow-[0_0_24px_-2px_rgba(245,158,11,0.45)]">
-        <Store size={17} className="text-brand-600 dark:text-brand-400" />
-      </div>
-      <span className="text-sm font-semibold text-ink-2">My Shop App · trade info</span>
-    </div>
-  );
-}
+const LOOP = [
+  { icon: Store, title: "Put your shelf on the network", body: "What you already have in stock becomes sourceable the moment you mark it visible. No listings to write." },
+  { icon: Truck, title: "Source in two taps", body: "Request a quantity from another vendor. Stock is reserved, the movement runs requested → confirmed → shipped → received." },
+  { icon: Receipt, title: "The record follows you", body: "Every completed movement updates your fulfilment rate and network score. Nobody types their own reputation here." },
+];
 
 export default function AuthPage() {
   const [params, setParams] = useSearchParams();
@@ -32,8 +41,12 @@ export default function AuthPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { login, register, loading, token } = useAuthStore();
-  const [form, setForm] = useState({ identifier: "", password: "", business_name: "", vendor_handle: "", email: "", phone: "", categories: "", physical_location: "", business_description: "" });
+  const [form, setForm] = useState({
+    identifier: "", password: "", business_name: "", vendor_handle: "", email: "",
+    phone: "", categories: "", physical_location: "", business_description: "",
+  });
   const [handleTouched, setHandleTouched] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   const from = location.state?.from || "/";
 
   useEffect(() => {
@@ -78,103 +91,165 @@ export default function AuthPage() {
   const switchMode = (m) => setParams(m === "register" ? { mode: "register" } : {}, { replace: true });
 
   return (
-    <div className="min-h-screen grid lg:grid-cols-[1.1fr_1fr] bg-surface-0">
-      <section className="hidden lg:flex flex-col justify-between p-12 relative overflow-hidden">
-        <div className="absolute -top-40 -left-32 w-[28rem] h-[28rem] rounded-full bg-brand-500/15 blur-3xl animate-glow-breathe" />
-        <div className="absolute bottom-0 right-0 w-80 h-80 rounded-full bg-blue-500/[0.07] blur-3xl" />
-        <div className="relative">
-          <Wordmark />
+    <div className="min-h-screen grid lg:grid-cols-[1.05fr_1fr] bg-surface-0">
+      {/* ══ the pitch: what this network is, in one loop ══════════════ */}
+      <section className="hidden lg:flex flex-col justify-between p-12 relative overflow-hidden bg-surface-1 border-r border-edge-1">
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            backgroundImage:
+              "radial-gradient(720px 320px at 0% -10%, rgb(var(--brand-500) / 0.12), transparent 60%), radial-gradient(520px 280px at 100% 100%, rgb(var(--accent-500) / 0.10), transparent 60%)",
+          }}
+          aria-hidden="true"
+        />
+        <div className="relative flex items-center gap-2.5">
+          <LogoMark size={36} />
+          <span className="text-base font-extrabold tracking-tight text-ink-1">brief</span>
+          <span className="text-2xs text-ink-4 border-l border-edge-2 pl-2.5">the trade network with receipts</span>
         </div>
-        <div className="relative max-w-md">
-          <h1 className="text-4xl font-bold tracking-tight text-ink-1 leading-tight">
-            Know your market
-            <br />
-            <span className="text-brand-600 dark:text-brand-400">before you move.</span>
+
+        <div className="relative max-w-lg">
+          <h1 className="text-4xl font-extrabold tracking-tight text-ink-1 leading-[1.1] text-balance">
+            Source from vendors whose record you can <span className="text-brand-600 dark:text-brand-400">actually see</span>.
           </h1>
-          <p className="mt-4 text-sm text-ink-3 leading-relaxed">
-            The trade information network for people who run shops — check what's changing, find who has stock, source from vendors you can measure, and keep your shelf live from your till.
+          <p className="mt-4 text-sm text-ink-3 leading-relaxed text-pretty">
+            Brief is for businesses that already buy from each other — market traders, kiosks, kitchens, wholesalers. Every price here is
+            stated by a vendor and timestamped. Every fulfilment rate is computed from movements that actually completed.
           </p>
-          <ul className="mt-8 space-y-4">
-            {PILLARS.map(([t, d]) => (
-              <li key={t} className="flex gap-3">
-                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-brand-500 shrink-0" />
-                <div>
-                  <p className="text-sm font-medium text-ink-1">{t}</p>
-                  <p className="text-xs text-ink-4 leading-relaxed">{d}</p>
+          <ol className="mt-9 space-y-5">
+            {LOOP.map(({ icon: Icon, title, body }, i) => (
+              <li key={title} className="flex gap-3.5">
+                <span className="mt-0.5 w-9 h-9 rounded-xl bg-surface-0 border border-edge-1 grid place-items-center text-brand-600 dark:text-brand-400 shrink-0">
+                  <Icon size={17} aria-hidden="true" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-sm font-bold text-ink-1">
+                    <span className="text-ink-4 font-mono mr-1.5">{i + 1}</span>
+                    {title}
+                  </p>
+                  <p className="text-2xs text-ink-3 leading-relaxed mt-0.5">{body}</p>
                 </div>
               </li>
             ))}
-          </ul>
+          </ol>
         </div>
-        <p className="relative text-2xs text-ink-4 font-mono">Nairobi · {new Date().getFullYear()}</p>
+
+        <p className="relative text-micro text-ink-4">
+          Vendor accounts only · one account per business · Nairobi · {new Date().getFullYear()}
+        </p>
       </section>
 
+      {/* ══ the form ══════════════════════════════════════════════════ */}
       <section className="flex items-center justify-center p-6 sm:p-10">
-        <div className="w-full max-w-md animate-slide-up">
-          <div className="lg:hidden mb-8">
-            <Wordmark />
+        <div className="w-full max-w-md animate-fade-in">
+          <div className="lg:hidden mb-8 flex items-center gap-2.5">
+            <LogoMark size={34} />
+            <span className="text-base font-extrabold tracking-tight text-ink-1">brief</span>
+            <span className="text-micro text-ink-4 border-l border-edge-2 pl-2.5">the trade network with receipts</span>
           </div>
 
-          <div className="glass rounded-3xl p-6 sm:p-7">
+          <div className="rounded-3xl border border-edge-1 bg-surface-0 shadow-sm p-6 sm:p-7">
             <div className="flex items-center gap-1 p-1 rounded-xl bg-surface-2 w-fit mb-6" role="tablist">
               {["login", "register"].map((m) => (
-                <button key={m} role="tab" aria-selected={mode === m} onClick={() => switchMode(m)} className={cn("px-4 h-8 rounded-lg text-sm font-medium transition-all", mode === m ? "bg-brand-500/20 text-brand-600 dark:text-brand-400 shadow-[0_0_16px_-4px_rgba(245,158,11,0.5)]" : "text-ink-4 hover:text-ink-2")}>
+                <button
+                  key={m}
+                  role="tab"
+                  type="button"
+                  aria-selected={mode === m}
+                  onClick={() => switchMode(m)}
+                  className={cn(
+                    "px-4 h-8 rounded-lg text-xs font-semibold transition-colors duration-1",
+                    "focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50",
+                    mode === m ? "bg-surface-0 text-ink-1 shadow-xs" : "text-ink-4 hover:text-ink-2"
+                  )}
+                >
                   {m === "login" ? "Enter" : "Join"}
                 </button>
               ))}
             </div>
 
-          <h2 className="text-xl font-semibold text-ink-1">{mode === "login" ? "Enter the network" : "Register your business"}</h2>
-          <p className="text-sm text-ink-4 mt-1 mb-6">{mode === "login" ? "Use your email or @handle." : "One account per business. You choose your role afterwards."}</p>
-
-          <form onSubmit={submit} className="space-y-4">
-            {mode === "login" ? (
-              <>
-                <Input label="Email or handle" icon={AtSign} required autoFocus autoComplete="username" value={form.identifier} onChange={set("identifier")} placeholder="mama_mboga" />
-                <Input label="Password" icon={Lock} type="password" required autoComplete="current-password" value={form.password} onChange={set("password")} />
-              </>
-            ) : (
-              <>
-                <Input label="Business name" icon={Store} required autoFocus value={form.business_name} onChange={set("business_name")} placeholder="Mama Mboga Fresh" />
-                <Input
-                  label="Handle"
-                  prefix="@"
-                  required
-                  value={form.vendor_handle}
-                  onChange={(e) => {
-                    setHandleTouched(true);
-                    setForm((f) => ({ ...f, vendor_handle: slugify(e.target.value) }));
-                  }}
-                  className="font-mono"
-                  hint="Lowercase letters, numbers and underscores"
-                />
-                <div className="grid sm:grid-cols-2 gap-3">
-                  <Input label="Email" icon={Mail} type="email" required autoComplete="email" value={form.email} onChange={set("email")} />
-                  <Input label="Phone" icon={Phone} value={form.phone} onChange={set("phone")} placeholder="+2547…" />
-                </div>
-                <Input label="Password" icon={Lock} type="password" required autoComplete="new-password" minLength={8} value={form.password} onChange={set("password")} hint="At least 8 characters" />
-                <div className="grid sm:grid-cols-2 gap-3">
-                  <Input label="What you trade" value={form.categories} onChange={set("categories")} placeholder="vegetables, fruit" hint="Comma separated" />
-                  <Input label="Where" icon={MapPin} value={form.physical_location} onChange={set("physical_location")} placeholder="Kawangware" />
-                </div>
-                <Textarea label="About the business" rows={2} value={form.business_description} onChange={set("business_description")} />
-              </>
-            )}
-            <Button type="submit" size="lg" fullWidth loading={loading} iconRight={ArrowRight}>
-              {mode === "login" ? "Enter" : "Join the network"}
-            </Button>
-          </form>
-
-          {mode === "login" && (
-            <p className="mt-4 text-2xs text-ink-4 text-center bg-surface-2 rounded-lg px-3 py-2">
-              Demo network: <span className="font-mono text-ink-3">@mama_mboga</span> · <span className="font-mono text-ink-3">Brief-demo-2026</span>
+            <h2 className="text-xl font-bold text-ink-1 tracking-tight">
+              {mode === "login" ? "Enter the network" : "Register your business"}
+            </h2>
+            <p className="text-2xs text-ink-3 mt-1 mb-6">
+              {mode === "login"
+                ? "Use your email or @handle."
+                : "Four fields to start trading. You pick your role, and everything else, afterwards."}
             </p>
-          )}
+
+            <form onSubmit={submit} className="space-y-4">
+              {mode === "login" ? (
+                <>
+                  <Input label="Email or handle" icon={AtSign} required autoFocus autoComplete="username" value={form.identifier} onChange={set("identifier")} placeholder="mama_mboga" />
+                  <Input label="Password" icon={Lock} type="password" required autoComplete="current-password" value={form.password} onChange={set("password")} />
+                </>
+              ) : (
+                <>
+                  <Input label="Business name" icon={Store} required autoFocus value={form.business_name} onChange={set("business_name")} placeholder="Mama Mboga Fresh" />
+                  <Input
+                    label="Handle"
+                    prefix="@"
+                    required
+                    value={form.vendor_handle}
+                    onChange={(e) => {
+                      setHandleTouched(true);
+                      setForm((f) => ({ ...f, vendor_handle: slugify(e.target.value) }));
+                    }}
+                    className="font-mono"
+                    hint="How the network addresses you. Lowercase letters, numbers and underscores."
+                  />
+                  <Input label="Email" icon={Mail} type="email" required autoComplete="email" value={form.email} onChange={set("email")} />
+                  <Input label="Password" icon={Lock} type="password" required autoComplete="new-password" minLength={8} value={form.password} onChange={set("password")} hint="At least 8 characters" />
+
+                  {/* progressive disclosure: these four improve the network's
+                      suggestions but have never been required by the API. */}
+                  <div className="rounded-xl border border-edge-1 overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setMoreOpen((v) => !v)}
+                      aria-expanded={moreOpen}
+                      className="w-full flex items-center justify-between gap-3 px-3.5 py-3 text-left hover:bg-surface-1 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50"
+                    >
+                      <span className="min-w-0">
+                        <span className="block text-2xs font-bold text-ink-1">Tell the network what you trade</span>
+                        <span className="block text-micro text-ink-4">Optional — it is what drives supplier suggestions.</span>
+                      </span>
+                      <ChevronDown size={16} className={cn("text-ink-4 shrink-0 transition-transform duration-1", moreOpen && "rotate-180")} aria-hidden="true" />
+                    </button>
+                    {moreOpen && (
+                      <div className="px-3.5 pb-3.5 pt-1 space-y-3 border-t border-edge-1">
+                        <div className="grid sm:grid-cols-2 gap-3">
+                          <Input label="What you trade" value={form.categories} onChange={set("categories")} placeholder="vegetables, fruit" hint="Comma separated" />
+                          <Input label="Where" icon={MapPin} value={form.physical_location} onChange={set("physical_location")} placeholder="Kawangware" />
+                        </div>
+                        <Input label="Phone" icon={Phone} value={form.phone} onChange={set("phone")} placeholder="+2547…" />
+                        <Textarea label="About the business" rows={2} value={form.business_description} onChange={set("business_description")} />
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+
+              <Button type="submit" size="lg" fullWidth loading={loading} iconRight={ArrowRight}>
+                {mode === "login" ? "Enter" : "Join the network"}
+              </Button>
+            </form>
+
+            {mode === "login" && (
+              <p className="mt-4 text-2xs text-ink-3 text-center bg-surface-2 rounded-xl px-3 py-2.5">
+                Demo network: <span className="font-mono text-ink-1">@mama_mboga</span> ·{" "}
+                <span className="font-mono text-ink-1">Brief-demo-2026</span>
+              </p>
+            )}
           </div>
 
-          <p className="mt-6 text-xs text-ink-4 text-center">
+          <p className="mt-6 text-2xs text-ink-4 text-center">
             {mode === "login" ? "New business? " : "Already registered? "}
-            <button onClick={() => switchMode(mode === "login" ? "register" : "login")} className="text-brand-600 dark:text-brand-400 hover:text-brand-600 dark:hover:text-brand-400 font-medium">
+            <button
+              type="button"
+              onClick={() => switchMode(mode === "login" ? "register" : "login")}
+              className="text-brand-700 dark:text-brand-400 font-semibold hover:underline underline-offset-2 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50"
+            >
               {mode === "login" ? "Join the network" : "Enter"}
             </button>
           </p>
