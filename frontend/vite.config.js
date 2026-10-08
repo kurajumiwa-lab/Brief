@@ -33,6 +33,9 @@ export default defineConfig(({ mode }) => {
           manualChunks: {
             react: ["react", "react-dom", "react-router-dom"],
             motion: ["framer-motion"],
+            // Leaflet is ~150 kB and only the map needs it: its own chunk keeps
+            // it out of the first paint and cacheable across deploys.
+            leaflet: ["leaflet"],
             vendor: ["axios", "zustand", "date-fns", "react-hot-toast", "react-dropzone", "clsx"],
           },
         },

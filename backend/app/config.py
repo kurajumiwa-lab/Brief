@@ -181,6 +181,47 @@ class Settings(BaseSettings):
     VOICE_MAX_BYTES: int = 512 * 1024
     VOICE_MAX_SECONDS: int = 15
 
+    # ── Map / viewport tiles (v2.7) ──────────────────────────────────────────
+    # The map NEVER downloads the whole directory. Every screenful is a bbox
+    # query that returns clusters below these zoom levels and individual pins
+    # above them, capped at MAP_POINT_LIMIT.
+    #
+    # Tile backend: chosen here, in one setting, and served to the client by
+    # GET /api/map/config together with the attribution its licence requires
+    # (see app/services/tile_providers.py).
+    #
+    #   auto      MapTiler when MAP_TILE_KEY is set, else the public OSM tiles
+    #             (dev only) — so a fresh checkout needs no signup
+    #   maptiler  OSM-derived raster, keyed  ← the production default
+    #   stadia / thunderforest   OSM-derived alternatives, keyed
+    #   osm       public OpenStreetMap tile server — DEVELOPMENT ONLY
+    #   custom    your own tile stack; set MAP_TILE_URL (+ attribution)
+    #
+    # The public OSM tile server is community-funded, rate-limited and its
+    # policy forbids bulk downloading. `/api/ops/status` and `/api/map/config`
+    # both keep warning until it is replaced.
+    MAP_TILE_PROVIDER: str = "auto"
+    MAP_TILE_KEY: str = ""                          # {key} in a provider template
+    MAP_TILE_URL: str = ""                          # override: self-hosted stack
+    MAP_TILE_ATTRIBUTION: str = ""                  # override: its licence credit
+    MAP_TILE_SUBDOMAINS: str = ""                   # e.g. "abc" for {s}-style CDNs
+    MAP_TILE_MIN_ZOOM: int = 2
+    MAP_TILE_MAX_ZOOM: int = 19
+    # Zoom at or above which a layer stops clustering and returns real pins.
+    MAP_PLACES_POINT_ZOOM: int = 15
+    MAP_VENDORS_POINT_ZOOM: int = 12
+    MAP_MARKETS_POINT_ZOOM: int = 6
+    MAP_POINT_LIMIT: int = 300          # hard ceiling on pins per layer per view
+    MAP_CLUSTER_CELL_PX: int = 96       # grid cell size on screen, in CSS pixels
+    MAP_MAX_BBOX_DEG: float = 40.0      # reject absurd viewports (whole continents)
+    # Server-side cache for viewport responses (process-local, then ETag/304 for
+    # the browser). Redis is not used: these are cheap, short-lived and per-box.
+    MAP_CACHE_TTL_SECONDS: int = 60
+    MAP_CACHE_ENTRIES: int = 256
+    MAP_COUNTS_TTL_SECONDS: int = 300   # the headline counters change slowly
+    # Browser cache for a viewport response. Short: pins move, stock changes.
+    MAP_HTTP_MAX_AGE_SECONDS: int = 30
+
     # Notifications & holds
     STOCK_LOW_THRESHOLD: int = 5        # units at or below which a STOCK_LOW alert fires
     EVENT_REMINDER_HOURS: int = 24

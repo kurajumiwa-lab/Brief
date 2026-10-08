@@ -99,7 +99,7 @@ export default function TasksPortal() {
             </div>
           </div>
           <div className="flex justify-end">
-            <Button size="sm" onClick={() => navigate("/squad")}>
+            <Button size="sm" onClick={() => navigate("/tasks/squad")}>
               Continue in Squad <ArrowUpRight size={12} />
             </Button>
           </div>
@@ -116,7 +116,7 @@ export default function TasksPortal() {
         <div className="flex items-center gap-2">
           <Zap size={13} className="text-amber-300" />
           <p className="text-2xs uppercase tracking-[0.2em] text-ink-4 font-bold">Open call-ups near you</p>
-          <button type="button" onClick={() => navigate("/squad")} className="ml-auto text-2xs font-bold text-brand-300 hover:text-brand-200 cursor-pointer">
+          <button type="button" onClick={() => navigate("/tasks/squad")} className="ml-auto text-2xs font-bold text-brand-300 hover:text-brand-200 cursor-pointer">
             all call-ups
           </button>
         </div>
@@ -177,13 +177,13 @@ export default function TasksPortal() {
 
       {/* ── The loop doors ── */}
       <div className="grid grid-cols-2 gap-3">
-        <button type="button" onClick={() => navigate("/squad")}
+        <button type="button" onClick={() => navigate("/tasks/squad")}
           className="glass glass-hover rounded-3xl p-4 text-left cursor-pointer">
           <Swords size={16} className="text-brand-300" />
           <p className="text-sm font-semibold text-ink-1 mt-2">Squad</p>
           <p className="text-2xs text-ink-4 mt-0.5">League, divisions, squads & the full match controls</p>
         </button>
-        <button type="button" onClick={() => navigate("/brief")}
+        <button type="button" onClick={() => navigate("/tasks/brief")}
           className="glass glass-hover rounded-3xl p-4 text-left cursor-pointer">
           <Briefcase size={16} className="text-amber-300" />
           <p className="text-sm font-semibold text-ink-1 mt-2">Brief</p>

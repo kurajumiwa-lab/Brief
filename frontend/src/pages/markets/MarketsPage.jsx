@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import {
-  Radar, MapPin, Store, Users, Trophy, Plus, Check, X, Search, Navigation, Medal, Pencil,
+  Radar, MapPin, Store, Users, Trophy, Plus, Check, X, Search, Navigation, Medal, Pencil, ChevronRight,
 } from "lucide-react";
 import Tabs from "@/components/ui/Tabs";
 import Button from "@/components/ui/Button";
@@ -56,7 +57,7 @@ function MarketRow({ m, onJoin, joining, selectable, selected, onSelect, withDat
       </span>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2 flex-wrap">
-          <p className="text-sm font-medium text-ink-1 truncate">{m.name}</p>
+          <Link to={`/markets/${m.id}`} className="text-sm font-medium text-ink-1 truncate hover:text-brand-300">{m.name}</Link>
           <span className="text-2xs text-ink-4">{m.city}{m.country ? ` · ${m.country}` : ""}</span>
           {typeof m.distance_km === "number" && (
             <span className="digital text-2xs text-brand-300">{m.distance_km} km</span>
@@ -297,7 +298,7 @@ function MyMarkets() {
       ) : data.markets.map((m) => (
         <div key={m.id} className="glass-strong rounded-3xl p-4 space-y-3">
           <div className="flex items-center gap-2 flex-wrap">
-            <p className="text-base font-semibold text-ink-1">{m.name}</p>
+            <Link to={`/markets/${m.id}`} className="text-base font-semibold text-ink-1 hover:text-brand-300">{m.name}</Link>
             <span className="text-2xs text-ink-4">{m.city}{m.country ? ` · ${m.country}` : ""}</span>
             {m.i_am_lead ? <Badge variant="brand" size="xs"><Medal size={9} /> Lead patron</Badge>
               : m.i_am_patron ? <Badge variant="outline" size="xs" className="text-brand-300">Patron</Badge>
@@ -327,7 +328,13 @@ function MyMarkets() {
           )}
 
           {m.lead_patron && <PatronTag zo={m} />}
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-2">
+            <Link
+              to={`/markets/${m.id}`}
+              className="inline-flex items-center gap-1 h-8 px-3 rounded-xl text-xs font-medium bg-white/[0.06] text-ink-2 hover:text-ink-1"
+            >
+              Open <ChevronRight size={12} />
+            </Link>
             <Button size="sm" variant="ghost" loading={leaving === m.id} onClick={async () => {
               setLeaving(m.id);
               try { await marketsAPI.leave(m.id); toast.success(`Left ${m.name}`); load(); }

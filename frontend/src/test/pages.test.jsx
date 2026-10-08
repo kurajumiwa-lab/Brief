@@ -61,6 +61,11 @@ vi.mock("@/lib/api", () => {
     notificationAPI: { list: vi.fn(() => ok({ unread_count: 0, notifications: [] })), unreadCount: vi.fn(() => ok({ unread_count: 0 })), markRead: vi.fn(() => ok({})), markAllRead: vi.fn(() => ok({})) },
     collectiveAPI: { list: vi.fn(() => ok([])), get: vi.fn(), create: vi.fn(), pledge: vi.fn(), withdraw: vi.fn(), setStatus: vi.fn() },
     fileAPI: { upload: vi.fn(), limits: vi.fn(() => ok({ max_mb: 10, allowed: [".pdf"] })) },
+    // the home hub reads four live counts
+    newsAPI: { feed: vi.fn(() => ok({ window_days: 7, new_today: 2, generated_at: new Date().toISOString(), items: [], counts: {} })) },
+    squadAPI: { calls: vi.fn(() => ok({ calls: [] })) },
+    marketsAPI: { mine: vi.fn(() => ok({ markets: [] })) },
+    mapAPI: { counts: vi.fn(() => ok({ markets: 0, vendors: 0, places: 0 })) },
   };
 });
 
@@ -114,14 +119,18 @@ describe("routing & auth gate", () => {
     expect(screen.getByLabelText(/^handle/i)).toHaveValue("mama_mboga_fresh");
   });
 
-  it("renders the shell with the nine nav items and the inline role switcher", async () => {
-    mount(<App />, "/");
+  it("renders the shell with every shelf section in the nav and the inline role switcher", async () => {
+    const { NAV } = await import("@/components/layout/Sidebar");
+    // The nav is the shelf itself — rendering the whole app here would drag
+    // the home hub's own API calls into a test about the sidebar.
+    mount(<Sidebar />, "/");
     const nav = await screen.findByRole("navigation", { name: /primary/i });
-    for (const label of ["Dashboard", "Stock Room", "Network", "Vendor Lists", "Groups", "Chat", "Tools", "Events", "POS Bridge"]) {
+    // Asserted against NAV itself, so adding a section cannot rot this test.
+    for (const { label } of NAV) {
       expect(within(nav).getByText(label)).toBeInTheDocument();
     }
     expect(screen.getByRole("radiogroup", { name: /current role/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /exit network/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /exit app/i })).toBeInTheDocument();
   });
 });
 
@@ -193,10 +202,11 @@ describe("Stock Room", () => {
     fireEvent.click(await screen.findByRole("button", { name: /add stock/i }));
     const dialog = await screen.findByRole("dialog");
     fireEvent.change(within(dialog).getByLabelText(/item name/i), { target: { value: "Spinach" } });
-    fireEvent.change(within(dialog).getByLabelText(/quantity in stock/i), { target: { value: "120" } });
-    fireEvent.click(within(dialog).getByRole("button", { name: /add to shelf/i }));
+    fireEvent.change(within(dialog).getByLabelText(/^quantity$/i), { target: { value: "120" } });
+    fireEvent.change(within(dialog).getByLabelText(/price/i), { target: { value: "30" } });   // a price is required to go on the shelf
+    fireEvent.click(within(dialog).getByRole("button", { name: /add to my stock/i }));
     await waitFor(() => expect(api.stockAPI.add).toHaveBeenCalled());
-    expect(api.stockAPI.add.mock.calls[0][0]).toMatchObject({ name: "Spinach", quantity_in_stock: 120, unit_price: null, visible_to_network: true });
+    expect(api.stockAPI.add.mock.calls[0][0]).toMatchObject({ name: "Spinach", quantity_in_stock: 120, unit_price: 30 });
     await waitFor(() => expect(api.stockAPI.get).toHaveBeenCalledWith("s-new"));
     expect(await screen.findByText("Spinach")).toBeInTheDocument();
   });

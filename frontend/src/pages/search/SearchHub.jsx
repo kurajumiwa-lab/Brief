@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link, useParams } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import { Search, Package, Store, MapPin, Newspaper, Building2 } from "lucide-react";
 import SearchInput from "@/components/ui/SearchInput";
 import EmptyState from "@/components/ui/EmptyState";
 import { PageSpinner } from "@/components/ui/Spinner";
-import { stockAPI, vendorAPI, marketsAPI, newsAPI, surfaceAPI, apiError } from "@/lib/api";
+import { stockAPI, vendorAPI, marketsAPI, newsAPI, mapAPI, apiError } from "@/lib/api";
 import { num, relativeTime } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 
@@ -27,7 +28,10 @@ const TABS = [
 
 export default function SearchHub() {
   const navigate = useNavigate();
-  const [tab, setTab] = useState("products");
+  // Each tab is a screen: /search/suppliers opens that list directly. Typing
+  // stays local — a term is a filter on the screen you are already on.
+  const { tab: tabParam } = useParams();
+  const tab = TABS.some((t) => t.value === tabParam) ? tabParam : "products";
   const [q, setQ] = useState("");
   const [lists, setLists] = useState({ products: null, suppliers: null, markets: null, news: null, places: null });
   const [error, setError] = useState("");
@@ -35,12 +39,11 @@ export default function SearchHub() {
   useEffect(() => {
     let live = true;
     const load = async () => {
-      const [p, s, m, n, pl] = await Promise.allSettled([
+      const [p, s, m, n] = await Promise.allSettled([
         stockAPI.network(),
         vendorAPI.network(),
         marketsAPI.list(),
         newsAPI.feed(7),
-        surfaceAPI.map(),
       ]);
       if (!live) return;
       const next = { ...lists };
@@ -48,7 +51,9 @@ export default function SearchHub() {
       if (s.status === "fulfilled") next.suppliers = s.value.data;
       if (m.status === "fulfilled") next.markets = m.value.data.markets;
       if (n.status === "fulfilled") next.news = n.value.data.items;
-      if (pl.status === "fulfilled") next.places = pl.value.data.places;
+      // Places are NOT preloaded: the directory is thousands of rows. The tab
+      // searches it server-side as you type (see the effect below).
+      next.places = [];
       setLists(next);
       if (p.status === "rejected" && s.status === "rejected" && m.status === "rejected") {
         setError(apiError(p.reason, "The search lists could not be loaded"));
@@ -59,6 +64,24 @@ export default function SearchHub() {
     return () => { live = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Places: one server-side search per term, never the whole directory.
+  useEffect(() => {
+    if (tab !== "places") return undefined;
+    const term = q.trim();
+    if (term.length < 2) {
+      setLists((prev) => (prev.places?.length ? { ...prev, places: [] } : prev));
+      return undefined;
+    }
+    let live = true;
+    const t = setTimeout(() => {
+      mapAPI
+        .viewport({ scope: "network", q: term, kind: "places", zoom: 16, limit: 50 })
+        .then((r) => live && setLists((prev) => ({ ...prev, places: r.data.points })))
+        .catch(() => live && setLists((prev) => ({ ...prev, places: [] })));
+    }, 250);
+    return () => { live = false; clearTimeout(t); };
+  }, [tab, q]);
 
   const query = q.trim().toLowerCase();
 
@@ -82,9 +105,8 @@ export default function SearchHub() {
           .filter((it) => inText(newsHaystack(it)))
           .slice(0, 50);
       case "places":
-        return (lists.places || [])
-          .filter((p) => inText(`${p.name} ${p.category || ""} ${p.zone_name || ""}`))
-          .slice(0, 50);
+        // Already filtered by the server; two characters minimum.
+        return (lists.places || []).slice(0, 50);
       default:
         return [];
     }
@@ -105,19 +127,26 @@ export default function SearchHub() {
 
       <div className="flex gap-1.5 overflow-x-auto pb-1">
         {TABS.map((t) => (
-          <button key={t.value} type="button" onClick={() => setTab(t.value)}
-            className={cn("shrink-0 rounded-full px-3 h-8 text-xs font-medium inline-flex items-center gap-1.5 cursor-pointer",
+          <Link key={t.value} to={`/search/${t.value}`}
+            className={cn("shrink-0 rounded-full px-3 h-8 text-xs font-medium inline-flex items-center gap-1.5",
               tab === t.value ? "bg-brand-500/20 text-brand-200" : "text-ink-4 hover:text-ink-2")}>
             <t.icon size={12} /> {t.label}
-          </button>
+          </Link>
         ))}
       </div>
 
       {!loaded ? (
         <PageSpinner label="Loading the list…" />
       ) : results.length === 0 ? (
-        <EmptyState icon={Search} title={query ? "Nothing matches" : "Nothing here yet"}
-          description={query ? "Try fewer words, or another tab." : "This list fills as real rows are written."} />
+        <EmptyState
+          icon={Search}
+          title={tab === "places" && query.length < 2 ? "Type to search the directory" : query ? "Nothing matches" : "Nothing here yet"}
+          description={
+            tab === "places" && query.length < 2
+              ? "The place directory is searched on the server — two letters is enough."
+              : query ? "Try fewer words, or another tab." : "This list fills as real rows are written."
+          }
+        />
       ) : (
         <div className="space-y-2 pb-10">
           {tab === "products" && results.map((it) => (

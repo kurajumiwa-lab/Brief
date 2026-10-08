@@ -2,6 +2,8 @@
 
 **The information layer around the shop.** Home is a shelf — News, Suppliers, Stock, Rentals, Groups, Events — and the vendor workspace (Brief: stock, deals, chat, analytics, POS) lives inside as a feature. *You source today, you sell tomorrow.*
 
+**Home is a hub, and everything on it is a door.** A tile opens a secondary screen, and a secondary screen opens a detail: `/nearby` → `/nearby/{group}` → `/place/{id}` or `/@handle`; `/markets` → `/markets/{id}`; `/tasks` → `/tasks/squad` · `/tasks/brief`; `/news/{kind}`; `/search/{tab}`. Where a surface cannot be a hub it is rewired, not duplicated — see [`docs/briefs/home-secondary-screens.md`](docs/briefs/home-secondary-screens.md).
+
 Brief_ is a vendor-centric community commerce platform: distribution-and-economic
 infrastructure for people who already trade with each other — market women,
 kiosk owners, wholesalers, couriers, hotel suppliers. Every account is a
@@ -31,6 +33,7 @@ there are the vendors who move it between each other.
 | **Discovery / recommendation** | `GET /vendors/discover` ranks vendors you have not connected to yet on six weighted factors — complementarity, reciprocity, trade evidence, proximity, graph distance and reputation — with the weights exposed at `/discover/weights` and a human-readable `reasons` list per candidate (the Network → Suggested tab). |
 | **Courier route optimisation** | A courier plans a run from explicit stops or straight from their undelivered shipments; nearest-neighbour + 2-opt ordering, per-leg distance, cumulative km and ETA, and an honest `saved_km` against the booking order. Dispatch notifies the senders whose parcels are on the run; stops are ticked off one by one. |
 | **Bookings & calendars** | One dated-hold model for the three tool flows: **warehouse / cold-storage space**, **pop-up shop pitches** (shared spaces) and **hotel sourcing rooms** for travelling vendors. Live day-by-day availability calendar, request → confirm/decline → complete, and cancellation that frees the window. |
+| **Marketplace map** | A viewport-driven Leaflet map over the open-data directory: `GET /api/map/viewport?bbox=…&zoom=…` returns **grid clusters** when zoomed out ("7.6K places" → "1,240") and a **capped list of pins** when zoomed in — never the 7,640-row directory. Counters double as filters (one dataset at a time), details load on tap, pins are drawn on one canvas, and tiles are configurable so the public OSM server is never a production dependency. `backend/app/services/map_viewport.py`, `frontend/src/pages/map/MapPage.jsx` |
 | **Monitoring & ops** | In-process metrics registry (`/metrics`, Prometheus text) with per-route percentiles and a slow-request list, `X-Request-ID` on every response, and an **Ops** console (`/ops`) showing version, environment, p50/p95/p99, error rate, pool and the raw scrape. Prometheus + Grafana + alerts ship in `deploy/monitoring/`. |
 
 ## Stack
@@ -182,6 +185,10 @@ GET  /vendor-lists/{id}/reviews  /{id}/reviews/mine  /{id}/rating      POST /{id
 POST /tools/{id}/book  /tools/{id}/book-warehouse (legacy alias)  /tools/bookings/{id}/status?status=   GET /tools/{id}/availability-calendar  /tools/bookings?role=
 POST /tools/couriers/{courier}/routes  /{courier}/routes/from-shipments   GET /tools/routes?role=  /tools/routes/{id}
 POST /tools/routes/{id}/status?status=  /tools/routes/{id}/stops/{stop_id}/solve       GET /metrics  /ops/status  /ops/slow
+# v2.7 — the marketplace map (see "The map" below)
+GET  /map/config  /map/counts           GET /map/viewport?bbox=minLng,minLat,maxLng,maxLat&zoom=&kind=&q=&filter=&scope=
+GET  /map/places/{id}  /map/vendors/{id}  /map/markets/{id}      (lazy detail, on tap)
+# retired: GET /api/surface/map — the whole-directory dump that hung the phone
 ```
 
 Auth returns an `access_token` (24 h) and a `refresh_token` (30 d); the frontend
@@ -191,6 +198,96 @@ it out for `LOGIN_LOCKOUT_MINUTES`; `RATE_LIMIT_AUTH` / `RATE_LIMIT_API`
 requests per minute apply on top.
 
 Interactive docs at `/docs`.
+
+## The map
+
+The map is a **market discovery surface**, not a map with businesses pinned to
+it. Its first version selected every public place (7,640 rows), shipped them to
+the phone and built a Leaflet marker per row — which is why it froze on mobile.
+The fix is architectural, not a tuning flag:
+
+```
+map viewport ──▶ GET /api/map/viewport?bbox=…&zoom=…&kind=…&filter=…
+                        │  indexed bbox range scan (public_places (lat, lng))
+                        ▼
+                 clusters below the threshold zoom · ≤300 pins above it
+                        │  ETag / 304 / Cache-Control · 60 s server cache
+                        ▼
+                 ~20–200 objects on the phone, drawn on one <canvas>
+```
+
+| zoom | what you see |
+|---|---|
+| 2–7 | region clusters — *"7.6K places" · "25 markets"* |
+| 8–11 | city and market clusters — *Nairobi 1,240 · Kampala 840* |
+| 12–14 | individual markets and vendors |
+| 15+ | individual businesses, with details on tap |
+
+* **Clustering happens in Postgres** (`GROUP BY floor(lat/cell)` over the
+  bbox-limited rows), so the database never hands the app 7,640 rows and the app
+  never hands the phone more than a few hundred objects.
+* **Counters are filters.** `Markets 25 · Vendors 0 · Places 7.6K` load one
+  dataset each — never all three at once.
+* **Details are lazy.** Tapping a pin fetches one place (phone, hours, source,
+  freshness); a bottom sheet shows it. Nothing fetches images.
+* **Pins are canvas, not DOM.** `preferCanvas` plus `circleMarker` keeps a few
+  hundred pins at one element; tiles use `updateWhenIdle` and
+  `detectRetina: false` so a pan does not request a screenful of 2× PNGs.
+* **Indexes are part of the schema** (alembic `0011`): composite `(lat, lng)`
+  btrees make a bounding box two range scans. `EXPLAIN` on the seeded 7,640-row
+  table: *Bitmap Index Scan on ix_public_places_mappable_lat_lng, 0.8 ms.*
+
+Run it against real volume:
+
+```bash
+python backend/seed_demo.py            # vendors, stock, movements
+python backend/seed_map_demo.py        # 7,640 places around 25 real markets
+# then: /map shows the directory at production scale
+```
+
+### Tiles: MapTiler by default, everything else one setting away
+
+The public OpenStreetMap tile server is community-funded, rate-limited, and its
+tile usage policy forbids bulk downloading and heavy use — so it is the
+**development** default only, and `/api/ops/status` keeps reporting
+`tile_dev_only: true` / `tile_warning` until it is replaced.
+
+**Production default: MapTiler** — OSM-derived (so the basemap and the directory
+share the ODbL credit), raster tiles that drop straight into Leaflet, keyed with
+a free tier and a global CDN, and a self-host migration that is a URL change
+(OpenMapTiles + `tileserver-gl`) once volume makes hosting cheaper than paying
+per 1,000 tiles.
+
+```bash
+MAP_TILE_PROVIDER=auto     # maptiler when MAP_TILE_KEY is set, else osm (dev)
+MAP_TILE_KEY=…             # fills {key} in the provider template
+# or: MAP_TILE_PROVIDER=stadia|thunderforest|custom   MAP_TILE_URL=https://tiles.you/{z}/{x}/{y}.png
+```
+
+The provider is resolved server-side and served to the client by
+`GET /api/map/config` with the attribution its licence requires, so the phone
+never hardcodes a tile URL and the ODbL credit cannot drift. A keyed provider
+with no key falls back to the dev tiles and says so (`key_missing`, `warning`)
+rather than handing the client a URL that can only 401.
+
+Offline note: the app caches the last screenful of *its own* data for a dead
+connection, and never caches or pre-fetches tiles — bulk-downloading the public
+OSM tile servers is exactly what their policy prohibits. Offline **maps** need a
+licensed provider. Full rationale, measurements and the PostGIS upgrade path:
+[`docs/briefs/map-performance.md`](docs/briefs/map-performance.md).
+
+### The home hub and its secondary screens (v2.8)
+
+`/` is a shelf of ten tiles, each with a live count, and every tile opens a
+screen: `/nearby` (with `/nearby/{group}` and `/place/{id}` behind it),
+`/news/{kind}`, `/search/{tab}`, `/markets/{id}`, and `/tasks/squad` ·
+`/tasks/brief`. Filters that are screens live in the URL; filters that are
+views of one screen (radius, search term) stay local. Surfaces that cannot be
+a hub are rewired rather than cloned — the orphaned shelf became the hub, the
+public business got `/place/{id}` instead of a bounce to the map, the unlisted
+`/squad` became a task track, and `/tasks/brief` hands over to the workspace
+that already owns itself.
+[`docs/briefs/home-secondary-screens.md`](docs/briefs/home-secondary-screens.md).
 
 ## Configuration
 
@@ -259,15 +356,17 @@ docker compose exec backend python -m app.wait_for_db --timeout 5
 ## Repository layout
 
 ```
-backend/     app/{models,services,routes,middleware,worker.py,wait_for_db.py}, alembic/versions/{0001_initial…0007_halal_finance}.py,
-             tests/, dev_local.py, seed_demo.py, entrypoint.sh
+backend/     app/{models,services,routes,middleware,worker.py,wait_for_db.py}, alembic/versions/{0001_initial…0011_map_viewport_indexes}.py,
+             tests/, dev_local.py, seed_demo.py, seed_map_demo.py, entrypoint.sh
              models: bookings.py (tool bookings) · reviews.py (list reviews) · routing.py (route plans & stops)
                     payments.py (intents, custody ledger, payouts, reconciliation, dispute holds) · chamas.py (groups, pool, loans, dividends)
                     halal.py (murabaha contracts)
              services: psp_client.py (provider + mock) · payments.py · custody.py · chamas.py · lock_settlement.py · halal.py · biashara.py
-             routes: analytics.py · reviews.py · bookings.py · route_planner.py · ops.py · payments.py · chamas.py · murabaha.py
-frontend/    src/{config,lib,stores,components/{layout,ui,vendor,stock,chat,groups,tools,lists,notifications,forms},pages/*,test}
+             routes: analytics.py · reviews.py · bookings.py · route_planner.py · ops.py · payments.py · chamas.py · murabaha.py · map.py
+             services: map_viewport.py (bbox queries, grid clustering, viewport cache) · map_indexes.py (the bbox DDL)
+frontend/    src/{config,lib,stores,components/{layout,ui,vendor,stock,chat,groups,tools,lists,notifications,forms,map},pages/*,test}
              pages/analytics/ (trade dashboard) · pages/ops/ (monitoring console)
+             components/map/{MarketMap,MapSheet}.jsx · lib/{mapViewport,useMapViewport}.js (viewport maths, debounce, cancel)
              components/tools/{RoutePlanner,BookingPanel}.jsx · components/lists/ReviewPanel.jsx
 pos-extension/  sync_daemon.py, adapters/, Dockerfile
 deploy/      github-deploy.yml (copy to .github/workflows/) · monitoring/ (Prometheus, alerts, Grafana)
@@ -328,6 +427,46 @@ and verifies an `HMAC-SHA256` signature of the raw body against
 real PSPs retry. `PSP_PROVIDER=mock` (the default) keeps the whole stack
 self-contained in dev and tests. Architecture and invariants:
 `docs/briefs/payment-custody-architecture.md`.
+
+## What v2.7 added (the marketplace map)
+
+1. **Viewport loading** — `GET /api/map/viewport?bbox=…&zoom=…` replaces the
+   whole-directory dump. The map asks for one screenful at a time.
+2. **Server-side clustering** — `GROUP BY floor(lat/cell)` inside the bbox, with
+   screen-sized, world-fixed cells. The phone receives aggregates, not rows.
+3. **Progressive disclosure** — regions → cities → markets → businesses, each
+   layer with its own zoom threshold.
+4. **Counters as filters** — Markets / Vendors / Places each load one dataset.
+5. **Lazy details** — tapping a pin fetches one place; a bottom sheet shows it.
+   No images are fetched on the map at all.
+6. **Canvas pins** — `preferCanvas` + `circleMarker`: a few hundred pins cost one
+   DOM node, and tiles use `updateWhenIdle` / `keepBuffer: 1` / no retina.
+7. **Debounce, cancel, guard** — 250 ms debounce, `AbortController` on the
+   previous request, and a request id so a slow response cannot overwrite a newer
+   one.
+8. **HTTP + server caching** — 60 s process cache, ETag/304 and
+   `Cache-Control: private, max-age=30`.
+9. **Offline honesty** — the last screenful of our own data is kept for a dead
+   connection and labelled; tiles are never cached or bulk-downloaded.
+10. **Production-ready tile configuration** — `MAP_TILE_URL` (plus attribution
+    and subdomains) served to the client from the server, with the public OSM
+    server flagged dev-only in `/api/ops/status` until it is changed.
+11. **Spatial indexes** — `0011_map_viewport_indexes`: composite `(lat, lng)`
+    btrees on places, vendors and markets, installed by both `init_db()` and
+    `alembic upgrade head`. A bbox is now two range scans (0.8 ms on 7,640 rows).
+13. **A tile backend that is production-grade** — MapTiler by default
+    (`MAP_TILE_PROVIDER=auto` + `MAP_TILE_KEY`), with Stadia, Thunderforest and
+    self-hosted presets one setting away, resolved in
+    `app/services/tile_providers.py` and served to the client with its
+    attribution. The public OSM server stays development-only and keeps warning.
+14. **`GET /api/surface/map` retired** — deleted rather than capped, along with
+    `surfaceAPI.map`, so the whole-directory dump cannot be reintroduced by
+    accident.
+12. **Scale you can reproduce** — `backend/seed_map_demo.py` seeds 7,640 places
+    around 25 real East-African markets.
+
+Details, measurements and the PostGIS/Vector-tile upgrade paths:
+[`docs/briefs/map-performance.md`](docs/briefs/map-performance.md).
 
 ## History
 

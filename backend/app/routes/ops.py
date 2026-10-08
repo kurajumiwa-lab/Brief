@@ -20,6 +20,8 @@ from app.middleware.metrics import registry
 from app.middleware.rate_limiter import current_backend
 from app.models.vendor import Vendor
 from app.routes.auth import get_current_vendor
+from app.services import map_viewport as mv
+from app.services import tile_providers
 from app.services.storage import storage_mode
 
 router = APIRouter()
@@ -57,6 +59,12 @@ async def ops_status(
     vendor: Vendor = Depends(get_current_vendor),
 ):
     """Latency, error rates, pool health and config facts — one screen."""
+    resolved_tiles = tile_providers.tile_config(
+        settings.MAP_TILE_PROVIDER,
+        api_key=settings.MAP_TILE_KEY,
+        url_override=settings.MAP_TILE_URL,
+        attribution_override=settings.MAP_TILE_ATTRIBUTION,
+    )
     db_ok, db_error = True, None
     try:
         async with engine.connect() as conn:
@@ -86,6 +94,24 @@ async def ops_status(
         "counters": {
             "rate_limited_responses": registry.limiter_rejections,
             "requests_total": registry.total_requests,
+        },
+        # The map is the heaviest screen in the app, so its two failure modes
+        # are surfaced here: a dev-only tile backend in production, and a
+        # viewport cache that is never hitting (i.e. clients re-fetching the
+        # same streets on every pan).
+        "map": {
+            "tile_provider": resolved_tiles["provider"],
+            "tile_provider_label": resolved_tiles["label"],
+            "tile_key_missing": resolved_tiles["key_missing"],
+            "tile_dev_only": resolved_tiles["dev_only"],
+            "tile_warning": resolved_tiles.get("warning"),
+            "point_zoom": {
+                "places": settings.MAP_PLACES_POINT_ZOOM,
+                "vendors": settings.MAP_VENDORS_POINT_ZOOM,
+                "markets": settings.MAP_MARKETS_POINT_ZOOM,
+            },
+            "viewport_cache": mv.viewport_cache.stats,
+            "counts_cache": mv.counts_cache.stats,
         },
     }
 
