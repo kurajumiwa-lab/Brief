@@ -3,7 +3,11 @@ import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import Shell from "@/components/layout/Shell";
 import { PageSpinner } from "@/components/ui/Spinner";
 import AuthPage from "@/pages/auth/AuthPage";
-import LocalHome from "@/pages/home/LocalHome";
+import HomeHub from "@/pages/home/HomeHub";
+import NearbyPage from "@/pages/nearby/NearbyPage";
+import PlaceProfile from "@/pages/nearby/PlaceProfile";
+import MarketDetail from "@/pages/markets/MarketDetail";
+import TaskTrack from "@/pages/tasks/TaskTrack";
 import { useAuthStore } from "@/stores/authStore";
 
 // v2.8 performance pass: every page is lazy. The home screen downloads only
@@ -62,16 +66,26 @@ export default function App() {
         }
       >
         <Fragment>
-          {/* Home is the B2C local-business home (Nextdoor-style, GPS +
-              categories). The B2B surfaces feed stays one tap away at /feed. */}
-          <Route path="/" element={<LocalHome />} />
+          {/* ── Home, and the screens that hang off it ──
+              Home is a hub: every tile opens a secondary screen, and each of
+              those has somewhere to go next (a category screen, a place, a
+              shop front, the map). Nothing on the hub is a dead end. */}
+          <Route path="/" element={<HomeHub />} />
+          <Route path="/nearby" element={<NearbyPage />} />
+          <Route path="/nearby/:group" element={<NearbyPage />} />
+          <Route path="/place/:id" element={<PlaceProfile />} />
           <Route path="/feed" element={<SurfaceFeed />} />
           <Route path="/search" element={<SearchHub />} />
+          <Route path="/search/:tab" element={<SearchHub />} />
           <Route path="/map" element={<MapPage />} />
           <Route path="/news" element={<News />} />
-          <Route path="/squad" element={<SquadPage />} />
+          <Route path="/news/:kind" element={<News />} />
+          {/* /squad is now a track of the Tasks section — the old URL still resolves. */}
+          <Route path="/squad" element={<Navigate to="/tasks/squad" replace />} />
           <Route path="/tasks" element={<TasksPortal />} />
+          <Route path="/tasks/:track" element={<TaskTrack />} />
           <Route path="/markets" element={<MarketsPage />} />
+          <Route path="/markets/:id" element={<MarketDetail />} />
           <Route path="/brief" element={<Dashboard />} />
           <Route path="/stock" element={<StockRoom />} />
           <Route path="/network" element={<Network />} />

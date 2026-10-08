@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link, useParams } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import { Search, Package, Store, MapPin, Newspaper, Building2 } from "lucide-react";
 import SearchInput from "@/components/ui/SearchInput";
@@ -27,7 +28,10 @@ const TABS = [
 
 export default function SearchHub() {
   const navigate = useNavigate();
-  const [tab, setTab] = useState("products");
+  // Each tab is a screen: /search/suppliers opens that list directly. Typing
+  // stays local — a term is a filter on the screen you are already on.
+  const { tab: tabParam } = useParams();
+  const tab = TABS.some((t) => t.value === tabParam) ? tabParam : "products";
   const [q, setQ] = useState("");
   const [lists, setLists] = useState({ products: null, suppliers: null, markets: null, news: null, places: null });
   const [error, setError] = useState("");
@@ -123,11 +127,11 @@ export default function SearchHub() {
 
       <div className="flex gap-1.5 overflow-x-auto pb-1">
         {TABS.map((t) => (
-          <button key={t.value} type="button" onClick={() => setTab(t.value)}
-            className={cn("shrink-0 rounded-full px-3 h-8 text-xs font-medium inline-flex items-center gap-1.5 cursor-pointer",
+          <Link key={t.value} to={`/search/${t.value}`}
+            className={cn("shrink-0 rounded-full px-3 h-8 text-xs font-medium inline-flex items-center gap-1.5",
               tab === t.value ? "bg-brand-500/20 text-brand-200" : "text-ink-4 hover:text-ink-2")}>
             <t.icon size={12} /> {t.label}
-          </button>
+          </Link>
         ))}
       </div>
 

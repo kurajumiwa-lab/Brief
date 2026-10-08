@@ -3,7 +3,7 @@ import logging
 import os
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -183,6 +183,21 @@ async def health():
         status_code=200 if db_ok else 503,
         content={"status": "ok" if db_ok else "degraded", "database": db_ok, "version": settings.VERSION},
     )
+
+
+# --- unknown /api paths are JSON 404s, never the SPA shell ------------------------
+# The catch-all below hands every unmatched path to the frontend so client-side
+# routes (/nearby/retail, /place/{id}) survive a refresh. That must not apply to
+# the API: a client deserialising JSON has to get a 404 it can read, not
+# index.html with a 200. This is registered after the routers, so real routes
+# still win, and before the SPA catch-all, so it wins over that.
+@app.api_route(
+    "/api/{rest:path}",
+    methods=["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD"],
+    include_in_schema=False,
+)
+async def api_unknown(rest: str):
+    raise HTTPException(404, f"Not found: /api/{rest}")
 
 
 # --- single-container deploys: serve the built frontend ---------------------------

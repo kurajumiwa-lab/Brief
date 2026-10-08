@@ -2,6 +2,8 @@
 
 **The information layer around the shop.** Home is a shelf — News, Suppliers, Stock, Rentals, Groups, Events — and the vendor workspace (Brief: stock, deals, chat, analytics, POS) lives inside as a feature. *You source today, you sell tomorrow.*
 
+**Home is a hub, and everything on it is a door.** A tile opens a secondary screen, and a secondary screen opens a detail: `/nearby` → `/nearby/{group}` → `/place/{id}` or `/@handle`; `/markets` → `/markets/{id}`; `/tasks` → `/tasks/squad` · `/tasks/brief`; `/news/{kind}`; `/search/{tab}`. Where a surface cannot be a hub it is rewired, not duplicated — see [`docs/briefs/home-secondary-screens.md`](docs/briefs/home-secondary-screens.md).
+
 Brief_ is a vendor-centric community commerce platform: distribution-and-economic
 infrastructure for people who already trade with each other — market women,
 kiosk owners, wholesalers, couriers, hotel suppliers. Every account is a
@@ -273,6 +275,19 @@ connection, and never caches or pre-fetches tiles — bulk-downloading the publi
 OSM tile servers is exactly what their policy prohibits. Offline **maps** need a
 licensed provider. Full rationale, measurements and the PostGIS upgrade path:
 [`docs/briefs/map-performance.md`](docs/briefs/map-performance.md).
+
+### The home hub and its secondary screens (v2.8)
+
+`/` is a shelf of ten tiles, each with a live count, and every tile opens a
+screen: `/nearby` (with `/nearby/{group}` and `/place/{id}` behind it),
+`/news/{kind}`, `/search/{tab}`, `/markets/{id}`, and `/tasks/squad` ·
+`/tasks/brief`. Filters that are screens live in the URL; filters that are
+views of one screen (radius, search term) stay local. Surfaces that cannot be
+a hub are rewired rather than cloned — the orphaned shelf became the hub, the
+public business got `/place/{id}` instead of a bounce to the map, the unlisted
+`/squad` became a task track, and `/tasks/brief` hands over to the workspace
+that already owns itself.
+[`docs/briefs/home-secondary-screens.md`](docs/briefs/home-secondary-screens.md).
 
 ## Configuration
 

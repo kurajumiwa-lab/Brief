@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Link, useParams } from "react-router-dom";
 import { useEffect } from "react";
 import {
   Newspaper, Package, ArrowLeftRight, CalendarDays, Users, ShoppingBasket, ChevronDown, ArrowUpRight,
@@ -244,9 +245,12 @@ const TEMPLATES = { stock: StockCard, movement: MovementCard, event: EventCard, 
 
 export default function News() {
   const navigate = useNavigate();
+  // A kind is a screen, not a filter: /news/stock opens straight into stock
+  // news and can be linked to. "all" is the hub at /news.
+  const { kind } = useParams();
+  const filter = kind || "all";
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
-  const [filter, setFilter] = useState("all");
   const [openId, setOpenId] = useState(null);
 
   useEffect(() => {
@@ -291,14 +295,14 @@ export default function News() {
         {KIND_FILTERS.map((f) => {
           const n = counts[f.value] || 0;
           return (
-            <button key={f.value} type="button" onClick={() => setFilter(f.value)}
-              disabled={f.value !== "all" && n === 0}
-              className={cn("shrink-0 rounded-full px-3 h-8 text-xs font-medium inline-flex items-center gap-1.5 cursor-pointer disabled:cursor-default",
+            <Link key={f.value} to={f.value === "all" ? "/news" : `/news/${f.value}`}
+              aria-disabled={f.value !== "all" && n === 0}
+              className={cn("shrink-0 rounded-full px-3 h-8 text-xs font-medium inline-flex items-center gap-1.5",
                 filter === f.value ? "bg-brand-500/20 text-brand-200" : "text-ink-4 hover:text-ink-2",
-                f.value !== "all" && n === 0 && "opacity-40")}>
+                f.value !== "all" && n === 0 && "opacity-40 pointer-events-none")}>
               {f.label}
               <span className="font-mono text-2xs opacity-70">{n || ""}</span>
-            </button>
+            </Link>
           );
         })}
       </div>

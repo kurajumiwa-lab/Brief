@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Store, MapPin, Building2, Search, Crosshair, Plus, Minus, List, X, ChevronRight,
   CloudOff, ZoomIn,
@@ -61,6 +61,7 @@ const QUICK = [
 
 export default function MapPage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const mapRef = useRef(null);
 
   const [config, setConfig] = useState(null);
@@ -136,6 +137,27 @@ export default function MapPage() {
     setSelected(item);
     if (mode === "list") setMode("map");
   }, [mode]);
+
+  // ── ?focus=<id> — arriving from a place or market screen ──────────────────
+  // A place profile and a market screen both say "show on the map". The map
+  // answers with the sheet open on that row instead of dropping you on an
+  // uncentred map and expecting you to find it yourself.
+  const focusId = searchParams.get("focus");
+  useEffect(() => {
+    if (!focusId || !config) return undefined;
+    let live = true;
+    mapAPI.place(focusId)
+      .then(({ data: d }) => {
+        if (!live) return;
+        setSelected({ id: d.id, kind: d.kind, name: d.name, lat: d.lat, lng: d.lng, category: d.category });
+        setMode("map");
+        mapRef.current?.flyTo(d.lat, d.lng, 17);
+        searchParams.delete("focus");
+        setSearchParams(searchParams, { replace: true });
+      })
+      .catch(() => live && toast.error("That place is no longer in the directory"));
+    return () => { live = false; };
+  }, [focusId, config]);
 
   const nearest = useMemo(
     () => [...points].sort((a, b) => (a.distance_km ?? 1e9) - (b.distance_km ?? 1e9)).slice(0, 40),
