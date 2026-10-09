@@ -4,7 +4,9 @@ import { MemoryRouter } from "react-router-dom";
 
 import {
   areaSummary, bboxString, categoryLabel, clusterColor, clusterRadius,
-  formatCount, zoomTier, rememberView, clearViews,
+  clusterStyle, formatCount, pointStyle, sortNetworkFirst, tierTag,
+  zoomTier, rememberView, clearViews,
+  NETWORK_COLOR, MUTED_COLOR, KIND_COLORS,
 } from "@/lib/mapViewport";
 import useMapViewport from "@/lib/useMapViewport";
 
@@ -220,7 +222,9 @@ describe("useMapViewport", () => {
 // has to be created with `vi.hoisted` too.
 const fixtures = vi.hoisted(() => ({
   placeCalls: [],
-  PLACE: { id: "p-1", kind: "places", name: "Kamau Electronics", category: "shop:electronics", lat: -1.28, lng: 36.82, distance_km: 1.2 },
+  reports: [],
+  // An EXTERNAL place: on the map, but not in the marketplace.
+  PLACE: { id: "p-1", kind: "places", name: "Kamau Electronics", category: "shop:electronics", lat: -1.28, lng: 36.82, distance_km: 1.2, network: false },
   config: {
     tiles: {
       provider: "openstreetmap", url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
@@ -230,18 +234,27 @@ const fixtures = vi.hoisted(() => ({
     thresholds: { places: 15, vendors: 12, markets: 6 },
     limits: { points_per_layer: 300, max_bbox_deg: 40, cluster_cell_px: 64 },
     quick_filters: [{ value: "food", label: "Food" }],
+    tiers: { external_modes: ["hide", "muted", "only"], external_default: "hide", place_stale_days: 180 },
     viewer: { lat: -1.28, lng: 36.82 },
     default_center: [-1.2867, 36.8172], default_zoom: 12,
   },
   counts: {
-    markets: 25, vendors: 0, places: 7640, claimed: 3,
+    markets: 25, markets_networked: 8, vendors: 4, vendors_with_offers: 4,
+    places: 7640, claimed: 91, network_places: 91, external_places: 7549, stale_places: 0,
     facets: [{ value: "food", label: "Food", count: 2749 }], categories: [],
   },
   view: {
     bbox: "36.7,-1.4,36.9,-1.2", zoom: 12,
-    points: [{ id: "p1", kind: "places", name: "Amina Electronics", category: "shop:electronics", lat: -1.28, lng: 36.82, distance_km: 1.2 }],
-    clusters: [{ id: "c1", kind: "places", lat: -1.3, lng: 36.8, count: 1240, sample: ["A", "B"] }],
-    counts: { markets: 2, vendors: 1, places: 1240 }, truncated: false,
+    points: [
+      // A network supplier, an unworked market, and an external place: the
+      // list must read marketplace-first, directory-after.
+      { id: "v1", kind: "vendors", name: "Amina Wholesale", handle: "amina", lat: -1.28, lng: 36.82, distance_km: 1.2, network: true, is_verified: true, in_stock_lines: 12 },
+      { id: "m1", kind: "markets", name: "Toi Market", city: "Nairobi", country: "Kenya", lat: -1.29, lng: 36.81, distance_km: 2.5, members: 0, networked: false, network: false },
+      { id: "p1", kind: "places", name: "Amina Electronics", category: "shop:electronics", lat: -1.28, lng: 36.82, distance_km: 1.2, network: false },
+    ],
+    clusters: [{ id: "c1", kind: "places", lat: -1.3, lng: 36.8, count: 1240, network: false, network_count: 0, sample: ["A", "B"] }],
+    counts: { markets: 2, vendors: 1, places: 1240, network: 12, external: 1228, stale: 0, vendors_with_offers: 1, markets_networked: 1 },
+    truncated: false,
   },
 }));
 const PLACE = fixtures.PLACE;
@@ -251,6 +264,7 @@ vi.mock("@/lib/api", () => {
     ...fixtures.PLACE, phone: "+254700000001", opening_hours: "Mo-Sa 09:00-18:00",
     address: "12 Tom Mboya Street", website: "https://example.com", zone_name: "Nairobi CBD",
     last_checked_at: new Date().toISOString(), claimed: false, claimed_by_me: false,
+    network: false, tier: "external", stale: false, checked_days_ago: 2,
     attribution: "Data \u00a9 OpenStreetMap contributors (ODbL)",
   };
   const apiError = (e, f = "Something went wrong") => e?.message || f;
@@ -263,6 +277,10 @@ vi.mock("@/lib/api", () => {
       place: vi.fn((id, opts) => { fixtures.placeCalls.push(opts); return Promise.resolve({ data: detail }); }),
       vendor: vi.fn(() => Promise.resolve({ data: {} })),
       market: vi.fn(() => Promise.resolve({ data: {} })),
+      reportPlace: vi.fn((id, verdict) => {
+        fixtures.reports.push(verdict);
+        return Promise.resolve({ data: { id, verdict, note: "Recorded — thanks" } });
+      }),
     },
     geoAPI: { claim: vi.fn(() => Promise.resolve({ data: { changed: true } })) },
     marketsAPI: { join: vi.fn(() => Promise.resolve({ data: {} })) },
@@ -270,7 +288,7 @@ vi.mock("@/lib/api", () => {
 });
 
 describe("MapSheet", () => {
-  it("fetches a pin's details only once it is open", async () => {
+  it("fetches a pin's details only once it is open, and says it is external", async () => {
     const { default: MapSheet } = await import("@/components/map/MapSheet");
     render(
       <MemoryRouter>
@@ -278,11 +296,49 @@ describe("MapSheet", () => {
       </MemoryRouter>,
     );
     expect(screen.getByText("Kamau Electronics")).toBeInTheDocument();
-    expect(screen.getByText("unverified")).toBeInTheDocument();     // honest until claimed
+    // Honest by default: an unclaimed row is on the map but NOT in the network.
+    expect(screen.getByText(/external · not in the network/)).toBeInTheDocument();
     expect(fixtures.placeCalls).toHaveLength(1);                     // one pin, one request
     await waitFor(() => expect(screen.getByText("+254700000001")).toBeInTheDocument());
     expect(screen.getByText(/Mo-Sa 09:00-18:00/)).toBeInTheDocument();
     expect(screen.getByText(/OpenStreetMap/)).toBeInTheDocument();   // ODbL travels with the row
+    // The two on-the-ground verdicts an external row offers.
+    expect(screen.getByRole("button", { name: /Still there/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Report gone/ })).toBeInTheDocument();
+  });
+
+  it("a network place wears the badge and loses the revalidation buttons", async () => {
+    const { default: MapSheet } = await import("@/components/map/MapSheet");
+    const { mapAPI } = await import("@/lib/api");
+    mapAPI.place.mockImplementationOnce(() =>
+      Promise.resolve({ data: { ...PLACE, network: true, tier: "network", claimed: true } }));
+    const { container } = render(
+      <MemoryRouter>
+        <MapSheet item={{ ...PLACE, network: true }} onClose={() => {}} />
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(container.textContent).toContain("network member"));
+    expect(document.querySelector(".bg-brand-50, .dark\\:bg-brand-500\\/15") || screen.getByText(/^ network$/)).toBeTruthy();
+    // The network manages its own rows: no street-verdict buttons.
+    expect(screen.queryByRole("button", { name: /Report gone/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Still there/ })).not.toBeInTheDocument();
+  });
+
+  it("a stale external place says the source went quiet — and can be confirmed", async () => {
+    const { default: MapSheet } = await import("@/components/map/MapSheet");
+    const { mapAPI } = await import("@/lib/api");
+    mapAPI.place.mockImplementationOnce((id, opts) => {
+      fixtures.placeCalls.push(opts);
+      return Promise.resolve({ data: { ...PLACE, stale: true, checked_days_ago: 214 } });
+    });
+    render(
+      <MemoryRouter>
+        <MapSheet item={PLACE} onClose={() => {}} />
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(screen.getByText(/214 days/)).toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: /Still there/ }));
+    await waitFor(() => expect(fixtures.reports).toContain("confirmed"));
   });
 
   it("cancels the detail request when the sheet is dismissed", async () => {
@@ -312,19 +368,39 @@ beforeEach(() => {
 });
 
 describe("MapPage", () => {
-  it("renders the counters as filters, and draws one screenful", async () => {
+  it("renders the network-first counters, and draws one screenful", async () => {
     const { default: MapPage } = await import("@/pages/map/MapPage");
     render(<MemoryRouter><MapPage /></MemoryRouter>);
-    await waitFor(() => expect(screen.getByText(/Markets/)).toBeInTheDocument());
-    expect(screen.getByText("7.6K")).toBeInTheDocument();          // the headline chip
+    await waitFor(() => expect(screen.getByText(/Suppliers/)).toBeInTheDocument());
+    // The Places chip counts network members (91), not the directory.
+    expect(screen.getByText("91")).toBeInTheDocument();
+    // The external directory lives behind its own switch, counted honestly.
+    expect(screen.getByText("7.5K")).toBeInTheDocument();          // 7,549 external
     expect(screen.getByPlaceholderText(/Search products/)).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByText(/1,240 places here/)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/12 network places here/)).toBeInTheDocument());
+  });
+
+  it("hides external places until one toggle brings them back, muted", async () => {
+    const { default: MapPage } = await import("@/pages/map/MapPage");
+    const { mapAPI } = await import("@/lib/api");
+    render(<MemoryRouter><MapPage /></MemoryRouter>);
+    await waitFor(() => expect(screen.getByText(/12 network places here/)).toBeInTheDocument());
+    // Default: the clean map. The API is asked for network rows only…
+    expect(mapAPI.viewport.mock.calls.every(([, opts]) => !opts?.signal?.aborted || true)).toBe(true);
+    expect(mapAPI.viewport.mock.calls.some(([params]) => params.external === "hide")).toBe(true);
+    // …and the status line says what is hidden instead of pretending.
+    expect(screen.getByText(/1,228 external hidden/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /External/ }));
+    await waitFor(() =>
+      expect(mapAPI.viewport.mock.calls.some(([params]) => params.external === "muted")).toBe(true));
+    expect(await screen.findByText(/1,228 external muted/)).toBeInTheDocument();
   });
 
   it("puts pins on a canvas, not one DOM node each", async () => {
     const { default: MapPage } = await import("@/pages/map/MapPage");
     const { container } = render(<MemoryRouter><MapPage /></MemoryRouter>);
-    await waitFor(() => expect(screen.getByText(/1,240 places here/)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/12 network places here/)).toBeInTheDocument());
     // One cluster bubble (it has to show a number) and zero DOM pins: the
     // individual place is a canvas circle. 7,640 pins would be 7,640 nodes.
     expect(container.querySelectorAll(".leaflet-marker-icon")).toHaveLength(1);
@@ -335,12 +411,30 @@ describe("MapPage", () => {
     const { default: MapPage } = await import("@/pages/map/MapPage");
     const { mapAPI } = await import("@/lib/api");
     render(<MemoryRouter><MapPage /></MemoryRouter>);
-    await waitFor(() => expect(screen.getByText(/1,240 places here/)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/12 network places here/)).toBeInTheDocument());
     fireEvent.click(screen.getByRole("button", { name: /Markets/ }));
     await waitFor(() =>
       expect(mapAPI.viewport.mock.calls.some(([params]) => params.kind === "markets")).toBe(true));
     // …and the directory is not queried alongside it.
     const last = mapAPI.viewport.mock.calls.at(-1)[0];
     expect(last.kind).toBe("markets");
+  });
+
+  it("reads marketplace-first in the list: suppliers, then the directory", async () => {
+    const { default: MapPage } = await import("@/pages/map/MapPage");
+    render(<MemoryRouter><MapPage /></MemoryRouter>);
+    await waitFor(() => expect(screen.getByText(/12 network places here/)).toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: /Show the list/ }));
+    const list = await screen.findByText(/Network businesses first/);
+    expect(list).toBeInTheDocument();
+    // Order in the DOM: the network supplier, the unworked market, the
+    // external place — distance never promotes the directory.
+    const body = document.body.textContent;
+    expect(body.indexOf("Amina Wholesale")).toBeLessThan(body.indexOf("Toi Market"));
+    expect(body.indexOf("Toi Market")).toBeLessThan(body.indexOf("Amina Electronics"));
+    // The external row is labelled for what it is.
+    expect(body).toContain("external");
+    expect(body).toContain("no suppliers yet");
+    expect(body).toContain("12 lines in stock");
   });
 });

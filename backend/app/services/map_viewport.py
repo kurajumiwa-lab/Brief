@@ -5,10 +5,16 @@ The directory holds thousands of public places (7,640 and growing). The old
 and turned each one into a Leaflet marker — several thousand DOM nodes, on a
 device with a few hundred MB of headroom. That is the bug.
 
-This module answers one question instead: **what is in this rectangle, at this
-zoom?** Everything below is built on that:
+This module answers two questions instead:
 
-    bbox + zoom + filters  →  one indexed range scan  →  clusters or ~300 pins
+1. **What is in this rectangle, at this zoom?**
+   `bbox + zoom + filters  →  one indexed range scan  →  clusters or ~300 pins`
+2. **Which of it is the marketplace?** (v2.8) Every place row is tiered —
+   `network` (claimed), `external` (unclaimed, fresh), `stale` (the source
+   stopped confirming it) — see `place_tier`. The viewport's `external=`
+   mode picks what is drawn; the counts always report the split. Vendors and
+   working markets are network rows by definition and rank by commercial
+   value, not by distance alone.
 
 Design decisions, and why:
 
@@ -51,6 +57,44 @@ MARKETS = "markets"
 VENDORS = "vendors"
 PLACES = "places"
 KINDS = (MARKETS, VENDORS, PLACES)
+
+# ── Place tiers (v2.8) ─────────────────────────────────────────────────────────
+# The non-negotiable product rule: **a location on the map is not automatically
+# part of the marketplace.** Every place row is in exactly one of three tiers:
+#
+#   network   — claimed by a vendor. The marketplace trusts the vendor's own
+#               rows; the place is a member.
+#   external  — unclaimed public data the source still confirms as fresh.
+#               Commercially relevant background: muted, never ranked first.
+#   stale     — unclaimed and not confirmed by the source for
+#               MAP_PLACE_STALE_DAYS. Off the commercial map until it is
+#               revalidated (a vendor confirms it, or the next ingest does).
+#
+# `external=` on the viewport picks how much of that the caller sees:
+#   hide   only network rows (the clean, supplier-first map)
+#   muted  network rows first, external rows included and flagged
+#   only   external rows alone — the claim-sourcing / audit view
+NETWORK_TIER = "network"
+EXTERNAL_TIER = "external"
+STALE_TIER = "stale"
+EXTERNAL_MODES = ("hide", "muted", "only")
+
+
+def fresh_cutoff(now: Optional[datetime] = None) -> datetime:
+    """Places whose `last_checked_at` is older than this are stale."""
+    from datetime import timedelta
+    return (now or datetime.utcnow()) - timedelta(days=settings.MAP_PLACE_STALE_DAYS)
+
+
+def place_tier(claimed: bool, last_checked_at: Optional[datetime],
+               now: Optional[datetime] = None) -> str:
+    """Which tier a row is in — the single definition the SQL mirrors."""
+    if claimed:
+        return NETWORK_TIER
+    if last_checked_at is None:
+        return STALE_TIER
+    cutoff = fresh_cutoff(now)
+    return EXTERNAL_TIER if last_checked_at >= cutoff else STALE_TIER
 
 # Zoom at or above which a layer stops clustering and returns real pins.
 def point_zoom(kind: str) -> int:
@@ -256,6 +300,28 @@ def _search_sql(term: str) -> Tuple[str, Dict[str, str]]:
             " OR COALESCE(zone_name,'') ILIKE :q)", {"q": f"%{term}%"})
 
 
+# `claimed_by_vendor_id IS NOT NULL` is the one ground truth for membership —
+# the claim flow sets both it and status='claimed', and the vendor's account is
+# what the network actually trusts.
+_NETWORK_SQL = "claimed_by_vendor_id IS NOT NULL"
+_FRESH_SQL = "(status = 'active' AND claimed_by_vendor_id IS NULL AND last_checked_at >= :fresh_cutoff)"
+_STALE_SQL = "(status = 'active' AND claimed_by_vendor_id IS NULL AND last_checked_at < :fresh_cutoff)"
+
+
+def place_tier_sql(mode: str) -> Tuple[str, Dict[str, datetime]]:
+    """`WHERE`-fragment selecting the tiers an `external=` mode may show.
+
+    Stale rows are never selected here — they leave the commercial map until
+    revalidated, and are reported (then archived) by the maintenance sweep.
+    """
+    if mode == "hide":
+        return f" AND {_NETWORK_SQL}", {}
+    if mode == "only":
+        return f" AND {_FRESH_SQL}", {"fresh_cutoff": fresh_cutoff()}
+    # muted — the honest default: network rows first, external flagged after.
+    return (f" AND ({_NETWORK_SQL} OR {_FRESH_SQL})", {"fresh_cutoff": fresh_cutoff()})
+
+
 def category_patterns(group: str) -> List[str]:
     """Quick-filter slug → `LIKE` patterns over the OSM category string."""
     spec = QUICK_FILTERS.get((group or "").strip().lower())
@@ -279,31 +345,39 @@ def _category_sql(group: str, category: str) -> Tuple[str, Dict[str, str]]:
 async def places_clusters(
     db: AsyncSession, box: BBox, cell: Tuple[float, float],
     q: str = "", group: str = "", category: str = "", limit: int = 400,
+    external: str = "muted",
 ) -> List[Dict[str, Any]]:
     """One row per grid cell: count, centroid, dominant category, 3 sample names.
 
     `mode()` picks the most common category in the cell and `array_agg` is sliced
     to three names — so the heaviest thing that leaves the database is a few
     hundred aggregate rows, never the underlying places.
+
+    Each cluster carries its tier split (`network` / `network_count`): a cell
+    with even one claimed place is a network cell and draws as one; a cell of
+    only unclaimed rows is external and draws muted. Stale rows are in no
+    cluster — they are off the commercial map.
     """
     search_sql, search_params = _search_sql(q)
     cat_sql, cat_params = _category_sql(group, category)
+    tier_sql, tier_params = place_tier_sql(external)
     bbox_sql, bbox_params = bbox_where(box)
     sql = text(f"""
         SELECT floor(lat / :cell_lat)  AS gy,
                floor(lng / :cell_lng)  AS gx,
                count(*)                AS n,
+               count(*) FILTER (WHERE {_NETWORK_SQL}) AS network_n,
                avg(lat)                AS clat,
                avg(lng)                AS clng,
                mode() WITHIN GROUP (ORDER BY category) AS cat,
                (array_agg(name ORDER BY last_checked_at DESC))[1:3] AS samples
           FROM public_places
-         WHERE status IN ('active', 'claimed'){bbox_sql}{search_sql}{cat_sql}
+         WHERE status IN ('active', 'claimed'){tier_sql}{bbox_sql}{search_sql}{cat_sql}
          GROUP BY 1, 2
          ORDER BY n DESC, gy, gx
          LIMIT :limit
     """)
-    params = {**bbox_params, **search_params, **cat_params,
+    params = {**bbox_params, **search_params, **cat_params, **tier_params,
               "cell_lat": cell[0], "cell_lng": cell[1], "limit": limit}
     rows = (await db.execute(sql, params)).all()
     return [{
@@ -312,6 +386,8 @@ async def places_clusters(
         "lat": round(float(r.clat), 6),
         "lng": round(float(r.clng), 6),
         "count": int(r.n),
+        "network_count": int(r.network_n or 0),
+        "network": int(r.network_n or 0) > 0,
         "category": r.cat,
         "sample": [s for s in (r.samples or []) if s],
     } for r in rows]
@@ -320,29 +396,49 @@ async def places_clusters(
 async def places_points(
     db: AsyncSession, box: BBox, center: Tuple[float, float],
     q: str = "", group: str = "", category: str = "", limit: int = 300,
+    external: str = "muted",
 ) -> List[Dict[str, Any]]:
-    """Individual places inside the viewport, nearest to the middle first."""
+    """Individual places inside the viewport, network members first, then
+    nearest to the middle. A network place and an external place at the same
+    distance are not equal: the member is the marketplace, the other is
+    background — so membership outranks proximity in the ordering."""
     search_sql, search_params = _search_sql(q)
     cat_sql, cat_params = _category_sql(group, category)
+    tier_sql, tier_params = place_tier_sql(external)
     bbox_sql, bbox_params = bbox_where(box)
     sql = text(f"""
-        SELECT id, name, category, lat, lng, zone_name, claimed_by_vendor_id
+        SELECT id, name, category, lat, lng, zone_name,
+               ({_NETWORK_SQL}) AS network
           FROM public_places
-         WHERE status IN ('active', 'claimed'){bbox_sql}{search_sql}{cat_sql}
-         ORDER BY (lat - :clat) * (lat - :clat) + (lng - :clng) * (lng - :clng)
+         WHERE status IN ('active', 'claimed'){tier_sql}{bbox_sql}{search_sql}{cat_sql}
+         ORDER BY ({_NETWORK_SQL}) DESC,
+                  (lat - :clat) * (lat - :clat) + (lng - :clng) * (lng - :clng)
          LIMIT :limit
     """)
-    params = {**bbox_params, **search_params, **cat_params,
+    params = {**bbox_params, **search_params, **cat_params, **tier_params,
               "clat": center[0], "clng": center[1], "limit": limit}
     rows = (await db.execute(sql, params)).all()
     return [{
         "id": str(r.id), "kind": PLACES, "name": r.name, "category": r.category,
         "lat": r.lat, "lng": r.lng, "zone_name": r.zone_name,
-        "claimed": bool(r.claimed_by_vendor_id),
+        "network": bool(r.network),
+        "claimed": bool(r.network),
     } for r in rows]
 
 
 # ── Vendors ────────────────────────────────────────────────────────────────────
+# Vendors ARE the network: every vendor row is a network row by definition, and
+# the ranking below is the product. "Current offers, ranked by relevance,
+# availability and commercial value" translates to SQL as:
+#
+#   has stock on the shelf now  →  verified  →  network score  →  nearest
+#
+# A verified supplier with 40 live lines two streets further away beats an
+# empty profile next door. The lateral count is bbox-capped before it runs
+# (the viewport predicate), so the join never walks the whole stock table.
+
+# Vendor clusters aggregate the same ranked population; they are network rows
+# and say so, so the client can style them apart from external clusters.
 async def vendor_clusters(
     db: AsyncSession, box: BBox, cell: Tuple[float, float],
     q: str = "", limit: int = 400,
@@ -372,6 +468,7 @@ async def vendor_clusters(
         "lat": round(float(r.clat), 6),
         "lng": round(float(r.clng), 6),
         "count": int(r.n),
+        "network": True,
         "category": None,
         "sample": [s for s in (r.samples or []) if s],
     } for r in rows]
@@ -381,17 +478,33 @@ async def vendor_points(
     db: AsyncSession, box: BBox, center: Tuple[float, float],
     q: str = "", limit: int = 300, exclude_vendor_id: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
+    """Suppliers inside the viewport, ranked by current offers first: in-stock
+    lines, then verification, then network score, then plain distance."""
     search_sql, search_params = (("", {}) if not q else (
-        " AND (business_name ILIKE :q OR COALESCE(vendor_handle,'') ILIKE :q"
-        " OR COALESCE(physical_location,'') ILIKE :q)", {"q": f"%{q}%"}))
-    exclude_sql = " AND id <> CAST(:me AS uuid)" if exclude_vendor_id else ""
-    bbox_sql, bbox_params = bbox_where(box, "geo_lat", "geo_lng")
+        " AND (v.business_name ILIKE :q OR COALESCE(v.vendor_handle,'') ILIKE :q"
+        " OR COALESCE(v.physical_location,'') ILIKE :q)", {"q": f"%{q}%"}))
+    exclude_sql = " AND v.id <> CAST(:me AS uuid)" if exclude_vendor_id else ""
+    bbox_sql, bbox_params = bbox_where(box, "v.geo_lat", "v.geo_lng")
     sql = text(f"""
-        SELECT id, business_name, vendor_handle, business_categories,
-               geo_lat, geo_lng, physical_location, current_role
-          FROM vendors
-         WHERE geo_lat IS NOT NULL AND geo_lng IS NOT NULL{bbox_sql}{search_sql}{exclude_sql}
-         ORDER BY (geo_lat - :clat) * (geo_lat - :clat) + (geo_lng - :clng) * (geo_lng - :clng)
+        SELECT v.id, v.business_name, v.vendor_handle, v.business_categories,
+               v.geo_lat, v.geo_lng, v.physical_location, v.current_role,
+               v.is_verified, v.network_score,
+               COALESCE(s.in_stock_lines, 0) AS in_stock_lines,
+               (v.geo_lat - :clat) * (v.geo_lat - :clat)
+                 + (v.geo_lng - :clng) * (v.geo_lng - :clng) AS d2
+          FROM vendors v
+          LEFT JOIN LATERAL (
+              SELECT count(*) AS in_stock_lines
+                FROM stock_items si
+               WHERE si.vendor_id = v.id
+                 AND si.visible_to_network IS TRUE
+                 AND si.quantity_available > 0
+          ) s ON TRUE
+         WHERE v.geo_lat IS NOT NULL AND v.geo_lng IS NOT NULL{bbox_sql}{search_sql}{exclude_sql}
+         ORDER BY (COALESCE(s.in_stock_lines, 0) > 0) DESC,
+                  v.is_verified DESC,
+                  v.network_score DESC,
+                  d2
          LIMIT :limit
     """)
     params = {**bbox_params, **search_params, "clat": center[0], "clng": center[1], "limit": limit}
@@ -404,51 +517,91 @@ async def vendor_points(
         "location": r.physical_location,
         "role": r.current_role.value if hasattr(r.current_role, "value") else r.current_role,
         "lat": r.geo_lat, "lng": r.geo_lng,
+        "network": True,
+        "is_verified": bool(r.is_verified),
+        "in_stock_lines": int(r.in_stock_lines or 0),
+        "network_score": float(r.network_score or 0.0),
     } for r in rows]
 
 
 # ── Markets ────────────────────────────────────────────────────────────────────
 async def market_rows(db: AsyncSession, box: Optional[BBox] = None, q: str = "") -> List[Dict[str, Any]]:
-    """Markets with their member count. The catalog is small (tens of rows), so
-    it is fetched whole and gridded in Python — one query, no aggregation pass."""
-    where = ["is_active IS TRUE", "center_lat IS NOT NULL", "center_lng IS NOT NULL"]
+    """Markets with their member count and their *working* supplier count.
+
+    A zone in the catalog is not automatically a market that matters. One with
+    registered vendors is `networked` — discoverable and clickable. One with
+    none is still drawn (a vendor can be the first to register), but muted and
+    sorted last: it is an address, not yet a marketplace. `active_members`
+    counts registered vendors who actually have something on the shelf right
+    now — that is the number a buyer is shopping against.
+    """
+    where = ["z.is_active IS TRUE", "z.center_lat IS NOT NULL", "z.center_lng IS NOT NULL"]
     params: Dict[str, Any] = {}
     if box is not None:
-        where.append("center_lat BETWEEN :south AND :north")
-        where.append(box.lng_sql("center_lng"))
+        where.append("z.center_lat BETWEEN :south AND :north")
+        where.append(box.lng_sql("z.center_lng"))
         params.update(box.params())
     if q:
-        where.append("(name ILIKE :q OR COALESCE(city,'') ILIKE :q OR COALESCE(country,'') ILIKE :q)")
+        where.append("(z.name ILIKE :q OR COALESCE(z.city,'') ILIKE :q OR COALESCE(z.country,'') ILIKE :q)")
         params["q"] = f"%{q}%"
     sql = text(f"""
         SELECT z.id, z.name, z.city, z.country, z.center_lat, z.center_lng, z.radius_km,
-               (SELECT count(*) FROM market_members m WHERE m.zone_id = z.id) AS members
+               (SELECT count(*) FROM market_members m WHERE m.zone_id = z.id) AS members,
+               (SELECT count(DISTINCT si.vendor_id)
+                  FROM market_members mm
+                  JOIN stock_items si ON si.vendor_id = mm.vendor_id
+                 WHERE mm.zone_id = z.id
+                   AND si.visible_to_network IS TRUE
+                   AND si.quantity_available > 0) AS active_members
           FROM market_zones z
          WHERE {' AND '.join(where)}
-         ORDER BY members DESC, z.name
+         ORDER BY (SELECT count(*) FROM market_members m WHERE m.zone_id = z.id) DESC,
+                  active_members DESC, z.name
     """)
     rows = (await db.execute(sql, params)).all()
     return [{
         "id": str(r.id), "kind": MARKETS, "name": r.name, "city": r.city, "country": r.country,
         "lat": r.center_lat, "lng": r.center_lng, "radius_km": r.radius_km,
         "members": int(r.members or 0),
+        "active_members": int(r.active_members or 0),
+        "networked": int(r.members or 0) > 0,
+        "network": int(r.members or 0) > 0,
         "category": "market",
     } for r in rows]
 
 
 # ── Counts (the headline chips + facets) ───────────────────────────────────────
 async def headline_counts(db: AsyncSession) -> Dict[str, Any]:
-    """Global totals for the Market / Vendor / Place chips, plus the quick-filter
-    facets. Four `count(*)`s and one grouped count — cheap enough to cache for
-    `MAP_COUNTS_TTL_SECONDS` and honest enough to label as a live total."""
-    places = (await db.execute(text(
-        "SELECT count(*) FROM public_places WHERE status IN ('active','claimed')"))).scalar() or 0
-    claimed = (await db.execute(text(
-        "SELECT count(*) FROM public_places WHERE status = 'claimed'"))).scalar() or 0
+    """Global totals for the chips, split by tier, plus the quick-filter facets.
+
+    The headline is the network: vendors, working markets, claimed places. The
+    external directory is still counted — honestly, in its own keys — because
+    "how much mapped stock is not yet in the network" is exactly the number a
+    claim-sourcing vendor acts on. Four `count(*)`s and one grouped count,
+    cached for `MAP_COUNTS_TTL_SECONDS`.
+    """
+    cutoff = fresh_cutoff()
+    network_places = (await db.execute(text(
+        "SELECT count(*) FROM public_places WHERE claimed_by_vendor_id IS NOT NULL"))).scalar() or 0
+    external_places = (await db.execute(text(
+        "SELECT count(*) FROM public_places WHERE status = 'active'"
+        " AND claimed_by_vendor_id IS NULL AND last_checked_at >= :cutoff"),
+        {"cutoff": cutoff})).scalar() or 0
+    stale_places = (await db.execute(text(
+        "SELECT count(*) FROM public_places WHERE status = 'active'"
+        " AND claimed_by_vendor_id IS NULL AND last_checked_at < :cutoff"),
+        {"cutoff": cutoff})).scalar() or 0
     vendors = (await db.execute(text(
         "SELECT count(*) FROM vendors WHERE geo_lat IS NOT NULL"))).scalar() or 0
+    vendors_with_offers = (await db.execute(text(
+        "SELECT count(*) FROM vendors v WHERE geo_lat IS NOT NULL AND EXISTS ("
+        " SELECT 1 FROM stock_items si WHERE si.vendor_id = v.id"
+        " AND si.visible_to_network IS TRUE AND si.quantity_available > 0)"))).scalar() or 0
     markets = (await db.execute(text(
         "SELECT count(*) FROM market_zones WHERE is_active IS TRUE"))).scalar() or 0
+    markets_networked = (await db.execute(text(
+        "SELECT count(*) FROM market_zones z WHERE z.is_active IS TRUE"
+        " AND EXISTS (SELECT 1 FROM market_members m WHERE m.zone_id = z.id)"))).scalar() or 0
 
     rows = (await db.execute(text("""
         SELECT COALESCE(category, '') AS cat, count(*) AS n
@@ -467,11 +620,17 @@ async def headline_counts(db: AsyncSession) -> Dict[str, Any]:
     categories = [{"value": c, "label": c.split(":")[-1] or c, "count": n}
                   for c, n in sorted(by_cat.items(), key=lambda kv: -kv[1])[:30] if c]
 
+    places = network_places + external_places + stale_places
     return {
         "markets": int(markets),
+        "markets_networked": int(markets_networked),
         "vendors": int(vendors),
+        "vendors_with_offers": int(vendors_with_offers),
         "places": int(places),
-        "claimed": int(claimed),
+        "claimed": int(network_places),          # v2.7 key, kept: claimed = network places
+        "network_places": int(network_places),
+        "external_places": int(external_places),
+        "stale_places": int(stale_places),
         "facets": facets,
         "categories": categories,
         "at": datetime.utcnow().isoformat(),
@@ -480,23 +639,38 @@ async def headline_counts(db: AsyncSession) -> Dict[str, Any]:
 
 async def viewport_totals(
     db: AsyncSession, box: Optional[BBox], kinds: Sequence[str],
-    q: str = "", group: str = "", category: str = "",
+    q: str = "", group: str = "", category: str = "", external: str = "muted",
 ) -> Dict[str, int]:
     """How many of each *requested* kind are really inside this rectangle — the
-    number the cluster labels and the '7,640 places in view' line may claim.
+    number the cluster labels and the '1,240 places in view' line may claim.
 
-    A kind that was not requested is not counted: one filter on, one dataset
-    queried. That is the whole point of the chips.
+    Places are split by tier (`network` / `external` / `stale`) whatever the
+    caller asked to draw, so a `hide` view can still say "1,212 external
+    hidden" instead of silently pretending the directory is empty. A kind that
+    was not requested is not counted: one filter on, one dataset queried.
     """
     out: Dict[str, int] = {}
     if PLACES in kinds:
         search_sql, search_params = _search_sql(q)
         cat_sql, cat_params = _category_sql(group, category)
         bbox_sql, bbox_params = bbox_where(box)
-        out[PLACES] = (await db.execute(text(f"""
+        shared = {**bbox_params, **search_params, **cat_params, "cutoff": fresh_cutoff()}
+        out[NETWORK_TIER] = (await db.execute(text(f"""
             SELECT count(*) FROM public_places
-             WHERE status IN ('active','claimed'){bbox_sql}{search_sql}{cat_sql}
+             WHERE status IN ('active','claimed')
+               AND claimed_by_vendor_id IS NOT NULL{bbox_sql}{search_sql}{cat_sql}
         """), {**bbox_params, **search_params, **cat_params})).scalar() or 0
+        out[EXTERNAL_TIER] = (await db.execute(text(f"""
+            SELECT count(*) FROM public_places
+             WHERE status = 'active' AND claimed_by_vendor_id IS NULL
+               AND last_checked_at >= :cutoff{bbox_sql}{search_sql}{cat_sql}
+        """), shared)).scalar() or 0
+        out[STALE_TIER] = (await db.execute(text(f"""
+            SELECT count(*) FROM public_places
+             WHERE status = 'active' AND claimed_by_vendor_id IS NULL
+               AND last_checked_at < :cutoff{bbox_sql}{search_sql}{cat_sql}
+        """), shared)).scalar() or 0
+        out[PLACES] = out[NETWORK_TIER] + out[EXTERNAL_TIER]   # what the map can draw
 
     if VENDORS in kinds:
         v_search, v_params = (("", {}) if not q else (
@@ -506,6 +680,33 @@ async def viewport_totals(
             SELECT count(*) FROM vendors
              WHERE geo_lat IS NOT NULL AND geo_lng IS NOT NULL{v_sql}{v_search}
         """), {**v_bbox, **v_params})).scalar() or 0
+        v_offer_search = v_search.replace("business_name", "v.business_name") \
+                                 .replace("vendor_handle", "v.vendor_handle")
+        out["vendors_with_offers"] = (await db.execute(text(f"""
+            SELECT count(*) FROM vendors v
+             WHERE v.geo_lat IS NOT NULL AND v.geo_lng IS NOT NULL
+               AND EXISTS (SELECT 1 FROM stock_items si WHERE si.vendor_id = v.id
+                           AND si.visible_to_network IS TRUE AND si.quantity_available > 0)
+               {v_sql.replace('geo_lat', 'v.geo_lat').replace('geo_lng', 'v.geo_lng')}{v_offer_search}
+        """), {**v_bbox, **v_params})).scalar() or 0
+
+    if MARKETS in kinds:
+        m_where = ["z.is_active IS TRUE"]
+        m_params: Dict[str, Any] = {}
+        if box is not None:
+            m_where.append("z.center_lat BETWEEN :south AND :north")
+            m_where.append(box.lng_sql("z.center_lng"))
+            m_params.update(box.params())
+        if q:
+            m_where.append("(z.name ILIKE :mq OR COALESCE(z.city,'') ILIKE :mq)")
+            m_params["mq"] = f"%{q}%"
+        out[MARKETS] = (await db.execute(text(
+            f"SELECT count(*) FROM market_zones z WHERE {' AND '.join(m_where)}"
+        ), m_params)).scalar() or 0
+        networked_where = m_where + ["EXISTS (SELECT 1 FROM market_members mm WHERE mm.zone_id = z.id)"]
+        out["markets_networked"] = (await db.execute(text(
+            f"SELECT count(*) FROM market_zones z WHERE {' AND '.join(networked_where)}"
+        ), m_params)).scalar() or 0
     return out
 
 
@@ -571,14 +772,18 @@ counts_cache = MapCache(settings.MAP_COUNTS_TTL_SECONDS, 32)
 
 
 def cache_key_for(kind_sig: str, box: Optional[BBox], zoom: int, q: str,
-                  group: str, category: str, limit: int, viewer: Optional[str]) -> str:
+                  group: str, category: str, limit: int, viewer: Optional[str],
+                  external: str = "muted") -> str:
     """Rounded to ~11 m so a one-pixel pan does not miss the cache; the response
-    is identical because the grid and the pin cap are both far coarser."""
+    is identical because the grid and the pin cap are both far coarser. The
+    external tier mode is part of the key: a `hide` view and a `muted` view of
+    the same rectangle are different answers."""
     if box is None:
         box_part = "network"
     else:
         box_part = "%.4f,%.4f,%.4f,%.4f" % (box.west, box.south, box.east, box.north)
-    return MapCache.key(kind_sig, box_part, zoom, q.strip().lower(), group, category, limit, viewer or "-")
+    return MapCache.key(kind_sig, box_part, zoom, q.strip().lower(), group, category,
+                        limit, external, viewer or "-")
 
 
 def parse_kinds(raw: str) -> List[str]:

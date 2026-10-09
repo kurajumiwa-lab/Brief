@@ -329,6 +329,22 @@ export const mapAPI = {
   place: (id, opts) => api.get(`/map/places/${id}`, opts),
   vendor: (id, opts) => api.get(`/map/vendors/${id}`, opts),
   market: (id, opts) => api.get(`/map/markets/${id}`, opts),
+  // v2.8 — the network keeps the directory honest. A vendor standing in front
+  // of an external place confirms it (revalidation) or reports it gone
+  // (archive). See docs/briefs/network-first-map.md.
+  reportPlace: (id, verdict) => api.post(`/map/places/${id}/report`, { verdict }),
+};
+
+// ── Requests — express a need, collect offers, close the loop ───────────────
+// The reusable interface behind all four jobs (stock, workers, delivery,
+// rentals): the type changes the wording, never the flow.
+export const requestsAPI = {
+  create: (body) => api.post("/requests", body),
+  list: (params) => api.get("/requests", { params: noEmpty(params) }),
+  get: (id) => api.get(`/requests/${id}`),
+  offer: (id, body) => api.post(`/requests/${id}/offers`, body),
+  accept: (id, offerId) => api.post(`/requests/${id}/offers/${offerId}/accept`),
+  cancel: (id) => api.post(`/requests/${id}/cancel`),
 };
 
 // ── Surface — the mixed feed, the price index, and the map pins ────────────

@@ -6,10 +6,14 @@ coordinates, plus the source's own id and the time the source last confirmed
 the place still exists.
 
 Lifecycle:
-    active   — ingested, shown with an "unverified · public data" badge
-    claimed  — a vendor linked the place to their account; the vendor's own
-               rows (stock, profile) are what the network now trusts
-    removed  — the place no longer appears in the source data
+    active    — ingested, shown with an "unverified · public data" badge
+    claimed   — a vendor linked the place to their account; the vendor's own
+                rows (stock, profile) are what the network now trusts
+    archived  — retired from the commercial map: the source stopped confirming
+                it (the maintenance sweep) or a vendor reported it gone. Not
+                deleted — the ingest restores it the day the source lists it
+                again, or a vendor's `confirmed` report does.
+    removed   — the place no longer appears in the source data
 
 The ODbL licence (which is why we can store these at all) requires the
 attribution "Data © OpenStreetMap contributors" wherever the data is shown.

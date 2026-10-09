@@ -16,6 +16,7 @@ import { useAuthStore } from "@/stores/authStore";
 const BrowsePage = lazy(() => import("@/pages/browse/BrowsePage"));
 const ListingPage = lazy(() => import("@/pages/listing/ListingPage"));
 const OrdersPage = lazy(() => import("@/pages/orders/OrdersPage"));
+const WorkPage = lazy(() => import("@/pages/work/WorkPage"));
 const SurfaceFeed = lazy(() => import("@/pages/surface/SurfaceFeed"));
 const SearchHub = lazy(() => import("@/pages/search/SearchHub"));
 const MapPage = lazy(() => import("@/pages/map/MapPage"));
@@ -89,13 +90,17 @@ export default function App() {
       >
         <Fragment>
           {/* ── Primary destinations ───────────────────────────────────
-              Home · Browse · Orders · Inbox · Me. Discovery routes remain
-              individually deep-linkable beneath Browse; business routes
-              remain deep-linkable beneath the Me workspace. */}
+              Home · Browse · Work · Inbox · Business — organised around what
+              an owner is doing, not around our databases. Discovery routes
+              remain deep-linkable beneath Browse (/network, /nearby, /map,
+              /markets, /news are views of the same results); work routes
+              (/orders, /tasks, /locks, /tools) under Work; business routes
+              under /me. Nothing was deleted — only duplicated navigation. */}
           <Route path="/" element={<HomeHub />} />
           <Route path="/browse" element={<BrowsePage />} />
           <Route path="/listing/:id" element={<ListingPage />} />
           <Route path="/orders" element={<OrdersPage />} />
+          <Route path="/work" element={<WorkPage />} />
           <Route path="/chat" element={<ChatPage />} />
           <Route path="/stock" element={<StockRoomRouter />} />
 

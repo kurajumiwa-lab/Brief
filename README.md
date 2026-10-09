@@ -33,7 +33,7 @@ there are the vendors who move it between each other.
 | **Discovery / recommendation** | `GET /vendors/discover` ranks vendors you have not connected to yet on six weighted factors — complementarity, reciprocity, trade evidence, proximity, graph distance and reputation — with the weights exposed at `/discover/weights` and a human-readable `reasons` list per candidate (the Network → Suggested tab). |
 | **Courier route optimisation** | A courier plans a run from explicit stops or straight from their undelivered shipments; nearest-neighbour + 2-opt ordering, per-leg distance, cumulative km and ETA, and an honest `saved_km` against the booking order. Dispatch notifies the senders whose parcels are on the run; stops are ticked off one by one. |
 | **Bookings & calendars** | One dated-hold model for the three tool flows: **warehouse / cold-storage space**, **pop-up shop pitches** (shared spaces) and **hotel sourcing rooms** for travelling vendors. Live day-by-day availability calendar, request → confirm/decline → complete, and cancellation that frees the window. |
-| **Marketplace map** | A viewport-driven Leaflet map over the open-data directory: `GET /api/map/viewport?bbox=…&zoom=…` returns **grid clusters** when zoomed out ("7.6K places" → "1,240") and a **capped list of pins** when zoomed in — never the 7,640-row directory. Counters double as filters (one dataset at a time), details load on tap, pins are drawn on one canvas, and tiles are configurable so the public OSM server is never a production dependency. `backend/app/services/map_viewport.py`, `frontend/src/pages/map/MapPage.jsx` |
+| **Marketplace map** | A supplier-first, viewport-driven Leaflet map over the open-data directory: `GET /api/map/viewport?bbox=…&zoom=…&external=…` returns **grid clusters** when zoomed out ("7.6K places" → "1,240") and a **capped list of pins** when zoomed in — never the 7,640-row directory. Every row carries its tier (`network` / `external` / `stale`): the verified network draws first and in colour, external public data is hidden by default and muted when shown, stale rows are revalidated or archived. Counters double as filters (one dataset at a time), details load on tap, pins are drawn on one canvas, and tiles are configurable so the public OSM server is never a production dependency. `backend/app/services/map_viewport.py`, `frontend/src/pages/map/MapPage.jsx` |
 | **Monitoring & ops** | In-process metrics registry (`/metrics`, Prometheus text) with per-route percentiles and a slow-request list, `X-Request-ID` on every response, and an **Ops** console (`/ops`) showing version, environment, p50/p95/p99, error rate, pool and the raw scrape. Prometheus + Grafana + alerts ship in `deploy/monitoring/`. |
 
 ## Stack
@@ -186,8 +186,11 @@ POST /tools/{id}/book  /tools/{id}/book-warehouse (legacy alias)  /tools/booking
 POST /tools/couriers/{courier}/routes  /{courier}/routes/from-shipments   GET /tools/routes?role=  /tools/routes/{id}
 POST /tools/routes/{id}/status?status=  /tools/routes/{id}/stops/{stop_id}/solve       GET /metrics  /ops/status  /ops/slow
 # v2.7 — the marketplace map (see "The map" below)
-GET  /map/config  /map/counts           GET /map/viewport?bbox=minLng,minLat,maxLng,maxLat&zoom=&kind=&q=&filter=&scope=
+GET  /map/config  /map/counts           GET /map/viewport?bbox=minLng,minLat,maxLng,maxLat&zoom=&kind=&q=&filter=&scope=&external=hide|muted|only
 GET  /map/places/{id}  /map/vendors/{id}  /map/markets/{id}      (lazy detail, on tap)
+POST /map/places/{id}/report            {"verdict": "confirmed" | "gone"}   (street-level revalidation)
+GET  /map/maintenance/sweep             where the directory went quiet (stale rows by zone)
+POST /map/maintenance/sweep?archive=true  archive what the source stopped confirming
 # retired: GET /api/surface/map — the whole-directory dump that hung the phone
 ```
 
@@ -201,13 +204,13 @@ Interactive docs at `/docs`.
 
 ## The map
 
-The map is a **market discovery surface**, not a map with businesses pinned to
-it. Its first version selected every public place (7,640 rows), shipped them to
-the phone and built a Leaflet marker per row — which is why it froze on mobile.
-The fix is architectural, not a tuning flag:
+The map is a **supplier-first marketplace with an optional map**, not a map
+with businesses pinned to it. Its first version selected every public place
+(7,640 rows), shipped them to the phone and built a Leaflet marker per row —
+which is why it froze on mobile. The fix is architectural, not a tuning flag:
 
 ```
-map viewport ──▶ GET /api/map/viewport?bbox=…&zoom=…&kind=…&filter=…
+map viewport ──▶ GET /api/map/viewport?bbox=…&zoom=…&kind=…&filter=…&external=…
                         │  indexed bbox range scan (public_places (lat, lng))
                         ▼
                  clusters below the threshold zoom · ≤300 pins above it
@@ -223,11 +226,17 @@ map viewport ──▶ GET /api/map/viewport?bbox=…&zoom=…&kind=…&filter=�
 | 12–14 | individual markets and vendors |
 | 15+ | individual businesses, with details on tap |
 
+* **A pin is not a member (v2.8).** Every place row is in a tier: `network`
+  (claimed by a vendor), `external` (unclaimed public data, fresh), `stale`
+  (the source stopped confirming it). The map opens network-only; one toggle
+  brings external places back, muted. Suppliers, working markets and claimed
+  places rank first everywhere — on the canvas, in the list, in the counters.
 * **Clustering happens in Postgres** (`GROUP BY floor(lat/cell)` over the
   bbox-limited rows), so the database never hands the app 7,640 rows and the app
   never hands the phone more than a few hundred objects.
-* **Counters are filters.** `Markets 25 · Vendors 0 · Places 7.6K` load one
-  dataset each — never all three at once.
+* **Counters are filters.** `Suppliers 4 · Markets 25 · Places 91` load one
+  dataset each — never all three at once. The Places chip counts network
+  members; the external directory has its own muted switch, always counted.
 * **Details are lazy.** Tapping a pin fetches one place (phone, hours, source,
   freshness); a bottom sheet shows it. Nothing fetches images.
 * **Pins are canvas, not DOM.** `preferCanvas` plus `circleMarker` keeps a few
@@ -467,6 +476,38 @@ self-contained in dev and tests. Architecture and invariants:
 
 Details, measurements and the PostGIS/Vector-tile upgrade paths:
 [`docs/briefs/map-performance.md`](docs/briefs/map-performance.md).
+
+## What v2.8 added (the network-first map)
+
+The v2.7 map was fast but commercially flat: 7,640 external rows could
+outshout twenty real suppliers. The correction is one non-negotiable rule —
+**a location on the map does not automatically make it part of the
+marketplace** — enforced end to end on the map surfaces only
+([the brief](docs/briefs/network-first-map.md)):
+
+1. **Tiers on the wire** — every place row states `network` / `external` /
+   `stale`; the viewport's `external=hide|muted|only` picks what the caller
+   sees (`hide` is the client default: the clean, supplier-first map).
+2. **Staleness with a lifecycle** — rows the source stopped confirming for
+   `MAP_PLACE_STALE_DAYS` leave every map view, stay counted, and are brought
+   back by a vendor's street-level "confirmed" report or the next ingest; the
+   `POST /api/map/maintenance/sweep` archive (dry-run first, capped) retires
+   what has been quiet for `MAP_PLACE_ARCHIVE_DAYS`. Claimed rows are never
+   touched by any of it.
+3. **Supplier-first ranking** — vendor pins order by current offers
+   (in-stock lines → verification → network score → distance), never by
+   distance alone; markets rank working (registered suppliers) before
+   unworked, and carry `active_members` — the number of registrants with
+   something on the shelf right now.
+4. **Honest counters** — `counts` always reports the tier split
+   (`network` / `external` / `stale`, `vendors_with_offers`,
+   `markets_networked`) whatever was asked to draw, so a hidden directory is
+   counted, never erased from the truth.
+5. **The UI says which side of the rule a pin is on** — emerald clusters for
+   network cells, grey translucent pins and "external" tags for the
+   directory, "no suppliers yet" for unworked markets, a staleness line with
+   "Still there" / "Report gone" actions in the bottom sheet, and a list that
+   reads marketplace-first.
 
 ## History
 

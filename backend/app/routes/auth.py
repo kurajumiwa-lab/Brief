@@ -1,12 +1,11 @@
 import re
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Optional
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from jose import JWTError, jwt
+from fastapi.security import OAuth2PasswordRequestForm
 from passlib.context import CryptContext
 from pydantic import BaseModel, EmailStr, Field, field_validator
 from sqlalchemy import select
@@ -17,11 +16,17 @@ from app.config import settings
 from app.database import get_db
 from app.models.governance import VendorActivityDay
 from app.models.vendor import Vendor, VendorProfile, VendorRole
+from app.platform.security import (
+    _decode,
+    create_access_token,
+    create_refresh_token,
+    oauth2_scheme,
+    vendor_id_from_token,  # noqa: F401  (re-exported: chat WS + tests import from here)
+)
 from app.services import login_guard
 
 router = APIRouter()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
 HANDLE_RE = re.compile(r"^[a-z0-9_]{3,100}$")
 PASSWORD_RULE = "Password must be at least {n} characters with one uppercase letter and one number"
@@ -81,46 +86,6 @@ class Token(BaseModel):
 
 class RefreshRequest(BaseModel):
     refresh_token: str
-
-
-def create_access_token(data: dict) -> str:
-    to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode.update({"exp": expire, "type": "access"})
-    return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
-
-
-def create_refresh_token(data: dict) -> str:
-    """Long-lived, only good for /auth/refresh. Carries a `pwd` fingerprint so
-    changing the password invalidates refresh tokens issued before it."""
-    to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
-    to_encode.update({"exp": expire, "type": "refresh", "jti": uuid.uuid4().hex})
-    return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
-
-
-def _decode(token: str, expected_type: str) -> Optional[dict]:
-    try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-    except JWTError:
-        return None
-    # Tokens minted before v2.1 carry no type; treat them as access tokens.
-    if payload.get("type", "access") != expected_type:
-        return None
-    return payload
-
-
-def vendor_id_from_token(token: str) -> Optional[uuid.UUID]:
-    """Shared by the HTTP dependency and the chat WebSocket. Refresh tokens
-    are refused here: they only open /auth/refresh."""
-    payload = _decode(token, "access")
-    if not payload:
-        return None
-    try:
-        sub = payload.get("sub")
-        return uuid.UUID(sub) if sub else None
-    except ValueError:
-        return None
 
 
 async def get_current_vendor(
