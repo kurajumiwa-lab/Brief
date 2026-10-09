@@ -18,8 +18,10 @@ export default {
       colors: {
         // The one action colour: trade green — go, confirm, source.
         brand: scale("brand", RAMP),
-        // The heritage amber, kept for money, markets and stated prices.
+        // The heritage gold, kept for money, markets and vendor-stated prices.
         accent: scale("accent", RAMP),
+        // Ogallo's orchid accent is reserved for identity and selected actions.
+        orchid: scale("orchid", RAMP),
         surface: { ...scale("surface", [0, 1, 2, 3, 4]), inverse: token("surface-inverse") },
         // v3: hairlines are back. Separation is a line *and* elevation, which
         // is what makes a light UI readable in daylight and in forced-colours.

@@ -3,11 +3,11 @@ import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /** The shelf header used on every home/profile section: title, why, a way on. */
-export default function SectionHeader({ title, description, to, action, linkLabel = "See all", className, as: Tag = "h2" }) {
+export default function SectionHeader({ title, description, to, action, linkLabel = "See all", className, id, as: Tag = "h2" }) {
   return (
     <div className={cn("flex items-end justify-between gap-4 mb-3", className)}>
       <div className="min-w-0">
-        <Tag className="text-lg font-bold text-ink-1 tracking-tight">{title}</Tag>
+        <Tag id={id} className="text-lg font-bold text-ink-1 tracking-tight">{title}</Tag>
         {description && <p className="text-2xs text-ink-3 mt-0.5 text-pretty">{description}</p>}
       </div>
       {action ||

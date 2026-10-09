@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
-  ArrowRight, Bell, CheckCircle2, Package, Sparkles, TrendingUp, Users,
+  ArrowRight, CheckCircle2, RefreshCw, Sparkles, TrendingUp, Users,
 } from "lucide-react";
 import GlobalSearch from "@/components/layout/GlobalSearch";
 import SectionHeader from "@/components/ui/SectionHeader";
@@ -14,139 +14,167 @@ import SourceDialog from "@/components/stock/SourceDialog";
 import VendorCard from "@/components/vendor/VendorCard";
 import MovementRow from "@/components/stock/MovementRow";
 import SetupChecklist from "@/components/onboarding/SetupChecklist";
-import { DISCOVERY_NAV } from "@/config/navigation";
+import { VENDOR_ROLES } from "@/config/constants";
 import { useAuthStore } from "@/stores/authStore";
 import { useStockStore, needsMyAction } from "@/stores/stockStore";
-import {
-  newsAPI, squadAPI, marketsAPI, mapAPI, nearbyAPI, stockAPI, vendorAPI,
-} from "@/lib/api";
-import { num, relativeTime } from "@/lib/formatters";
-import { formatCount } from "@/lib/mapViewport";
-import { cn } from "@/lib/utils";
+import { stockAPI, vendorAPI } from "@/lib/api";
+import { titleCase } from "@/lib/utils";
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   HOME — a marketplace, not a tile wall.
-   ---------------------------------------------------------------------------
-   v2's home was ten equal-weight tiles. The app's own UI report called it
-   correctly: "eight equal-weight tiles is a wall, not a shelf — nothing is
-   signposted" (docs/UI-UX-REPORT.md §2.2).
-
-   v3 keeps every single door (all ten are still here, still counting real
-   rows, still rendering "—" for zero) but gives the screen a spine:
-
-     1  search            — the fastest path to the core action
-     2  needs your action — the reason to open the app at all
-     3  the doors         — now a rail, not a wall
-     4  fresh on the network — real listings, straight into the loop
-     5  suppliers to meet — discovery, already ranked by the API
-
-   Nothing is decided on this screen; every block opens the surface that owns
-   the detail. That hub-and-secondary-screen rule from v2 is unchanged.
-   ═══════════════════════════════════════════════════════════════════════════ */
-
+/** Home is the personalised trading feed—not another directory of app links. */
 export default function HomeHub() {
   const navigate = useNavigate();
   const vendor = useAuthStore((s) => s.vendor);
   const movements = useStockStore((s) => s.movements);
   const fetchMovements = useStockStore((s) => s.fetchMovements);
 
-  const [board, setBoard] = useState(null);
-  const [extras, setExtras] = useState({ calls: null, markets: null, places: null, nearby: null });
   const [fresh, setFresh] = useState(null);
+  const [freshError, setFreshError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [categories, setCategories] = useState([]);
   const [suppliers, setSuppliers] = useState(null);
   const [sourcing, setSourcing] = useState(null);
 
   useEffect(() => {
     let live = true;
-    const safe = (p, then) => p?.then?.((r) => live && then(r))?.catch?.(() => {});
+    const safe = (request, update, onError) => {
+      if (!request?.then) {
+        if (live) onError?.();
+        return;
+      }
+      request
+        .then((response) => live && update(response.data))
+        .catch(() => live && onError?.());
+    };
 
-    safe(newsAPI?.feed?.(7), (r) => setBoard(r.data));
-    safe(squadAPI?.calls?.(), (r) => setExtras((x) => ({ ...x, calls: r.data.calls.length })));
-    safe(marketsAPI?.mine?.(), (r) => setExtras((x) => ({ ...x, markets: r.data.markets.length })));
-    safe(mapAPI?.counts?.(), (r) => setExtras((x) => ({ ...x, places: r.data.places })));
-    safe(nearbyAPI?.list?.({ radius_km: 5, limit: 1 }), (r) => setExtras((x) => ({ ...x, nearby: r.data.total })));
-    safe(stockAPI?.network?.({ limit: 8 }), (r) => setFresh(r.data || []));
-    safe(vendorAPI?.suggested?.(3), (r) => setSuppliers(r.data || []));
+    safe(
+      stockAPI?.network?.({ limit: 8 }),
+      (data) => {
+        setFresh(Array.isArray(data) ? data : data?.items || []);
+        setFreshError(false);
+      },
+      () => {
+        setFresh([]);
+        setFreshError(true);
+      }
+    );
+    safe(stockAPI?.categories?.(), (data) => setCategories(Array.isArray(data) ? data : []), () => setCategories([]));
+    safe(vendorAPI?.suggested?.(3), (data) => setSuppliers(Array.isArray(data) ? data : data?.vendors || []));
     fetchMovements?.().catch(() => {});
 
     return () => {
       live = false;
     };
-  }, [fetchMovements]);
-
-  const counts = board?.counts ?? null;
-  const countFor = (key) =>
-    ({
-      nearby: extras.nearby,
-      places: extras.places,
-      markets: extras.markets,
-      calls: extras.calls,
-      news: counts?.news,
-      suppliers: counts?.suppliers,
-      stock: counts?.stock,
-      rentals: counts?.rentals,
-      groups: counts?.groups,
-      events: counts?.events,
-    }[key]);
+  }, [fetchMovements, reloadKey]);
 
   const actionable = movements.filter(needsMyAction);
+  const recentTrades = movements
+    .filter((movement) => ["received", "cancelled"].includes(movement.status))
+    .sort((a, b) => new Date(b.updated_at || b.created_at || 0) - new Date(a.updated_at || a.created_at || 0))
+    .slice(0, 3);
   const firstName = (vendor?.business_name || "").split(" ")[0];
+  const role = VENDOR_ROLES.find((item) => item.value === vendor?.current_role) || VENDOR_ROLES.find((item) => item.value === "both");
+
+  const headline = {
+    sourcing: "Find the stock your business needs.",
+    selling: "Put your stock in front of the network.",
+    both: "A good market runs both ways.",
+    dormant: "Your network is ready when you are.",
+  }[role.value];
 
   return (
-    <div className="space-y-10">
-      {/* ══ 1 · the fastest path to the core action ═══════════════════ */}
-      <section className="relative overflow-hidden rounded-3xl border border-edge-1 bg-surface-1 px-6 py-8 sm:px-10 sm:py-12">
-        <div
-          className="pointer-events-none absolute inset-0 opacity-[0.55]"
-          style={{
-            backgroundImage:
-              "radial-gradient(620px 240px at 8% -20%, rgb(var(--brand-500) / 0.14), transparent 65%), radial-gradient(520px 220px at 102% 0%, rgb(var(--accent-500) / 0.10), transparent 60%)",
-          }}
-          aria-hidden="true"
-        />
-        <div className="relative max-w-2xl">
-          <p className="text-2xs font-bold uppercase tracking-[0.18em] text-brand-700 dark:text-brand-400">
-            {firstName ? `Welcome back, ${firstName}` : "The trade network with receipts"}
-          </p>
-          <h1 className="mt-2 text-3xl sm:text-4xl font-extrabold text-ink-1 tracking-tight text-balance">
-            What do you need on the shelf today?
+    <div className="space-y-9 sm:space-y-11">
+      {/* Search is the hero action; the market image gives the feed its own identity. */}
+      <section
+        aria-label="Ogallo trading network"
+        className="relative isolate overflow-hidden rounded-[1.75rem] sm:rounded-[2rem] border border-edge-1 bg-ink-1 text-white shadow-md"
+        style={{
+          backgroundImage:
+            "linear-gradient(90deg, rgb(8 31 23 / .93) 0%, rgb(8 31 23 / .81) 40%, rgb(8 31 23 / .34) 74%, rgb(8 31 23 / .16) 100%), url('/ogallo-market-hero.jpg')",
+          backgroundSize: "cover",
+          backgroundPosition: "center 56%",
+        }}
+      >
+        <div className="absolute inset-0 -z-10 bg-gradient-to-br from-brand-950/20 via-transparent to-orchid-900/15" aria-hidden="true" />
+        <div className="max-w-3xl px-5 py-7 sm:px-9 sm:py-10 lg:px-12 lg:py-12">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3 py-1 text-micro font-bold uppercase tracking-[0.12em] text-white/90 backdrop-blur-sm">
+              <Sparkles size={12} aria-hidden="true" /> Ogallo · the trade network
+            </span>
+            <Badge variant="purple" size="sm" className="!bg-white/15 !text-white !border !border-white/20">
+              {role.emoji} Currently {role.label.toLowerCase()}
+            </Badge>
+          </div>
+          <p className="mt-7 text-sm font-semibold text-brand-100 dark:text-brand-300">{firstName ? `Welcome back, ${firstName}` : "Welcome to your trading network"}</p>
+          <h1 className="mt-2 max-w-2xl text-3xl sm:text-4xl lg:text-[2.8rem] leading-tight font-extrabold tracking-tight text-balance text-white">
+            {headline}
           </h1>
-          <p className="mt-2.5 text-sm text-ink-3 max-w-xl text-pretty">
-            Source from vendors whose fulfilment record you can actually see. Prices are vendor-stated and timestamped — never a computed
-            market rate.
+          <p className="mt-3 max-w-xl text-sm sm:text-base leading-relaxed text-white/80 text-pretty">
+            Discover real stock, compare suppliers and start a trade with a fulfilment record you can see. Every price is stated by its vendor.
           </p>
-          <GlobalSearch className="mt-6 max-w-xl" size="lg" />
+          <GlobalSearch className="mt-6 max-w-2xl" size="lg" />
           <div className="mt-4 flex flex-wrap items-center gap-2">
-            <span className="text-micro font-bold uppercase tracking-[0.1em] text-ink-4">Popular</span>
+            <span className="mr-1 text-micro font-bold uppercase tracking-[0.1em] text-white/65">Try</span>
             {["tomatoes", "sukuma wiki", "cooking oil", "kitenge", "rice"].map((term) => (
               <Link
                 key={term}
                 to={`/browse?search=${encodeURIComponent(term)}`}
-                className="rounded-full border border-edge-2 bg-surface-0 px-3 py-1 text-micro font-semibold text-ink-2 hover:border-ink-4 hover:text-ink-1 transition-colors"
+                className="rounded-full border border-white/25 bg-white/10 px-3 py-1 text-2xs font-semibold text-white hover:bg-white/20 focus-visible:outline-white transition-colors"
               >
                 {term}
               </Link>
             ))}
+            <Link to="/browse" className="ml-auto inline-flex items-center gap-1 text-2xs font-bold text-white/90 hover:text-white">
+              Browse all <ArrowRight size={13} aria-hidden="true" />
+            </Link>
           </div>
         </div>
+        <span className="pointer-events-none absolute bottom-5 right-6 hidden text-right text-micro font-semibold uppercase tracking-[0.14em] text-white/75 lg:block">
+          Local trade <span className="mx-1 text-accent-300">·</span> visible prices <span className="mx-1 text-accent-300">·</span> real fulfilment
+        </span>
       </section>
 
-      {/* ══ 2 · first-run setup, until the loop has run once ════════ */}
+      {/* New vendors get a small, dismissible checklist; existing traders see a live business pulse. */}
       <SetupChecklist />
 
-      {/* ══ 3 · the reason to open the app ════════════════════════════ */}
+      {categories.length > 0 && (
+        <section aria-labelledby="home-categories">
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <p className="text-micro font-bold uppercase tracking-[0.14em] text-orchid-700 dark:text-orchid-300">Start with what moves</p>
+              <h2 id="home-categories" className="mt-1 text-lg font-bold tracking-tight text-ink-1">Browse by category</h2>
+            </div>
+            <Link to="/browse" className="inline-flex shrink-0 items-center gap-1 text-2xs font-semibold text-brand-700 dark:text-brand-400 hover:underline underline-offset-2">
+              All stock <ArrowRight size={13} aria-hidden="true" />
+            </Link>
+          </div>
+          <div className="mt-3 flex gap-2 overflow-x-auto no-scrollbar pb-1">
+            {categories.slice(0, 8).map((category) => (
+              <Link
+                key={category}
+                to={`/browse?category=${encodeURIComponent(category)}`}
+                className="shrink-0 rounded-full border border-edge-1 bg-surface-1 px-3.5 py-2 text-xs font-semibold text-ink-2 hover:border-brand-500/50 hover:bg-brand-50 dark:hover:bg-brand-500/10 hover:text-brand-800 dark:hover:text-brand-300 transition-colors"
+              >
+                {titleCase(category)}
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* The home feed surfaces only the work that needs attention. */}
       {actionable.length > 0 && (
         <section aria-labelledby="needs-you">
           <SectionHeader
             as="h2"
+            id="needs-you"
             title="Needs your action"
-            description="Confirm, ship or receive — these are the only steps that move stock and score either side."
+            description="Confirm, ship or receive. These are the next steps that keep a trade moving."
             to="/orders?needs=me"
             linkLabel="All orders"
           />
           <div className="space-y-3">
-            {actionable.slice(0, 3).map((m) => (
-              <MovementRow key={m.id} movement={m} actionable />
+            {actionable.slice(0, 3).map((movement) => (
+              <MovementRow key={movement.id} movement={movement} actionable />
             ))}
           </div>
           {actionable.length > 3 && (
@@ -157,74 +185,47 @@ export default function HomeHub() {
         </section>
       )}
 
-      {/* ══ 4 · the ten doors ════════════════════════════════════════ */}
-      <section aria-labelledby="doors">
-        <SectionHeader
-          as="h2"
-          title="Your shelf of doors"
-          description="Each one opens the screen that owns the detail. A count is live rows — zero reads as a dash, never as a padded number."
-        />
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-          {DISCOVERY_NAV.map(({ to, label, icon: Icon, countKey }) => {
-            const count = countFor(countKey);
-            const has = typeof count === "number" && count > 0;
-            const unknown = count === null || count === undefined;
-            return (
-              <button
-                key={label}
-                type="button"
-                onClick={() => navigate(to)}
-                aria-label={`${label} — ${has ? num(count) : "none yet"}`}
-                className={cn(
-                  "group rounded-2xl border border-edge-1 bg-surface-0 p-4 text-left shadow-xs",
-                  "glass-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50"
-                )}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <span className="w-9 h-9 rounded-xl bg-surface-2 grid place-items-center text-ink-2 group-hover:bg-brand-50 group-hover:text-brand-700 dark:group-hover:bg-brand-500/15 dark:group-hover:text-brand-300 transition-colors">
-                    <Icon size={17} aria-hidden="true" />
-                  </span>
-                  <span className={cn("text-base font-bold tabular-nums", has ? "text-ink-1" : "text-ink-4")}>
-                    {unknown ? <span className="inline-block w-6 h-3 rounded skeleton align-middle" /> : has ? formatCount(count) : "—"}
-                  </span>
-                </div>
-                <p className="mt-3 text-xs font-semibold text-ink-1 flex items-center gap-1">
-                  {label}
-                  <ArrowRight size={12} className="text-ink-4 opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0 transition-all" aria-hidden="true" />
-                </p>
-              </button>
-            );
-          })}
-        </div>
-      </section>
+      {recentTrades.length > 0 && (
+        <section aria-labelledby="recent-trades">
+          <SectionHeader
+            as="h2"
+            id="recent-trades"
+            title="Recent trade activity"
+            description="Pick up the thread or review what has already moved through your network."
+            to="/orders"
+            linkLabel="Order history"
+          />
+          <div className="space-y-3">
+            {recentTrades.map((movement) => (
+              <MovementRow key={movement.id} movement={movement} />
+            ))}
+          </div>
+        </section>
+      )}
 
-      {/* ══ 5 · real listings, straight into the loop ════════════════ */}
-      <section aria-labelledby="fresh">
+      <section aria-labelledby="fresh-stock">
         <SectionHeader
           as="h2"
+          id="fresh-stock"
           title="Fresh on the network"
-          description="Visible stock from other vendors, most available first. Your own shelf never appears here."
+          description="Stock other vendors have made visible, ordered by availability. Your own shelf never appears here."
           to="/browse"
-          linkLabel="Browse all"
+          linkLabel="Browse all stock"
         />
         {fresh === null ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <SkeletonCard key={i} />
-            ))}
+            {[0, 1, 2, 3].map((item) => <SkeletonCard key={item} />)}
           </div>
         ) : fresh.length === 0 ? (
           <EmptyState
-            compact
-            icon={Package}
-            tone="brand"
-            title="No network stock yet"
-            description="When vendors you can reach make stock visible, it lands here. Connecting with more suppliers is the fastest way to fill it."
-            action={
-              <Button size="sm" icon={Users} onClick={() => navigate("/network?tab=suggested")}>
-                Find suppliers
-              </Button>
-            }
+            icon={freshError ? RefreshCw : Users}
+            title={freshError ? "Fresh stock didn't load" : "No stock is showing yet"}
+            description={freshError
+              ? "The network didn't answer. Check your connection and try again; vendor prices and records are unchanged."
+              : "When vendors make stock visible to the network, it appears here. You can also meet suppliers and ask what they have available."}
+            action={freshError
+              ? <Button size="sm" variant="secondary" icon={RefreshCw} onClick={() => { setFresh(null); setReloadKey((key) => key + 1); }}>Try again</Button>
+              : <Button size="sm" variant="secondary" onClick={() => navigate("/network")}>Meet suppliers</Button>}
           />
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -235,41 +236,35 @@ export default function HomeHub() {
         )}
       </section>
 
-      {/* ══ 6 · discovery, already ranked by the API ═════════════════ */}
       {suppliers?.length > 0 && (
-        <section aria-labelledby="suppliers">
+        <section aria-labelledby="supplier-picks">
           <SectionHeader
             as="h2"
+            id="supplier-picks"
             title="Suppliers worth meeting"
-            description="Ranked on complementarity, reciprocity, trade evidence, proximity, graph distance and reputation."
+            description="Suggested from your profile and recorded network activity—not paid placement."
             to="/network"
-            linkLabel="See the network"
+            linkLabel="See suppliers"
           />
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {suppliers.slice(0, 3).map((v) => (
-              <VendorCard key={v.id || v.vendor_id} vendor={v} reasons={v.reasons} />
+            {suppliers.slice(0, 3).map((supplier) => (
+              <VendorCard key={supplier.id || supplier.vendor_id} vendor={supplier} reasons={supplier.reasons} />
             ))}
           </div>
         </section>
       )}
 
-      {/* ══ the honesty line — the brand, in one sentence ════════════ */}
-      <footer className="rounded-2xl border border-edge-1 bg-surface-1 px-5 py-4 flex flex-wrap items-center gap-x-6 gap-y-2">
+      <footer className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-edge-1 pt-5">
         {[
-          { icon: CheckCircle2, text: "Counts are live rows" },
-          { icon: TrendingUp, text: "Scores are earned from completed movements, never entered" },
-          { icon: Sparkles, text: "Prices are vendor-stated, shown with when they were stated" },
+          { icon: CheckCircle2, text: "Counts come from live records" },
+          { icon: TrendingUp, text: "Trust is earned from completed movements" },
+          { icon: Sparkles, text: "Prices are vendor-stated and timestamped" },
         ].map(({ icon: Icon, text }) => (
-          <span key={text} className="inline-flex items-center gap-2 text-micro text-ink-3">
-            <Icon size={14} className="text-brand-600 dark:text-brand-400 shrink-0" aria-hidden="true" />
+          <span key={text} className="inline-flex items-center gap-2 text-2xs text-ink-3">
+            <Icon size={14} className="text-brand-700 dark:text-brand-400 shrink-0" aria-hidden="true" />
             {text}
           </span>
         ))}
-        {board && (
-          <Badge variant="gray" size="xs" className="ml-auto">
-            <Bell size={10} aria-hidden="true" /> board read {relativeTime(board.generated_at)}
-          </Badge>
-        )}
       </footer>
 
       <SourceDialog item={sourcing} open={!!sourcing} onClose={() => setSourcing(null)} onDone={() => navigate("/orders")} />

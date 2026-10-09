@@ -13,8 +13,8 @@ import { useUIStore } from "@/stores/uiStore";
 
 /**
  * The app frame: a sticky marketplace header, a scrolling document body, a
- * thumb-reachable tab bar on phones, and one All-sections drawer carrying the
- * long tail of the IA.
+ * thumb-reachable primary tabs on phones, and one secondary drawer carrying
+ * the long tail of the information architecture.
  *
  * Rendered once as a layout route so navigation never remounts the chrome.
  */
@@ -38,7 +38,7 @@ export default function Shell() {
 
       <AppHeader />
 
-      <main id="main" tabIndex={-1} className={fullBleed ? "flex-1 min-h-0 pb-16 lg:pb-0" : "flex-1 pb-24 lg:pb-16"}>
+      <main id="main" tabIndex={-1} className={fullBleed ? "flex-1 min-h-0 pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0" : "flex-1 pb-24 lg:pb-16"}>
         <div className={fullBleed ? "h-full" : "container-app py-6"}>
           <ErrorBoundary key={pathname}>
             <Suspense fallback={<PageSpinner />}>
@@ -58,8 +58,8 @@ export default function Shell() {
         side="left"
         width="max-w-xs"
         className="!p-0"
-        title="All sections"
-        description="Everything the network can do"
+        title="More sections"
+        description="Community and business tools"
       >
         <div className="-m-5 h-[calc(100%+2.5rem)]">
           <SidebarContent onNavigate={() => setSections(false)} />

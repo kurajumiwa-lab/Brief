@@ -83,6 +83,9 @@ import StockRoom from "@/pages/stock/StockRoom";
 import ChatPage from "@/pages/chat/ChatPage";
 import Network from "@/pages/network/Network";
 import Sidebar from "@/components/layout/Sidebar";
+import AccountMenu from "@/components/layout/AccountMenu";
+import MePage from "@/pages/me/MePage";
+import SetupChecklist from "@/components/onboarding/SetupChecklist";
 
 const mount = (ui, path = "/") =>
   render(
@@ -119,27 +122,74 @@ describe("routing & auth gate", () => {
     expect(screen.getByLabelText(/^handle/i)).toHaveValue("mama_mboga_fresh");
   });
 
-  it("renders the shell with every shelf section in the nav and the inline role switcher", async () => {
+  it("keeps the secondary drawer free of Home and primary navigation", async () => {
     const { NAV } = await import("@/components/layout/Sidebar");
-    // The nav is the shelf itself — rendering the whole app here would drag
-    // the home hub's own API calls into a test about the sidebar.
     mount(<Sidebar />, "/");
-    const nav = await screen.findByRole("navigation", { name: /primary/i });
-    // Asserted against NAV itself, so adding a section cannot rot this test.
-    for (const { label } of NAV) {
-      expect(within(nav).getByText(label)).toBeInTheDocument();
-    }
-    expect(screen.getByRole("radiogroup", { name: /current role/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /exit app/i })).toBeInTheDocument();
+    const nav = await screen.findByRole("navigation", { name: /more sections/i });
+    for (const { label } of NAV) expect(within(nav).getByText(label)).toBeInTheDocument();
+    expect(within(nav).queryByRole("link", { name: /^home$/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("radiogroup", { name: /current role/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /sign out/i })).not.toBeInTheDocument();
   });
 });
 
-describe("Sidebar role switcher", () => {
-  it("switches role through the API and updates the vendor", async () => {
-    mount(<Sidebar />);
-    fireEvent.click(screen.getByTitle(/^Sourcing —/));
+describe("Account menu and operating mode", () => {
+  it("keeps the sole mode switch in the identity menu and persists the server-backed choice", async () => {
+    mount(<><AccountMenu /><Sidebar /></>);
+    fireEvent.click(screen.getByRole("button", { name: /account and operating mode/i }));
+    const menu = screen.getByRole("menu");
+    const roleGroup = within(menu).getByRole("radiogroup", { name: /current role/i });
+    fireEvent.click(within(roleGroup).getByTitle(/^Sourcing —/));
     await waitFor(() => expect(api.vendorAPI.switchRole).toHaveBeenCalledWith("sourcing"));
     await waitFor(() => expect(useAuthStore.getState().vendor.current_role).toBe("sourcing"));
+    expect(screen.getAllByRole("radiogroup", { name: /current role/i })).toHaveLength(1);
+    expect(within(menu).getByRole("menuitem", { name: /profile settings/i })).toBeInTheDocument();
+    expect(within(menu).queryByRole("link", { name: /mama mboga fresh/i })).not.toBeInTheDocument();
+    expect(within(menu).queryByRole("menuitem", { name: /analytics|my shelf|pos bridge|dashboard/i })).not.toBeInTheDocument();
+  });
+});
+
+describe("Me workspace", () => {
+  it("shows business tools, a consistent operating mode and real destinations", async () => {
+    mount(<MePage />, "/me");
+    expect(await screen.findByRole("heading", { name: "Mama Mboga Fresh" })).toBeInTheDocument();
+    expect(screen.getByText(/your business workspace/i)).toBeInTheDocument();
+    expect(screen.getByText(/currently selling/i)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /shop front/i })).toHaveAttribute("href", "/@mama_mboga");
+    expect(screen.getByRole("link", { name: /my shelf/i })).toHaveAttribute("href", "/stock");
+    expect(screen.getByRole("link", { name: /analytics/i })).toHaveAttribute("href", "/analytics");
+    expect(screen.getByRole("link", { name: /pos bridge/i })).toHaveAttribute("href", "/pos");
+    expect(screen.getByRole("link", { name: /^tasks\b/i })).toHaveAttribute("href", "/tasks");
+    expect(screen.getByRole("link", { name: /vendor lists/i })).toHaveAttribute("href", "/lists");
+    expect(screen.getByRole("link", { name: /market locks/i })).toHaveAttribute("href", "/locks");
+    expect(screen.getByRole("link", { name: /our network/i })).toHaveAttribute("href", "/governance");
+    expect(screen.getByRole("link", { name: /surfaces/i })).toHaveAttribute("href", "/feed");
+    expect(screen.queryByRole("link", { name: /groups & collectives|events/i })).not.toBeInTheDocument();
+  });
+});
+
+describe("Onboarding handoff", () => {
+  it("removes completed steps and replaces onboarding with live business insights", async () => {
+    useStockStore.setState({ mine: STOCK, movements: MOVEMENTS });
+    mount(<SetupChecklist />, "/");
+
+    const pulse = await screen.findByRole("region", { name: /your business, at a glance/i });
+    expect(within(pulse).getByText("Visible listings").parentElement).toHaveTextContent("1");
+    expect(within(pulse).getByText("Open trades").parentElement).toHaveTextContent("1");
+    expect(within(pulse).getByText("Supplier links").parentElement).toHaveTextContent("1");
+    expect(screen.queryByRole("heading", { name: /get trading/i })).not.toBeInTheDocument();
+  });
+
+  it("shows only remaining setup steps and turns a dismissal into a useful pulse", async () => {
+    useStockStore.setState({ mine: STOCK, movements: [] });
+    mount(<SetupChecklist />, "/");
+
+    expect(await screen.findByText("Run the loop once")).toBeInTheDocument();
+    expect(screen.queryByText("Say what you trade")).not.toBeInTheDocument();
+    expect(screen.queryByText("Put one item on the shelf")).not.toBeInTheDocument();
+    expect(screen.queryByText("Connect with a supplier")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /dismiss setup checklist/i }));
+    expect(await screen.findByRole("region", { name: /a live read on your trading/i })).toBeInTheDocument();
   });
 });
 

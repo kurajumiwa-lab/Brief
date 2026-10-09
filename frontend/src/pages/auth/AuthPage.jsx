@@ -104,7 +104,7 @@ export default function AuthPage() {
         />
         <div className="relative flex items-center gap-2.5">
           <LogoMark size={36} />
-          <span className="text-base font-extrabold tracking-tight text-ink-1">brief</span>
+          <span className="text-base font-extrabold tracking-tight text-ink-1">ogallo</span>
           <span className="text-2xs text-ink-4 border-l border-edge-2 pl-2.5">the trade network with receipts</span>
         </div>
 
@@ -113,7 +113,7 @@ export default function AuthPage() {
             Source from vendors whose record you can <span className="text-brand-600 dark:text-brand-400">actually see</span>.
           </h1>
           <p className="mt-4 text-sm text-ink-3 leading-relaxed text-pretty">
-            Brief is for businesses that already buy from each other — market traders, kiosks, kitchens, wholesalers. Every price here is
+            Ogallo is for businesses that already buy from each other — market traders, kiosks, kitchens, wholesalers. Every price here is
             stated by a vendor and timestamped. Every fulfilment rate is computed from movements that actually completed.
           </p>
           <ol className="mt-9 space-y-5">
@@ -144,7 +144,7 @@ export default function AuthPage() {
         <div className="w-full max-w-md animate-fade-in">
           <div className="lg:hidden mb-8 flex items-center gap-2.5">
             <LogoMark size={34} />
-            <span className="text-base font-extrabold tracking-tight text-ink-1">brief</span>
+            <span className="text-base font-extrabold tracking-tight text-ink-1">ogallo</span>
             <span className="text-micro text-ink-4 border-l border-edge-2 pl-2.5">the trade network with receipts</span>
           </div>
 

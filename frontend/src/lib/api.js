@@ -52,7 +52,7 @@ export function apiError(err, fallback = "Something went wrong") {
     return where ? `${where}: ${first.msg}` : first.msg || fallback;
   }
   if (err?.code === "ECONNABORTED") return "The server took too long to respond";
-  if (err?.message === "Network Error") return "Can't reach the Brief_ API";
+  if (err?.message === "Network Error") return "Can't reach Ogallo right now";
   return fallback;
 }
 

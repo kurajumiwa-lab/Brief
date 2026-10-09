@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronDown, Search, X } from "lucide-react";
 import { SEARCH_SCOPES } from "@/config/navigation";
@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 export default function GlobalSearch({ className, autoFocus, onSubmitted, size = "md" }) {
   const navigate = useNavigate();
   const inputRef = useRef(null);
+  const inputId = `global-search-${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
   const [scope, setScope] = useState(() => {
     try {
       return localStorage.getItem("brief-search-scope") || "stock";
@@ -73,12 +74,12 @@ export default function GlobalSearch({ className, autoFocus, onSubmitted, size =
       )}
       style={tall ? { height: "3.25rem" } : undefined}
     >
-      <label htmlFor="global-search" className="sr-only">
+      <label htmlFor={inputId} className="sr-only">
         Search the network
       </label>
       <Search size={tall ? 18 : 16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-4 pointer-events-none" aria-hidden="true" />
       <input
-        id="global-search"
+        id={inputId}
         ref={inputRef}
         value={q}
         autoFocus={autoFocus}

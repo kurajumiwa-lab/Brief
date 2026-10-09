@@ -40,7 +40,18 @@ export default function ToolsPage() {
   const tab = TABS.some((t) => t.value === params.get("tab")) ? params.get("tab") : "browse";
   const setTab = (v) => setParams(v === "browse" ? {} : { tab: v }, { replace: true });
   const [category, setCategory] = useState("");
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(() => params.get("search") || "");
+  useEffect(() => {
+    const query = params.get("search") || "";
+    setSearch((current) => current === query ? current : query);
+  }, [params]);
+  const updateSearch = (value) => {
+    setSearch(value);
+    const next = new URLSearchParams(params);
+    if (value) next.set("search", value);
+    else next.delete("search");
+    setParams(next, { replace: true });
+  };
   const [area, setArea] = useState("");
   const [listing, setListing] = useState(false);
   const [courier, setCourier] = useState(false);
@@ -80,7 +91,7 @@ export default function ToolsPage() {
       {tab === "browse" && (
         <>
           <div className="flex flex-col sm:flex-row gap-2">
-            <SearchInput value={search} onChange={setSearch} placeholder="Search tools" className="sm:w-72" />
+            <SearchInput value={search} onChange={updateSearch} placeholder="Search tools" className="sm:w-72" />
             <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
               <Chip active={!category} onClick={() => setCategory("")}>
                 All

@@ -15,7 +15,7 @@ const palette = [
   "bg-brand-600",
   "bg-blue-600",
   "bg-accent-600",
-  "bg-purple-600",
+  "bg-orchid-600",
   "bg-rose-600",
   "bg-teal-600",
   "bg-indigo-600",
