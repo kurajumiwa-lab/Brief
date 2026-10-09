@@ -66,6 +66,17 @@ vi.mock("@/lib/api", () => {
   const apiError = (e, f = "Something went wrong") => e?.message || f;
   return {
     apiError,
+    // v2.9: Browse also mounts the request feed (the action center reads it).
+    requestsAPI: {
+      list: vi.fn(() => ok([])),
+      create: vi.fn(() => ok({})),
+      get: vi.fn(() => ok({})),
+      offer: vi.fn(() => ok({})),
+      accept: vi.fn(() => ok({})),
+      cancel: vi.fn(() => ok({})),
+    },
+    toolAPI: { browse: vi.fn(() => ok([])) },
+    squadAPI: { calls: vi.fn(() => ok({ calls: [] })), accept: vi.fn() },
     stockAPI: {
       network: vi.fn((params) => ok([{ ...ITEM, _params: params }])),
       get: vi.fn((id) => ok({ ...ITEM, id })),
@@ -121,22 +132,22 @@ beforeEach(() => {
   useStockStore.setState({ mine: [], network: [], movements: [], categories: [] });
 });
 
-describe("Browse — the network tab, promoted to a destination", () => {
+describe("Browse — the goods view, one job of the action center", () => {
   it("reads filters from the URL and passes them to the existing network endpoint", async () => {
-    at("/browse?search=kitenge&category=Textiles", "/browse", <BrowsePage />);
+    at("/browse?type=goods&search=kitenge&category=Textiles", "/browse", <BrowsePage />);
     await waitFor(() =>
       expect(stockAPI.network).toHaveBeenCalledWith(expect.objectContaining({ search: "kitenge", category: "Textiles" }))
     );
   });
 
   it("lists network stock as cards that link to the listing page", async () => {
-    at("/browse", "/browse", <BrowsePage />);
+    at("/browse?type=goods", "/browse", <BrowsePage />);
     const title = await screen.findByRole("link", { name: /Kitenge 6-yard/i });
     expect(title).toHaveAttribute("href", "/listing/s1");
   });
 
   it("offers sourceable quantity, never raw in-stock", async () => {
-    at("/browse", "/browse", <BrowsePage />);
+    at("/browse?type=goods", "/browse", <BrowsePage />);
     await screen.findByRole("link", { name: /Kitenge 6-yard/i });
     expect(screen.getByText(/30/)).toBeInTheDocument();
     expect(screen.queryByText(/^40 piece/)).not.toBeInTheDocument();

@@ -335,6 +335,18 @@ export const mapAPI = {
   reportPlace: (id, verdict) => api.post(`/map/places/${id}/report`, { verdict }),
 };
 
+// ── Requests — express a need, collect offers, close the loop ───────────────
+// The reusable interface behind all four jobs (stock, workers, delivery,
+// rentals): the type changes the wording, never the flow.
+export const requestsAPI = {
+  create: (body) => api.post("/requests", body),
+  list: (params) => api.get("/requests", { params: noEmpty(params) }),
+  get: (id) => api.get(`/requests/${id}`),
+  offer: (id, body) => api.post(`/requests/${id}/offers`, body),
+  accept: (id, offerId) => api.post(`/requests/${id}/offers/${offerId}/accept`),
+  cancel: (id) => api.post(`/requests/${id}/cancel`),
+};
+
 // ── Surface — the mixed feed, the price index, and the map pins ────────────
 export const surfaceAPI = {
   feed: () => api.get("/surface/feed"),

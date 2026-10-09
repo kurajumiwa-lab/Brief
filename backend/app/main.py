@@ -16,7 +16,7 @@ from app.middleware.rate_limiter import RateLimitMiddleware, configure_backend
 from app.middleware.vendor_only import VendorOnlyMiddleware
 from app.routes import (
     analytics, auth, bookings, chamas, chat, collective, events, files, geo as geo_routes,
-    governance, groups, map as map_routes, market_locks, markets as markets_routes,
+    governance, groups, requests as requests_routes, map as map_routes, market_locks, markets as markets_routes,
     onboarding as onboarding_routes,
     surface as surface_routes,
     nearby as nearby_routes,
@@ -116,6 +116,7 @@ app.include_router(geo_routes.router, prefix="/api/geo", tags=["Geo & Open Data"
 app.include_router(squad_routes.router, prefix="/api/squad", tags=["Hustle League"])
 app.include_router(markets_routes.router, prefix="/api/markets", tags=["Markets"])
 app.include_router(surface_routes.router, prefix="/api/surface", tags=["Surface"])
+app.include_router(requests_routes.router, prefix="/api/requests", tags=["Business Requests"])
 # v2.7 — the marketplace map: viewport queries, server-side clustering, lazy details
 app.include_router(map_routes.router, prefix="/api/map", tags=["Map"])
 app.include_router(nearby_routes.router, prefix="/api/nearby", tags=["Nearby (B2C)"])
