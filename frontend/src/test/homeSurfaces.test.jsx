@@ -3,15 +3,15 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// The home refactor's contract, asserted:
+// The navigation redesign's contract, asserted:
 //
-//   · Home is a hub — a tile is a door, not a place the detail lives
-//   · every tile opens a real screen (URL changes, screen renders)
+//   · Home is a personalised trading feed, not a directory of destinations
+//   · hero search still routes into the existing stock-browse workflow
+//   · Browse groups the discovery surfaces without removing their deep links
 //   · a category is a screen: /nearby/{group} filters from the URL
 //   · a public place gets its own screen instead of bouncing to /map
 //   · a market gets its own screen instead of acting inline in a list
 //   · the squad track is reachable as a task screen; /squad still resolves
-//   · nothing pads: a zero count reads "—", not a badge
 // ─────────────────────────────────────────────────────────────────────────────
 
 const ok = (data) => Promise.resolve({ data });
@@ -57,7 +57,7 @@ const MARKET = {
   last_ingest_at: new Date().toISOString(), last_ingest_count: 214, welcome: null,
 };
 
-const calls = { nearby: [], place: [], market: [], join: [] };
+const calls = { nearby: [], place: [], market: [], join: [], tools: [] };
 
 vi.mock("@/lib/api", () => {
   const apiError = (e, f = "Something went wrong") => e?.message || f;
@@ -76,6 +76,7 @@ vi.mock("@/lib/api", () => {
       recent: vi.fn(() => ok({ wins: [] })),
     },
     marketsAPI: {
+      list: vi.fn(() => ok({ markets: [MARKET, { ...MARKET, id: "z-2", name: "Nairobi Wholesale", city: "Nairobi" }], countries: ["Kenya"] })),
       mine: vi.fn(() => ok({ markets: [] })),
       join: vi.fn((id) => { calls.join.push(id); return ok({ message: "joined" }); }),
       leave: vi.fn(() => ok({ message: "left" })),
@@ -92,9 +93,15 @@ vi.mock("@/lib/api", () => {
        have" blocks — the doors must still render if either is empty. */
     stockAPI: {
       network: vi.fn(() => ok([])),
+      categories: vi.fn(() => ok(["fresh produce", "grains", "textiles"])),
       movements: vi.fn(() => ok([])),
     },
     vendorAPI: { suggested: vi.fn(() => ok([])) },
+    toolAPI: {
+      browse: vi.fn((params) => { calls.tools.push(params); return ok([]); }),
+      mine: vi.fn(() => ok([])),
+      couriers: vi.fn(() => ok([])),
+    },
     nearbyAPI: {
       list: vi.fn((params) => { calls.nearby.push(params); return ok(NEARBY); }),
     },
@@ -132,35 +139,76 @@ beforeEach(() => {
   calls.place.length = 0;
   calls.market.length = 0;
   calls.join.length = 0;
+  calls.tools.length = 0;
 });
 
 // ── the hub ──────────────────────────────────────────────────────────────────
-describe("Home (hub)", () => {
-  it("is a shelf of doors, each labelled by the section behind it", async () => {
+describe("Home trading feed", () => {
+  it("prioritises search and marketplace activity rather than a destination grid", async () => {
     const { default: HomeHub } = await import("@/pages/home/HomeHub");
     renderAt("/", "/", <HomeHub />);
 
-    await waitFor(() => expect(screen.getByText("Around you")).toBeInTheDocument());
-    for (const label of ["Map", "News", "Suppliers", "Stock", "Rentals", "Markets", "Groups", "Events", "Tasks"]) {
-      expect(screen.getByText(label)).toBeInTheDocument();
+    expect(screen.getByRole("search")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /fresh on the network/i })).toBeInTheDocument();
+    expect(screen.queryByText("Your shelf of doors")).not.toBeInTheDocument();
+    for (const label of ["Around you", "Map", "News", "Rentals", "Markets", "Groups", "Events", "Tasks"]) {
+      expect(screen.queryByRole("link", { name: new RegExp(label, "i") })).not.toBeInTheDocument();
     }
   });
 
-  it("shows zero as a dash, not as a badge", async () => {
+  it("uses live network categories as one-tap Browse filters", async () => {
     const { default: HomeHub } = await import("@/pages/home/HomeHub");
     renderAt("/", "/", <HomeHub />);
-    await waitFor(() => expect(screen.getByText("Around you")).toBeInTheDocument());
-    // stock and groups are 0 in the fixture — both tiles read "—"
-    const dashes = screen.getAllByText("—");
-    expect(dashes.length).toBeGreaterThanOrEqual(2);
+    const category = await screen.findByRole("link", { name: "Fresh Produce" });
+    expect(category).toHaveAttribute("href", "/browse?category=fresh%20produce");
+    expect(screen.queryByRole("link", { name: "Convenience" })).not.toBeInTheDocument();
   });
 
-  it("opens a secondary screen instead of expanding in place", async () => {
+  it("keeps trust claims visible without inventing activity or market prices", async () => {
     const { default: HomeHub } = await import("@/pages/home/HomeHub");
-    renderRoutes("/", <Route path="/" element={<HomeHub />} />);
-    await waitFor(() => expect(screen.getByText("Around you")).toBeInTheDocument());
-    fireEvent.click(screen.getByText("Around you"));
-    await waitFor(() => expect(screen.getByTestId("elsewhere")).toBeInTheDocument());
+    renderAt("/", "/", <HomeHub />);
+    expect(screen.getByText(/prices are vendor-stated and timestamped/i)).toBeInTheDocument();
+    expect(screen.getByText(/trust is earned from completed movements/i)).toBeInTheDocument();
+    expect(screen.queryByText(/market rate/i)).not.toBeInTheDocument();
+  });
+
+  it("shows an honest recovery action when the live stock request fails", async () => {
+    const { stockAPI } = await import("@/lib/api");
+    stockAPI.network.mockRejectedValueOnce(new Error("offline"));
+    const { default: HomeHub } = await import("@/pages/home/HomeHub");
+    renderAt("/", "/", <HomeHub />);
+
+    expect(await screen.findByRole("heading", { name: "Fresh stock didn't load" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /try again/i }));
+    expect(await screen.findByRole("heading", { name: "No stock is showing yet" })).toBeInTheDocument();
+  });
+
+  it("resumes recent completed trades through the existing Orders history", async () => {
+    const { stockAPI } = await import("@/lib/api");
+    stockAPI.movements.mockResolvedValueOnce(ok([{
+      id: "move-1", stock_item_id: "stock-4", stock_name: "Red onions", direction: "incoming",
+      status: "received", from_handle: "east_market", to_handle: "mama_mboga", quantity: 4,
+      unit_price: 120, total_value: 480, created_at: new Date().toISOString(),
+    }]));
+    const { default: HomeHub } = await import("@/pages/home/HomeHub");
+    renderAt("/", "/", <HomeHub />);
+
+    expect(await screen.findByRole("heading", { name: "Recent trade activity" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Order history" })).toHaveAttribute("href", "/orders");
+    expect(screen.getByRole("link", { name: "Red onions" })).toHaveAttribute("href", "/listing/stock-4");
+  });
+
+  it("submits the hero search to the existing Browse results route", async () => {
+    const { default: HomeHub } = await import("@/pages/home/HomeHub");
+    renderRoutes("/", (
+      <>
+        <Route path="/" element={<HomeHub />} />
+        <Route path="/browse" element={<div data-testid="browse-results">Browse results</div>} />
+      </>
+    ));
+    fireEvent.change(screen.getByLabelText("Search the network"), { target: { value: "rice" } });
+    fireEvent.submit(screen.getByRole("search"));
+    expect(await screen.findByTestId("browse-results")).toBeInTheDocument();
   });
 });
 
@@ -247,6 +295,27 @@ describe("Market", () => {
     await waitFor(() => expect(screen.getByText("Register here")).toBeInTheDocument());
     fireEvent.click(screen.getByText("Register here"));
     await waitFor(() => expect(calls.join).toEqual(["z-1"]));
+  });
+});
+
+// ── a global market-search result ────────────────────────────────────────────
+describe("Market search", () => {
+  it("opens the all-markets view and filters the existing catalog from the URL", async () => {
+    const { default: MarketsPage } = await import("@/pages/markets/MarketsPage");
+    renderAt("/markets", "/markets?tab=all&search=Kibuye", <MarketsPage />);
+    expect(await screen.findByRole("link", { name: "Kibuye Market" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Nairobi Wholesale" })).not.toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Search markets, towns or countries")).toHaveValue("Kibuye");
+  });
+});
+
+// ── the global rentals search ────────────────────────────────────────────────
+describe("Rentals search", () => {
+  it("seeds the existing tools search from its deep-link query", async () => {
+    const { default: ToolsPage } = await import("@/pages/tools/ToolsPage");
+    renderAt("/tools", "/tools?search=warehouse", <ToolsPage />);
+    await waitFor(() => expect(calls.tools).toContainEqual({ category: "", search: "warehouse" }));
+    expect(screen.getByPlaceholderText("Search tools")).toHaveValue("warehouse");
   });
 });
 

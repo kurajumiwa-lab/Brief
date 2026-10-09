@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   Radar, MapPin, Store, Users, Trophy, Plus, Check, X, Search, Navigation, Medal, Pencil, ChevronRight,
 } from "lucide-react";
@@ -7,6 +7,7 @@ import Tabs from "@/components/ui/Tabs";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import Input from "@/components/ui/Input";
+import SearchInput from "@/components/ui/SearchInput";
 import Select from "@/components/ui/Select";
 import EmptyState from "@/components/ui/EmptyState";
 import { PageSpinner } from "@/components/ui/Spinner";
@@ -182,7 +183,7 @@ function NearMe() {
 }
 
 // ── All markets + multi-select data ─────────────────────────────────────────
-function AllMarkets() {
+function AllMarkets({ searchQuery, onSearchChange }) {
   const [data, setData] = useState(null);
   const [country, setCountry] = useState("");
   const [selected, setSelected] = useState({});
@@ -195,7 +196,11 @@ function AllMarkets() {
   }, []);
   useEffect(load, [load]);
 
-  const markets = useMemo(() => (data?.markets || []).filter((m) => !country || m.country === country), [data, country]);
+  const markets = useMemo(() => (data?.markets || []).filter((market) => {
+    const matchesCountry = !country || market.country === country;
+    const haystack = `${market.name || ""} ${market.city || ""} ${market.country || ""}`.toLocaleLowerCase();
+    return matchesCountry && (!searchQuery || haystack.includes(searchQuery.trim().toLocaleLowerCase()));
+  }), [data, country, searchQuery]);
   const selectedIds = Object.keys(selected).filter((id) => selected[id]);
 
   const toggle = (id) => setSelected((s) => ({ ...s, [id]: !s[id] }));
@@ -237,6 +242,8 @@ function AllMarkets() {
           <button key={c} onClick={() => setCountry(c === country ? "" : c)} className={cn("shrink-0 rounded-full px-3 h-8 text-xs", country === c ? "bg-brand-500/20 text-brand-600 dark:text-brand-400" : "text-ink-4")}>{c}</button>
         ))}
       </div>
+
+      <SearchInput value={searchQuery} onChange={onSearchChange} placeholder="Search markets, towns or countries" className="sm:max-w-sm" />
 
       {selectedIds.length > 0 && (
         <div className="sticky top-0 z-10 glass-strong rounded-2xl p-3 flex items-center gap-2">
@@ -348,7 +355,31 @@ function MyMarkets() {
 }
 
 export default function MarketsPage() {
-  const [tab, setTab] = useState("near");
+  const [params, setParams] = useSearchParams();
+  const searchQuery = params.get("search") || "";
+  const tab = TABS.some((item) => item.value === params.get("tab"))
+    ? params.get("tab")
+    : searchQuery ? "all" : "near";
+
+  const setTab = (value) => {
+    const next = new URLSearchParams(params);
+    if (value === "near") next.delete("tab");
+    else next.set("tab", value);
+    if (value !== "all") next.delete("search");
+    setParams(next, { replace: true });
+  };
+
+  const setSearchQuery = (value) => {
+    const next = new URLSearchParams(params);
+    if (value) {
+      next.set("search", value);
+      next.set("tab", "all");
+    } else {
+      next.delete("search");
+    }
+    setParams(next, { replace: true });
+  };
+
   return (
     <div className="space-y-4">
       <div>
@@ -357,7 +388,7 @@ export default function MarketsPage() {
       </div>
       <Tabs tabs={TABS} value={tab} onChange={setTab} />
       {tab === "near" && <NearMe />}
-      {tab === "all" && <AllMarkets />}
+      {tab === "all" && <AllMarkets searchQuery={searchQuery} onSearchChange={setSearchQuery} />}
       {tab === "mine" && <MyMarkets />}
     </div>
   );

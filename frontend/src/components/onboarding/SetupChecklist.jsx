@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Check, Circle, X } from "lucide-react";
+import { ArrowRight, Circle, X } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import { useStockStore } from "@/stores/stockStore";
 import { vendorAPI } from "@/lib/api";
@@ -17,8 +17,8 @@ import { cn } from "@/lib/utils";
      3  meet suppliers          vendors/connections
      4  run the loop once       stock/movements
 
-   It ticks itself off as the vendor trades, disappears for good once all four
-   are done, and can be dismissed at any time. Nothing here blocks the app.
+   Completed steps disappear as the vendor trades. Once finished — or dismissed —
+   the compact checklist becomes a live business pulse. Nothing blocks the app.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 const KEY = (handle) => `brief-setup-done:${handle || "anon"}`;
@@ -29,6 +29,7 @@ export default function SetupChecklist({ className }) {
   const movements = useStockStore((s) => s.movements);
   const fetchMine = useStockStore((s) => s.fetchMine);
   const [connections, setConnections] = useState(null);
+  const [mineLoaded, setMineLoaded] = useState(false);
   const [dismissed, setDismissed] = useState(() => {
     try {
       return localStorage.getItem(KEY(vendor?.vendor_handle)) === "1";
@@ -39,13 +40,18 @@ export default function SetupChecklist({ className }) {
 
   useEffect(() => {
     let live = true;
-    if (!mine.length) fetchMine?.().catch(() => {});
+    if (mine.length) setMineLoaded(true);
+    else {
+      fetchMine?.()
+        .then(() => live && setMineLoaded(true))
+        .catch(() => live && setMineLoaded(true));
+    }
     (async () => {
       try {
         const { data } = await vendorAPI.connections();
         if (live) setConnections(Array.isArray(data) ? data.length : data?.connections?.length ?? 0);
       } catch {
-        if (live) setConnections(0);
+        if (live) setConnections(null);
       }
     })();
     return () => {
@@ -104,7 +110,9 @@ export default function SetupChecklist({ className }) {
     }
   }, [complete, vendor]);
 
-  if (dismissed || complete) return null;
+  if (dismissed || complete) {
+    return <BusinessPulse vendor={vendor} mine={mine} mineLoaded={mineLoaded} movements={movements} connections={connections} complete={complete} className={className} />;
+  }
 
   const dismiss = () => {
     try {
@@ -141,41 +149,59 @@ export default function SetupChecklist({ className }) {
         </div>
       </div>
 
-      <ol className="mt-4 grid sm:grid-cols-2 gap-2.5">
-        {steps.map((s) => (
-          <li
-            key={s.id}
-            className={cn(
-              "flex items-start gap-3 rounded-2xl border p-3.5",
-              s.done ? "border-edge-1 bg-surface-0/60" : "border-edge-2 bg-surface-0"
-            )}
-          >
-            <span
-              className={cn(
-                "mt-0.5 w-5 h-5 rounded-full grid place-items-center shrink-0",
-                s.done ? "bg-brand-500 text-white" : "text-ink-4"
-              )}
-            >
-              {s.done ? <Check size={13} aria-hidden="true" /> : <Circle size={15} aria-hidden="true" />}
-            </span>
+      <ol className="mt-3 grid sm:grid-cols-2 gap-x-6">
+        {steps.filter((step) => !step.done).map((step) => (
+          <li key={step.id} className="flex items-start gap-3 border-t border-edge-1 py-3">
+            <Circle size={15} className="mt-0.5 shrink-0 text-ink-4" aria-hidden="true" />
             <div className="min-w-0 flex-1">
-              <p className={cn("text-xs font-semibold", s.done ? "text-ink-3 line-through decoration-edge-3" : "text-ink-1")}>{s.title}</p>
-              {!s.done && (
-                <>
-                  <p className="text-micro text-ink-3 mt-0.5 leading-relaxed">{s.body}</p>
-                  <Link
-                    to={s.to}
-                    className="mt-1.5 inline-flex items-center gap-1 text-micro font-bold text-brand-700 dark:text-brand-400 hover:underline underline-offset-2 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50"
-                  >
-                    {s.cta}
-                    <ArrowRight size={12} aria-hidden="true" />
-                  </Link>
-                </>
-              )}
+              <p className="text-xs font-semibold text-ink-1">{step.title}</p>
+              <p className="text-micro text-ink-3 mt-0.5 leading-relaxed">{step.body}</p>
+              <Link
+                to={step.to}
+                className="mt-1.5 inline-flex items-center gap-1 text-micro font-bold text-brand-700 dark:text-brand-400 hover:underline underline-offset-2 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50"
+              >
+                {step.cta}
+                <ArrowRight size={12} aria-hidden="true" />
+              </Link>
             </div>
           </li>
         ))}
       </ol>
+    </section>
+  );
+}
+
+function BusinessPulse({ vendor, mine, mineLoaded, movements, connections, complete, className }) {
+  const visible = mine.filter((item) => item.visible_to_network).length;
+  const openTrades = movements.filter((movement) => ["pending", "confirmed", "shipped", "in_transit"].includes(movement.status)).length;
+  const fulfilment = vendor?.fulfillment_rate == null ? "—" : `${Math.round(Number(vendor.fulfillment_rate))}%`;
+  const stats = [
+    { label: "Visible listings", value: mineLoaded ? visible : "—", note: "on your shelf" },
+    { label: "Open trades", value: openTrades, note: "moving through Orders" },
+    { label: "Supplier links", value: connections == null ? "—" : connections, note: "recorded connections" },
+    { label: "Fulfilment", value: fulfilment, note: vendor?.fulfillment_rate == null ? "build a record through completed trades" : "from completed movements" },
+  ];
+
+  return (
+    <section aria-labelledby="business-pulse-title" className={cn("border-y border-edge-1 py-4 sm:py-5", className)}>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="text-micro font-bold uppercase tracking-[0.14em] text-brand-700 dark:text-brand-300">Business pulse</p>
+          <h2 id="business-pulse-title" className="mt-1 text-lg font-bold tracking-tight text-ink-1">
+            {complete ? "Your business, at a glance" : "A live read on your trading"}
+          </h2>
+        </div>
+        <span className="text-micro text-ink-4">{complete ? "Setup complete" : "Quick view"}</span>
+      </div>
+      <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-4 sm:grid-cols-4 sm:divide-x sm:divide-edge-1">
+        {stats.map((stat) => (
+          <div key={stat.label} className="min-w-0 sm:px-4 first:pl-0">
+            <dt className="text-micro font-bold uppercase tracking-[0.1em] text-ink-4">{stat.label}</dt>
+            <dd className="mt-1 text-xl font-bold leading-none text-ink-1 tabular-nums">{stat.value}</dd>
+            <dd className="mt-1.5 text-micro text-ink-4 leading-snug">{stat.note}</dd>
+          </div>
+        ))}
+      </dl>
     </section>
   );
 }

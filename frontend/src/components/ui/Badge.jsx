@@ -9,7 +9,7 @@ const variants = {
   blue: "bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300",
   amber: "bg-accent-50 text-accent-700 dark:bg-accent-500/15 dark:text-accent-300",
   red: "bg-red-50 text-red-700 dark:bg-red-500/15 dark:text-red-300",
-  purple: "bg-purple-50 text-purple-700 dark:bg-purple-500/15 dark:text-purple-300",
+  purple: "bg-orchid-50 text-orchid-700 dark:bg-orchid-500/15 dark:text-orchid-300",
   gray: "bg-surface-2 text-ink-3",
   outline: "bg-transparent text-ink-3 border border-edge-2",
   solid: "bg-ink-1 text-surface-0",

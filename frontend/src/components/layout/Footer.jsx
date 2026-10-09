@@ -1,45 +1,32 @@
 import { Link } from "react-router-dom";
+import { ArrowRight, CheckCircle2, ShieldCheck } from "lucide-react";
 import { LogoMark } from "./Logo";
-import { SECTION_GROUPS } from "@/config/navigation";
 
-/**
- * A quiet footer that does real work: it is the full sitemap, which keeps
- * every destination crawlable and reachable without the drawer.
- */
+/** A quiet brand footer, not a second sitemap. */
 export default function Footer() {
   return (
-    <footer className="hidden lg:block border-t border-edge-1 bg-surface-1 mt-8">
-      <div className="container-app py-10">
-        <div className="grid grid-cols-5 gap-8">
-          <div className="col-span-1">
-            <div className="flex items-center gap-2">
-              <LogoMark size={28} />
-              <span className="text-base font-extrabold tracking-tight text-ink-1">brief</span>
-            </div>
-            <p className="mt-3 text-2xs text-ink-4 leading-relaxed">
-              The trade network with receipts. Every account is a business — no shoppers, no cart.
-            </p>
+    <footer className="hidden lg:block border-t border-edge-1 bg-surface-1 mt-10">
+      <div className="container-app py-7 flex flex-wrap items-center justify-between gap-5">
+        <div className="flex items-center gap-3">
+          <LogoMark size={30} />
+          <div>
+            <p className="text-sm font-extrabold tracking-tight text-ink-1">ogallo</p>
+            <p className="text-2xs text-ink-4">A trading network built on real records.</p>
           </div>
-          {SECTION_GROUPS.map((group) => (
-            <nav key={group.title} aria-label={group.title}>
-              <h2 className="text-micro uppercase tracking-[0.12em] font-bold text-ink-4">{group.title}</h2>
-              <ul className="mt-3 space-y-2">
-                {group.items
-                  .filter((i) => !i.quiet)
-                  .map((item) => (
-                    <li key={item.to + item.label}>
-                      <Link to={item.to} className="text-2xs text-ink-3 hover:text-ink-1 hover:underline underline-offset-2">
-                        {item.label}
-                      </Link>
-                    </li>
-                  ))}
-              </ul>
-            </nav>
-          ))}
         </div>
-        <p className="mt-10 pt-5 border-t border-edge-1 text-micro text-ink-4">
-          Counts are live rows · prices are vendor-stated and timestamped · place data © OpenStreetMap contributors (ODbL)
-        </p>
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+          <span className="inline-flex items-center gap-1.5 text-2xs text-ink-3">
+            <CheckCircle2 size={14} className="text-brand-700 dark:text-brand-400" aria-hidden="true" />
+            Prices are vendor-stated
+          </span>
+          <span className="inline-flex items-center gap-1.5 text-2xs text-ink-3">
+            <ShieldCheck size={14} className="text-orchid-600 dark:text-orchid-300" aria-hidden="true" />
+            Trust is earned through fulfilment
+          </span>
+          <Link to="/browse" className="inline-flex items-center gap-1 text-2xs font-semibold text-brand-800 hover:text-brand-700 dark:text-brand-300">
+            Browse the network <ArrowRight size={13} aria-hidden="true" />
+          </Link>
+        </div>
       </div>
     </footer>
   );

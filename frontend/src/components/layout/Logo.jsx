@@ -28,12 +28,12 @@ export default function Logo({ to = "/", compact = false, className }) {
     <Link
       to={to}
       className={cn("flex items-center gap-2.5 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50", className)}
-      aria-label="Brief — home"
+      aria-label="Ogallo — home"
     >
       <LogoMark />
       {!compact && (
         <span className="hidden sm:flex items-baseline gap-1">
-          <span className="text-lg font-extrabold tracking-tight text-ink-1 leading-none">brief</span>
+          <span className="text-lg font-extrabold tracking-tight text-ink-1 leading-none">ogallo</span>
           <span className="w-1.5 h-1.5 rounded-full bg-brand-500 mb-0.5" aria-hidden="true" />
         </span>
       )}

@@ -22,7 +22,7 @@ const MapPage = lazy(() => import("@/pages/map/MapPage"));
 const News = lazy(() => import("@/pages/news/News"));
 const TasksPortal = lazy(() => import("@/pages/tasks/TasksPortal"));
 const MarketsPage = lazy(() => import("@/pages/markets/MarketsPage"));
-const Dashboard = lazy(() => import("@/pages/dashboard/Dashboard"));
+const MePage = lazy(() => import("@/pages/me/MePage"));
 const StockRoom = lazy(() => import("@/pages/stock/StockRoom"));
 const Network = lazy(() => import("@/pages/network/Network"));
 const VendorLists = lazy(() => import("@/pages/lists/VendorLists"));
@@ -88,9 +88,10 @@ export default function App() {
         }
       >
         <Fragment>
-          {/* ── The core loop ──────────────────────────────────────────
-              browse → listing → order → inbox. These four are the only
-              destinations in the header and the mobile tab bar. */}
+          {/* ── Primary destinations ───────────────────────────────────
+              Home · Browse · Orders · Inbox · Me. Discovery routes remain
+              individually deep-linkable beneath Browse; business routes
+              remain deep-linkable beneath the Me workspace. */}
           <Route path="/" element={<HomeHub />} />
           <Route path="/browse" element={<BrowsePage />} />
           <Route path="/listing/:id" element={<ListingPage />} />
@@ -98,7 +99,7 @@ export default function App() {
           <Route path="/chat" element={<ChatPage />} />
           <Route path="/stock" element={<StockRoomRouter />} />
 
-          {/* ── Discovery: home's ten doors and the screens behind them ── */}
+          {/* ── Browse and supporting discovery surfaces ──────────────── */}
           <Route path="/nearby" element={<NearbyPage />} />
           <Route path="/nearby/:group" element={<NearbyPage />} />
           <Route path="/place/:id" element={<PlaceProfile />} />
@@ -123,7 +124,10 @@ export default function App() {
           <Route path="/tasks/:track" element={<TaskTrack />} />
 
           {/* ── Your business ─────────────────────────────────────────── */}
-          <Route path="/brief" element={<Dashboard />} />
+          <Route path="/me" element={<MePage />} />
+          {/* Brief is the legacy name for the Me workspace; keep old links alive. */}
+          <Route path="/brief" element={<Navigate to="/me" replace />} />
+          <Route path="/profile" element={<Navigate to="/me" replace />} />
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/pos" element={<POSBridge />} />
           <Route path="/governance" element={<OurNetwork />} />
