@@ -20,17 +20,48 @@ from app.models.vendor import Vendor
 from app.modules.trade.models import (
     BusinessRequest,
     OfferStatus,
+    RequestEvent,
     RequestOffer,
     RequestStatus,
     RequestType,
     RequestUrgency,
 )
+from app.platform.event_outbox import emit
 from app.services.routing import haversine_km
 
 MAX_OPEN_FEED = 60
 
 REQUEST_TYPES = {t.value for t in RequestType}
 URGENCIES = {u.value for u in RequestUrgency}
+
+# The locked decision: the trade lifecycle is an EXPLICIT state machine.
+# Every legal change is in the map; anything else is refused with 409, no
+# matter which code path asked. Terminal states map to nothing.
+REQUEST_FLOW = {
+    RequestStatus.OPEN: {RequestStatus.FULFILLED, RequestStatus.CANCELLED},
+    RequestStatus.FULFILLED: set(),
+    RequestStatus.CANCELLED: set(),
+}
+OFFER_FLOW = {
+    OfferStatus.OFFERED: {OfferStatus.ACCEPTED, OfferStatus.DECLINED},
+    OfferStatus.ACCEPTED: set(),
+    OfferStatus.DECLINED: set(),
+}
+
+
+def _require_transition(flow: dict, current, target, message: str) -> None:
+    if target not in flow.get(current, set()):
+        raise RequestFlowError(message, status=409)
+
+
+def _record(db: AsyncSession, request: BusinessRequest, event_type: str,
+            actor_vendor_id=None, offer_id=None, payload: dict | None = None) -> None:
+    """Append one line to the request's audit history — same transaction as
+    the change it describes, never updated afterwards."""
+    db.add(RequestEvent(
+        request_id=request.id, event_type=event_type,
+        actor_vendor_id=actor_vendor_id, offer_id=offer_id, payload=payload or {},
+    ))
 
 
 class RequestFlowError(Exception):
@@ -59,7 +90,19 @@ async def to_dict(db: AsyncSession, r: BusinessRequest, viewer: Vendor) -> dict:
         zone_name = (await db.get(MarketZone, r.zone_id)).name
     mine = r.requester_vendor_id == viewer.id
     is_requester = mine
-    return {
+    events = None
+    if is_requester:
+        rows = (await db.execute(
+            select(RequestEvent).where(RequestEvent.request_id == r.id)
+            .order_by(RequestEvent.id.asc()).limit(50)
+        )).scalars().all()
+        events = [
+            {"type": e.event_type,
+             "offer_id": str(e.offer_id) if e.offer_id else None,
+             "at": e.created_at.isoformat()}
+            for e in rows
+        ]
+    out = {
         "id": str(r.id),
         "request_type": r.request_type.value if hasattr(r.request_type, "value") else r.request_type,
         "description": r.description,
@@ -87,7 +130,13 @@ async def to_dict(db: AsyncSession, r: BusinessRequest, viewer: Vendor) -> dict:
                 {"lat": viewer.geo_lat, "lng": viewer.geo_lng},
                 {"lat": r.geo_lat, "lng": r.geo_lng}) or 0.0, 1)
         ),
+        # The audit trail is the requester's instrument; other viewers get the
+        # facts (status, offers, counts) without the play-by-play.
+        "events": events,
     }
+    if not is_requester:
+        out.pop("events", None)
+    return out
 
 
 def offer_dict(o: RequestOffer, viewer: Vendor) -> dict:
@@ -147,6 +196,13 @@ async def create_request(db: AsyncSession, vendor: Vendor, *, request_type: str,
         budget_kes=budget_kes,
     )
     db.add(request)
+    await db.flush()   # assign the id the history line and the event carry
+    _record(db, request, "posted", actor_vendor_id=vendor.id,
+            payload={"request_type": request_type, "needed_by": needed_by})
+    emit(db, "trade.request.posted", {
+        "request_id": str(request.id), "request_type": request_type,
+        "zone_id": str(zone_id) if zone_id else None,
+    })
     await db.commit()
     await db.refresh(request)
     return request
@@ -239,6 +295,7 @@ async def add_offer(db: AsyncSession, vendor: Vendor, request: BusinessRequest, 
         existing.price_kes = price_kes
         existing.lead_time = (lead_time or "").strip() or None
         existing.status = OfferStatus.OFFERED
+        _record(db, request, "offer_updated", actor_vendor_id=vendor.id, offer_id=existing.id)
         await db.commit()
         await db.refresh(existing)
         return existing
@@ -251,6 +308,13 @@ async def add_offer(db: AsyncSession, vendor: Vendor, request: BusinessRequest, 
         lead_time=(lead_time or "").strip() or None,
     )
     db.add(offer)
+    await db.flush()   # the offer's id is needed by the history and the event
+    _record(db, request, "offer_received", actor_vendor_id=vendor.id, offer_id=offer.id,
+            payload={"responder_vendor_id": str(vendor.id)})
+    emit(db, "trade.request.offer_received", {
+        "request_id": str(request.id), "offer_id": str(offer.id),
+        "responder_vendor_id": str(vendor.id),
+    })
     await db.commit()
     await db.refresh(offer)
     return offer
@@ -263,17 +327,20 @@ async def accept_offer(db: AsyncSession, vendor: Vendor, request: BusinessReques
     completion data trust is built from."""
     if request.requester_vendor_id != vendor.id:
         raise RequestFlowError("Only the requester accepts an offer", status=403)
-    if request.status != RequestStatus.OPEN:
-        raise RequestFlowError("This request is already closed", status=409)
+    _require_transition(REQUEST_FLOW, request.status, RequestStatus.FULFILLED,
+                        "This request is already closed")
 
     offer = await db.get(RequestOffer, offer_id)
     if not offer or offer.request_id != request.id:
         raise RequestFlowError("Offer not found on this request", status=404)
+    _require_transition(OFFER_FLOW, offer.status, OfferStatus.ACCEPTED,
+                        "That offer is no longer on the table")
 
     offer.status = OfferStatus.ACCEPTED
     request.status = RequestStatus.FULFILLED
     request.accepted_offer_id = offer.id
     request.closed_at = datetime.utcnow()
+    rivals = 0
     for other in (await db.execute(
         select(RequestOffer).where(
             RequestOffer.request_id == request.id,
@@ -281,6 +348,17 @@ async def accept_offer(db: AsyncSession, vendor: Vendor, request: BusinessReques
         ))).scalars():
         if other.status == OfferStatus.OFFERED:
             other.status = OfferStatus.DECLINED
+            rivals += 1
+    _record(db, request, "offer_accepted", actor_vendor_id=vendor.id, offer_id=offer.id,
+            payload={"accepted_offer_id": str(offer.id)})
+    if rivals:
+        _record(db, request, "rival_offers_declined", payload={"count": rivals})
+    _record(db, request, "request_fulfilled", actor_vendor_id=vendor.id)
+    emit(db, "trade.request.fulfilled", {
+        "request_id": str(request.id), "accepted_offer_id": str(offer.id),
+        "request_type": request.request_type.value
+        if hasattr(request.request_type, "value") else str(request.request_type),
+    })
     await db.commit()
     return {"id": str(request.id), "status": request.status.value,
             "accepted_offer_id": str(offer.id)}
@@ -289,9 +367,11 @@ async def accept_offer(db: AsyncSession, vendor: Vendor, request: BusinessReques
 async def cancel_request(db: AsyncSession, vendor: Vendor, request: BusinessRequest) -> dict:
     if request.requester_vendor_id != vendor.id:
         raise RequestFlowError("Only the requester cancels a request", status=403)
-    if request.status != RequestStatus.OPEN:
-        raise RequestFlowError("This request is already closed", status=409)
+    _require_transition(REQUEST_FLOW, request.status, RequestStatus.CANCELLED,
+                        "This request is already closed")
     request.status = RequestStatus.CANCELLED
     request.closed_at = datetime.utcnow()
+    _record(db, request, "request_cancelled", actor_vendor_id=vendor.id)
+    emit(db, "trade.request.cancelled", {"request_id": str(request.id)})
     await db.commit()
     return {"id": str(request.id), "status": request.status.value}

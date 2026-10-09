@@ -12,17 +12,60 @@ from sqlalchemy import text
 from app.config import settings
 from app.database import async_session, engine, init_db
 from app.middleware.metrics import MetricsMiddleware
-from app.modules.trade import router as requests_routes
 from app.middleware.rate_limiter import RateLimitMiddleware, configure_backend
 from app.middleware.vendor_only import VendorOnlyMiddleware
+from app.modules.trade import router as requests_routes
+from app.platform import event_outbox
 from app.routes import (
-    analytics, auth, bookings, chamas, chat, collective, events, files, geo as geo_routes,
-    governance, groups, map as map_routes, market_locks, markets as markets_routes,
-    onboarding as onboarding_routes,
-    surface as surface_routes,
+    analytics,
+    auth,
+    bookings,
+    chamas,
+    chat,
+    collective,
+    events,
+    files,
+    governance,
+    groups,
+    market_locks,
+    murabaha,
+    notifications,
+    payments,
+    pos_bridge,
+    reviews,
+    route_planner,
+    stock,
+    tools,
+    vendor_lists,
+    vendors,
+    verification,
+)
+from app.routes import (
+    geo as geo_routes,
+)
+from app.routes import (
+    map as map_routes,
+)
+from app.routes import (
+    markets as markets_routes,
+)
+from app.routes import (
     nearby as nearby_routes,
-    murabaha, news as news_routes, notifications, ops as ops_routes, payments, pos_bridge, reviews,
-    route_planner, squad as squad_routes, stock, tools, vendor_lists, vendors, verification,
+)
+from app.routes import (
+    news as news_routes,
+)
+from app.routes import (
+    onboarding as onboarding_routes,
+)
+from app.routes import (
+    ops as ops_routes,
+)
+from app.routes import (
+    squad as squad_routes,
+)
+from app.routes import (
+    surface as surface_routes,
 )
 from app.services import geo_data, payment_worker, pos_sync
 from app.services.storage import local_root
@@ -52,10 +95,12 @@ async def lifespan(app: FastAPI):
     scheduler = None
     payments_scheduler = None
     open_data = None
+    outbox_task = None
     if settings.RUN_SCHEDULER:
         scheduler = asyncio.create_task(pos_sync.scheduler_loop(async_session, settings.POS_SYNC_INTERVAL))
         payments_scheduler = asyncio.create_task(payment_worker.scheduler_loop(async_session))
         open_data = asyncio.create_task(geo_data.open_data_loop(async_session))
+        outbox_task = asyncio.create_task(event_outbox.scheduler_loop(async_session))
     else:
         log.info("scheduler disabled here (RUN_SCHEDULER=false) — run `python -m app.worker` once")
     log.info("🏪 Brief_ Vendor Network v%s initialized", settings.VERSION)
@@ -63,7 +108,7 @@ async def lifespan(app: FastAPI):
     try:
         yield
     finally:
-        for task in (scheduler, payments_scheduler, open_data):
+        for task in (scheduler, payments_scheduler, open_data, outbox_task):
             if task:
                 task.cancel()
                 try:

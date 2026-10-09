@@ -7,6 +7,27 @@ without breaking a single screen.
 
 ---
 
+## Locked decisions — where each one lives in code now
+
+From the critique's decision table (v2.10). Postponed until scale demands
+them: microservices, a dedicated event broker, distributed infrastructure,
+a separate analytics warehouse.
+
+| Decision | Status | Where it lives |
+|---|---|---|
+| Modular monolith first | **in force** | `app/modules/` + module law (§2); Wave 0 pilot shipped; ruff import discipline next |
+| PostgreSQL | **always was** | the entire stack; pgserver-backed tests run the real dialect |
+| Business tenancy: explicit memberships, scoped permissions | Wave 2 | today: caller-is-the-business (`get_current_vendor`); token mechanics already extracted to `platform/security.py` |
+| Inventory = movements, balances, reservations | Wave 3 | tables exist (`stock_items/movements/reservations`); they move under `modules/inventory` with one writer |
+| Trade lifecycle: explicit state machine + auditable history | **shipped v2.10** | `trade/service.py`: `REQUEST_FLOW`/`OFFER_FLOW` maps, `_require_transition` (409 on anything unmapped); `request_events` append-only audit, requester-visible via `events` in the detail payload |
+| Integrations: transactional outbox + background workers | **shipped v2.10** | `platform/event_outbox.py`: `emit()` in the same transaction, `drain()` (FOR UPDATE SKIP LOCKED) on the scheduler loop (`main.py` lifespan + `app/worker.py`); `trade` emits posted/offer_received/fulfilled/cancelled |
+| Vendor Tools → resources + bookings + fulfilment domains | Wave 4 | mapped in §2; `/api/tools` URLs frozen, code splits |
+| Analytics: read models from canonical records | Wave 5 | outbox table is the substrate; read models rebuild from it |
+| Trust: reproducible metrics from qualifying recorded events | Wave 5 | events carry no prices/notes (negotiation privacy preserved); completion facts (`request_fulfilled`, rival-declines) are the seed |
+| Migration: incremental, tested, reversible | **in force** | §3 wave table; revert = git revert (no data migrations except additive 0013) |
+
+---
+
 ## 0. What Ogallo actually runs on (known facts, read from the repo)
 
 The stack questions don't need answers from memory — the repo *is* the answer:
@@ -165,7 +186,7 @@ writers, ever.
 
 | Wave | Their step | What we do | Authoritative writer becomes | Done when |
 |---|---|---|---|---|
-| **0** ✅ | 1–2 (inventory, boundaries) | This document; **pilot extraction of `trade`** (`business_requests` + offers) into `modules/trade/{models,schemas,service,router}.py` — service owns the rules and raises `RequestFlowError(status)`, router is a translator; URLs and behavior unchanged, 166 tests green | `trade.service` for requests/offers | ✅ this commit |
+| **0** ✅ | 1–2 (inventory, boundaries) | This document; **pilot extraction of `trade`** (v2.10 also shipped: flow maps, `request_events` audit, `platform/event_outbox`, `platform/security`) (`business_requests` + offers) into `modules/trade/{models,schemas,service,router}.py` — service owns the rules and raises `RequestFlowError(status)`, router is a translator; URLs and behavior unchanged, 166 tests green | `trade.service` for requests/offers | ✅ this commit |
 | **1** | 2 | Extract `platform/`: `security.py` (JWT + `get_current_vendor` out of `routes/auth.py`), `jobs.py` (the three loops + worker under one registry), `storage.py`, `observability/`; add `tests/contracts/` with an OpenAPI pin so the URL contract can't drift while code moves | platform owns tokens, time, storage | contract tests green on unchanged URLs |
 | **2** | 2 | `modules/identity` (auth, vendors, vendor_profiles, patrons out of vendor_list.py, login_guard) + `modules/businesses` (onboarding). Frontend untouched | identity owns vendors/patrons writes | auth + vendor tests pass from new home |
 | **3** | 3 | `modules/catalogue` + `modules/inventory` (stock quantities, reservations, POS bridge/sync) + trade foundations: sourcing, `stock_movements`, negotiations, collective → `trade.service`. Transaction boundary: one command = one service call = one transaction | inventory owns quantities; trade owns movement/request state machines | stock + collective + requests suites green; movements written only by trade |

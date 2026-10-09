@@ -40,7 +40,10 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
 )
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import (
+    text as sa_text,
+)
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import relationship
 
 from app.database import Base
@@ -143,3 +146,27 @@ class RequestOffer(Base):
 
     request = relationship("BusinessRequest", back_populates="offers", foreign_keys=[request_id])
     responder = relationship("Vendor", foreign_keys=[responder_vendor_id])
+
+
+class RequestEvent(Base):
+    """The auditable history of one request — an append-only record of what
+    happened and when (locked decision: the trade lifecycle is an explicit
+    state machine with auditable history). Written by trade.service inside
+    the same transaction as the state change it describes; never updated.
+
+    The payload deliberately carries NO prices and NO offer notes: event
+    history is for ordering and rebuilding, negotiation content lives on the
+    offer row where its privacy rules already apply.
+    """
+
+    __tablename__ = "request_events"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    request_id = Column(UUID(as_uuid=True), ForeignKey("business_requests.id", ondelete="CASCADE"), nullable=False, index=True)
+    event_type = Column(String(40), nullable=False)   # posted | offer_received | offer_updated
+                                                      # | offer_accepted | rival_offers_declined
+                                                      # | request_fulfilled | request_cancelled
+    actor_vendor_id = Column(UUID(as_uuid=True), nullable=True)
+    offer_id = Column(UUID(as_uuid=True), nullable=True)
+    payload = Column(JSONB, nullable=False, server_default=sa_text("'{}'::jsonb"), default=dict)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
