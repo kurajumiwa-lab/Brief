@@ -19,7 +19,7 @@ from app.models.notification import Notification, NotificationType
 from app.models.performance import VendorPerformance
 from app.models.collective import CollectiveSourcingRequest, CollectivePledge
 from app.models.market_locks import MarketZone, MarketMember, LockProduct, SupplierMOQ, LockWindow, LockCluster, LockPick, SupplierQuote
-from app.models.requests import BusinessRequest, RequestOffer, RequestType, RequestUrgency, RequestStatus, OfferStatus
+from app.modules.trade.models import BusinessRequest, RequestOffer, RequestType, RequestUrgency, RequestStatus, OfferStatus
 from app.models.governance import (
     VendorActivityDay, GovernanceProposal, GovernanceVote, CouncilTerm, RuleVersion,
     BiasharaScoreEvent, GovernanceAuditEvent, DualApprovalRequest, RevenueEvent,
