@@ -329,6 +329,10 @@ export const mapAPI = {
   place: (id, opts) => api.get(`/map/places/${id}`, opts),
   vendor: (id, opts) => api.get(`/map/vendors/${id}`, opts),
   market: (id, opts) => api.get(`/map/markets/${id}`, opts),
+  // v2.8 — the network keeps the directory honest. A vendor standing in front
+  // of an external place confirms it (revalidation) or reports it gone
+  // (archive). See docs/briefs/network-first-map.md.
+  reportPlace: (id, verdict) => api.post(`/map/places/${id}/report`, { verdict }),
 };
 
 // ── Surface — the mixed feed, the price index, and the map pins ────────────

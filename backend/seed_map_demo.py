@@ -25,6 +25,7 @@ from datetime import datetime, timedelta
 
 from sqlalchemy import select, text
 
+from app.config import settings
 from app.database import async_session
 from app.models.market_locks import MarketZone
 from app.models.public_place import PublicPlace
@@ -125,6 +126,10 @@ async def seed_places(db, target: int):
 
     batch = []
     now = datetime.utcnow()
+    # The demo must demo the tiers: ~2% of the directory is claimed by the
+    # seeded vendors (network), ~4% has gone quiet past the staleness window
+    # (stale — off the commercial map until revalidated), the rest is external.
+    vendor_ids = (await db.execute(text("SELECT id FROM vendors"))).scalars().all()
     for i in range(todo):
         zone = zones[i % len(zones)]
         # Most shops sit inside the market's walkable ring; a few spill out.
@@ -132,6 +137,10 @@ async def seed_places(db, target: int):
         lat = zone.center_lat + random.gauss(0, spread)
         lng = zone.center_lng + random.gauss(0, spread)
         category = CATEGORIES[i % len(CATEGORIES)]
+        tier_roll = random.random()
+        claimed_by = vendor_ids[i % len(vendor_ids)] if (vendor_ids and tier_roll < 0.02) else None
+        checked_days = (random.randint(settings.MAP_PLACE_STALE_DAYS + 30, 500)
+                        if tier_roll >= 0.98 else random.randint(0, 45))
         batch.append(PublicPlace(
             source="openstreetmap", external_id=f"node/{10_000_000 + i}",
             name=place_name(category, i), category=category,
@@ -141,9 +150,10 @@ async def seed_places(db, target: int):
             address=f"{random.randint(1, 200)} {random.choice(STREETS)}, {zone.city}",
             lat=round(max(-90, min(90, lat)), 6), lng=round(max(-180, min(180, lng)), 6),
             zone_id=zone.id, zone_name=zone.name,
-            status="active",
+            status="claimed" if claimed_by else "active",
+            claimed_by_vendor_id=claimed_by,
             first_seen_at=now - timedelta(days=random.randint(30, 400)),
-            last_checked_at=now - timedelta(days=random.randint(0, 45)),
+            last_checked_at=now - timedelta(days=checked_days),
             created_at=now, updated_at=now,
         ))
         if len(batch) >= 500:

@@ -195,7 +195,10 @@ async def ingest_zone(zone: MarketZone, db: AsyncSession) -> dict:
             for field in ("name", "category", "detail", "phone", "opening_hours", "website", "address", "lat", "lng"):
                 if p[field] is not None:
                     setattr(existing, field, p[field])
-            if existing.status == "removed":
+            if existing.status in ("removed", "archived"):
+                # The source (or a vendor on the street) says the place is back.
+                # Archived rows revive exactly like removed ones — archive is a
+                # commercial-map decision, not a deletion.
                 existing.status = "active"
             if existing.zone_id is None:
                 existing.zone_id, existing.zone_name = zone.id, zone.name

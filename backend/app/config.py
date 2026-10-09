@@ -221,6 +221,14 @@ class Settings(BaseSettings):
     MAP_COUNTS_TTL_SECONDS: int = 300   # the headline counters change slowly
     # Browser cache for a viewport response. Short: pins move, stock changes.
     MAP_HTTP_MAX_AGE_SECONDS: int = 30
+    # v2.8 — the network-first map. A pin on the map is not a marketplace
+    # member. Unclaimed public-data places are external: hidden by default on
+    # the client, muted when shown, and dropped from the commercial map once
+    # the source has not confirmed them for MAP_PLACE_STALE_DAYS. A sweep
+    # archives what has been silent for MAP_PLACE_ARCHIVE_DAYS (the ingest
+    # revives an archived row the day the source lists it again).
+    MAP_PLACE_STALE_DAYS: int = 180
+    MAP_PLACE_ARCHIVE_DAYS: int = 365
 
     # Notifications & holds
     STOCK_LOW_THRESHOLD: int = 5        # units at or below which a STOCK_LOW alert fires

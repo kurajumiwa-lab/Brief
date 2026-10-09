@@ -1,7 +1,7 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { bboxString, clusterColor, clusterRadius, KIND_COLORS, PIN_RADIUS } from "@/lib/mapViewport";
+import { bboxString, clusterRadius, clusterStyle, pointStyle } from "@/lib/mapViewport";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MarketMap — plain Leaflet, canvas-drawn pins, one screenful of data.
@@ -119,6 +119,9 @@ const MarketMap = forwardRef(function MarketMap(
   }, [config]);
 
   // ── pins: canvas circle markers, replaced wholesale each view ─────────────
+  // The style IS the product rule: network pins keep their layer colour;
+  // external pins (unclaimed public data) draw grey, translucent and slightly
+  // smaller — background, not marketplace.
   useEffect(() => {
     const map = mapRef.current;
     const layer = pinLayer.current;
@@ -126,15 +129,10 @@ const MarketMap = forwardRef(function MarketMap(
     layer.clearLayers();
     points.forEach((p) => {
       if (typeof p.lat !== "number" || typeof p.lng !== "number") return;
-      const isSelected = p.id === selectedId;
-      const base = PIN_RADIUS[p.kind] ?? 6;
+      const style = pointStyle(p, p.id === selectedId);
       const marker = L.circleMarker([p.lat, p.lng], {
         renderer: map.options.renderer || undefined,
-        radius: isSelected ? base + 4 : base,
-        color: isSelected ? "#FFFFFF" : KIND_COLORS[p.kind] || "#60A5FA",
-        weight: isSelected ? 3 : 1.5,
-        fillColor: KIND_COLORS[p.kind] || "#60A5FA",
-        fillOpacity: isSelected ? 1 : 0.85,
+        ...style,
       });
       marker.on("click", () => handlers.current.onSelect?.(p));
       layer.addLayer(marker);
@@ -142,6 +140,8 @@ const MarketMap = forwardRef(function MarketMap(
   }, [points, selectedId]);
 
   // ── clusters: the only DOM markers, because they carry a number ───────────
+  // A cluster with any network row inside draws emerald; a purely external
+  // cluster draws grey. The count stays honest either way.
   useEffect(() => {
     const map = mapRef.current;
     const layer = clusterLayer.current;
@@ -149,7 +149,7 @@ const MarketMap = forwardRef(function MarketMap(
     layer.clearLayers();
     clusters.forEach((c) => {
       if (typeof c.lat !== "number" || typeof c.lng !== "number") return;
-      const color = clusterColor(c.count);
+      const color = clusterStyle(c);
       const marker = L.marker([c.lat, c.lng], {
         icon: clusterIcon(c.count, color),
         keyboard: false,
@@ -157,7 +157,7 @@ const MarketMap = forwardRef(function MarketMap(
       });
       marker.on("click", () => handlers.current.onCluster?.(c));
       marker.bindTooltip(
-        `${c.count} ${c.kind === "vendors" ? "vendors" : c.kind === "markets" ? "markets" : "places"}`,
+        `${c.count} ${c.kind === "vendors" ? "vendors" : c.kind === "markets" ? "markets" : c.network === false ? "external places" : "places"}`,
         { direction: "top", offset: [0, -6] },
       );
       layer.addLayer(marker);

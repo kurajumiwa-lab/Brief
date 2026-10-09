@@ -31,6 +31,7 @@ export default function useMapViewport({
   filter = "",
   category = "",
   scope = "viewport",
+  external = "hide",
   limit,
   debounceMs = 250,
   enabled = true,
@@ -59,7 +60,7 @@ export default function useMapViewport({
         const res = await fetcher(
           { bbox: scope === "network" ? undefined : bbox, zoom, kind, q: q || undefined,
             filter: filter || undefined, category: category || undefined, scope,
-            limit },
+            external: scope === "network" ? undefined : external, limit },
           { signal: controller.signal },
         );
         if (id !== latest.current) return;                 // a newer view won
@@ -88,7 +89,7 @@ export default function useMapViewport({
       controller.abort();
       if (timer) clearTimeout(timer);
     };
-  }, [bbox, zoom, kind, q, filter, category, scope, limit, debounceMs, enabled, fetcher, nonce]);
+  }, [bbox, zoom, kind, q, filter, category, scope, external, limit, debounceMs, enabled, fetcher, nonce]);
 
   const refresh = useCallback(() => setNonce((n) => n + 1), []);
 

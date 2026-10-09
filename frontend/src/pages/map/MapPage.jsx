@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
-  Store, MapPin, Building2, Search, Crosshair, Plus, Minus, List, X, ChevronRight,
-  CloudOff, ZoomIn,
+  Store, MapPin, Building2, Crosshair, Plus, Minus, List, X, ChevronRight,
+  CloudOff, ZoomIn, Eye, EyeOff, ShieldCheck,
 } from "lucide-react";
 import MarketMap from "@/components/map/MarketMap";
 import MapSheet from "@/components/map/MapSheet";
@@ -13,11 +13,14 @@ import { mapAPI, apiError } from "@/lib/api";
 import { toast } from "@/components/ui/Toast";
 import { num } from "@/lib/formatters";
 import useMapViewport from "@/lib/useMapViewport";
-import { areaSummary, categoryLabel, formatCount, KIND_COLORS } from "@/lib/mapViewport";
+import {
+  areaSummary, categoryLabel, formatCount, KIND_COLORS, MUTED_COLOR,
+  sortNetworkFirst, tierTag,
+} from "@/lib/mapViewport";
 import { cn } from "@/lib/utils";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// MAP — find something to buy near you.
+// MAP — find someone to buy from near you.
 //
 // The old screen loaded the whole directory (7,640 places), built a Leaflet
 // marker for each one and waited. On a phone that is a freeze, not a delay —
@@ -25,23 +28,32 @@ import { cn } from "@/lib/utils";
 //
 // What this screen does instead:
 //
-//   1. VIEWPORT LOADING. The map asks for one screenful at a time
+//   1. SUPPLIERS FIRST. The verified network is the product: vendors, claimed
+//      places and working markets draw in full colour and rank first, in the
+//      list and on the canvas. The map opens on them, not on the directory.
+//   2. A PIN IS NOT A MEMBER. Unclaimed public-data places are `external`:
+//      hidden by default behind one toggle. Switch it on and they appear
+//      muted — grey, translucent, labelled "external". A location on this map
+//      never silently becomes part of the marketplace.
+//   3. STALE ROWS ARE OFF THE MAP. Once the source stops confirming a place
+//      (`MAP_PLACE_STALE_DAYS`) it leaves the commercial map, is counted as
+//      `stale`, and is revalidated or archived — see MapSheet and the sweep.
+//   4. VIEWPORT LOADING. The map asks for one screenful at a time
 //      (`GET /api/map/viewport?bbox=…&zoom=…`), debounced and cancelled.
-//   2. SERVER-SIDE CLUSTERING. Zoomed out it draws ~20–200 aggregate bubbles
-//      ("7.6K places", "1,240"); zoomed in it draws real pins, capped at 300.
-//   3. COUNTERS ARE FILTERS. Markets / Vendors / Places each load one dataset,
-//      never all three at once.
-//   4. PROGRESSIVE DISCLOSURE. Zoom 2–7 regions, 8–11 cities, 12–14 markets and
-//      vendors, 15+ individual businesses — details only when a pin is tapped.
-//   5. MAP + LIST. The map is a discovery surface; the list is where you act.
+//   5. SERVER-SIDE CLUSTERING. Zoomed out it draws ~20–200 aggregate bubbles
+//      ("1,240 places", "3 suppliers"); zoomed in it draws real pins, capped.
+//   6. COUNTERS ARE FILTERS. Suppliers / Markets / Places each load one
+//      dataset, never all three at once.
+//   7. MAP + LIST. The map is a discovery surface; the list is where you act,
+//      and it sorts the marketplace above the directory.
 //
 // Tiles come from the server config (see MarketMap). Attribution is ODbL and
 // travels with every row that came from OpenStreetMap.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const COUNTERS = [
+  { value: "vendors", label: "Suppliers", icon: Store },
   { value: "markets", label: "Markets", icon: MapPin },
-  { value: "vendors", label: "Vendors", icon: Store },
   { value: "places", label: "Places", icon: Building2 },
 ];
 
@@ -73,6 +85,10 @@ export default function MapPage() {
   const [search, setSearch] = useState("");     // already debounced by SearchInput
   const [selected, setSelected] = useState(null);
   const [mode, setMode] = useState("map");        // map | list
+  // The clean-map default: external (unclaimed public-data) places are off.
+  // One toggle brings them back, muted — their absence never pretends the
+  // directory is empty, because the counts keep reporting it.
+  const [showExternal, setShowExternal] = useState(false);
 
   // ── boot: tile config + headline counters (two small calls) ───────────────
   useEffect(() => {
@@ -92,6 +108,7 @@ export default function MapPage() {
   const term = search.trim();
   const searching = term.length >= 2;
   const scope = searching ? "network" : "viewport";
+  const externalMode = showExternal ? "muted" : "hide";
 
   const { data, loading, error: viewError, offline } = useMapViewport({
     bbox: view?.bbox,
@@ -100,6 +117,7 @@ export default function MapPage() {
     q: term,
     filter,
     scope,
+    external: externalMode,
     limit: VIEW_LIMIT,
     enabled: Boolean(config) && (scope === "network" || Boolean(view?.bbox)),
   });
@@ -160,7 +178,7 @@ export default function MapPage() {
   }, [focusId, config]);
 
   const nearest = useMemo(
-    () => [...points].sort((a, b) => (a.distance_km ?? 1e9) - (b.distance_km ?? 1e9)).slice(0, 40),
+    () => sortNetworkFirst(points).slice(0, 40),
     [points],
   );
 
@@ -193,7 +211,13 @@ export default function MapPage() {
       <div className="mt-2 flex items-center gap-1.5 overflow-x-auto pb-1">
         {COUNTERS.map(({ value, label, icon: Icon }) => {
           const active = kind === value;
-          const total = counts?.[value];
+          // Tiered shape: the Places chip counts network members, not the
+          // external directory — the toggle below owns the external number.
+          // (Headline counts key it `network_places`, viewports key it `network`.)
+          const networkPlaces = counts?.network ?? counts?.network_places;
+          const total = value === "places" && networkPlaces != null
+            ? networkPlaces
+            : counts?.[value];
           return (
             <button key={value} type="button"
               onClick={() => setKind((k) => (k === value ? "all" : value))}
@@ -207,6 +231,19 @@ export default function MapPage() {
             </button>
           );
         })}
+        {/* The external-directory switch: off = the clean, network-only map. */}
+        <button type="button"
+          onClick={() => setShowExternal((v) => !v)}
+          aria-pressed={showExternal}
+          title="Unclaimed public-data places, shown muted"
+          className={cn("shrink-0 h-8 px-3 rounded-full text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-colors",
+            showExternal ? "bg-surface-2 text-ink-2" : "bg-surface-2/60 text-ink-4 hover:text-ink-2")}>
+          {showExternal ? <Eye size={12} /> : <EyeOff size={12} />}
+          External
+          <span className="font-mono opacity-70" style={{ color: showExternal ? undefined : MUTED_COLOR }}>
+            {formatCount(counts?.external_places)}
+          </span>
+        </button>
         {kind !== "all" && (
           <button type="button" onClick={() => setKind("all")}
             className="shrink-0 h-8 px-2.5 rounded-full text-2xs text-ink-4 hover:text-ink-1 inline-flex items-center gap-1 cursor-pointer">
@@ -249,14 +286,14 @@ export default function MapPage() {
               onViewChange={onViewChange}
             />
 
-            {/* status line — what the screen is actually showing */}
+            {/* status line — what the screen is actually showing, network first */}
             <div className="absolute top-2 left-2 right-2 z-[500] flex items-start gap-1.5 pointer-events-none">
               <p className="text-2xs px-2 py-1 rounded-full bg-ink-1/50 text-white/80 backdrop-blur-sm">
                 {loading
                   ? (searching ? "Searching the network…" : "Loading this area…")
                   : searching
                     ? `${formatCount(shownCounts.markets + shownCounts.vendors + shownCounts.places)} matches · whole network`
-                    : areaSummary(shownCounts, kind)}
+                    : areaSummary(shownCounts, kind, { externalHidden: !showExternal })}
               </p>
               {offline && (
                 <p className="text-2xs px-2 py-1 rounded-full bg-accent-500/10 text-accent-600 dark:text-accent-400 inline-flex items-center gap-1">
@@ -286,9 +323,15 @@ export default function MapPage() {
             {!loading && !points.length && !clusters.length && (
               <div className="absolute inset-0 z-[450] flex items-center justify-center pointer-events-none">
                 <p className="text-xs text-white/60 bg-ink-1/50 rounded-2xl px-4 py-3 text-center">
-                  {searching ? "Nothing matches that search." : "Nothing mapped here yet."}
+                  {searching ? "Nothing matches that search."
+                    : shownCounts.external
+                      ? "No network businesses mapped here yet."
+                      : "Nothing mapped here yet."}
                   <span className="block text-2xs text-white/40 mt-0.5">
-                    {searching ? "Try fewer words." : "Zoom out, or open Markets to map this area."}
+                    {searching ? "Try fewer words."
+                      : shownCounts.external
+                        ? `${formatCount(shownCounts.external)} unverified public places are hidden — show external to see them.`
+                        : "Zoom out, or open Markets to map this area."}
                   </span>
                 </p>
               </div>
@@ -336,31 +379,50 @@ function NearbyList({ items, kind, loading, selectedId, onSelect, onOpenMarkets 
   return (
     <div className="h-full overflow-y-auto overscroll-contain p-2 space-y-1.5">
       <p className="text-2xs text-ink-4 px-1 pb-1">
-        {num(items.length)} {kind === "all" ? "places" : kind} nearest to the middle of the map
+        Network businesses first, then everything else — {num(items.length)} rows near the middle of the map
       </p>
-      {items.map((it) => (
-        <button key={`${it.kind}-${it.id}`} type="button" onClick={() => onSelect(it)}
-          className={cn("w-full text-left glass rounded-2xl p-3 flex items-center gap-3 cursor-pointer",
-            selectedId === it.id ? "ring-1 ring-brand-500/60" : "glass-hover")}>
-          <span className="w-8 h-8 rounded-xl shrink-0 flex items-center justify-center"
-            style={{ background: `${KIND_COLORS[it.kind] || "#60A5FA"}22`, color: KIND_COLORS[it.kind] || "#60A5FA" }}>
-            {it.kind === "vendors" ? <Store size={14} /> : it.kind === "markets" ? <MapPin size={14} /> : <Building2 size={14} />}
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-sm font-medium text-ink-1 truncate">{it.name}</span>
-            <span className="block text-2xs text-ink-4 truncate">
-              {it.kind === "vendors" && `@${it.handle}`}
-              {it.kind === "markets" && `${[it.city, it.country].filter(Boolean).join(", ")} · ${num(it.members || 0)} registered`}
-              {it.kind === "places" && categoryLabel(it.category)}
-              {it.zone_name ? ` · ${it.zone_name}` : ""}
+      {items.map((it) => {
+        const tag = tierTag(it);
+        const external = tag === "external";
+        return (
+          <button key={`${it.kind}-${it.id}`} type="button" onClick={() => onSelect(it)}
+            className={cn("w-full text-left glass rounded-2xl p-3 flex items-center gap-3 cursor-pointer",
+              selectedId === it.id ? "ring-1 ring-brand-500/60" : external ? "opacity-70" : "glass-hover")}>
+            <span className="w-8 h-8 rounded-xl shrink-0 flex items-center justify-center"
+              style={{
+                background: `${external ? MUTED_COLOR : KIND_COLORS[it.kind] || "#60A5FA"}22`,
+                color: external ? MUTED_COLOR : KIND_COLORS[it.kind] || "#60A5FA",
+              }}>
+              {it.kind === "vendors" ? <Store size={14} /> : it.kind === "markets" ? <MapPin size={14} /> : <Building2 size={14} />}
             </span>
-          </span>
-          {typeof it.distance_km === "number" && (
-            <span className="digital text-xs text-ink-3 shrink-0">{it.distance_km} km</span>
-          )}
-          <ChevronRight size={14} className="text-ink-4 shrink-0" />
-        </button>
-      ))}
+            <span className="min-w-0 flex-1">
+              <span className={cn("block truncate", external ? "text-sm text-ink-3" : "text-sm font-medium text-ink-1")}>
+                {it.name}
+                {tag && (
+                  <span className={cn("ml-1.5 text-[10px] font-semibold rounded-full px-1.5 py-0.5 align-middle",
+                    tag === "network" ? "text-brand-600 dark:text-brand-400 bg-brand-500/10" : "text-ink-4 bg-surface-2")}>
+                    {tag}
+                  </span>
+                )}
+              </span>
+              <span className="block text-2xs text-ink-4 truncate">
+                {it.kind === "vendors" && [
+                  it.handle ? `@${it.handle}` : null,
+                  it.is_verified ? "verified" : null,
+                  it.in_stock_lines ? `${num(it.in_stock_lines)} lines in stock` : null,
+                ].filter(Boolean).join(" · ")}
+                {it.kind === "markets" && `${[it.city, it.country].filter(Boolean).join(", ")} · ${it.networked === false ? "no suppliers yet" : `${num(it.members || 0)} registered`}`}
+                {it.kind === "places" && categoryLabel(it.category)}
+                {it.zone_name ? ` · ${it.zone_name}` : ""}
+              </span>
+            </span>
+            {typeof it.distance_km === "number" && (
+              <span className="digital text-xs text-ink-3 shrink-0">{it.distance_km} km</span>
+            )}
+            <ChevronRight size={14} className="text-ink-4 shrink-0" />
+          </button>
+        );
+      })}
     </div>
   );
 }

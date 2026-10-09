@@ -75,18 +75,104 @@ export const KIND_COLORS = {
   places: "#60A5FA",
 };
 
+// ── Tiers (v2.8): a pin on the map is not automatically in the marketplace ────
+// network  — vendors, claimed places, markets with registered suppliers.
+//            Drawn full colour, ranked first. This is the product.
+// external — unclaimed public-data rows. Hidden by default; when shown, muted.
+// stale    — the source stopped confirming the row: off the commercial map.
+export const NETWORK_COLOR = "#34D399";   // emerald — the verified network
+export const MUTED_COLOR = "#9CA3AF";     // grey — everything else
+
+/** TRUE when a pin is on the map but not in the marketplace. */
+export function isExternal(item) {
+  return item?.kind === "places" && item.network === false;
+}
+
+/** Canvas-circle style for one pin. Network pins keep their layer colour;
+    external pins drop to grey, thinner and translucent — visible background,
+    unmistakably not a member. */
+export function pointStyle(item, selected = false) {
+  const kind = item?.kind || "places";
+  const base = PIN_RADIUS[kind] ?? 6;
+  const external = isExternal(item);
+  const color = external ? MUTED_COLOR : KIND_COLORS[kind] || "#60A5FA";
+  return {
+    radius: selected ? base + 4 : external ? base - 1 : base,
+    color: selected ? "#FFFFFF" : color,
+    weight: selected ? 3 : external ? 1 : 1.5,
+    fillColor: color,
+    fillOpacity: selected ? 1 : external ? 0.3 : 0.85,
+    opacity: selected ? 1 : external ? 0.5 : 1,
+  };
+}
+
+/** Cluster bubble colour. A cluster with even one network row is a network
+    cell and reads as one; a purely external cluster reads muted. Vendor and
+    market clusters are network rows by definition and keep their colours. */
+export function clusterStyle(cluster) {
+  if (cluster.kind === "places") {
+    if (cluster.network === false) return MUTED_COLOR;
+    if (cluster.network === true) return NETWORK_COLOR;
+  }
+  return clusterColor(cluster.count);
+}
+
+/** List order: the marketplace first, the directory after. Vendors and
+    working markets lead; claimed places and network-catalog markets that are
+    not worked yet sit in the middle; external places last — distance only
+    breaks ties inside a tier. */
+export function tierRank(item) {
+  if (item.kind === "vendors") return 0;
+  if (item.kind === "markets") return item.networked === false ? 1 : 0;
+  if (item.kind === "places") return item.network === false ? 2 : 1;
+  return 3;
+}
+
+export function sortNetworkFirst(items) {
+  return [...(items || [])].sort((a, b) =>
+    (tierRank(a) - tierRank(b))
+    || ((a.distance_km ?? 1e9) - (b.distance_km ?? 1e9)));
+}
+
+/** Short tag for a list row: what the network relationship is. */
+export function tierTag(item) {
+  if (item.kind === "vendors") return null;            // vendors are the network
+  if (item.kind === "markets") {
+    if (item.networked === false) return "no suppliers yet";
+    return null;
+  }
+  if (item.kind === "places") {
+    if (item.network === false) return "external";
+    return "network";
+  }
+  return null;
+}
+
+/** "This area holds 1,240 places" — the honest sentence under the chips.
+    Network rows are named first; the external directory is the trailing
+    clause, and says it is hidden when the map is not showing it. Accepts the
+    v2.7 flat shape too, so old callers keep their sentence. */
+export function areaSummary(counts = {}, kind = "all", { externalHidden = false } = {}) {
+  const parts = [];
+  const wantMarkets = kind === "all" || kind === "markets";
+  const wantVendors = kind === "all" || kind === "vendors";
+  const wantPlaces = kind === "all" || kind === "places";
+  const tiered = counts.network != null;
+  const networkPlaces = tiered ? counts.network : counts.places;
+  const placeWord = tiered ? "network places" : "places";
+  if (wantMarkets && counts.markets) parts.push(`${formatCount(counts.markets)} markets`);
+  if (wantVendors && counts.vendors) parts.push(`${formatCount(counts.vendors)} vendors`);
+  if (wantPlaces && networkPlaces) parts.push(`${formatCount(networkPlaces)} ${placeWord}`);
+  if (!parts.length && !counts.external) return "Nothing mapped in this area yet";
+  let sentence = parts.length ? `${parts.join(" · ")} here` : "Only external places here";
+  if (wantPlaces && counts.external) {
+    sentence += ` · ${formatCount(counts.external)} external ${externalHidden ? "hidden" : "muted"}`;
+  }
+  return sentence;
+}
+
 /** Tap radius in px for a pin (canvas circle markers have no DOM padding). */
 export const PIN_RADIUS = { markets: 9, vendors: 7, places: 6 };
-
-/** "This area holds 1,240 places" — the honest sentence under the chips. */
-export function areaSummary(counts = {}, kind = "all") {
-  const parts = [];
-  if ((kind === "all" || kind === "markets") && counts.markets) parts.push(`${formatCount(counts.markets)} markets`);
-  if ((kind === "all" || kind === "vendors") && counts.vendors) parts.push(`${formatCount(counts.vendors)} vendors`);
-  if ((kind === "all" || kind === "places") && counts.places) parts.push(`${formatCount(counts.places)} places`);
-  if (!parts.length) return "Nothing mapped in this area yet";
-  return `${parts.join(" · ")} here`;
-}
 
 // ── Offline: last-known area ─────────────────────────────────────────────────
 // Application data only. We deliberately never cache map tiles: bulk-downloading

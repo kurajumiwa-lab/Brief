@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Building2, Store, MapPin, X, Navigation, Phone, Clock, Globe, ChevronRight,
-  Map as MapIcon, Package, Users, Check,
+  Map as MapIcon, Package, Users, Check, ShieldCheck, AlertTriangle,
 } from "lucide-react";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
@@ -94,6 +94,29 @@ export default function MapSheet({ item, onClose, onFocus }) {
     }
   };
 
+  // v2.8 — on-the-ground revalidation. The vendor is the freshest sensor the
+  // directory has: "confirmed" refreshes the row's freshness, "gone" archives
+  // it off the commercial map (the ingest restores it if the source disagrees).
+  const report = async (verdict) => {
+    setBusy(true);
+    try {
+      const res = await mapAPI.reportPlace(id, verdict);
+      toast.success(res.data.note || "Recorded — thanks");
+      setDetail((d) => (d ? {
+        ...d,
+        stale: false,
+        tier: verdict === "confirmed" ? "external" : d.tier,
+        status: verdict === "gone" ? "archived" : d.status,
+        last_checked_at: verdict === "confirmed" ? new Date().toISOString() : d.last_checked_at,
+      } : d));
+      if (verdict === "gone") setTimeout(onClose, 900);
+    } catch (e) {
+      toast.error(apiError(e, "That report was refused"));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <div className="absolute inset-x-0 bottom-0 z-[600] px-2 pb-2 animate-slide-up">
       <div className="glass-strong rounded-2xl p-3.5 shadow-[0_-8px_40px_-12px_rgba(0,0,0,0.8)]">
@@ -102,10 +125,18 @@ export default function MapSheet({ item, onClose, onFocus }) {
             <Icon size={17} />
           </span>
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <p className="text-sm font-semibold text-ink-1 truncate">{item.name}</p>
-              {kind === "places" && !detail?.claimed && (
-                <Badge variant="outline" size="xs">unverified</Badge>
+              {kind === "places" && (detail ? detail.network : item.network) ? (
+                <Badge variant="brand" size="xs"><ShieldCheck size={10} /> network</Badge>
+              ) : kind === "places" && (
+                <Badge variant="outline" size="xs">external · not in the network</Badge>
+              )}
+              {kind === "vendors" && detail?.is_verified && (
+                <Badge variant="brand" size="xs"><ShieldCheck size={10} /> verified</Badge>
+              )}
+              {kind === "markets" && detail?.networked === false && (
+                <Badge variant="outline" size="xs">no suppliers yet</Badge>
               )}
             </div>
             <p className="text-2xs text-ink-4 mt-0.5 truncate">
@@ -140,9 +171,17 @@ export default function MapSheet({ item, onClose, onFocus }) {
                   </Line>
                 )}
                 <Line icon={Building2}>
-                  {detail.zone_name ? `${detail.zone_name} · ` : ""}public data, checked {detail.last_checked_at ? relativeTime(detail.last_checked_at) : "once"}
+                  {detail.zone_name ? `${detail.zone_name} · ` : ""}
+                  {detail.network ? "network member" : "public data"}, checked {detail.last_checked_at ? relativeTime(detail.last_checked_at) : "once"}
                   {detail.claimed_by_me && " · claimed by you"}
                 </Line>
+                {detail.stale && (
+                  <Line icon={AlertTriangle}>
+                    <span className="text-accent-600 dark:text-accent-400">
+                      The source has not confirmed this place in {num(detail.checked_days_ago ?? "many")} days — treat it as outdated
+                    </span>
+                  </Line>
+                )}
               </>
             )}
 
@@ -159,7 +198,11 @@ export default function MapSheet({ item, onClose, onFocus }) {
 
             {kind === "markets" && (
               <>
-                <Line icon={Users}>{num(detail.members)} vendors registered</Line>
+                <Line icon={Users}>
+                  {detail.networked
+                    ? `${num(detail.members)} suppliers registered · ${num(detail.active_members)} with stock now`
+                    : "No suppliers registered yet — an address, not yet a market"}
+                </Line>
                 <Line icon={Building2}>
                   {num(detail.places)} places mapped · {num(detail.claimed)} claimed
                   {detail.places > 0 && detail.members === 0 ? " — an unworked market" : ""}
@@ -182,6 +225,20 @@ export default function MapSheet({ item, onClose, onFocus }) {
                   Add your stock
                 </Button>
               )}
+              {/* Revalidation: the two on-the-ground verdicts. Hidden for
+                  network rows — their vendor owns the truth about them. */}
+              {!detail?.network && (
+                <>
+                  <Button size="sm" variant="outline" loading={busy}
+                    onClick={() => report("confirmed")} icon={ShieldCheck}>
+                    Still there
+                  </Button>
+                  <Button size="sm" variant="ghost" loading={busy}
+                    onClick={() => report("gone")} icon={AlertTriangle}>
+                    Report gone
+                  </Button>
+                </>
+              )}
               <Button size="sm" variant="outline" onClick={() => window.open(directions, "_blank", "noreferrer")} icon={Navigation}>
                 Directions
               </Button>
@@ -200,7 +257,7 @@ export default function MapSheet({ item, onClose, onFocus }) {
           {kind === "markets" && (
             <>
               <Button size="sm" variant="secondary" loading={busy} onClick={joinMarket}>
-                Register for this market
+                {detail?.networked ? "Register for this market" : "Be the first supplier here"}
               </Button>
               <Button size="sm" variant="outline" onClick={() => navigate("/markets")} icon={ChevronRight}>
                 Open market
