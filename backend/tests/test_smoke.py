@@ -11,6 +11,8 @@ import uuid
 
 import pytest
 
+from tests.order_helpers import complete_self_pickup
+
 pytestmark = pytest.mark.asyncio
 
 
@@ -101,10 +103,14 @@ async def test_full_loop(client):
     # Only the supplier confirms; the buyer cannot.
     r = await client.post(f"/api/stock/movements/{movement_id}/confirm", headers=b)
     assert r.status_code == 403
-    for action, who in (("confirm", s), ("ship", s), ("receive", b)):
-        r = await client.post(f"/api/stock/movements/{movement_id}/{action}", headers=who)
-        assert r.status_code == 200, (action, r.text)
-    assert r.json()["status"] == "received"
+    # Supplier confirmation and exact, ready pickup details precede dispatch;
+    # buyer-generated receipt proof precedes final receipt.
+    r = await client.post(f"/api/stock/movements/{movement_id}/confirm", headers=s)
+    assert r.status_code == 200
+    r = await client.post(f"/api/stock/movements/{movement_id}/ship", headers=s)
+    assert r.status_code == 409 and "choose pickup" in r.json()["detail"].lower()
+    completed = await complete_self_pickup(client, movement_id, s, b, already_confirmed=True)
+    assert completed["status"] == "received"
 
     # Shelves moved.
     r = await client.get(f"/api/stock/{stock_id}", headers=s)

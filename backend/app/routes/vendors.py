@@ -24,6 +24,7 @@ class VendorOut(BaseModel):
     business_categories: list
     business_description: Optional[str]
     physical_location: Optional[str]
+    allow_direct_calls: bool = False
     network_score: float
     parasitism_index: float
     total_sourced: int
@@ -48,6 +49,7 @@ class VendorUpdate(BaseModel):
     business_description: Optional[str] = None
     physical_location: Optional[str] = None
     phone: Optional[str] = None
+    allow_direct_calls: Optional[bool] = None
     geo_lat: Optional[float] = None
     geo_lng: Optional[float] = None
     finance_mode: Optional[str] = None  # 'conventional' | 'halal_sharia'
@@ -76,6 +78,7 @@ def vendor_out(v: Vendor, connected: bool = False) -> VendorOut:
         business_categories=v.business_categories or [],
         business_description=v.business_description,
         physical_location=v.physical_location,
+        allow_direct_calls=bool(v.allow_direct_calls),
         network_score=v.network_score,
         parasitism_index=v.parasitism_index,
         total_sourced=v.total_sourced,

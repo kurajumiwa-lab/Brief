@@ -56,6 +56,7 @@ class NotificationType(str, PyEnum):
     BENEFIT_UPDATE = "benefit_update"        # Non-cash network benefit statement
     APPEAL_UPDATE = "appeal_update"          # Vendor appeal status change
     PAYMENT_UPDATE = "payment_update"        # Payment, settlement, dispute or custody event
+    DELIVERY_QUOTE_REQUEST = "delivery_quote_request"  # A customer needs a real delivery quote
     CHAMA_UPDATE = "chama_update"            # Chama deposit, loan vote, disbursement, dividend
     SYSTEM = "system"                        # Platform announcements
 

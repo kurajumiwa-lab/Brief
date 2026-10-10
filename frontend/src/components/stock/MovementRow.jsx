@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowDownLeft, ArrowUpRight, Check, Clock, PackageCheck, Truck, X } from "lucide-react";
+import { ArrowDownLeft, ArrowRight, ArrowUpRight, Check, Clock, X } from "lucide-react";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
 import Avatar from "@/components/ui/Avatar";
@@ -13,17 +13,14 @@ import { currency, num, relativeTime } from "@/lib/formatters";
 import { cn, titleCase } from "@/lib/utils";
 
 /**
- * Actions follow the API's state machine — unchanged from v2:
- *   supplier (outgoing): pending → confirm · confirmed → ship
- *   buyer    (incoming): shipped → receive
- *   either side may cancel before receipt
+ * Confirmation and cancellation remain quick actions. Dispatch and receipt
+ * live on the order page, where both sides first review the current fulfilment
+ * details and the buyer's one-time receipt code can be used.
  */
 export function movementActions(m) {
   const supplier = m.direction === "outgoing";
   const actions = [];
   if (supplier && m.status === "pending") actions.push({ action: "confirm", label: "Confirm", icon: Check, primary: true });
-  if (supplier && m.status === "confirmed") actions.push({ action: "ship", label: "Mark shipped", icon: Truck, primary: true });
-  if (!supplier && m.status === "shipped") actions.push({ action: "receive", label: "Received", icon: PackageCheck, primary: true });
   if (["pending", "confirmed", "shipped"].includes(m.status)) actions.push({ action: "cancel", label: "Cancel", icon: X, danger: true });
   return actions;
 }
@@ -156,24 +153,28 @@ export default function MovementRow({ movement: m, actionable }) {
           {m.notes && <p className="mt-1.5 text-micro text-ink-4 italic line-clamp-2">“{m.notes}”</p>}
         </div>
 
-        {actions.length > 0 && (
-          <div className="flex items-center gap-2 sm:justify-end shrink-0">
-            {actions.map((a) => (
-              <Button
-                key={a.action}
-                size="sm"
-                variant={a.danger ? "ghost" : a.primary ? "primary" : "secondary"}
-                className={a.danger ? "text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10" : undefined}
-                icon={a.icon}
-                loading={busy === a.action}
-                disabled={!!busy}
-                onClick={() => run(a)}
-              >
-                {a.label}
-              </Button>
-            ))}
-          </div>
-        )}
+        <div className="flex flex-wrap items-center gap-2 sm:justify-end shrink-0">
+          <Link
+            to={`/orders/${m.id}`}
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-edge-2 px-3 text-xs font-semibold text-ink-2 hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+          >
+            Order details <ArrowRight size={13} aria-hidden="true" />
+          </Link>
+          {actions.map((a) => (
+            <Button
+              key={a.action}
+              size="sm"
+              variant={a.danger ? "ghost" : a.primary ? "primary" : "secondary"}
+              className={a.danger ? "text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10" : undefined}
+              icon={a.icon}
+              loading={busy === a.action}
+              disabled={!!busy}
+              onClick={() => run(a)}
+            >
+              {a.label}
+            </Button>
+          ))}
+        </div>
       </div>
     </article>
   );

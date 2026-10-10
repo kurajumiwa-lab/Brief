@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeftRight, Bell, LayoutGrid, Receipt } from "lucide-react";
+import { ArrowLeftRight, Bell, LayoutGrid, Receipt, ShieldCheck, Truck } from "lucide-react";
 import Button from "@/components/ui/Button";
 import Chip from "@/components/ui/Chip";
 import Stat from "@/components/ui/Stat";
@@ -9,8 +9,10 @@ import ErrorState from "@/components/ui/ErrorState";
 import Breadcrumbs from "@/components/ui/Breadcrumbs";
 import { SkeletonRows } from "@/components/ui/Skeleton";
 import MovementRow from "@/components/stock/MovementRow";
+import DeliveryQuoteInbox from "@/pages/orders/DeliveryQuoteInbox";
+import OrderSupportInbox from "@/pages/orders/OrderSupportInbox";
 import { useStockStore, needsMyAction } from "@/stores/stockStore";
-import { apiError } from "@/lib/api";
+import { apiError, locksAPI } from "@/lib/api";
 import { currency, num } from "@/lib/formatters";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -41,6 +43,9 @@ export default function OrdersPage() {
   const { movements, fetchMovements } = useStockStore();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [showDeliveryInbox, setShowDeliveryInbox] = useState(false);
+  const [showSupportInbox, setShowSupportInbox] = useState(() => params.get("support") === "1");
+  const [opsRole, setOpsRole] = useState("");
 
   const setParam = useCallback(
     (patch) => {
@@ -63,6 +68,15 @@ export default function OrdersPage() {
     load();
   }, [load]);
 
+  useEffect(() => {
+    if (typeof locksAPI?.opsMe !== "function") return;
+    let active = true;
+    locksAPI.opsMe().then(({ data }) => {
+      if (active) setOpsRole(data?.role || "");
+    }).catch(() => {});
+    return () => { active = false; };
+  }, []);
+
   const pending = useMemo(() => movements.filter(needsMyAction), [movements]);
   const rows = useMemo(() => {
     const list = onlyActionable ? pending : movements;
@@ -81,20 +95,31 @@ export default function OrdersPage() {
         <div>
           <h1 className="text-2xl font-bold text-ink-1 tracking-tight">Orders</h1>
           <p className="text-2xs text-ink-3 mt-1 max-w-xl">
-            Every sourcing request is a movement: requested → confirmed → shipped → received. Only a received movement scores either side.
+            Review current pickup or delivery terms before anyone travels. Payment, receipt and settlement statuses come from verified provider or order records.
           </p>
         </div>
-        <Button size="sm" variant="secondary" icon={LayoutGrid} onClick={() => navigate("/browse")}>
-          Browse stock
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          {(["admin", "clerk"].includes(opsRole)) && <Button size="sm" variant="secondary" icon={ShieldCheck} aria-expanded={showSupportInbox} onClick={() => { const next = !showSupportInbox; setShowSupportInbox(next); setParam({ support: next ? "1" : "" }); }}>
+            {showSupportInbox ? "Hide support cases" : "Platform support cases"}
+          </Button>}
+          <Button size="sm" variant="secondary" icon={Truck} aria-expanded={showDeliveryInbox} onClick={() => setShowDeliveryInbox((current) => !current)}>
+            {showDeliveryInbox ? "Hide quote requests" : "Delivery quote requests"}
+          </Button>
+          <Button size="sm" variant="secondary" icon={LayoutGrid} onClick={() => navigate("/browse")}>
+            Browse stock
+          </Button>
+        </div>
       </header>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Stat label="Needs your action" value={num(pending.length)} tone={pending.length ? "brand" : "default"} icon={Bell} hint="Confirm, ship or receive" />
+        <Stat label="Needs your action" value={num(pending.length)} tone={pending.length ? "brand" : "default"} icon={Bell} hint="Confirm, review terms or receipt" />
         <Stat label="Open movements" value={num(open.length)} hint="not yet received or cancelled" />
-        <Stat label="Value in flight" value={currency(value)} hint="sum of open movements" />
-        <Stat label="Completed" value={num(received)} hint="received — these are the ones that score" />
+        <Stat label="Product value in flight" value={currency(value)} hint="recorded product amount; excludes delivery and platform fees" />
+        <Stat label="Completed" value={num(received)} hint="receipt confirmed in the order record" />
       </div>
+
+      {showSupportInbox && ["admin", "clerk"].includes(opsRole) && <OrderSupportInbox />}
+      {showDeliveryInbox && <DeliveryQuoteInbox />}
 
       <div className="flex flex-wrap items-center gap-2 py-2 border-y border-edge-1">
         {FILTERS.map((f) => (

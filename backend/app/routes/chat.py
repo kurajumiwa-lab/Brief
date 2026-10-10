@@ -18,7 +18,7 @@ from app.database import async_session, get_db
 from app.models.chat import ChatMessage, ChatRoom, ChatRoomType, chat_room_participants
 from app.models.groups import GroupMembership, VendorGroup
 from app.models.notification import NotificationType
-from app.models.stock import PriceNegotiation, StockItem
+from app.models.stock import PriceNegotiation, StockItem, StockMovement
 from app.models.vendor import Vendor
 from app.models.vendor_list import VendorListMembership
 from app.routes.auth import get_current_vendor, vendor_id_from_token
@@ -190,6 +190,7 @@ def _room_out(r: ChatRoom, joined: bool, participants: Optional[list] = None) ->
         "group_id": str(r.group_id) if r.group_id else None,
         "vendor_list_id": str(r.vendor_list_id) if r.vendor_list_id else None,
         "deal_stock_item_id": str(r.deal_stock_item_id) if r.deal_stock_item_id else None,
+        "stock_movement_id": str(r.stock_movement_id) if r.stock_movement_id else None,
         "participant_count": r.participant_count,
         "message_count": r.message_count,
         "joined": joined,
@@ -364,6 +365,39 @@ async def open_deal_room(
         await db.flush()
         await db.execute(p.insert().values([
             {"room_id": room.id, "vendor_id": vendor.id}, {"room_id": room.id, "vendor_id": item.vendor_id},
+        ]))
+        await db.commit()
+    return {"room_id": str(room.id), "room": _room_out(room, True, await _participants(db, room))}
+
+
+@router.post("/orders/{movement_id}")
+async def open_order_room(
+    movement_id: UUID,
+    vendor: Vendor = Depends(get_current_vendor),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get or create a private live conversation attached to one order."""
+    movement = await db.get(StockMovement, movement_id, with_for_update=True)
+    if not movement or vendor.id not in (movement.from_vendor_id, movement.to_vendor_id):
+        raise HTTPException(404, "Order not found")
+    room = (await db.execute(select(ChatRoom).where(
+        ChatRoom.stock_movement_id == movement.id,
+    ))).scalars().first()
+    if room is None:
+        item = await db.get(StockItem, movement.stock_item_id)
+        room = ChatRoom(
+            name=f"Order · {item.name if item else 'transaction'}",
+            room_type=ChatRoomType.DEAL,
+            deal_stock_item_id=movement.stock_item_id,
+            stock_movement_id=movement.id,
+            created_by=vendor.id,
+            participant_count=2,
+        )
+        db.add(room)
+        await db.flush()
+        await db.execute(chat_room_participants.insert().values([
+            {"room_id": room.id, "vendor_id": movement.from_vendor_id},
+            {"room_id": room.id, "vendor_id": movement.to_vendor_id},
         ]))
         await db.commit()
     return {"room_id": str(room.id), "room": _room_out(room, True, await _participants(db, room))}

@@ -16,6 +16,7 @@ import { useAuthStore } from "@/stores/authStore";
 const BrowsePage = lazy(() => import("@/pages/browse/BrowsePage"));
 const ListingPage = lazy(() => import("@/pages/listing/ListingPage"));
 const OrdersPage = lazy(() => import("@/pages/orders/OrdersPage"));
+const OrderDetailPage = lazy(() => import("@/pages/orders/OrderDetailPage"));
 const WorkPage = lazy(() => import("@/pages/work/WorkPage"));
 const SurfaceFeed = lazy(() => import("@/pages/surface/SurfaceFeed"));
 const SearchHub = lazy(() => import("@/pages/search/SearchHub"));
@@ -100,6 +101,7 @@ export default function App() {
           <Route path="/browse" element={<BrowsePage />} />
           <Route path="/listing/:id" element={<ListingPage />} />
           <Route path="/orders" element={<OrdersPage />} />
+          <Route path="/orders/:id" element={<OrderDetailPage />} />
           <Route path="/work" element={<WorkPage />} />
           <Route path="/chat" element={<ChatPage />} />
           <Route path="/stock" element={<StockRoomRouter />} />

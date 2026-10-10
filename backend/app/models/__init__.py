@@ -20,6 +20,7 @@ from app.models.performance import VendorPerformance
 from app.models.collective import CollectiveSourcingRequest, CollectivePledge
 from app.models.market_locks import MarketZone, MarketMember, LockProduct, SupplierMOQ, LockWindow, LockCluster, LockPick, SupplierQuote
 from app.modules.trade.models import BusinessRequest, RequestEvent, RequestOffer, RequestType, RequestUrgency, RequestStatus, OfferStatus
+from app.modules.orders.models import OrderTransaction, DeliveryQuoteRequest, DeliveryQuote, MovementEvent, OrderDispute
 from app.platform.event_outbox import OutboxEvent
 from app.models.governance import (
     VendorActivityDay, GovernanceProposal, GovernanceVote, CouncilTerm, RuleVersion,
@@ -28,7 +29,7 @@ from app.models.governance import (
     VendorCreditLedger, VendorAppeal, VendorDataConsent,
 )
 from app.models.payments import (
-    PaymentIntent, CustodyLedgerEntry, Disbursement, ReconciliationRun, DisputeHold,
+    PaymentIntent, PaymentRefund, CustodyLedgerEntry, Disbursement, ReconciliationRun, DisputeHold,
     ESCROW_PICK_HEDGING, DISPUTE_HOLD, PLATFORM_FEES,
     SACCO_ADVANCES,
 )
@@ -53,11 +54,12 @@ __all__ = [
     "Notification", "NotificationType",
     "VendorPerformance", "CollectiveSourcingRequest", "CollectivePledge",
     "MarketZone", "MarketMember", "LockProduct", "SupplierMOQ", "LockWindow", "LockCluster", "LockPick", "SupplierQuote",
+    "OrderTransaction", "DeliveryQuoteRequest", "DeliveryQuote", "MovementEvent", "OrderDispute",
     "VendorActivityDay", "GovernanceProposal", "GovernanceVote", "CouncilTerm", "RuleVersion",
     "BiasharaScoreEvent", "GovernanceAuditEvent", "DualApprovalRequest", "RevenueEvent",
     "AllocationPolicy", "BenefitPeriod", "NetworkBenefitEvent", "VendorBenefitAllocation",
     "VendorCreditLedger", "VendorAppeal", "VendorDataConsent",
-    "PaymentIntent", "CustodyLedgerEntry", "Disbursement", "ReconciliationRun", "DisputeHold",
+    "PaymentIntent", "PaymentRefund", "CustodyLedgerEntry", "Disbursement", "ReconciliationRun", "DisputeHold",
     "MurabahaContract",
     "ESCROW_PICK_HEDGING", "DISPUTE_HOLD", "PLATFORM_FEES",
     "Chama", "ChamaMember", "ChamaDeposit", "ChamaLoan", "ChamaLoanVote", "ChamaDividend",

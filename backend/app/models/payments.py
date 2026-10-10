@@ -17,7 +17,7 @@ from datetime import datetime
 
 from sqlalchemy import (
     CheckConstraint, Column, Date, DateTime, ForeignKey, Integer, String, Text,
-    UniqueConstraint, Index,
+    UniqueConstraint, Index, text as sa_text,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
@@ -49,7 +49,7 @@ class PaymentIntent(Base):
         CheckConstraint(
             "entity_type IN ('pick_deposit','pick_full_payment','chama_deposit',"
             "'chama_loan_repayment','sacco_savings','sacco_loan_repayment','pool_ride_share',"
-            "'murabaha_repayment','musharakah_profit')",
+            "'murabaha_repayment','musharakah_profit','stock_movement_payment')",
             name="ck_payment_intent_entity_type",
         ),
         CheckConstraint("amount_ksh > 0", name="ck_payment_intent_amount_positive"),
@@ -63,6 +63,10 @@ class PaymentIntent(Base):
         ),
         Index("idx_payment_intents_entity", "entity_type", "entity_id"),
         Index("idx_payment_intents_status_created", "status", "created_at"),
+        Index(
+            "uq_order_payment_one_active_intent", "entity_id", unique=True,
+            postgresql_where=sa_text("entity_type = 'stock_movement_payment' AND status IN ('pending','completed')"),
+        ),
     )
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -86,6 +90,38 @@ class PaymentIntent(Base):
     completed_at = Column(DateTime, nullable=True)
 
     ledger_entries = relationship("CustodyLedgerEntry", back_populates="intent")
+
+
+class PaymentRefund(Base):
+    """A PSP refund request. A refund is booked only after its verified callback."""
+    __tablename__ = "payment_refunds"
+    __table_args__ = (
+        CheckConstraint("amount_ksh > 0", name="ck_payment_refund_amount_positive"),
+        CheckConstraint(
+            "product_refund_ksh >= 0 AND delivery_refund_ksh >= 0 AND platform_fee_refund_ksh >= 0",
+            name="ck_payment_refund_allocation_nonnegative",
+        ),
+        CheckConstraint("status IN ('pending','completed','failed')", name="ck_payment_refund_status"),
+        Index("ix_payment_refunds_intent", "payment_intent_id", "created_at"),
+        Index(
+            "uq_payment_refunds_one_pending_per_intent", "payment_intent_id", unique=True,
+            postgresql_where=sa_text("status = 'pending'"),
+        ),
+    )
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    payment_intent_id = Column(UUID(as_uuid=True), ForeignKey("payment_intents.id", ondelete="CASCADE"), nullable=False)
+    amount_ksh = Column(Integer, nullable=False)
+    product_refund_ksh = Column(Integer, nullable=False, default=0, server_default="0")
+    delivery_refund_ksh = Column(Integer, nullable=False, default=0, server_default="0")
+    platform_fee_refund_ksh = Column(Integer, nullable=False, default=0, server_default="0")
+    reason = Column(String(400), nullable=False)
+    api_ref = Column(String(80), unique=True, nullable=False)
+    psp_ref = Column(String(80), nullable=True)
+    status = Column(String(16), nullable=False, default="pending", server_default="pending")
+    failure_reason = Column(String(400), nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    completed_at = Column(DateTime, nullable=True)
 
 
 class CustodyLedgerEntry(Base):
@@ -151,7 +187,7 @@ class Disbursement(Base):
             "entity_type IN ("
             "'pick_settlement','pick_refund','chama_loan','chama_dividend',"
             "'sacco_loan','sacco_dividend','sacco_withdrawal','price_shield_credit',"
-            "'network_benefit','pool_ride_transporter')",
+            "'network_benefit','pool_ride_transporter','movement_settlement','movement_delivery')",
             name="ck_disbursement_entity_type",
         ),
         CheckConstraint("amount_ksh > 0", name="ck_disbursement_amount_positive"),

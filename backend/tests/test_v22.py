@@ -9,6 +9,8 @@ from datetime import datetime, timedelta
 
 import pytest
 
+from tests.order_helpers import complete_self_pickup
+
 pytestmark = pytest.mark.asyncio
 
 PASSWORD = "Correct-horse-9"
@@ -55,9 +57,7 @@ async def _trade(client, seller, buyer, stock_id, quantity=2, price=None) -> str
     r = await client.post(f"/api/stock/{stock_id}/source", headers=buyer, json=payload)
     assert r.status_code == 201, r.text
     movement_id = r.json()["movement_id"]
-    for headers, action in ((seller, "confirm"), (seller, "ship"), (buyer, "receive")):
-        r = await client.post(f"/api/stock/movements/{movement_id}/{action}", headers=headers)
-        assert r.status_code == 200, r.text
+    await complete_self_pickup(client, movement_id, seller, buyer)
     return movement_id
 
 

@@ -106,7 +106,7 @@ export const stockAPI = {
   categories: () => api.get("/stock/categories"),
   source: (id, data) => api.post(`/stock/${id}/source`, data),
   movements: (params) => api.get("/stock/movements", { params: noEmpty(params) }), // status, direction
-  advance: (id, action) => api.post(`/stock/movements/${id}/${action}`), // confirm | ship | receive | cancel
+  advance: (id, action, receiptCode) => api.post(`/stock/movements/${id}/${action}`, null, { params: noEmpty({ receipt_code: receiptCode }) }), // confirm | ship | receive | cancel
   alternatives: (id, limit = 6) => api.get(`/stock/${id}/alternatives`, { params: { limit } }),
   /** Self-declare / lab-certify provenance. `fields`: batch_number*, origin_country, expiry_date, lab_certified, spec_sheet_url; `file`: spec sheet */
   verify: (id, fields, file) => {
@@ -122,6 +122,24 @@ export const stockAPI = {
     form.append("file", file);
     return api.post("/stock/bulk-import", form, { headers: { "Content-Type": "multipart/form-data" } });
   },
+};
+
+// ── Live orders and fulfilment ────────────────────────────────────────────
+export const ordersAPI = {
+  get: (id) => api.get(`/orders/${id}`),
+  supportDisputes: (params) => api.get("/orders/support/disputes", { params: noEmpty(params) }),
+  resolveDispute: (movementId, disputeId, data) => api.post(`/orders/${movementId}/disputes/${disputeId}/resolve`, data),
+  setPickup: (id, data) => api.put(`/orders/${id}/pickup`, data),
+  requestDeliveryQuote: (id, data) => api.post(`/orders/${id}/delivery-requests`, data),
+  deliveryInbox: () => api.get("/orders/delivery-requests/inbox"),
+  answerDeliveryQuote: (requestId, data) => api.post(`/orders/delivery-requests/${requestId}/quote`, data),
+  selectDeliveryQuote: (id, quoteId) => api.post(`/orders/${id}/delivery-quotes/${quoteId}/select`),
+  createReceiptCode: (id) => api.post(`/orders/${id}/receipt-code`),
+  receive: (id, receiptCode) => api.post(`/orders/${id}/receive`, { receipt_code: receiptCode }),
+  pay: (id, data) => api.post(`/orders/${id}/payments`, data),
+  tracking: (id, data) => api.post(`/orders/${id}/tracking`, data),
+  openDispute: (id, data) => api.post(`/orders/${id}/disputes`, data),
+  retrySettlement: (id) => api.post(`/orders/${id}/settlement/retry`),
 };
 
 // ── Groups ─────────────────────────────────────────────────────────────────
@@ -175,6 +193,7 @@ export const chatAPI = {
   createTopic: (data) => api.post("/chat/niche-topic", data), // { name, topic, topic_tags }
   directRoom: (vendorId) => api.post(`/chat/direct/${vendorId}`),
   dealRoom: (stockId) => api.post(`/chat/deal/${stockId}`),
+  orderRoom: (movementId) => api.post(`/chat/orders/${movementId}`),
   // deal protocol (v2.1)
   acceptDeal: (roomId, messageId) => api.post(`/chat/${roomId}/deals/${messageId}/accept`),
   counterDeal: (roomId, messageId, data) => api.post(`/chat/${roomId}/deals/${messageId}/counter`, data), // { proposed_price_per_unit*, quantity, delivery_terms, payment_terms, notes }

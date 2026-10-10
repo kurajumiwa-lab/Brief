@@ -390,6 +390,8 @@ async def update_shipment_status(
         raise HTTPException(403, "Only the courier updates a shipment (the receiver can confirm delivery)")
     if shipment.status in ("delivered", "failed"):
         raise HTTPException(400, f"Shipment already {shipment.status}")
+    if status == "delivered" and shipment.movement_id:
+        raise HTTPException(409, "Order receipt requires the buyer's one-time code on the order page")
     if SHIPMENT_STATUSES.index(status) < SHIPMENT_STATUSES.index(shipment.status) and status != "failed":
         raise HTTPException(400, f"Can't go back from {shipment.status} to {status}")
 
