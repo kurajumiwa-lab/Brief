@@ -75,6 +75,8 @@ export function routeFor(n) {
   const d = n.data || {};
   if (d.market_lock_cluster_id || d.window_id && d.zone_id) return "/locks";
   if (d.room_id) return `/chat?room=${d.room_id}`;
+  if (d.support_case) return "/orders?support=1";
+  if (d.movement_id) return `/orders/${d.movement_id}`;
   if (d.group_id && n.type?.startsWith("collective")) return `/groups?tab=mine&group=${d.group_id}&panel=collective`;
   if (d.group_id) return `/groups?tab=mine&group=${d.group_id}`;
   if (d.list_id) return `/lists?list=${d.list_id}`;

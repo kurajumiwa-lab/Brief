@@ -454,6 +454,7 @@ function EditProfileDrawer({ open, onClose, vendor, profile, onSaved }) {
         business_name: vendor.business_name || "",
         business_description: vendor.business_description || "",
         physical_location: vendor.physical_location || "",
+        allow_direct_calls: !!vendor.allow_direct_calls,
         business_categories: (vendor.business_categories || []).join(", "),
         primary_goods: (profile?.primary_goods || []).join(", "),
         sourcing_interests: (profile?.sourcing_interests || []).join(", "),
@@ -473,6 +474,7 @@ function EditProfileDrawer({ open, onClose, vendor, profile, onSaved }) {
           business_name: form.business_name.trim(),
           business_description: form.business_description.trim() || null,
           physical_location: form.physical_location.trim() || null,
+          allow_direct_calls: !!form.allow_direct_calls,
           business_categories: splitList(form.business_categories),
         }),
         vendorAPI.updateProfile({
@@ -513,6 +515,8 @@ function EditProfileDrawer({ open, onClose, vendor, profile, onSaved }) {
         <Input label="Business name" required value={form.business_name || ""} onChange={set("business_name")} />
         <Textarea label="About" rows={3} value={form.business_description || ""} onChange={set("business_description")} hint="Two lines is plenty — what you sell and who you sell to." />
         <Input label="Location" value={form.physical_location || ""} onChange={set("physical_location")} />
+        <Check checked={form.allow_direct_calls} onChange={set("allow_direct_calls")} label="Allow direct calls from order counterparties" />
+        <p className="-mt-2 text-micro text-ink-4">Your number is shared only on an order with its other participant, and only while this setting is on. In-app chat stays available either way.</p>
         <Input label="Categories" value={form.business_categories || ""} onChange={set("business_categories")} hint="Comma separated" />
         <div className="pt-2 border-t border-edge-1 space-y-4">
           <Input label="What you stock (primary goods)" value={form.primary_goods || ""} onChange={set("primary_goods")} placeholder="sukuma, spinach, tomatoes" hint="Comma separated" />

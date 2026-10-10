@@ -44,6 +44,7 @@ class Vendor(Base):
     vendor_handle = Column(String(100), unique=True, nullable=False, index=True)  # @handle
     email = Column(String(255), unique=True, nullable=False, index=True)
     phone = Column(String(20))
+    allow_direct_calls = Column(Boolean, nullable=False, default=False, server_default="false")
     phone_verified_at = Column(DateTime, nullable=True)  # Set only by a real verification flow/provider.
     fraud_suspended_at = Column(DateTime, nullable=True)  # Eligibility block after reviewed fraud finding.
     password_hash = Column(String(255), nullable=False)

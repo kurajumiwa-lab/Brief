@@ -13,6 +13,7 @@ Every step notifies the other side (v2.1 §2.3) and refreshes the supplier's
 SRM-lite metrics (§4.4). Callers commit.
 """
 
+import secrets
 from datetime import datetime, timedelta
 from typing import Optional
 from uuid import UUID
@@ -21,8 +22,11 @@ from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
+from app.modules.orders.audit import ensure_order_transaction, record_movement_event
+from app.modules.orders.models import DeliveryQuote, DeliveryQuoteRequest, OrderDispute, OrderTransaction
 from app.models.notification import NotificationType
 from app.models.stock import MovementStatus, StockItem, StockMovement, StockReservation, StockSource
+from app.models.tools import CourierRegistration, CourierShipment
 from app.models.vendor import Vendor
 from app.services import notification_service, parasitism_engine, performance_service
 
@@ -127,6 +131,11 @@ async def request_sourcing(
     recompute_available(item)
     db.add(movement)
     await db.flush()  # movement.id for the hold and the notification deep link
+    await ensure_order_transaction(db, movement)
+    record_movement_event(db, movement.id, "order_requested", actor_vendor_id=buyer.id)
+    if confirmed:
+        record_movement_event(db, movement.id, "supplier_confirmed", actor_vendor_id=item.vendor_id,
+                              payload={"confirmed_in_chat": True})
 
     db.add(StockReservation(
         stock_item_id=item.id, reserving_vendor_id=buyer.id, movement_id=movement.id,
@@ -168,7 +177,7 @@ _TRANSITIONS = {
 
 
 async def transition(db: AsyncSession, movement: StockMovement, action: str, actor: Vendor,
-                     reason: Optional[str] = None) -> StockMovement:
+                     reason: Optional[str] = None, receipt_code: Optional[str] = None) -> StockMovement:
     """Advance a movement. Supplier confirms and ships; buyer receives; either
     side may cancel before receipt."""
     item = await db.get(StockItem, movement.stock_item_id)
@@ -178,10 +187,25 @@ async def transition(db: AsyncSession, movement: StockMovement, action: str, act
     if action == "cancel":
         if actor.id not in (movement.from_vendor_id, movement.to_vendor_id):
             raise StockError("Not your movement", 403)
+        if movement.status == MovementStatus.SHIPPED.value:
+            transaction = (await db.execute(select(OrderTransaction).where(
+                OrderTransaction.movement_id == movement.id,
+            ))).scalar_one_or_none()
+            quote = await db.get(DeliveryQuote, transaction.selected_quote_id) if transaction and transaction.selected_quote_id else None
+            if quote is None or quote.provider_type != "self_pickup":
+                raise StockError("This order has been dispatched. Open a support case so the provider, stock and payment can be reconciled before cancellation.", 409)
         if movement.status == MovementStatus.RECEIVED.value:
-            raise StockError("Already received; cannot cancel")
+            raise StockError("Already received; open a dispute if something is wrong")
         if movement.status == MovementStatus.CANCELLED.value:
             return movement
+        from app.models.payments import PaymentIntent
+        active_payment = (await db.execute(select(PaymentIntent.id).where(
+            PaymentIntent.entity_type == "stock_movement_payment",
+            PaymentIntent.entity_id == movement.id,
+            PaymentIntent.status.in_(("pending", "completed")),
+        ).limit(1))).scalar_one_or_none()
+        if active_payment:
+            raise StockError("A payment is pending or verified. Resolve it or open a dispute before cancelling.", 409)
         await _cancel(db, movement, item, actor.id, reason or "cancelled", actor)
         await performance_service.recalculate(db, movement.from_vendor_id)
         return movement
@@ -189,20 +213,151 @@ async def transition(db: AsyncSession, movement: StockMovement, action: str, act
     if action not in _TRANSITIONS:
         raise StockError(f"Unknown action '{action}'")
     expected, nxt, side = _TRANSITIONS[action]
-    owner = movement.from_vendor_id if side == "supplier" else movement.to_vendor_id
-    if actor.id != owner:
-        raise StockError(f"Only the {side} can {action} this movement", 403)
     if movement.status != expected.value:
         raise StockError(f"Movement is '{movement.status}', expected '{expected.value}' to {action}")
+
+    order_transaction = await ensure_order_transaction(db, movement)
+    selected_quote = None
+    if action in ("ship", "receive"):
+        if not order_transaction.selected_quote_id:
+            raise StockError("The customer must choose pickup or a delivery quote before travel.", 409)
+        selected_quote = await db.get(DeliveryQuote, order_transaction.selected_quote_id)
+        if selected_quote is None or selected_quote.status != "selected":
+            raise StockError("The selected fulfilment option is no longer available.", 409)
+        if not order_transaction.pickup_address or not order_transaction.ready_for_collection:
+            raise StockError("The supplier must confirm the exact pickup address and mark the order ready first.", 409)
+        if selected_quote.pickup_address != order_transaction.pickup_address:
+            raise StockError("Pickup details changed. Ask the customer to review the fulfilment options again.", 409)
+        if not selected_quote.ready_for_collection:
+            raise StockError("The selected option predates the supplier's ready confirmation. Review it again.", 409)
+        if action == "ship" and selected_quote.expires_at and selected_quote.expires_at <= datetime.utcnow():
+            raise StockError("The selected delivery quote has expired. Ask the customer to choose a fresh quote.", 409)
+        if selected_quote.provider_type != "self_pickup" and not selected_quote.destination_address:
+            raise StockError("The selected delivery option has no confirmed destination.", 409)
+
+    owner = movement.from_vendor_id if side == "supplier" else movement.to_vendor_id
+    if action == "receive":
+        # A one-time code generated by the buyer and entered by the chosen
+        # fulfilment provider is the proof-of-receipt step. The buyer cannot
+        # mark their own order as received just by pressing a button.
+        if selected_quote is None or actor.id != selected_quote.provider_vendor_id:
+            raise StockError("Only the selected supplier or courier can confirm receipt with the buyer's code.", 403)
+    elif actor.id != owner:
+        raise StockError(f"Only the {side} can {action} this movement", 403)
+
+    if action in ("ship", "receive"):
+        open_dispute = (await db.execute(select(OrderDispute.id).where(
+            OrderDispute.movement_id == movement.id,
+            OrderDispute.status.in_(("open", "in_review")),
+        ).limit(1))).scalar_one_or_none()
+        if open_dispute:
+            raise StockError("This order has an open support case. Resolve it before dispatch or receipt.", 409)
+
+        from app.models.payments import PaymentIntent, PaymentRefund
+        from sqlalchemy import func
+
+        payment = (await db.execute(select(PaymentIntent).where(
+            PaymentIntent.entity_type == "stock_movement_payment",
+            PaymentIntent.entity_id == movement.id,
+        ).order_by(PaymentIntent.created_at.desc()).limit(1).with_for_update())).scalar_one_or_none()
+        if payment and payment.status == "pending":
+            raise StockError("Payment is still being verified; wait for the provider's result before dispatch or receipt.", 409)
+        if payment and payment.status == "refunded":
+            raise StockError("This order was fully refunded by the provider and cannot be dispatched or received.", 409)
+        if payment and payment.status == "completed":
+            pending_refund = (await db.execute(select(PaymentRefund.id).where(
+                PaymentRefund.payment_intent_id == payment.id,
+                PaymentRefund.status == "pending",
+            ).limit(1))).scalar_one_or_none()
+            if pending_refund:
+                raise StockError("A provider refund is still processing; wait before dispatch or receipt.", 409)
+            refunded_amount = (await db.execute(select(func.coalesce(func.sum(PaymentRefund.amount_ksh), 0)).where(
+                PaymentRefund.payment_intent_id == payment.id,
+                PaymentRefund.status == "completed",
+            ))).scalar_one()
+            if int(refunded_amount or 0) >= payment.amount_ksh:
+                raise StockError("This order was fully refunded by the provider and cannot be dispatched or received.", 409)
+
+    if action == "receive":
+        import hashlib
+        import hmac
+
+        supplied_hash = hashlib.sha256((receipt_code or "").strip().encode()).hexdigest()
+        if (not receipt_code or not order_transaction.receipt_code_hash
+                or not hmac.compare_digest(supplied_hash, order_transaction.receipt_code_hash)):
+            raise StockError("Enter the current six-digit code shared by the buyer to confirm delivery.", 400)
+        if order_transaction.receipt_code_expires_at and order_transaction.receipt_code_expires_at < datetime.utcnow():
+            raise StockError("The receipt code expired. Ask the buyer to generate a new one.", 400)
+        if selected_quote and selected_quote.provider_type in ("courier", "errand", "scheduled"):
+            shipment = (await db.execute(select(CourierShipment).where(
+                CourierShipment.movement_id == movement.id,
+            ).with_for_update())).scalars().first()
+            if shipment and shipment.status == "failed":
+                raise StockError("The courier marked this delivery as failed. Open support before confirming receipt.", 409)
 
     now = datetime.utcnow()
     movement.status = nxt.value
     if nxt is MovementStatus.CONFIRMED:
         movement.confirmed_at = now
+        record_movement_event(db, movement.id, "supplier_confirmed", actor_vendor_id=actor.id)
     elif nxt is MovementStatus.SHIPPED:
         movement.shipped_at = now
+        record_movement_event(db, movement.id, "dispatch_marked", actor_vendor_id=actor.id,
+                              payload={"delivery_mode": selected_quote.provider_type if selected_quote else None})
+        if selected_quote and selected_quote.provider_type in ("courier", "errand", "scheduled"):
+            request = await db.get(DeliveryQuoteRequest, selected_quote.request_id) if selected_quote.request_id else None
+            registration = await db.get(CourierRegistration, request.courier_registration_id) if request and request.courier_registration_id else None
+            if (registration is None or registration.vendor_id != selected_quote.provider_vendor_id
+                    or registration.vendor_id in (movement.from_vendor_id, movement.to_vendor_id)):
+                raise StockError("The selected courier registration is no longer valid.", 409)
+            shipment = (await db.execute(select(CourierShipment).where(
+                CourierShipment.movement_id == movement.id,
+            ).with_for_update())).scalars().first()
+            if shipment is None:
+                tracking_number = "BRF-" + secrets.token_hex(3).upper() + "-" + secrets.token_hex(2).upper()
+                shipment = CourierShipment(
+                    courier_id=registration.id,
+                    sender_vendor_id=movement.from_vendor_id,
+                    receiver_vendor_id=movement.to_vendor_id,
+                    movement_id=movement.id,
+                    tracking_number=tracking_number,
+                    status="picked_up",
+                    origin=selected_quote.pickup_address,
+                    destination=selected_quote.destination_address,
+                    cost=selected_quote.price_ksh,
+                    notes=f"Order {str(movement.id)[:8]}",
+                    picked_up_at=now,
+                    status_history=[{"status": "picked_up", "at": now.isoformat(), "by": actor.vendor_handle}],
+                )
+                db.add(shipment)
+                await db.flush()
+                record_movement_event(db, movement.id, "delivery_tracking_created", actor_vendor_id=actor.id,
+                                      payload={"tracking_number": tracking_number, "courier_name": registration.courier_name})
+                for recipient_id in {movement.to_vendor_id, registration.vendor_id} - {actor.id}:
+                    await notification_service.create_notification(
+                        db, recipient_id, NotificationType.SHIPMENT_UPDATE,
+                        f"Order shipment {tracking_number} is ready to track",
+                        f"Via {registration.courier_name}. The buyer's receipt code is still required at hand-off.",
+                        sender_id=actor.id,
+                        data={"movement_id": movement.id, "tracking_number": tracking_number},
+                    )
+            elif shipment.courier_id != registration.id:
+                raise StockError("A different courier shipment is already linked to this order.", 409)
     elif nxt is MovementStatus.RECEIVED:
         await _settle_receipt(db, movement, item)
+        if selected_quote and selected_quote.provider_type in ("courier", "errand", "scheduled"):
+            shipment = (await db.execute(select(CourierShipment).where(
+                CourierShipment.movement_id == movement.id,
+            ).with_for_update())).scalars().first()
+            if shipment:
+                shipment.status = "delivered"
+                shipment.delivered_at = now
+                history = list(shipment.status_history or [])
+                history.append({"status": "delivered", "at": now.isoformat(), "by": actor.vendor_handle,
+                                "note": "Buyer receipt code verified"})
+                shipment.status_history = history
+        record_movement_event(db, movement.id, "order_received", actor_vendor_id=actor.id,
+                              payload={"delivery_mode": selected_quote.provider_type if selected_quote else None})
 
     counterpart = movement.to_vendor_id if side == "supplier" else movement.from_vendor_id
     ntype, title = {
@@ -230,6 +385,8 @@ async def _cancel(db: AsyncSession, movement: StockMovement, item: StockItem, by
     movement.completed_at = datetime.utcnow()
     movement.cancelled_by_vendor_id = by_vendor_id
     await _resolve_hold(db, movement, hold_status)
+    record_movement_event(db, movement.id, "order_cancelled", actor_vendor_id=by_vendor_id,
+                          payload={"reason": reason[:80]})
 
     if actor is not None:
         other = movement.to_vendor_id if actor.id == movement.from_vendor_id else movement.from_vendor_id

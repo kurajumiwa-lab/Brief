@@ -141,6 +141,7 @@ class MockPSPClient(PSPClient):
         self._wallets: dict[str, int] = {}
         self._collections: dict[str, dict] = {}   # api_ref → record
         self._payouts: dict[str, dict] = {}
+        self._transfers: dict[str, dict] = {}
         self._seq = 0
         self._pending_tasks: set[asyncio.Task] = set()
         self._paused_events: list[dict] = []
@@ -164,6 +165,7 @@ class MockPSPClient(PSPClient):
         self._wallets = {}
         self._collections = {}
         self._payouts = {}
+        self._transfers = {}
         self._seq = 0
         self.fail_next_collect = False
         self.fail_next_disburse = False
@@ -224,7 +226,7 @@ class MockPSPClient(PSPClient):
                 payment_id = self._next_id("MOCKPAY")
                 self._schedule({
                     "type": "payment.failed", "id": payment_id, "api_ref": api_ref,
-                    "amount": amount, "failure_reason": "Injected failure (test)",
+                    "amount": amount, "currency": "KES", "failure_reason": "Injected failure (test)",
                 })
                 return {"payment_id": payment_id, "status": "pending"}
             payment_id = self._next_id("MOCKPAY")
@@ -235,7 +237,7 @@ class MockPSPClient(PSPClient):
             }
         self._schedule({
             "type": "payment.completed", "id": payment_id, "api_ref": api_ref,
-            "amount": amount, "phone_number": phone, "provider": provider,
+            "amount": amount, "currency": "KES", "phone_number": phone, "provider": provider,
             "mpesa_receipt": payment_id.replace("MOCKPAY", "SHJ")[:12],
         })
         return {"payment_id": payment_id, "status": "pending"}
@@ -248,14 +250,14 @@ class MockPSPClient(PSPClient):
                 payout_id = self._next_id("MOCKOUT")
                 self._schedule({
                     "type": "payout.failed", "id": payout_id, "api_ref": api_ref,
-                    "amount": amount, "failure_reason": "Injected failure (test)",
+                    "amount": amount, "currency": "KES", "failure_reason": "Injected failure (test)",
                 })
                 return {"payout_id": payout_id, "status": "pending"}
             payout_id = self._next_id("MOCKOUT")
             if self._wallet(wallet) < amount:
                 self._schedule({
                     "type": "payout.failed", "id": payout_id, "api_ref": api_ref,
-                    "amount": amount, "failure_reason": "Insufficient wallet balance",
+                    "amount": amount, "currency": "KES", "failure_reason": "Insufficient wallet balance",
                 })
                 return {"payout_id": payout_id, "status": "pending"}
             self._wallets[wallet] = self._wallet(wallet) - amount
@@ -264,7 +266,7 @@ class MockPSPClient(PSPClient):
             }
         self._schedule({
             "type": "payout.completed", "id": payout_id, "api_ref": api_ref,
-            "amount": amount, "phone_number": phone, "provider": provider,
+            "amount": amount, "currency": "KES", "phone_number": phone, "provider": provider,
         })
         return {"payout_id": payout_id, "status": "pending"}
 
@@ -280,18 +282,23 @@ class MockPSPClient(PSPClient):
             self._wallets[record["wallet"]] = self._wallet(record["wallet"]) - amount
         refund_id = self._next_id("MOCKRFND")
         self._schedule({"type": "refund.completed", "id": refund_id,
-                        "api_ref": api_ref, "amount": amount,
+                        "api_ref": api_ref, "amount": amount, "currency": "KES",
                         "phone_number": record["phone"]})
         return {"refund_id": refund_id, "status": "pending"}
 
     async def internal_transfer(self, *, from_wallet: str, to_wallet: str,
                                 amount: int, api_ref: str) -> dict:
         async with self._lock:
+            existing = self._transfers.get(api_ref)
+            if existing:
+                return dict(existing)
             if self._wallet(from_wallet) < amount:
                 raise PSPError(f"Insufficient balance in {from_wallet} to transfer {amount}")
             self._wallets[from_wallet] = self._wallet(from_wallet) - amount
             self._wallets[to_wallet] = self._wallet(to_wallet) + amount
-        return {"transfer_id": self._next_id("MOCKXFER"), "status": "complete"}
+            result = {"transfer_id": self._next_id("MOCKXFER"), "status": "complete"}
+            self._transfers[api_ref] = result
+        return dict(result)
 
 
 # ---------------------------------------------------------------------------

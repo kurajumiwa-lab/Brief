@@ -1,5 +1,6 @@
 import csv
 import io
+import logging
 from datetime import datetime, timezone
 from typing import List, Optional
 from uuid import UUID
@@ -31,6 +32,7 @@ def _naive_utc(v):
     return v or None
 
 router = APIRouter()
+log = logging.getLogger("brief.stock")
 
 
 class StockItemCreate(BaseModel):
@@ -564,6 +566,7 @@ async def source_from_vendor(
 async def advance_movement(
     movement_id: UUID,
     action: str,
+    receipt_code: Optional[str] = Query(None, max_length=12),
     vendor: Vendor = Depends(get_current_vendor),
     db: AsyncSession = Depends(get_db),
 ):
@@ -575,10 +578,20 @@ async def advance_movement(
     if not movement or vendor.id not in (movement.from_vendor_id, movement.to_vendor_id):
         raise HTTPException(404, "Movement not found")
     try:
-        await stock_engine.transition(db, movement, action, vendor)
+        await stock_engine.transition(db, movement, action, vendor, receipt_code=receipt_code)
     except stock_engine.StockError as exc:
         raise HTTPException(exc.status_code, str(exc))
     await db.commit()
+    if action == "receive":
+        try:
+            from app.modules.orders.settlement import start_order_settlement
+            await start_order_settlement(db, movement.id)
+            await db.commit()
+        except Exception:
+            # Goods receipt is already committed. Provider availability must
+            # never roll it back or make the movement appear unreceived.
+            await db.rollback()
+            log.exception("receipt was saved but settlement could not be queued for order %s", movement.id)
     return {"message": f"Movement {movement.status}", "status": movement.status, "movement_id": str(movement.id)}
 
 

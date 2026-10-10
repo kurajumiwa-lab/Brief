@@ -14,6 +14,7 @@ from sqlalchemy import select, update
 from app.database import async_session
 from app.models.stock import StockReservation
 from app.services import stock_engine
+from tests.order_helpers import complete_self_pickup
 
 pytestmark = pytest.mark.asyncio
 
@@ -166,9 +167,7 @@ async def test_verification_alternatives_and_notifications(client):
     # fulfil one for real → SRM-lite numbers
     r = await client.post(f"/api/stock/{tom}/source", headers=buyer, json={"quantity": 2})
     mid = r.json()["movement_id"]
-    for who, action in ((seller, "confirm"), (seller, "ship"), (buyer, "receive")):
-        r = await client.post(f"/api/stock/movements/{mid}/{action}", headers=who)
-        assert r.status_code == 200, r.text
+    await complete_self_pickup(client, mid, seller, buyer)
     r = await client.get("/api/stock/movements", headers=buyer)
     done = next(m for m in r.json() if m["id"] == mid)
     assert done["status"] == "received" and done["confirmed_at"] and done["shipped_at"] and done["completed_at"]

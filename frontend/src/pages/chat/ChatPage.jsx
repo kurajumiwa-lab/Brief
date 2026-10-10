@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
-import { Hash, ArrowLeft, Wifi, WifiOff, Users, LogIn } from "lucide-react";
+import { Link, useSearchParams } from "react-router-dom";
+import { Hash, ArrowLeft, Wifi, WifiOff, Users, LogIn, Receipt } from "lucide-react";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import Modal from "@/components/ui/Modal";
@@ -96,6 +96,7 @@ export default function ChatPage() {
                   {activeRoom.topic_tags?.length ? ` · ${activeRoom.topic_tags.map((t) => `#${t}`).join(" ")}` : ""}
                 </p>
               </div>
+              {activeRoom.stock_movement_id && <Link to={`/orders/${activeRoom.stock_movement_id}`} className="inline-flex h-8 shrink-0 items-center gap-1 rounded-lg border border-edge-2 px-2 text-2xs font-semibold text-ink-2 hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"><Receipt size={13} aria-hidden="true" /><span className="hidden sm:inline">Order</span><span className="sr-only">View linked order</span></Link>}
               <span className={cn("inline-flex items-center gap-1 text-2xs", live ? "text-brand-600 dark:text-brand-400" : "text-ink-4")} title={live ? "Live" : "Reconnecting…"}>
                 {live ? <Wifi size={12} /> : <WifiOff size={12} />}
                 <span className="hidden sm:inline">{live ? "live" : "offline"}</span>

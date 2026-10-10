@@ -134,6 +134,13 @@ class Settings(BaseSettings):
     RECONCILIATION_VARIANCE_TOLERANCE_KSH: int = 100
     # When true, collections require vendor.phone_verified_at to be set.
     PAYMENT_REQUIRE_VERIFIED_PHONE: bool = False
+    # Marketplace orders stay payment-disabled until a licensed PSP has agreed
+    # to the collection/settlement flow and the merchant sub-account is set.
+    # Never point order collections at an ordinary operating account.
+    TRADE_PAYMENTS_ENABLED: bool = False
+    TRADE_SETTLEMENT_ENABLED: bool = False
+    TRADE_PSP_SUB_ACCOUNT: str = ""
+    TRADE_PLATFORM_FEE_RATE: float = 0.0
     # Per-transaction and per-day collection caps (KSh).
     COLLECT_PER_TRANSACTION_LIMIT_KSH: int = 150_000
     COLLECT_DAILY_PER_VENDOR_LIMIT_KSH: int = 500_000

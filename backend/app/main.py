@@ -15,6 +15,7 @@ from app.middleware.metrics import MetricsMiddleware
 from app.middleware.rate_limiter import RateLimitMiddleware, configure_backend
 from app.middleware.vendor_only import VendorOnlyMiddleware
 from app.modules.trade import router as requests_routes
+from app.modules.orders.router import router as orders_routes
 from app.platform import event_outbox
 from app.routes import (
     analytics,
@@ -163,6 +164,7 @@ app.include_router(squad_routes.router, prefix="/api/squad", tags=["Hustle Leagu
 app.include_router(markets_routes.router, prefix="/api/markets", tags=["Markets"])
 app.include_router(surface_routes.router, prefix="/api/surface", tags=["Surface"])
 app.include_router(requests_routes, prefix="/api/requests", tags=["Business Requests"])
+app.include_router(orders_routes, prefix="/api/orders", tags=["Order Transactions"])
 # v2.7 — the marketplace map: viewport queries, server-side clustering, lazy details
 app.include_router(map_routes.router, prefix="/api/map", tags=["Map"])
 app.include_router(nearby_routes.router, prefix="/api/nearby", tags=["Nearby (B2C)"])

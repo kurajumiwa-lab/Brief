@@ -235,7 +235,9 @@ describe("Dashboard", () => {
     mount(<Dashboard />);
     fireEvent.click(await screen.findByRole("button", { name: /confirm/i }));
     await waitFor(() => expect(api.stockAPI.advance).toHaveBeenCalledWith("m1", "confirm"));
-    expect(await screen.findByRole("button", { name: /mark shipped/i })).toBeInTheDocument();
+    const details = await screen.findByRole("link", { name: /order details/i });
+    expect(details).toHaveAttribute("href", "/orders/m1");
+    expect(screen.queryByRole("button", { name: /mark shipped/i })).not.toBeInTheDocument();
   });
 });
 

@@ -41,6 +41,9 @@ class ChatRoom(Base):
     group_id = Column(UUID(as_uuid=True), ForeignKey('vendor_groups.id'), nullable=True)
     vendor_list_id = Column(UUID(as_uuid=True), ForeignKey('vendor_lists.id'), nullable=True)
     deal_stock_item_id = Column(UUID(as_uuid=True), ForeignKey('stock_items.id'), nullable=True)
+    # Present for one-to-one order conversations. Direct/deal rooms remain
+    # unchanged; this link makes order-specific chat discoverable and auditable.
+    stock_movement_id = Column(UUID(as_uuid=True), ForeignKey('stock_movements.id', ondelete='CASCADE'), nullable=True, unique=True)
 
     # Niche topic
     topic = Column(String(200))

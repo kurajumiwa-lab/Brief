@@ -76,6 +76,7 @@ vi.mock("@/lib/api", () => {
       cancel: vi.fn(() => ok({})),
     },
     toolAPI: { browse: vi.fn(() => ok([])) },
+    locksAPI: { opsMe: vi.fn(() => ok({ role: null })) },
     squadAPI: { calls: vi.fn(() => ok({ calls: [] })), accept: vi.fn() },
     stockAPI: {
       network: vi.fn((params) => ok([{ ...ITEM, _params: params }])),
