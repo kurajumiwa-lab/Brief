@@ -79,7 +79,7 @@ const BROWSE_ROOTS = [
 const WORK_ROOTS = ["/work", "/orders", "/tasks", "/locks", "/tools"];
 
 const ME_ROOTS = [
-  "/me", "/stock", "/analytics", "/pos", "/brief",
+  "/me", "/stock", "/analytics", "/pos", "/brief", "/passport",
   "/groups", "/lists", "/events", "/governance", "/ops", "/feed",
 ];
 

@@ -364,6 +364,53 @@ export const requestsAPI = {
   offer: (id, body) => api.post(`/requests/${id}/offers`, body),
   accept: (id, offerId) => api.post(`/requests/${id}/offers/${offerId}/accept`),
   cancel: (id) => api.post(`/requests/${id}/cancel`),
+  // v2.11 — how this request measures against my verified facts, in words.
+  fit: (id) => api.get(`/requests/${id}/fit`),
+  // Standing watches: "tell me when a request looks like this".
+  watches: () => api.get("/requests/watches"),
+  createWatch: (body) => api.post("/requests/watches", body),
+  setWatchState: (id, active) => api.post(`/requests/watches/${id}/state`, null, { params: { active } }),
+  deleteWatch: (id) => api.delete(`/requests/watches/${id}`),
+};
+
+// ── Business passport (v2.11) — verified facts, readiness, the verifier desk ─
+//
+// A claim is evidence, never a verdict: the API says who checked what, on
+// which date, and the UI must show those words unchanged. Uploads use
+// multipart because the evidence is a file (PDF/PNG/JPG/WEBP, same storage
+// layer as spec sheets).
+const asForm = (fields = {}) => {
+  const form = new FormData();
+  Object.entries(fields).forEach(([k, v]) => {
+    if (v === undefined || v === null || v === "") return;
+    form.append(k, typeof v === "boolean" ? String(v) : v);
+  });
+  return form;
+};
+
+export const passportAPI = {
+  catalog: () => api.get("/passport/catalog"),
+  me: () => api.get("/passport"),
+  of: (handle) => api.get(`/passport/${encodeURIComponent(handle)}`),
+  readiness: (checklist, handle) => api.get(`/passport/readiness/${checklist}`, { params: noEmpty({ handle }) }),
+  setProfile: (headline, publishedChecklists) =>
+    api.put("/passport/profile", asForm({
+      headline,
+      published_checklists: publishedChecklists ? publishedChecklists.join(",") : undefined,
+    }), { headers: { "Content-Type": "multipart/form-data" } }),
+  saveClaim: (fields, file) => {
+    const form = asForm(fields);
+    if (file) form.append("evidence", file);
+    return api.post("/passport/claims", form, { headers: { "Content-Type": "multipart/form-data" } });
+  },
+  requestVerification: (id) => api.post(`/passport/claims/${id}/request-verification`),
+  withdraw: (id) => api.delete(`/passport/claims/${id}`),
+  // The desk answers 403 for ordinary accounts — the page hides itself then.
+  queue: () => api.get("/passport/queue"),
+  verify: (id, fields) => api.post(`/passport/claims/${id}/verify`, asForm(fields),
+    { headers: { "Content-Type": "multipart/form-data" } }),
+  reject: (id, reason) => api.post(`/passport/claims/${id}/reject`, asForm({ reason }),
+    { headers: { "Content-Type": "multipart/form-data" } }),
 };
 
 // ── Surface — the mixed feed, the price index, and the map pins ────────────

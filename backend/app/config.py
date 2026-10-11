@@ -161,6 +161,13 @@ class Settings(BaseSettings):
     # Pilot market staff are explicitly allow-listed as role:vendor_handle pairs,
     # e.g. admin:brief_admin,spotter:market_spotter,negotiator:market_negotiator.
     MARKET_OPS_ROLES: str = ""
+    # Explicit claim-verifier allowlist (v2.11), as vendor handles. A verifier
+    # is an ordinary account whose handle is listed here: the role lives in
+    # config, never in a grant a bug could hand out. Leave empty to disable
+    # the desk — claims then stay `documented` until someone is appointed.
+    VERIFIER_HANDLES: str = ""
+    # How often the scheduler sweeps claim expiry and queues renewal reminders.
+    STANDING_SWEEP_INTERVAL: int = 3600
     # Cooperative member votes are disabled unless a registered entity and its
     # reviewed legal basis are configured explicitly.
     GOVERNANCE_COOPERATIVE_ENABLED: bool = False
@@ -263,6 +270,14 @@ class Settings(BaseSettings):
     @property
     def allowed_pos_systems(self) -> List[str]:
         return self._split(self.ALLOWED_POS_SYSTEMS)
+
+    @property
+    def verifier_handles(self) -> List[str]:
+        return [h.lower() for h in self._split(self.VERIFIER_HANDLES)]
+
+    def is_verifier(self, handle: str) -> bool:
+        """Is this account allowed to check other businesses' documents?"""
+        return (handle or "").lower() in self.verifier_handles
 
     def market_ops_role(self, handle: str) -> Optional[str]:
         """Resolve a configured market staff role without storing role grants in app sessions."""

@@ -9,6 +9,7 @@ import { requestsAPI, apiError } from "@/lib/api";
 import { useAuthStore } from "@/stores/authStore";
 import { useConfirm } from "@/components/ui/ConfirmDialog";
 import { toast } from "@/components/ui/Toast";
+import FitChecklist from "@/components/requests/FitChecklist";
 import { num, relativeTime } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 
@@ -172,6 +173,9 @@ export default function RequestCard({ request, mode = "open", onChange }) {
       {/* ── someone else's request: answer it ───────────────────────────── */}
       {!isMine && open && (
         <>
+          {request.requirements?.length > 0 && (
+            <FitChecklist requestId={request.id} />
+          )}
           {!offering && !request.my_offer && (
             <Button size="sm" variant="secondary" block onClick={() => setOffering(true)}>
               Offer to help

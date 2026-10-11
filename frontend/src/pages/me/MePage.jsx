@@ -22,6 +22,14 @@ const DESTINATIONS = [
     group: "Business",
   },
   {
+    title: "Business passport",
+    description: "Verified facts, documents and the readiness buyers check.",
+    to: () => "/passport",
+    icon: ShieldCheck,
+    tone: "brand",
+    group: "Business",
+  },
+  {
     title: "My shelf",
     description: "Manage quantities, visibility, provenance and imports.",
     to: () => "/stock",

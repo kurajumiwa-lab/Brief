@@ -14,6 +14,7 @@ import logging
 
 from app.config import settings
 from app.database import async_session, engine
+from app.modules.standing import sweep as standing_sweep
 from app.platform import event_outbox
 from app.services import payment_worker, pos_sync
 
@@ -28,10 +29,11 @@ async def main() -> None:
     pos_task = asyncio.create_task(pos_sync.scheduler_loop(async_session, settings.POS_SYNC_INTERVAL))
     payments_task = asyncio.create_task(payment_worker.scheduler_loop(async_session))
     outbox_task = asyncio.create_task(event_outbox.scheduler_loop(async_session))
+    standing_task = asyncio.create_task(standing_sweep.scheduler_loop(async_session))
     try:
-        await asyncio.gather(pos_task, payments_task, outbox_task)
+        await asyncio.gather(pos_task, payments_task, outbox_task, standing_task)
     finally:
-        for task in (pos_task, payments_task, outbox_task):
+        for task in (pos_task, payments_task, outbox_task, standing_task):
             task.cancel()
             try:
                 await task

@@ -25,7 +25,7 @@ from app.database import get_db
 from app.models.vendor import Vendor
 from app.modules.trade import service
 from app.modules.trade.models import BusinessRequest, RequestType
-from app.modules.trade.schemas import OfferIn, RequestIn
+from app.modules.trade.schemas import OfferIn, RequestIn, WatchIn
 from app.routes.auth import get_current_vendor
 
 router = APIRouter()
@@ -46,6 +46,7 @@ async def create_request(
             needed_by=body.needed_by,
             budget_kes=body.budget_kes,
             zone_id=body.zone_id,
+            requirements=[r.model_dump() for r in body.requirements],
         )
     except service.RequestFlowError as e:
         raise HTTPException(e.status, str(e))
@@ -77,6 +78,75 @@ async def list_requests(
         rows = await service.list_mine(db, vendor, type_filter=type_filter, term=term, limit=limit)
         return [await service.to_dict(db, r, vendor) for r in rows]
     return await service.open_feed(db, vendor, type_filter=type_filter, term=term, limit=limit)
+
+
+@router.post("/watches", status_code=201)
+async def create_watch(
+    body: WatchIn,
+    vendor: Vendor = Depends(get_current_vendor),
+    db: AsyncSession = Depends(get_db),
+):
+    """Follow a standing question: "delivery jobs around Kisumu, 20K and up".
+    Every clause is readable, every alert explains which clause fired."""
+    try:
+        watch = await service.create_watch(
+            db, vendor, label=body.label, request_type=body.request_type,
+            keywords=body.keywords, zone_id=body.zone_id, min_budget_kes=body.min_budget_kes,
+        )
+    except service.RequestFlowError as e:
+        raise HTTPException(e.status, str(e))
+    return service.watch_out(watch)
+
+
+@router.get("/watches")
+async def list_watches(
+    vendor: Vendor = Depends(get_current_vendor),
+    db: AsyncSession = Depends(get_db),
+):
+    return {
+        "watches": [service.watch_out(w) for w in await service.list_watches(db, vendor)],
+        "limit": service.MAX_WATCHES,
+    }
+
+
+@router.post("/watches/{watch_id}/state")
+async def set_watch_state(
+    watch_id: UUID,
+    active: bool = Query(True),
+    vendor: Vendor = Depends(get_current_vendor),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        return service.watch_out(await service.set_watch_active(db, vendor, watch_id, active))
+    except service.RequestFlowError as e:
+        raise HTTPException(e.status, str(e))
+
+
+@router.delete("/watches/{watch_id}", status_code=204)
+async def delete_watch(
+    watch_id: UUID,
+    vendor: Vendor = Depends(get_current_vendor),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        await service.delete_watch(db, vendor, watch_id)
+    except service.RequestFlowError as e:
+        raise HTTPException(e.status, str(e))
+
+
+@router.get("/{request_id}/fit")
+async def request_fit(
+    request_id: UUID,
+    vendor: Vendor = Depends(get_current_vendor),
+    db: AsyncSession = Depends(get_db),
+):
+    """How this request measures against my verified facts — one line per
+    requirement, with the counts kept apart and the next step named. This is
+    the "you meet 8 of 10" answer, and it never blocks an offer."""
+    request = await db.get(BusinessRequest, request_id)
+    if not request:
+        raise HTTPException(404, "Request not found")
+    return await service.fit_for(db, request, vendor)
 
 
 @router.get("/{request_id}")

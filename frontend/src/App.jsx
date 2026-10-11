@@ -25,6 +25,7 @@ const News = lazy(() => import("@/pages/news/News"));
 const TasksPortal = lazy(() => import("@/pages/tasks/TasksPortal"));
 const MarketsPage = lazy(() => import("@/pages/markets/MarketsPage"));
 const MePage = lazy(() => import("@/pages/me/MePage"));
+const PassportPage = lazy(() => import("@/pages/standing/PassportPage"));
 const StockRoom = lazy(() => import("@/pages/stock/StockRoom"));
 const Network = lazy(() => import("@/pages/network/Network"));
 const VendorLists = lazy(() => import("@/pages/lists/VendorLists"));
@@ -139,6 +140,7 @@ export default function App() {
           <Route path="/pos" element={<POSBridge />} />
           <Route path="/governance" element={<OurNetwork />} />
           <Route path="/ops" element={<Ops />} />
+          <Route path="/passport" element={<PassportPage />} />
           <Route path="/@:handle" element={<VendorProfile />} />
 
           {/* ── v2 URLs that moved ────────────────────────────────────── */}
