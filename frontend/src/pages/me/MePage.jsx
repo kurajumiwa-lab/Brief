@@ -30,6 +30,14 @@ const DESTINATIONS = [
     group: "Business",
   },
   {
+    title: "Growth planner",
+    description: "Inverted pyramid plan, live pulse, 5-gear motions and plan tiers.",
+    to: () => "/growth",
+    icon: Sparkles,
+    tone: "purple",
+    group: "Business",
+  },
+  {
     title: "My shelf",
     description: "Manage quantities, visibility, provenance and imports.",
     to: () => "/stock",

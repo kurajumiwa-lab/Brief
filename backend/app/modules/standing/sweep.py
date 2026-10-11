@@ -20,6 +20,9 @@ from app.modules.standing import service
 
 log = logging.getLogger("brief.standing.sweep")
 
+expire_due = service.expire_due
+remind_expiring = service.remind_expiring
+
 
 async def run_once(session_factory) -> dict:
     """One pass, in its own session — used by the loop and by tests."""

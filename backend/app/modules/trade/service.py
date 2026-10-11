@@ -731,6 +731,14 @@ async def notify_requirement_matches(db: AsyncSession, request: BusinessRequest,
 
 # ── standing watches: the CRUD behind the bell ───────────────────────────────
 
+def watch_limit_for(vendor: Vendor) -> int:
+    """Server-side watch entitlement for this vendor's subscription plan."""
+    limit = getattr(vendor, "plan_watches_limit", None)
+    if limit is not None and int(limit) > 0:
+        return int(limit)
+    return MAX_WATCHES
+
+
 def watch_out(watch: RequestWatch) -> dict:
     return {
         "id": str(watch.id),
@@ -752,8 +760,9 @@ async def create_watch(db: AsyncSession, vendor: Vendor, *, label: str | None,
     existing = (await db.execute(
         select(func.count()).select_from(RequestWatch).where(RequestWatch.vendor_id == vendor.id)
     )).scalar() or 0
-    if existing >= MAX_WATCHES:
-        raise RequestFlowError(f"You are already following {MAX_WATCHES} watches — remove one first")
+    limit = watch_limit_for(vendor)
+    if existing >= limit:
+        raise RequestFlowError(f"You are already following {limit} watches — remove one first")
     type_value = None
     if request_type:
         if request_type not in REQUEST_TYPES:

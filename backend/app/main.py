@@ -16,6 +16,7 @@ from app.middleware.rate_limiter import RateLimitMiddleware, configure_backend
 from app.middleware.vendor_only import VendorOnlyMiddleware
 from app.modules.standing import router as passport_routes
 from app.modules.standing import sweep as standing_sweep
+from app.modules.growth import router as growth_routes
 from app.modules.trade import router as requests_routes
 from app.modules.orders.router import router as orders_routes
 from app.platform import event_outbox
@@ -170,6 +171,7 @@ app.include_router(surface_routes.router, prefix="/api/surface", tags=["Surface"
 app.include_router(requests_routes, prefix="/api/requests", tags=["Business Requests"])
 # v2.11 — verified standing, the passport, renewal reminders and the verifier desk
 app.include_router(passport_routes.router, prefix="/api/passport", tags=["Business Passport"])
+app.include_router(growth_routes.router, prefix="/api/growth", tags=["Growth & Business Planner"])
 app.include_router(orders_routes, prefix="/api/orders", tags=["Order Transactions"])
 # v2.7 — the marketplace map: viewport queries, server-side clustering, lazy details
 app.include_router(map_routes.router, prefix="/api/map", tags=["Map"])
@@ -212,6 +214,7 @@ async def api_root():
             "pos_bridge": "/api/pos",
             "notifications": "/api/notifications",
             "passport": "/api/passport",
+            "growth": "/api/growth",
             "files": "/api/files",
             "collective": "/api/collective",
             "market_locks": "/api/locks",

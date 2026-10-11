@@ -27,6 +27,7 @@ from app.models.collective import COLLECTIVE_STATUSES, CollectivePledge, Collect
 from app.models.groups import GroupMembership, VendorGroup
 from app.models.notification import NotificationType
 from app.models.vendor import Vendor
+from app.modules.growth import rules as growth_rules
 from app.routes.auth import get_current_vendor
 from app.services.notification_service import create_notification, notify_many
 
@@ -119,6 +120,10 @@ async def create_request(
     vendor: Vendor = Depends(get_current_vendor),
     db: AsyncSession = Depends(get_db),
 ):
+    try:
+        growth_rules.require_program_active("collective buys")
+    except growth_rules.GrowthRuleError as exc:
+        raise HTTPException(exc.status, str(exc))
     try:
         group_id = UUID(data.group_id)
     except ValueError:
@@ -280,6 +285,15 @@ async def set_status(
         raise HTTPException(400, f"Request is already {req.status}")
     if COLLECTIVE_STATUSES.index(status) < COLLECTIVE_STATUSES.index(req.status) and status not in ("gathering", "cancelled"):
         raise HTTPException(400, f"Can't move from {req.status} back to {status}")
+    await _refresh_totals(db, req)
+    if status in ("quota_met", "negotiating", "ordered", "fulfilled"):
+        if req.current_pledged_quantity < req.target_quantity or req.pledge_count <= 0:
+            raise HTTPException(
+                400,
+                f"Collective buy requires validated pledges meeting the target MOQ ({req.current_pledged_quantity}/{req.target_quantity} pledged)",
+            )
+    if status == "fulfilled" and req.status != "ordered":
+        raise HTTPException(400, "Collective buy must be ordered before it can be marked fulfilled")
     req.status = status
     if status in ("ordered", "fulfilled", "cancelled", "negotiating"):
         pledgers = list((await db.execute(select(CollectivePledge.vendor_id).where(

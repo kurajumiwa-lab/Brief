@@ -191,7 +191,16 @@ function BusinessPulse({ vendor, mine, mineLoaded, movements, connections, compl
             {complete ? "Your business, at a glance" : "A live read on your trading"}
           </h2>
         </div>
-        <span className="text-micro text-ink-4">{complete ? "Setup complete" : "Quick view"}</span>
+        <div className="flex items-center gap-3">
+          <Link
+            to="/growth"
+            className="inline-flex items-center gap-1 text-micro font-bold text-brand-700 dark:text-brand-400 hover:underline underline-offset-2"
+          >
+            Growth planner
+            <ArrowRight size={11} aria-hidden="true" />
+          </Link>
+          <span className="text-micro text-ink-4">{complete ? "Setup complete" : "Quick view"}</span>
+        </div>
       </div>
       <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-4 sm:grid-cols-4 sm:divide-x sm:divide-edge-1">
         {stats.map((stat) => (

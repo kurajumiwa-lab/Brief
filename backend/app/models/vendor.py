@@ -63,6 +63,14 @@ class Vendor(Base):
     # gated out of interest-bearing products (Riba).
     finance_mode = Column(String(20), nullable=False, default="conventional", server_default="conventional")
 
+    # Plan & server-side entitlements (v2.12): starter | readiness | network | institution.
+    # Upgrading a plan grants seats, watch capacity and verification SLA priority —
+    # it NEVER sets is_verified or approves compliance claims.
+    plan_tier = Column(String(24), nullable=False, default="starter", server_default="starter")
+    plan_seats_limit = Column(Integer, nullable=False, default=1, server_default="1")
+    plan_watches_limit = Column(Integer, nullable=False, default=10, server_default="10")
+    plan_updated_at = Column(DateTime, nullable=True)
+
     # Network Stats
     network_score = Column(Float, default=0.0, nullable=False)  # How active/valuable in network
     total_stock_moved = Column(Integer, default=0, nullable=False)
