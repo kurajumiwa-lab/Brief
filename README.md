@@ -67,6 +67,42 @@ service owns the scheduler (POS pulls, hold expiry, nightly score recompute and
 event reminders). Caddy terminates TLS for `$DOMAIN`; `db-backup` keeps 14
 nightly dumps in the `backups` volume.
 
+### Railway (single container)
+
+`railway.json` + the root `Dockerfile` build one image that serves both halves:
+the API serves `frontend/dist` itself and answers `/api` on the same origin, so
+there is no second service and no CORS to configure.
+
+1. **Add Postgres** to the project, then on the app service set
+   `DATABASE_URL=${{Postgres.DATABASE_URL}}`. Variable changes are staged until
+   you deploy.
+2. Set `SECRET_KEY`. Everything else has a working default.
+3. Deploy. The entrypoint waits for Postgres, runs `alembic upgrade head`, then
+   starts uvicorn on `$PORT`. `/api/health` is the healthcheck.
+
+### Railway (single container) — the deploy succeeds but nothing renders
+
+The most common cause is `alembic upgrade head` failing inside the entrypoint.
+`entrypoint.sh` runs under `set -e`, so a failed migration exits the container
+before uvicorn ever starts: Railway reports a crashed deploy and the URL
+returns nothing at all. The whole traceback is in the deploy log — scroll to
+the last error before `Waiting for application startup` (which will be absent).
+
+To reproduce it locally against a throwaway database:
+
+```bash
+cd backend
+python -m pytest tests/test_migrations.py   # migrates a scratch DB from zero
+```
+
+Other things that produce a blank page on a single-container deploy:
+
+| symptom | cause | fix |
+|---|---|---|
+| `GET /` returns the JSON API index, not the app | `FRONTEND_DIST` points somewhere without an `index.html`, so main.py never mounts the SPA | Leave it at the Dockerfile default (`/app/frontend/dist`); check the build log's `npm run build` step |
+| one line of `{"detail":"Not Found"}` | the SPA catch-all is not registered because the dist check failed | as above |
+| assets 404 but HTML loads | a stale `index.html` hashed against an older build | redeploy; the asset filenames are content-hashed per build |
+
 `deploy/github-deploy.yml` is a ready CI/CD pipeline (backend pytest with
 migrations applied, checked and rolled back on the Postgres service; a
 load-test smoke run against a booted API; frontend tests + build; image build
@@ -361,6 +397,21 @@ for the full budget. To re-check a running container without restarting it:
 ```bash
 docker compose exec backend python -m app.wait_for_db --timeout 5
 ```
+
+### `type "someenum" does not exist` while migrating
+
+A migration referenced a PostgreSQL enum type the database does not have under
+that name. Enum names are not a style choice: SQLAlchemy derives them from the
+Python class (`RequestType` → `requesttype`) and emits that name in DDL and in
+casts, so a migration creating the type under any other spelling produces a
+schema the ORM cannot address. The schema still builds — the mismatch stays
+invisible until something names the type in DDL, which is usually a later
+migration, i.e. a deploy.
+
+Name enum types after the lower-cased Python class, and let
+`tests/test_migrations.py` check your work: it migrates a scratch database from
+empty and asserts every enum the models declares exists under that name and is
+the type the column is actually bound to.
 
 ## Repository layout
 

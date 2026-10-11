@@ -48,6 +48,20 @@ NEW_NOTIFICATION_TYPES = (
     "OPPORTUNITY_MATCH",
 )
 
+# The four types 0012 creates. That revision shipped with snake_case names
+# (`request_type`, …) while the ORM declares them by lower-cased class name
+# (`requesttype`, …), so a database migrated before the fix does not have the
+# type `request_watches` is about to reference and this upgrade died with
+# `type "requesttype" does not exist`. Renaming is the repair: Postgres carries
+# every column that uses the type along with it, so no data moves and the
+# tables 0012 built keep working — they just end up with the name the ORM uses.
+_ENUM_RENAMES = (
+    ("request_type", "requesttype"),
+    ("request_urgency", "requesturgency"),
+    ("request_status", "requeststatus"),
+    ("offer_status", "offerstatus"),
+)
+
 
 def _enum(values, name):
     """Create the type if this database has never seen it.
@@ -61,9 +75,28 @@ def _enum(values, name):
     return postgresql.ENUM(*values, name=name, create_type=False)
 
 
+def _repair_request_enum_names() -> None:
+    """Rename the 0012 enums still carrying their original snake_case names.
+
+    A no-op on a database created after 0012 was corrected, and on any database
+    where the target name already exists — so it is safe to run twice and safe
+    on a fresh install.
+    """
+    bind = op.get_bind()
+    present = {row[0] for row in bind.execute(sa.text(
+        "SELECT t.typname FROM pg_type t JOIN pg_enum e ON e.enumtypid = t.oid"))}
+    for old, new in _ENUM_RENAMES:
+        if old in present and new not in present:
+            op.execute(f'ALTER TYPE "{old}" RENAME TO "{new}"')
+
+
 def upgrade() -> None:
     for value in NEW_NOTIFICATION_TYPES:
         op.execute(f"ALTER TYPE notificationtype ADD VALUE IF NOT EXISTS '{value}'")
+
+    # Before anything references them: a database already carrying 0012 has the
+    # wrong names, and `request_watches` below cannot be created without this.
+    _repair_request_enum_names()
 
     claim_status = _enum(CLAIM_STATUS, "claimstatus")
     claim_method = _enum(CLAIM_METHOD, "claimmethod")
@@ -129,13 +162,17 @@ def upgrade() -> None:
         sa.Column("updated_at", sa.DateTime(), nullable=False),
     )
 
+    # Same values as 0012. `checkfirst` covers a database where 0012 somehow
+    # left the type behind; the rename above covers the usual case.
+    request_type = _enum(("stock", "worker", "delivery", "rental", "errand", "service"), "requesttype")
+
     op.create_table(
         "request_watches",
         sa.Column("id", PGUUID(as_uuid=True), primary_key=True),
         sa.Column("vendor_id", PGUUID(as_uuid=True),
                   sa.ForeignKey("vendors.id", ondelete="CASCADE"), nullable=False),
         sa.Column("label", sa.String(120), nullable=True),
-        sa.Column("request_type", postgresql.ENUM(name="requesttype", create_type=False), nullable=True),
+        sa.Column("request_type", request_type, nullable=True),
         sa.Column("keywords", sa.String(200), nullable=True),
         sa.Column("zone_id", PGUUID(as_uuid=True),
                   sa.ForeignKey("market_zones.id", ondelete="SET NULL"), nullable=True),

@@ -34,15 +34,21 @@ REQUEST_STATUS = ("open", "fulfilled", "cancelled")
 OFFER_STATUS = ("offered", "accepted", "declined")
 
 
+# The names below are the ones SQLAlchemy derives from the Python enum classes in
+# app/modules/trade/models.py — `RequestType` → `requesttype`, and so on. They
+# are not a style choice: the ORM emits the type name it derives whenever it
+# builds DDL or casts a bind parameter, so a type created here under any other
+# name is invisible to it. This migration originally used snake_case names and
+# the deploy broke because of it (0015 repairs databases already migrated).
 def _enum(name, values):
     return PG_ENUM(*values, name=name, create_type=True)
 
 
 def upgrade() -> None:
-    request_type = _enum("request_type", REQUEST_TYPE)
-    urgency = _enum("request_urgency", URGENCY)
-    request_status = _enum("request_status", REQUEST_STATUS)
-    offer_status = _enum("offer_status", OFFER_STATUS)
+    request_type = _enum("requesttype", REQUEST_TYPE)
+    urgency = _enum("requesturgency", URGENCY)
+    request_status = _enum("requeststatus", REQUEST_STATUS)
+    offer_status = _enum("offerstatus", OFFER_STATUS)
 
     op.create_table(
         "business_requests",
@@ -93,5 +99,8 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.drop_table("request_offers")
     op.drop_table("business_requests")
-    for name in ("offer_status", "request_status", "request_urgency", "request_type"):
+    # Both spellings: a database migrated before this fix holds the snake_case
+    # names, and a downgrade must clean up after either.
+    for name in ("offerstatus", "requeststatus", "requesturgency", "requesttype",
+                 "offer_status", "request_status", "request_urgency", "request_type"):
         op.execute(f"DROP TYPE IF EXISTS {name}")
