@@ -20,7 +20,9 @@ from app.models.performance import VendorPerformance
 from app.models.collective import CollectiveSourcingRequest, CollectivePledge
 from app.models.market_locks import MarketZone, MarketMember, LockProduct, SupplierMOQ, LockWindow, LockCluster, LockPick, SupplierQuote
 from app.modules.trade.models import BusinessRequest, RequestEvent, RequestOffer, RequestType, RequestUrgency, RequestStatus, OfferStatus
+from app.modules.standing.models import BusinessClaim, ClaimEvent, ClaimMethod, ClaimStatus, StandingProfile
 from app.modules.orders.models import OrderTransaction, DeliveryQuoteRequest, DeliveryQuote, MovementEvent, OrderDispute
+from app.modules.trade.models import RequestWatch
 from app.platform.event_outbox import OutboxEvent
 from app.models.governance import (
     VendorActivityDay, GovernanceProposal, GovernanceVote, CouncilTerm, RuleVersion,
@@ -55,6 +57,8 @@ __all__ = [
     "VendorPerformance", "CollectiveSourcingRequest", "CollectivePledge",
     "MarketZone", "MarketMember", "LockProduct", "SupplierMOQ", "LockWindow", "LockCluster", "LockPick", "SupplierQuote",
     "OrderTransaction", "DeliveryQuoteRequest", "DeliveryQuote", "MovementEvent", "OrderDispute",
+    "BusinessClaim", "ClaimEvent", "ClaimMethod", "ClaimStatus", "StandingProfile",
+    "RequestWatch",
     "VendorActivityDay", "GovernanceProposal", "GovernanceVote", "CouncilTerm", "RuleVersion",
     "BiasharaScoreEvent", "GovernanceAuditEvent", "DualApprovalRequest", "RevenueEvent",
     "AllocationPolicy", "BenefitPeriod", "NetworkBenefitEvent", "VendorBenefitAllocation",

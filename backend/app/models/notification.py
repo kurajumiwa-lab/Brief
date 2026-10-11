@@ -58,6 +58,12 @@ class NotificationType(str, PyEnum):
     PAYMENT_UPDATE = "payment_update"        # Payment, settlement, dispute or custody event
     DELIVERY_QUOTE_REQUEST = "delivery_quote_request"  # A customer needs a real delivery quote
     CHAMA_UPDATE = "chama_update"            # Chama deposit, loan vote, disbursement, dividend
+    # Standing & the passport (v2.11)
+    CLAIM_VERIFIED = "claim_verified"        # A verifier checked a document of yours
+    CLAIM_REJECTED = "claim_rejected"        # A document didn't pass — with the reason
+    CLAIM_EXPIRING = "claim_expiring"        # Renew soon: 30/14/7 days before expiry
+    CLAIM_VERIFICATION_REQUESTED = "claim_verification_requested"  # Verifier desk queue
+    OPPORTUNITY_MATCH = "opportunity_match"  # A posted request matches a standing watch
     SYSTEM = "system"                        # Platform announcements
 
 

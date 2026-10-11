@@ -14,6 +14,8 @@ from app.database import async_session, engine, init_db
 from app.middleware.metrics import MetricsMiddleware
 from app.middleware.rate_limiter import RateLimitMiddleware, configure_backend
 from app.middleware.vendor_only import VendorOnlyMiddleware
+from app.modules.standing import router as passport_routes
+from app.modules.standing import sweep as standing_sweep
 from app.modules.trade import router as requests_routes
 from app.modules.orders.router import router as orders_routes
 from app.platform import event_outbox
@@ -97,11 +99,13 @@ async def lifespan(app: FastAPI):
     payments_scheduler = None
     open_data = None
     outbox_task = None
+    standing_task = None
     if settings.RUN_SCHEDULER:
         scheduler = asyncio.create_task(pos_sync.scheduler_loop(async_session, settings.POS_SYNC_INTERVAL))
         payments_scheduler = asyncio.create_task(payment_worker.scheduler_loop(async_session))
         open_data = asyncio.create_task(geo_data.open_data_loop(async_session))
         outbox_task = asyncio.create_task(event_outbox.scheduler_loop(async_session))
+        standing_task = asyncio.create_task(standing_sweep.scheduler_loop(async_session))
     else:
         log.info("scheduler disabled here (RUN_SCHEDULER=false) — run `python -m app.worker` once")
     log.info("🏪 Brief_ Vendor Network v%s initialized", settings.VERSION)
@@ -109,7 +113,7 @@ async def lifespan(app: FastAPI):
     try:
         yield
     finally:
-        for task in (scheduler, payments_scheduler, open_data, outbox_task):
+        for task in (scheduler, payments_scheduler, open_data, outbox_task, standing_task):
             if task:
                 task.cancel()
                 try:
@@ -164,6 +168,8 @@ app.include_router(squad_routes.router, prefix="/api/squad", tags=["Hustle Leagu
 app.include_router(markets_routes.router, prefix="/api/markets", tags=["Markets"])
 app.include_router(surface_routes.router, prefix="/api/surface", tags=["Surface"])
 app.include_router(requests_routes, prefix="/api/requests", tags=["Business Requests"])
+# v2.11 — verified standing, the passport, renewal reminders and the verifier desk
+app.include_router(passport_routes.router, prefix="/api/passport", tags=["Business Passport"])
 app.include_router(orders_routes, prefix="/api/orders", tags=["Order Transactions"])
 # v2.7 — the marketplace map: viewport queries, server-side clustering, lazy details
 app.include_router(map_routes.router, prefix="/api/map", tags=["Map"])
@@ -205,6 +211,7 @@ async def api_root():
             "events": "/api/events",
             "pos_bridge": "/api/pos",
             "notifications": "/api/notifications",
+            "passport": "/api/passport",
             "files": "/api/files",
             "collective": "/api/collective",
             "market_locks": "/api/locks",

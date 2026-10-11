@@ -29,6 +29,7 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     Column,
     DateTime,
@@ -108,6 +109,12 @@ class BusinessRequest(Base):
 
     needed_by = Column(Enum(RequestUrgency, values_callable=_enum_values), nullable=False, default=RequestUrgency.FLEXIBLE)
     budget_kes = Column(Integer, nullable=True)   # optional; "open to quotes" is a real answer
+    # What the buyer asks a supplier to evidence (v2.11): a list of
+    # {"key": <claim key or "stated">, "label": <words for a stated ask>,
+    # "must_have": bool}. Claim-keyed requirements are checked against the
+    # supplier's verified facts, and the answer says exactly what is missing —
+    # "8 of 10, two still need confirmation" — never a silent ranking.
+    requirements = Column(JSONB, nullable=False, server_default=sa_text("'[]'::jsonb"), default=list)
 
     status = Column(Enum(RequestStatus, values_callable=_enum_values), nullable=False, default=RequestStatus.OPEN, index=True)
     # The accepted offer, denormalised so a fulfilled request shows what closed
@@ -169,4 +176,37 @@ class RequestEvent(Base):
     actor_vendor_id = Column(UUID(as_uuid=True), nullable=True)
     offer_id = Column(UUID(as_uuid=True), nullable=True)
     payload = Column(JSONB, nullable=False, server_default=sa_text("'{}'::jsonb"), default=dict)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
+class RequestWatch(Base):
+    """A standing question about opportunities (v2.11).
+
+    "Tell me when a request looks like this." A watch is deliberately narrow:
+    a type, some words, a market and a floor on the budget — the same fields a
+    trader would say out loud ("packaging jobs around Kisumu, at least 20K").
+    Nothing is learned here and nothing is ranked: when a request is posted,
+    `service.notify_watchers` runs the readable match below and rings the bell.
+
+    Alerts are capped and the cap is a product decision: a bell that rings for
+    everything is a bell nobody reads.
+    """
+
+    __tablename__ = "request_watches"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    vendor_id = Column(
+        UUID(as_uuid=True), ForeignKey("vendors.id", ondelete="CASCADE"),
+        nullable=False, index=True,
+    )
+    label = Column(String(120), nullable=True)      # the owner's name for it
+    request_type = Column(Enum(RequestType, values_callable=_enum_values), nullable=True)  # NULL = any type
+    keywords = Column(String(200), nullable=True)   # matched against description + location
+    zone_id = Column(UUID(as_uuid=True), ForeignKey("market_zones.id", ondelete="SET NULL"),
+                     nullable=True, index=True)
+    # A floor, not a ceiling: "don't wake me for a 2,000-shilling job".
+    # A request with no stated budget still alerts, and the bell says so.
+    min_budget_kes = Column(Integer, nullable=True)
+    is_active = Column(Boolean, nullable=False, default=True, server_default=sa_text("true"))
+    last_notified_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)

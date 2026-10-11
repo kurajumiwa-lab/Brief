@@ -4,7 +4,7 @@ import {
 } from "lucide-react";
 import Button from "@/components/ui/Button";
 import Spinner from "@/components/ui/Spinner";
-import { requestsAPI, apiError } from "@/lib/api";
+import { passportAPI, requestsAPI, apiError } from "@/lib/api";
 import { useAuthStore } from "@/stores/authStore";
 import { toast } from "@/components/ui/Toast";
 import { cn } from "@/lib/utils";
@@ -42,6 +42,10 @@ export default function RequestComposer({ open, onClose, defaultType = "stock", 
   const [location, setLocation] = useState("");
   const [neededBy, setNeededBy] = useState("flexible");
   const [budget, setBudget] = useState("");
+  const [catalog, setCatalog] = useState(null);
+  const [requirements, setRequirements] = useState([]);
+  const [pick, setPick] = useState("");
+  const [stated, setStated] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -56,13 +60,43 @@ export default function RequestComposer({ open, onClose, defaultType = "stock", 
     setLocation(vendor?.physical_location || "");
     setNeededBy("flexible");
     setBudget("");
+    setRequirements([]);
+    setPick("");
+    setStated("");
     setError("");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
+  useEffect(() => {
+    if (!open || catalog) return;
+    passportAPI.catalog().then((r) => setCatalog(r.data)).catch(() => {});
+  }, [open, catalog]);
+
   if (!open) return null;
 
   const example = REQUEST_TYPES.find((t) => t.value === requestType)?.example;
+
+  const addClaimRequirement = () => {
+    if (!pick) return;
+    const spec = (catalog?.claims || []).find((c) => c.key === pick);
+    if (!spec) return;
+    setRequirements((prev) =>
+      prev.some((r) => r.key === pick)
+        ? prev
+        : [...prev, { key: spec.key, label: spec.label, must_have: true }]);
+    setPick("");
+  };
+
+  const addStatedRequirement = () => {
+    const words = stated.trim();
+    if (words.length < 3) return;
+    setRequirements((prev) => [...prev.filter((r) => r.key !== "stated"),
+                                 { key: "stated", label: words.slice(0, 160), must_have: false }]);
+    setStated("");
+  };
+
+  const toggleMust = (key) =>
+    setRequirements((prev) => prev.map((r) => (r.key === key ? { ...r, must_have: !r.must_have } : r)));
 
   const submit = async (e) => {
     e?.preventDefault();
@@ -75,6 +109,9 @@ export default function RequestComposer({ open, onClose, defaultType = "stock", 
         location,
         needed_by: neededBy,
         budget_kes: budget ? Number(budget.replace(/[^\d]/g, "")) || null : null,
+        requirements: requirements.map((r) => ({
+          key: r.key, label: r.key === "stated" ? r.label : undefined, must_have: r.must_have,
+        })),
       });
       toast.success("Request posted — nearby businesses can respond now");
       onPosted?.(data);
@@ -180,6 +217,68 @@ export default function RequestComposer({ open, onClose, defaultType = "stock", 
             className="mt-1 w-full h-10 rounded-xl border border-edge-2 bg-surface-1 px-3 text-sm text-ink-1 placeholder:text-ink-4 focus:outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15"
           />
         </label>
+
+        {/* ── ask for documents (optional) ────────────────────────────────
+            A claim requirement is checked against a supplier's verified
+            facts, so both sides can see what is met before anyone talks. A
+            stated requirement is the buyer's own words — the platform says
+            plainly that it cannot check those. */}
+        <fieldset className="rounded-xl border border-edge-2 p-3 space-y-2">
+          <legend className="text-xs font-semibold text-ink-2 px-1">Ask for documents (optional)</legend>
+          <p className="text-2xs text-ink-4">
+            Suppliers see how they measure up: "you meet 3 of 4; one still needs confirmation".
+          </p>
+
+          {requirements.length > 0 && (
+            <ul className="space-y-1">
+              {requirements.map((r) => (
+                <li key={r.key} className="flex items-center gap-2 rounded-lg bg-surface-1 border border-edge-1 px-2.5 py-1.5">
+                  <span className="min-w-0 flex-1 truncate text-2xs text-ink-1">
+                    {r.label}
+                    {r.key === "stated" && <span className="text-ink-4"> · your words, unchecked</span>}
+                  </span>
+                  {r.key !== "stated" && (
+                    <label className="inline-flex items-center gap-1 text-2xs text-ink-3 cursor-pointer">
+                      <input type="checkbox" checked={r.must_have} onChange={() => toggleMust(r.key)}
+                             className="accent-brand-600" />
+                      required
+                    </label>
+                  )}
+                  <button type="button" aria-label={`Remove ${r.label}`}
+                          className="text-ink-4 hover:text-ink-1 cursor-pointer"
+                          onClick={() => setRequirements((prev) => prev.filter((x) => x.key !== r.key))}>
+                    <X size={12} />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <div className="flex gap-1.5">
+            <select value={pick} onChange={(e) => setPick(e.target.value)}
+                    aria-label="Add a document requirement"
+                    className="min-w-0 flex-1 h-9 rounded-lg border border-edge-2 bg-surface-1 px-2 text-2xs text-ink-1 focus:outline-none focus:border-brand-500">
+              <option value="">Choose a document…</option>
+              {(catalog?.claims || []).map((c) => (
+                <option key={c.key} value={c.key}>{c.label}</option>
+              ))}
+            </select>
+            <Button type="button" size="sm" variant="secondary" disabled={!pick} onClick={addClaimRequirement}>
+              Add
+            </Button>
+          </div>
+
+          <div className="flex gap-1.5">
+            <input value={stated} onChange={(e) => setStated(e.target.value)} maxLength={160}
+                   placeholder="Or your own words: e.g. own transport for the last mile"
+                   aria-label="Add a requirement in your own words"
+                   className="min-w-0 flex-1 h-9 rounded-lg border border-edge-2 bg-surface-1 px-2.5 text-2xs text-ink-1 placeholder:text-ink-4 focus:outline-none focus:border-brand-500" />
+            <Button type="button" size="sm" variant="ghost" disabled={stated.trim().length < 3}
+                    onClick={addStatedRequirement}>
+              Add
+            </Button>
+          </div>
+        </fieldset>
 
         {error && (
           <p className="text-2xs text-red-600 dark:text-red-400 bg-red-500/10 rounded-xl px-3 py-2">{error}</p>

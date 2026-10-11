@@ -67,6 +67,11 @@ vi.mock("@/lib/api", () => {
       accept: vi.fn(() => Promise.resolve({ data: {} })),
       cancel: vi.fn(),
     },
+    // The composer reads the document catalog for its optional "Ask for
+    // documents" fieldset; a partial mock only needs the export to exist.
+    passportAPI: {
+      catalog: vi.fn(() => Promise.resolve({ data: { claims: [], checklists: [] } })),
+    },
     chatAPI: { rooms: vi.fn(() => Promise.resolve({ data: { rooms: [] } })) },
   };
 });

@@ -46,7 +46,7 @@ describe("Ogallo navigation map", () => {
     }
     expect(isPrimaryActive(PRIMARY_NAV[2], "/browse")).toBe(false);
     // Business keeps the workspace inventory (minus what moved to Work).
-    for (const path of ["/me", "/stock", "/analytics", "/pos", "/groups", "/lists"]) {
+    for (const path of ["/me", "/stock", "/analytics", "/pos", "/groups", "/lists", "/passport"]) {
       expect(isPrimaryActive(PRIMARY_NAV[4], path)).toBe(true);
     }
     expect(isPrimaryActive(PRIMARY_NAV[4], "/@mama_mboga", "mama_mboga")).toBe(true);

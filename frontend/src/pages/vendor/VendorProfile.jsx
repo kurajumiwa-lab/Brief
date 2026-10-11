@@ -19,6 +19,7 @@ import { SkeletonGrid } from "@/components/ui/Skeleton";
 import { PageSpinner } from "@/components/ui/Spinner";
 import { toast } from "@/components/ui/Toast";
 import { TrustRow, ReliabilityMeter, vendorLevel } from "@/components/trust/TrustSignals";
+import { VerifiedStrip } from "@/components/trust/VerifiedFacts";
 import ParasitismBadge from "@/components/vendor/ParasitismBadge";
 import ConnectionButton from "@/components/vendor/ConnectionButton";
 import StockCard from "@/components/stock/StockCard";
@@ -26,7 +27,7 @@ import SourceDialog from "@/components/stock/SourceDialog";
 import { Check } from "@/components/forms/GroupForm";
 import { useAuthStore } from "@/stores/authStore";
 import { useChatStore } from "@/stores/chatStore";
-import { vendorAPI, stockAPI, apiError } from "@/lib/api";
+import { vendorAPI, stockAPI, passportAPI, apiError } from "@/lib/api";
 import { ROLE_BADGE, VENDOR_ROLES } from "@/config/constants";
 import { currency, num } from "@/lib/formatters";
 import { splitList } from "@/lib/utils";
@@ -57,6 +58,7 @@ export default function VendorProfile() {
   const openDirect = useChatStore((s) => s.openDirect);
 
   const [vendor, setVendor] = useState(null);
+  const [passport, setPassport] = useState(null);
   const [stock, setStock] = useState([]);
   const [profile, setProfile] = useState(null);
   const [perf, setPerf] = useState(null);
@@ -82,6 +84,11 @@ export default function VendorProfile() {
         if (!alive) return;
         setVendor(v);
         setStock(items);
+        // The passport is public: live verified facts and the owner's own
+        // headline. Evidence files and unverified rows never travel here.
+        passportAPI.of(handle)
+          .then(({ data }) => alive && setPassport(data))
+          .catch(() => {});
         vendorAPI
           .performance(handle)
           .then(({ data }) => alive && setPerf(data))
@@ -191,6 +198,11 @@ export default function VendorProfile() {
                 )}
               </div>
               <TrustRow vendor={vendor} className="mt-2.5" />
+              <VerifiedStrip
+                headline={passport?.headline}
+                facts={passport?.facts}
+                className="mt-2"
+              />
             </div>
 
             <div className="flex flex-wrap items-center gap-2 sm:pb-1">
