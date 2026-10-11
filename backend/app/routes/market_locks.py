@@ -22,6 +22,7 @@ from app.database import get_db
 from app.models.market_locks import LockCluster, LockPick, LockProduct, LockWindow, MarketZone, SupplierMOQ, SupplierQuote
 from app.models.notification import NotificationType
 from app.models.vendor import Vendor
+from app.modules.growth import rules as growth_rules
 from app.routes.auth import get_current_vendor
 from app.services.market_locks import (
     MARKET_TZ, as_utc_naive, daily_flash_times, evaluate_window, minimum_bid_quantity,
@@ -314,6 +315,10 @@ async def submit_lock_pick(
     vendor: Vendor = Depends(get_current_vendor),
     db: AsyncSession = Depends(get_db),
 ):
+    try:
+        growth_rules.require_program_active("flash-lock picks")
+    except growth_rules.GrowthRuleError as exc:
+        raise HTTPException(exc.status, str(exc))
     window = await db.get(LockWindow, window_id, with_for_update=True)
     now = datetime.utcnow()
     if not window or window.status not in ("open", "rolling"):

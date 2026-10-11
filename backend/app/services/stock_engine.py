@@ -93,6 +93,52 @@ def fulfillment_rate(vendor: Vendor) -> Optional[float]:
     return round(100.0 * done / (done + lost), 1)
 
 
+def fulfillment_mark(vendor: Vendor) -> dict:
+    """Compute the earned supplier fulfilment mark from actual completed
+    movements and fulfilment outcomes using fixed sample-size thresholds."""
+    done = int(getattr(vendor, "movements_completed", 0) or 0)
+    rate = fulfillment_rate(vendor)
+    if not done or rate is None:
+        return {
+            "key": "new",
+            "label": "New to the network",
+            "completed_movements": done,
+            "fulfillment_rate": rate,
+            "hint": "No completed movements yet — nothing to rate",
+        }
+    if rate >= 95.0 and done >= 20:
+        return {
+            "key": "top",
+            "label": "Top supplier",
+            "completed_movements": done,
+            "fulfillment_rate": rate,
+            "hint": "95%+ fulfilment across 20 or more completed movements",
+        }
+    if rate >= 85.0 and done >= 10:
+        return {
+            "key": "l2",
+            "label": "Level 2",
+            "completed_movements": done,
+            "fulfillment_rate": rate,
+            "hint": "85%+ fulfilment across 10 or more completed movements",
+        }
+    if rate >= 70.0 and done >= 3:
+        return {
+            "key": "l1",
+            "label": "Level 1",
+            "completed_movements": done,
+            "fulfillment_rate": rate,
+            "hint": "70%+ fulfilment across 3 or more completed movements",
+        }
+    return {
+        "key": "rising",
+        "label": "Getting started",
+        "completed_movements": done,
+        "fulfillment_rate": rate,
+        "hint": "Trading, but not enough completed movements to rate yet",
+    }
+
+
 # --- sourcing -----------------------------------------------------------------------
 
 async def request_sourcing(
@@ -434,7 +480,18 @@ async def expire_stale_holds(db: AsyncSession) -> int:
 
 
 async def _settle_receipt(db: AsyncSession, movement: StockMovement, item: StockItem) -> None:
-    """Debit the supplier, credit the buyer, score the pair."""
+    """Debit the supplier, credit the buyer, score the pair.
+
+    Idempotent: if this movement has already been settled (`completed_at` set or
+    its reservation already marked `fulfilled`), retrying is a safe no-op so
+    inventory can never be debited or credited twice.
+    """
+    already_fulfilled = (await db.execute(select(StockReservation.id).where(
+        StockReservation.movement_id == movement.id, StockReservation.status == "fulfilled",
+    ).limit(1))).scalar_one_or_none()
+    if movement.completed_at is not None or already_fulfilled is not None:
+        return
+
     qty = movement.quantity
     previous_qty = item.quantity_in_stock
     item.quantity_reserved = max(0, item.quantity_reserved - qty)

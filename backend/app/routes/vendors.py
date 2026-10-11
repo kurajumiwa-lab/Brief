@@ -36,9 +36,14 @@ class VendorOut(BaseModel):
     connected: bool = False
     # v2.6 halal-trade: 'halal_sharia' vendors are gated out of interest products
     finance_mode: str = "conventional"
+    # v2.12 plan & server-side entitlements
+    plan_tier: str = "starter"
+    plan_seats_limit: int = 1
+    plan_watches_limit: int = 10
     # SRM-lite (v2.1 §4.4)
     fulfillment_rate: Optional[float] = None   # % of confirmed movements delivered; None until there is a sample
     movements_completed: int = 0
+    fulfillment_mark: Optional[dict] = None
     reliability_score: Optional[float] = None  # filled where the performance row is loaded
 
 
@@ -89,8 +94,12 @@ def vendor_out(v: Vendor, connected: bool = False) -> VendorOut:
         is_verified=v.is_verified,
         connected=connected,
         finance_mode=getattr(v, "finance_mode", None) or "conventional",
+        plan_tier=getattr(v, "plan_tier", None) or "starter",
+        plan_seats_limit=int(getattr(v, "plan_seats_limit", 1) or 1),
+        plan_watches_limit=int(getattr(v, "plan_watches_limit", 10) or 10),
         fulfillment_rate=stock_engine.fulfillment_rate(v),
         movements_completed=int(getattr(v, "movements_completed", 0) or 0),
+        fulfillment_mark=stock_engine.fulfillment_mark(v),
     )
 
 

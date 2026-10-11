@@ -72,6 +72,10 @@ vi.mock("@/lib/api", () => {
     passportAPI: {
       catalog: vi.fn(() => Promise.resolve({ data: { claims: [], checklists: [] } })),
     },
+    growthAPI: {
+      blueprint: vi.fn(() => Promise.resolve({ data: {} })),
+      pulse: vi.fn(() => Promise.resolve({ data: {} })),
+    },
     chatAPI: { rooms: vi.fn(() => Promise.resolve({ data: { rooms: [] } })) },
   };
 });

@@ -500,6 +500,16 @@ export const analyticsAPI = {
   weights: () => api.get("/analytics/weights"),
 };
 
+// ── Growth planner, live pulse, 5-gear motions & server-side entitlements (v2.12)
+export const growthAPI = {
+  blueprint: () => api.get("/growth/blueprint"),
+  pulse: () => api.get("/growth/pulse"),
+  changePlan: (plan_tier) => api.put("/growth/plan", { plan_tier }),
+  seats: () => api.get("/growth/seats"),
+  addSeat: (body) => api.post("/growth/seats", body),
+  removeSeat: (id) => api.delete(`/growth/seats/${id}`),
+};
+
 // ── Ops / monitoring (v2.2) ────────────────────────────────────────────────
 export const opsAPI = {
   status: () => api.get("/ops/status"),

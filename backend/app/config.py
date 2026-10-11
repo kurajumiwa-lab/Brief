@@ -58,6 +58,13 @@ class Settings(BaseSettings):
     VERSION: str = "2.2.0"
     DESCRIPTION: str = "No consumers. Only vendors."
     DEBUG: bool = False
+    ENVIRONMENT: str = "development"
+
+    # Six-month rollout & motion window (v2.12). When disabled or past its end
+    # date, new experimental motion launches are refused while all existing
+    # transactions, audit logs, outstanding obligations and records remain open.
+    SIX_MONTH_PROGRAM_ENABLED: bool = True
+    SIX_MONTH_PROGRAM_END_DATE: str = "2027-04-12"
 
     # Database — Postgres only. Either shape is accepted; both derived URLs are
     # normalised in the validators below.
@@ -270,6 +277,10 @@ class Settings(BaseSettings):
     @property
     def allowed_pos_systems(self) -> List[str]:
         return self._split(self.ALLOWED_POS_SYSTEMS)
+
+    @property
+    def is_production(self) -> bool:
+        return (self.ENVIRONMENT or "").strip().lower() in ("production", "prod")
 
     @property
     def verifier_handles(self) -> List[str]:

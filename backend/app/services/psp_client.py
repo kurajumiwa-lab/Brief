@@ -413,8 +413,10 @@ _provider: Optional[PSPClient] = None
 
 def get_psp_client() -> PSPClient:
     global _provider
-    if _provider is None:
-        provider = (settings.PSP_PROVIDER or "mock").strip().lower()
+    provider = (settings.PSP_PROVIDER or "mock").strip().lower()
+    if settings.is_production and provider == "mock":
+        raise PSPError("Simulated/mock payments are forbidden in production; configure a licensed PSP")
+    if _provider is None or (settings.is_production and isinstance(_provider, MockPSPClient)):
         if provider == "mock":
             _provider = MockPSPClient()
         elif provider == "intasend":
@@ -425,7 +427,9 @@ def get_psp_client() -> PSPClient:
 
 
 def mock_psp() -> MockPSPClient:
-    """Test/dev handle for the mock provider (raises if a real one is set)."""
+    """Test/dev handle for the mock provider (raises if a real one is set or in production)."""
+    if settings.is_production:
+        raise PSPError("Simulated/mock payments are forbidden in production")
     client = get_psp_client()
     if not isinstance(client, MockPSPClient):
         raise PSPError("mock_psp() requires PSP_PROVIDER=mock")

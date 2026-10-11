@@ -105,7 +105,7 @@ async def list_watches(
 ):
     return {
         "watches": [service.watch_out(w) for w in await service.list_watches(db, vendor)],
-        "limit": service.MAX_WATCHES,
+        "limit": service.watch_limit_for(vendor),
     }
 
 
