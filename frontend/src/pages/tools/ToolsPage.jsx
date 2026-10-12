@@ -1,5 +1,9 @@
 import { useEffect, useState } from "react";
-import { Plus, Wrench, Truck, MapPin, Star, CalendarCheck, CalendarDays, Power, Warehouse, Package, Store, Hotel, Box, Snowflake, Route } from "lucide-react";
+import { Link, useSearchParams } from "react-router-dom";
+import {
+  Plus, Wrench, Truck, MapPin, Star, CalendarCheck, CalendarDays, Power, Warehouse,
+  Package, Store, Hotel, Box, Snowflake, Route, Info, ShieldCheck, Layers,
+} from "lucide-react";
 import Tabs from "@/components/ui/Tabs";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
@@ -8,18 +12,18 @@ import Modal from "@/components/ui/Modal";
 import Input from "@/components/ui/Input";
 import SearchInput from "@/components/ui/SearchInput";
 import EmptyState from "@/components/ui/EmptyState";
+import Avatar from "@/components/ui/Avatar";
 import { PageSpinner } from "@/components/ui/Spinner";
 import { toast } from "@/components/ui/Toast";
 import ToolForm, { CourierForm } from "@/components/forms/ToolForm";
 import ShipmentPanel, { BookShipmentModal } from "@/components/tools/ShipmentPanel";
 import RoutePlanner from "@/components/tools/RoutePlanner";
 import BookingPanel from "@/components/tools/BookingPanel";
-import { useSearchParams } from "react-router-dom";
 import { useToolStore } from "@/stores/toolStore";
 import { useAuthStore } from "@/stores/authStore";
 import { TOOL_CATEGORIES, PRICE_UNITS } from "@/config/constants";
 import { apiError, toolAPI } from "@/lib/api";
-import { currency, num } from "@/lib/formatters";
+import { currency, dayLabel, num } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 
 const TABS = [
@@ -35,6 +39,19 @@ const ICONS = { Warehouse, Truck, Package, Store, Hotel, Wrench, Box, Snowflake 
 
 const unitLabel = (u) => PRICE_UNITS.find((p) => p.value === u)?.label || (u ? `/ ${u.replace("per_", "")}` : "");
 
+function formatCapacity(capacity, details) {
+  if (!capacity && !details) return null;
+  if (capacity?.value != null) return `${num(capacity.value)} ${capacity.unit || "units"}`;
+  if (capacity?.sqm != null) return `${num(capacity.sqm)} sqm${capacity.pallets ? ` · ${num(capacity.pallets)} pallets` : ""}`;
+  if (details?.max_weight_kg != null) return `Up to ${num(details.max_weight_kg)} kg`;
+  if (details?.shared_spaces_available != null) return `${num(details.shared_spaces_available)} shared spaces`;
+  const entries = Object.entries(capacity || {}).filter(([, v]) => v != null && v !== "");
+  if (entries.length > 0) {
+    return entries.map(([k, v]) => `${v} ${k}`).join(" · ");
+  }
+  return null;
+}
+
 export default function ToolsPage() {
   const [params, setParams] = useSearchParams();
   const tab = TABS.some((t) => t.value === params.get("tab")) ? params.get("tab") : "browse";
@@ -43,7 +60,7 @@ export default function ToolsPage() {
   const [search, setSearch] = useState(() => params.get("search") || "");
   useEffect(() => {
     const query = params.get("search") || "";
-    setSearch((current) => current === query ? current : query);
+    setSearch((current) => (current === query ? current : query));
   }, [params]);
   const updateSearch = (value) => {
     setSearch(value);
@@ -56,6 +73,7 @@ export default function ToolsPage() {
   const [listing, setListing] = useState(false);
   const [courier, setCourier] = useState(false);
   const [booking, setBooking] = useState(null);
+  const [inspecting, setInspecting] = useState(null);
   const [shipping, setShipping] = useState(null); // courier being booked for a parcel
   const [courierOpen, setCourierOpen] = useState(false);
   const me = useAuthStore((s) => s.vendor);
@@ -73,8 +91,10 @@ export default function ToolsPage() {
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h2 className="text-xl font-semibold text-ink-1 tracking-tight">Vendor Tools</h2>
-          <p className="text-xs text-ink-4">Shared infrastructure between vendors — warehouse space, transport, couriers, popup shops, hotel sourcing.</p>
+          <h2 className="text-xl font-semibold text-ink-1 tracking-tight">Vendor Tools &amp; Facilities</h2>
+          <p className="text-xs text-ink-3">
+            Warehouse space, cold storage, transport, couriers, pop-up shops, and hotel sourcing across the vendor network.
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <Button size="sm" variant="secondary" icon={Truck} onClick={() => setCourier(true)}>
@@ -106,11 +126,45 @@ export default function ToolsPage() {
           {loading && tools.length === 0 ? (
             <PageSpinner />
           ) : tools.length === 0 ? (
-            <EmptyState icon={Wrench} title="No tools listed here yet" description="Have a spare store, a lorry that runs empty on Tuesdays, or a hotel that needs a supplier? List it." action={<Button size="sm" icon={Plus} onClick={() => setListing(true)}>List a tool</Button>} />
+            <EmptyState
+              icon={Warehouse}
+              illustration={search || category ? "search" : "warehouse"}
+              title={search || category ? "No facilities match your filter" : "No tools or warehouse spaces listed yet"}
+              description={
+                search || category
+                  ? "Clear the category or search term to view all available warehouse bays, cold rooms, and equipment."
+                  : "Have a spare store, cold room, lorry, or pop-up stall? List it so nearby businesses can book capacity."
+              }
+              action={
+                search || category ? (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => {
+                      setCategory("");
+                      updateSearch("");
+                    }}
+                  >
+                    Clear filters
+                  </Button>
+                ) : (
+                  <Button size="sm" icon={Plus} onClick={() => setListing(true)}>
+                    List a tool
+                  </Button>
+                )
+              }
+            />
           ) : (
-            <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-3">
+            <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
               {tools.map((t) => (
-                <ToolCard key={t.id} tool={t} mine={t.vendor_handle === me?.vendor_handle} onBook={setBooking} onToggle={toggle} />
+                <ToolCard
+                  key={t.id}
+                  tool={t}
+                  mine={t.vendor_handle === me?.vendor_handle}
+                  onBook={setBooking}
+                  onDetails={setInspecting}
+                  onToggle={toggle}
+                />
               ))}
             </div>
           )}
@@ -121,15 +175,27 @@ export default function ToolsPage() {
         <>
           <Input value={area} onChange={(e) => setArea(e.target.value)} placeholder="Coverage area, e.g. Eastlands" wrapperClassName="sm:w-72" />
           {couriers.length === 0 ? (
-            <EmptyState icon={Truck} title="No couriers registered" description="Boda riders and delivery fleets register here so vendors can route movements through them." action={<Button size="sm" onClick={() => setCourier(true)}>Register as a courier</Button>} />
+            <EmptyState
+              icon={Truck}
+              illustration="warehouse"
+              title="No couriers registered"
+              description="Boda riders and delivery fleets register here so vendors can route movements through them."
+              action={<Button size="sm" onClick={() => setCourier(true)}>Register as a courier</Button>}
+            />
           ) : (
-            <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-3">
+            <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
               {couriers.map((c) => (
-                <Card key={c.id} className="flex flex-col gap-2">
+                <Card key={c.id} className="flex flex-col gap-3">
                   <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <h3 className="text-sm font-semibold text-ink-1 truncate">{c.courier_name}</h3>
-                      <p className="text-2xs text-ink-4 font-mono">@{c.vendor_handle}{c.registration_number ? ` · ${c.registration_number}` : ""}</p>
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <Avatar name={c.courier_name} size="sm" />
+                      <div className="min-w-0">
+                        <h3 className="text-sm font-semibold text-ink-1 truncate">{c.courier_name}</h3>
+                        <p className="text-2xs text-ink-4 font-mono truncate">
+                          @{c.vendor_handle}
+                          {c.registration_number ? ` · ${c.registration_number}` : ""}
+                        </p>
+                      </div>
                     </div>
                     {c.is_verified && (
                       <Badge variant="brand" size="xs">
@@ -149,9 +215,12 @@ export default function ToolsPage() {
                       </Badge>
                     ))}
                   </div>
-                  <div className="mt-auto flex items-center justify-between text-xs text-ink-4 font-mono pt-1">
-                    <span>{c.price_per_kg != null ? `${currency(c.price_per_kg)}/kg` : ""}{c.base_rate != null ? ` · base ${currency(c.base_rate)}` : ""}</span>
-                    <span className="inline-flex items-center gap-1">
+                  <div className="mt-auto rounded-xl bg-surface-1 border border-edge-1 p-2.5 flex items-center justify-between text-xs font-mono">
+                    <span className="text-ink-1 font-semibold">
+                      {c.price_per_kg != null ? `${currency(c.price_per_kg)}/kg` : ""}
+                      {c.base_rate != null ? ` · base ${currency(c.base_rate)}` : ""}
+                    </span>
+                    <span className="inline-flex items-center gap-1 text-ink-3">
                       <Star size={11} className="text-accent-600 dark:text-accent-400" /> {Number(c.rating || 0).toFixed(1)} · {num(c.total_deliveries || 0)} runs
                     </span>
                   </div>
@@ -175,84 +244,320 @@ export default function ToolsPage() {
 
       {tab === "mine" &&
         (mine.length === 0 ? (
-          <EmptyState icon={Wrench} title="You haven't listed anything" description="Listings you create appear here; toggle availability when they're booked out." />
+          <EmptyState
+            icon={Wrench}
+            illustration="warehouse"
+            title="You haven't listed any facilities or tools"
+            description="Warehouse bays, cold rooms, transport vehicles, and equipment you list appear here; toggle availability anytime."
+            action={
+              <Button size="sm" icon={Plus} onClick={() => setListing(true)}>
+                List a tool
+              </Button>
+            }
+          />
         ) : (
-          <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-3">
+          <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
             {mine.map((t) => (
-              <ToolCard key={t.id} tool={t} mine onToggle={toggle} />
+              <ToolCard key={t.id} tool={t} mine onDetails={setInspecting} onToggle={toggle} />
             ))}
           </div>
         ))}
 
-      <Modal open={listing} onClose={() => setListing(false)} title="List a tool" description="Priced per unit of time, weight or space — your call.">
+      <Modal open={listing} onClose={() => setListing(false)} title="List a tool or facility" description="Priced per unit of time, weight or space — your call.">
         <ToolForm defaultCategory={category || "warehouse"} onDone={() => setListing(false)} onCancel={() => setListing(false)} />
       </Modal>
-      <Modal open={courier || courierOpen} onClose={() => { setCourier(false); setCourierOpen(false); }} title="Register a courier service" description="Also listed under Tools → Courier so vendors can find you." size="sm">
-        <CourierForm onDone={() => { setCourier(false); setCourierOpen(false); setTab("couriers"); }} onCancel={() => { setCourier(false); setCourierOpen(false); }} />
+      <Modal
+        open={courier || courierOpen}
+        onClose={() => {
+          setCourier(false);
+          setCourierOpen(false);
+        }}
+        title="Register a courier service"
+        description="Also listed under Tools → Couriers so vendors can find you."
+        size="sm"
+      >
+        <CourierForm
+          onDone={() => {
+            setCourier(false);
+            setCourierOpen(false);
+            setTab("couriers");
+          }}
+          onCancel={() => {
+            setCourier(false);
+            setCourierOpen(false);
+          }}
+        />
       </Modal>
       <BookingModal tool={booking} onClose={() => setBooking(null)} />
+      <FacilityDetailsModal
+        tool={inspecting}
+        mine={inspecting?.vendor_handle === me?.vendor_handle}
+        onClose={() => setInspecting(null)}
+        onBook={(t) => {
+          setInspecting(null);
+          setBooking(t);
+        }}
+      />
       <BookShipmentModal courier={shipping} open={!!shipping} onClose={() => setShipping(null)} onDone={() => setTab("shipments")} />
     </div>
   );
 }
 
-function ToolCard({ tool: t, mine, onBook, onToggle }) {
+/**
+ * Amazon-style Warehouse & Facility Rental Card:
+ * Shows facility imagery/visual header, location, available capacity, rental
+ * rate and billing period, relevant facility features, availability status,
+ * and viewing (`Details`) or booking-request (`Book`) action.
+ */
+function ToolCard({ tool: t, mine, onBook, onDetails, onToggle }) {
   const cat = TOOL_CATEGORIES.find((c) => c.value === t.category);
-  const Icon = (cat && ICONS[cat.icon]) || Wrench;
+  const Icon = (cat && ICONS[cat.icon]) || Warehouse;
   const bookable = ["warehouse", "cold_storage", "popup_shop", "hotel_sourcing"].includes(t.category);
+  const capText = formatCapacity(t.capacity, t.details);
+  const imageSrc = t.images?.[0];
+
   return (
-    <Card className={cn("flex flex-col gap-3", !t.is_available && "opacity-70")}>
-      <div className="flex items-start gap-3">
-        <div className="w-9 h-9 rounded-lg bg-surface-3 border border-edge-1 flex items-center justify-center text-brand-600 dark:text-brand-400 shrink-0">
-          <Icon size={16} />
+    <article
+      className={cn(
+        "flex flex-col bg-surface-0 border border-edge-1 rounded-2xl overflow-hidden shadow-xs glass-hover h-full",
+        !t.is_available && "opacity-75"
+      )}
+    >
+      {/* ── Facility Visual Header ────────────────────────────────────── */}
+      <div className="relative aspect-[16/9] bg-surface-2 border-b border-edge-1 overflow-hidden">
+        {imageSrc ? (
+          <img src={imageSrc} alt={t.title} className="w-full h-full object-cover" loading="lazy" />
+        ) : (
+          <div className="w-full h-full flex flex-col items-center justify-center p-4 bg-brand-50 dark:bg-surface-2 text-brand-700 dark:text-brand-300">
+            <div className="w-12 h-12 rounded-2xl bg-surface-0 border border-edge-1 shadow-2xs flex items-center justify-center mb-1.5">
+              <Icon size={22} />
+            </div>
+            <span className="text-micro font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-surface-0 border border-edge-1 text-ink-2">
+              {cat?.label || t.category}
+            </span>
+          </div>
+        )}
+        <div className="absolute top-2.5 left-2.5 flex flex-wrap gap-1">
+          {t.is_available !== false ? (
+            <Badge variant="brand" size="xs">
+              Available now
+            </Badge>
+          ) : (
+            <Badge variant="gray" size="xs">
+              unavailable
+            </Badge>
+          )}
         </div>
-        <div className="min-w-0 flex-1">
-          <h3 className="text-sm font-semibold text-ink-1 truncate">{t.title}</h3>
-          <p className="text-2xs text-ink-4 truncate">
-            {cat?.label} · <span className="text-ink-3">{t.vendor_business}</span> <span className="font-mono">@{t.vendor_handle}</span>
+        {t.location && (
+          <div className="absolute bottom-2 left-2.5 right-2.5 flex items-center justify-between gap-1">
+            <span className="inline-flex items-center gap-1 rounded-lg bg-surface-0 border border-edge-1 px-2 py-0.5 text-micro font-semibold text-ink-1 shadow-2xs truncate">
+              <MapPin size={10} className="text-brand-600 shrink-0" /> {t.location}
+            </span>
+            {t.avg_rating > 0 && (
+              <span className="inline-flex items-center gap-1 rounded-lg bg-surface-0 border border-edge-1 px-2 py-0.5 text-micro font-semibold text-ink-1 shadow-2xs shrink-0">
+                <Star size={10} className="text-accent-600" /> {Number(t.avg_rating).toFixed(1)}
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* ── Body ──────────────────────────────────────────────────────── */}
+      <div className="flex flex-col flex-1 p-4 gap-3">
+        <div className="min-w-0">
+          <h3 className="text-sm font-semibold text-ink-1 leading-snug line-clamp-2">{t.title}</h3>
+          <p className="text-2xs text-ink-4 truncate mt-0.5">
+            {cat?.label || t.category} · <span className="text-ink-2 font-medium">{t.vendor_business}</span>{" "}
+            <Link to={`/@${t.vendor_handle}`} className="font-mono hover:underline">
+              @{t.vendor_handle}
+            </Link>
           </p>
         </div>
-        {!t.is_available && (
-          <Badge variant="gray" size="xs">
-            unavailable
-          </Badge>
+
+        {/* Relevant facility highlights */}
+        {((t.features && t.features.length > 0) || t.details?.vehicle_type) && (
+          <div className="flex flex-wrap gap-1">
+            {t.details?.vehicle_type && (
+              <Badge variant="blue" size="xs">
+                {t.details.vehicle_type}
+              </Badge>
+            )}
+            {(t.features || []).slice(0, 3).map((f) => (
+              <Badge key={f} variant="gray" size="xs">
+                {f}
+              </Badge>
+            ))}
+            {(t.features || []).length > 3 && (
+              <Badge variant="outline" size="xs">
+                +{t.features.length - 3} more
+              </Badge>
+            )}
+          </div>
         )}
-      </div>
-      {t.description && <p className="text-xs text-ink-3 line-clamp-2">{t.description}</p>}
-      <div className="flex flex-wrap gap-1">
-        {t.location && (
-          <Badge variant="outline" size="xs">
-            <MapPin size={9} /> {t.location}
-          </Badge>
-        )}
-        {t.capacity?.value != null && (
-          <Badge variant="outline" size="xs">
-            {num(t.capacity.value)} {t.capacity.unit}
-          </Badge>
-        )}
-        {(t.features || []).slice(0, 3).map((f) => (
-          <Badge key={f} variant="gray" size="xs">
-            {f}
-          </Badge>
-        ))}
-      </div>
-      <div className="mt-auto flex items-center justify-between gap-2 pt-1">
-        <div className="text-xs">
-          <span className="font-mono text-ink-1">{t.price_per_unit != null ? currency(t.price_per_unit) : "ask"}</span>
-          <span className="text-ink-4"> {unitLabel(t.price_unit)}</span>
-          {t.times_booked > 0 && <span className="text-2xs text-ink-4"> · {t.times_booked} booked</span>}
+
+        {/* Commercial rate + Available capacity block */}
+        <div className="mt-auto rounded-xl bg-surface-1 border border-edge-1 p-3">
+          <div className="flex items-end justify-between gap-2">
+            <div>
+              <p className="text-micro uppercase tracking-wider font-bold text-ink-4">Rental rate</p>
+              <p className="text-base font-bold text-ink-1 tabular-nums mt-0.5">
+                {t.price_per_unit != null ? currency(t.price_per_unit) : "ask"}
+                <span className="text-2xs font-normal text-ink-4"> {unitLabel(t.price_unit)}</span>
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-micro uppercase tracking-wider font-bold text-ink-4">Capacity</p>
+              <p className="text-xs font-semibold text-ink-1 tabular-nums mt-0.5">
+                {capText || "Standard unit"}
+              </p>
+            </div>
+          </div>
+          {(t.min_booking > 1 || t.deposit_required > 0 || t.times_booked > 0) && (
+            <div className="mt-2 pt-2 border-t border-edge-1 flex flex-wrap items-center justify-between gap-2 text-micro text-ink-4">
+              {t.min_booking > 1 && <span>Min booking: {t.min_booking}</span>}
+              {t.deposit_required > 0 && <span>Deposit: {currency(t.deposit_required)}</span>}
+              {t.times_booked > 0 && <span>{t.times_booked} booked</span>}
+            </div>
+          )}
         </div>
-        {mine ? (
-          <Button size="xs" variant={t.is_available ? "ghost" : "secondary"} icon={Power} onClick={() => onToggle(t)}>
-            {t.is_available ? "Mark unavailable" : "Make available"}
-          </Button>
-        ) : bookable ? (
-          <Button size="xs" icon={CalendarCheck} onClick={() => onBook(t)} disabled={!t.is_available}>
-            Book
-          </Button>
-        ) : null}
+
+        {/* Actions: Book + Details progressive disclosure */}
+        <div className="flex items-center justify-between gap-2 pt-0.5">
+          {onDetails && (
+            <Button size="xs" variant="secondary" icon={Info} onClick={() => onDetails(t)}>
+              Details
+            </Button>
+          )}
+          <div className="flex items-center gap-1.5 ml-auto">
+            {mine ? (
+              <Button size="xs" variant={t.is_available ? "ghost" : "secondary"} icon={Power} onClick={() => onToggle(t)}>
+                {t.is_available ? "Mark unavailable" : "Make available"}
+              </Button>
+            ) : bookable ? (
+              <Button size="xs" icon={CalendarCheck} onClick={() => onBook(t)} disabled={!t.is_available}>
+                Book
+              </Button>
+            ) : null}
+          </div>
+        </div>
       </div>
-    </Card>
+    </article>
+  );
+}
+
+function FacilityDetailsModal({ tool, mine, onClose, onBook }) {
+  const [calendar, setCalendar] = useState(null);
+  const bookable = tool && ["warehouse", "cold_storage", "popup_shop", "hotel_sourcing"].includes(tool.category);
+
+  useEffect(() => {
+    if (!tool || !bookable || !toolAPI?.calendar) {
+      setCalendar(null);
+      return;
+    }
+    let alive = true;
+    toolAPI
+      .calendar(tool.id, { days: 7 })
+      .then(({ data }) => alive && setCalendar(data))
+      .catch(() => alive && setCalendar(null));
+    return () => {
+      alive = false;
+    };
+  }, [tool, bookable]);
+
+  if (!tool) return null;
+  const cat = TOOL_CATEGORIES.find((c) => c.value === tool.category);
+  const capText = formatCapacity(tool.capacity, tool.details);
+
+  return (
+    <Modal
+      open={!!tool}
+      onClose={onClose}
+      title={tool.title}
+      description={`${cat?.label || tool.category} · Hosted by ${tool.vendor_business || `@${tool.vendor_handle}`}`}
+      size="md"
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose}>
+            Close
+          </Button>
+          {!mine && bookable && (
+            <Button icon={CalendarCheck} disabled={!tool.is_available} onClick={() => onBook?.(tool)}>
+              Request booking
+            </Button>
+          )}
+        </>
+      }
+    >
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+          <div className="rounded-xl border border-edge-1 bg-surface-1 p-3">
+            <span className="text-micro uppercase tracking-wider font-bold text-ink-4">Rate</span>
+            <p className="text-sm font-bold text-ink-1 mt-0.5">
+              {tool.price_per_unit != null ? currency(tool.price_per_unit) : "Ask host"}{" "}
+              <span className="text-2xs font-normal text-ink-4">{unitLabel(tool.price_unit)}</span>
+            </p>
+          </div>
+          <div className="rounded-xl border border-edge-1 bg-surface-1 p-3">
+            <span className="text-micro uppercase tracking-wider font-bold text-ink-4">Capacity</span>
+            <p className="text-sm font-bold text-ink-1 mt-0.5">{capText || "Standard"}</p>
+          </div>
+          <div className="rounded-xl border border-edge-1 bg-surface-1 p-3 col-span-2 sm:col-span-1">
+            <span className="text-micro uppercase tracking-wider font-bold text-ink-4">Location</span>
+            <p className="text-sm font-bold text-ink-1 mt-0.5 truncate">{tool.location || "Contact host"}</p>
+          </div>
+        </div>
+
+        {tool.description && (
+          <div>
+            <h4 className="text-xs font-semibold text-ink-1 mb-1">Facility overview</h4>
+            <p className="text-xs text-ink-2 leading-relaxed">{tool.description}</p>
+          </div>
+        )}
+
+        {tool.features?.length > 0 && (
+          <div>
+            <h4 className="text-xs font-semibold text-ink-1 mb-1.5">Facilities &amp; equipment</h4>
+            <div className="flex flex-wrap gap-1.5">
+              {tool.features.map((f) => (
+                <Badge key={f} variant="gray" size="xs">
+                  {f}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {calendar?.days?.length > 0 && (
+          <div>
+            <h4 className="text-xs font-semibold text-ink-1 mb-1.5">Next 7 days availability</h4>
+            <div className="grid grid-cols-7 gap-1.5">
+              {calendar.days.slice(0, 7).map((d) => (
+                <div
+                  key={d.date}
+                  className={cn(
+                    "rounded-lg border p-2 text-center",
+                    d.full
+                      ? "border-red-200 bg-red-50 text-red-700 dark:bg-surface-2 dark:text-red-300"
+                      : "border-edge-1 bg-surface-1 text-ink-1"
+                  )}
+                >
+                  <p className="text-micro text-ink-4">{dayLabel(d.date)}</p>
+                  <p className="text-xs font-bold font-mono mt-0.5">{d.free}</p>
+                  <p className="text-[10px] text-ink-4">free</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {tool.terms && (
+          <div className="rounded-xl border border-edge-1 bg-surface-1 p-3">
+            <h4 className="text-xs font-semibold text-ink-1 mb-1">Booking &amp; commercial terms</h4>
+            <p className="text-2xs text-ink-3 leading-relaxed">{tool.terms}</p>
+          </div>
+        )}
+      </div>
+    </Modal>
   );
 }
 
@@ -313,7 +618,11 @@ function BookingModal({ tool, onClose }) {
       open={!!tool}
       onClose={onClose}
       title={tool ? `Book ${tool.title}` : ""}
-      description={tool ? `${tool.vendor_business} · ${tool.price_per_unit != null ? currency(tool.price_per_unit) : "price on request"} ${unitLabel(tool.price_unit)}` : ""}
+      description={
+        tool
+          ? `${tool.vendor_business} · ${tool.price_per_unit != null ? currency(tool.price_per_unit) : "price on request"} ${unitLabel(tool.price_unit)}`
+          : ""
+      }
       size="sm"
     >
       {tool && (
@@ -331,7 +640,11 @@ function BookingModal({ tool, onClose }) {
                   title={`${d.committed} of ${d.capacity} ${calendar.unit} committed`}
                   className={cn(
                     "shrink-0 rounded-md border px-2 py-1 text-2xs font-mono",
-                    d.full ? "border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-500/15 text-red-600 dark:text-red-400" : d.committed > 0 ? "border-accent-200 dark:border-accent-800 bg-accent-50 dark:bg-accent-500/15 text-accent-600 dark:text-accent-400" : "border-edge-1 bg-surface-1 text-ink-4"
+                    d.full
+                      ? "border-red-200 dark:border-red-800 bg-red-50 dark:bg-surface-2 text-red-600 dark:text-red-400"
+                      : d.committed > 0
+                      ? "border-accent-200 dark:border-accent-800 bg-accent-50 dark:bg-surface-2 text-accent-600 dark:text-accent-400"
+                      : "border-edge-1 bg-surface-1 text-ink-4"
                   )}
                 >
                   {d.date.slice(8)} · {d.free} free
@@ -365,7 +678,15 @@ function BookingModal({ tool, onClose }) {
 function Chip({ active, onClick, icon, children }) {
   const Icon = icon ? ICONS[icon] : null;
   return (
-    <button onClick={onClick} className={cn("shrink-0 inline-flex items-center gap-1 rounded-full border px-2.5 h-7 text-xs transition-colors", active ? "border-brand-200 dark:border-brand-800 bg-brand-50 dark:bg-brand-500/15 text-brand-600 dark:text-brand-400" : "border-edge-1 bg-surface-1 text-ink-3 hover:border-edge-2 hover:text-ink-1")}>
+    <button
+      onClick={onClick}
+      className={cn(
+        "shrink-0 inline-flex items-center gap-1 rounded-full border px-2.5 h-7 text-xs transition-colors",
+        active
+          ? "border-brand-600 bg-brand-50 dark:bg-surface-2 text-brand-700 dark:text-brand-300 font-semibold"
+          : "border-edge-1 bg-surface-0 text-ink-3 hover:border-edge-2 hover:text-ink-1"
+      )}
+    >
       {Icon && <Icon size={11} />}
       {children}
     </button>

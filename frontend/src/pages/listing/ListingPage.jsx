@@ -273,7 +273,7 @@ export default function ListingPage() {
               </div>
             </div>
             {alternatives.length === 0 ? (
-              <p className="text-xs text-ink-4 rounded-2xl border border-dashed border-edge-1 bg-surface-1 p-5">
+              <p className="text-xs text-ink-4 rounded-2xl border border-edge-1 bg-surface-1 p-5">
                 Nobody else on the network is showing this category right now. That is a gap, not an error.
               </p>
             ) : (

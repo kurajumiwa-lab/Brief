@@ -72,6 +72,8 @@ class ProfileUpdate(BaseModel):
     operating_hours: Optional[dict] = None
     logo_url: Optional[str] = None
     banner_url: Optional[str] = None
+    avatar_url: Optional[str] = None
+    chat_identity: Optional[dict] = None
 
 
 def vendor_out(v: Vendor, connected: bool = False) -> VendorOut:
@@ -124,6 +126,39 @@ async def update_profile(
     return vendor_out(vendor)
 
 
+def _extended_profile_dict(profile: VendorProfile) -> dict:
+    cap = dict(profile.supply_capacity or {})
+    chat_identity = cap.get("chat_identity") or {}
+    avatar_url = cap.get("avatar_url") or chat_identity.get("avatar_url") or None
+    return {
+        "primary_goods": profile.primary_goods or [],
+        "sourcing_interests": profile.sourcing_interests or [],
+        "supply_capacity": cap,
+        "preferred_regions": profile.preferred_regions or [],
+        "min_order_value": profile.min_order_value,
+        "accepts_bulk": profile.accepts_bulk,
+        "offers_credit": profile.offers_credit,
+        "warehouse_address": profile.warehouse_address,
+        "operating_hours": profile.operating_hours,
+        "logo_url": profile.logo_url,
+        "banner_url": profile.banner_url,
+        "avatar_url": avatar_url,
+        "chat_identity": {
+            "mode": chat_identity.get("mode", "business_logo"),
+            "scope": chat_identity.get("scope", "organization"),
+            "sender_name": chat_identity.get("sender_name", ""),
+            "sender_role": chat_identity.get("sender_role", "Owner"),
+            "avatar_url": avatar_url,
+            "logo_url": profile.logo_url or chat_identity.get("logo_url") or None,
+            "locations": chat_identity.get(
+                "locations",
+                {"conversation_list": True, "message_header": True, "messages": True},
+            ),
+            "personal_override": chat_identity.get("personal_override"),
+        },
+    }
+
+
 @router.get("/me/profile")
 async def get_my_extended_profile(
     vendor: Vendor = Depends(get_current_vendor),
@@ -135,19 +170,7 @@ async def get_my_extended_profile(
         db.add(profile)
         await db.commit()
         await db.refresh(profile)
-    return {
-        "primary_goods": profile.primary_goods or [],
-        "sourcing_interests": profile.sourcing_interests or [],
-        "supply_capacity": profile.supply_capacity or {},
-        "preferred_regions": profile.preferred_regions or [],
-        "min_order_value": profile.min_order_value,
-        "accepts_bulk": profile.accepts_bulk,
-        "offers_credit": profile.offers_credit,
-        "warehouse_address": profile.warehouse_address,
-        "operating_hours": profile.operating_hours,
-        "logo_url": profile.logo_url,
-        "banner_url": profile.banner_url,
-    }
+    return _extended_profile_dict(profile)
 
 
 @router.put("/me/profile")
@@ -160,10 +183,29 @@ async def update_extended_profile(
     if profile is None:
         profile = VendorProfile(vendor_id=vendor.id)
         db.add(profile)
-    for field, value in data.model_dump(exclude_none=True).items():
+    payload = data.model_dump(exclude_none=True)
+    avatar_url = payload.pop("avatar_url", None)
+    chat_identity = payload.pop("chat_identity", None)
+    for field, value in payload.items():
         setattr(profile, field, value)
+    if avatar_url is not None or chat_identity is not None:
+        cap = dict(profile.supply_capacity or {})
+        if avatar_url is not None:
+            cap["avatar_url"] = avatar_url
+        if chat_identity is not None:
+            merged_identity = dict(cap.get("chat_identity") or {})
+            merged_identity.update(chat_identity)
+            if avatar_url is not None:
+                merged_identity["avatar_url"] = avatar_url
+            if "logo_url" in chat_identity and chat_identity["logo_url"] is not None and "logo_url" not in payload:
+                profile.logo_url = chat_identity["logo_url"]
+            cap["chat_identity"] = merged_identity
+        profile.supply_capacity = cap
     await db.commit()
-    return {"message": "Profile updated"}
+    await db.refresh(profile)
+    out = _extended_profile_dict(profile)
+    out["message"] = "Profile updated"
+    return out
 
 
 @router.post("/switch-role/{role}")

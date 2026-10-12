@@ -1,6 +1,51 @@
 import { create } from "zustand";
-import { chatAPI } from "@/lib/api";
+import { chatAPI, vendorAPI } from "@/lib/api";
 import { ws } from "@/lib/ws";
+
+const IDENTITY_STORAGE_KEY = "brief.chatIdentity";
+
+export const DEFAULT_CHAT_IDENTITY = {
+  mode: "combined", // 'personal_photo' | 'business_logo' | 'combined' | 'business_with_role'
+  scope: "organization", // 'organization' | 'personal'
+  sender_name: "",
+  sender_role: "Owner",
+  avatar_url: "",
+  logo_url: "",
+  locations: {
+    conversation_list: true,
+    message_header: true,
+    messages: true,
+  },
+  personal_override: null,
+};
+
+function readStoredIdentity() {
+  try {
+    const raw = typeof window !== "undefined" ? window.localStorage.getItem(IDENTITY_STORAGE_KEY) : null;
+    if (!raw) return DEFAULT_CHAT_IDENTITY;
+    const parsed = JSON.parse(raw);
+    return {
+      ...DEFAULT_CHAT_IDENTITY,
+      ...parsed,
+      locations: {
+        ...DEFAULT_CHAT_IDENTITY.locations,
+        ...(parsed?.locations || {}),
+      },
+    };
+  } catch {
+    return DEFAULT_CHAT_IDENTITY;
+  }
+}
+
+function writeStoredIdentity(identity) {
+  try {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(IDENTITY_STORAGE_KEY, JSON.stringify(identity));
+    }
+  } catch {
+    /* ignore storage quota errors */
+  }
+}
 
 let unsubscribe = null;
 
@@ -11,16 +56,76 @@ export const useChatStore = create((set, get) => ({
   loading: false,
   sending: false,
   live: false,
+  chatIdentity: readStoredIdentity(),
+  identityLoaded: false,
+
+  loadIdentity: async () => {
+    const stored = readStoredIdentity();
+    set({ chatIdentity: stored });
+    if (!vendorAPI?.profile) return stored;
+    try {
+      const res = await vendorAPI.profile();
+      const data = res?.data || {};
+      const serverIdentity = data.chat_identity || {};
+      const merged = {
+        ...DEFAULT_CHAT_IDENTITY,
+        ...stored,
+        ...serverIdentity,
+        logo_url: data.logo_url || serverIdentity.logo_url || stored.logo_url || "",
+        avatar_url: data.avatar_url || serverIdentity.avatar_url || stored.avatar_url || "",
+        locations: {
+          ...DEFAULT_CHAT_IDENTITY.locations,
+          ...(stored.locations || {}),
+          ...(serverIdentity.locations || {}),
+        },
+      };
+      writeStoredIdentity(merged);
+      set({ chatIdentity: merged, identityLoaded: true });
+      return merged;
+    } catch {
+      set({ identityLoaded: true });
+      return stored;
+    }
+  },
+
+  saveIdentity: async (nextIdentity) => {
+    const current = get().chatIdentity || DEFAULT_CHAT_IDENTITY;
+    const merged = {
+      ...DEFAULT_CHAT_IDENTITY,
+      ...current,
+      ...nextIdentity,
+      locations: {
+        ...DEFAULT_CHAT_IDENTITY.locations,
+        ...(current.locations || {}),
+        ...(nextIdentity?.locations || {}),
+      },
+    };
+    writeStoredIdentity(merged);
+    set({ chatIdentity: merged });
+    if (vendorAPI?.updateProfile) {
+      await vendorAPI.updateProfile({
+        logo_url: merged.logo_url || null,
+        avatar_url: merged.avatar_url || null,
+        chat_identity: merged,
+      });
+    }
+    return merged;
+  },
 
   fetchRooms: async (params = {}) => {
     const { data } = await chatAPI.rooms(params);
-    set({ rooms: data });
-    return data;
+    const list = Array.isArray(data) ? data : data?.rooms || [];
+    set({ rooms: list });
+    return list;
   },
 
   /** Open a room: load history, then attach the live socket exactly once. */
-  selectRoom: async (room) => {
-    if (!room) return get().leaveRoom();
+  selectRoom: async (roomOrId) => {
+    if (!roomOrId) return get().leaveRoom();
+    const room =
+      typeof roomOrId === "string"
+        ? get().rooms.find((r) => r.id === roomOrId) || { id: roomOrId, name: roomOrId, room_type: "direct" }
+        : roomOrId;
     if (get().activeRoom?.id === room.id) return;
     unsubscribe?.();
     unsubscribe = null;

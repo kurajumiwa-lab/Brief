@@ -10,7 +10,7 @@ export default function Card({ className, hover, padding = "p-4", onClick, child
     <Tag
       onClick={onClick}
       className={cn(
-        "bg-surface-0 border border-edge-1 rounded-2xl shadow-xs",
+        "bg-surface-1 border border-edge-1 rounded-2xl shadow-xs",
         padding,
         interactive &&
           "glass-hover cursor-pointer text-left w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50",

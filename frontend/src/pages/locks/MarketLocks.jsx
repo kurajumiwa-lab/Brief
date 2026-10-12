@@ -164,7 +164,7 @@ export default function MarketLocks() {
         <EmptyState icon={MapPin} title="Pick your market first" description="Locks only combine orders from your selected market zone. Set it above to see eligible products and the Daily Flash window." />
       ) : (
         <>
-          <Card padding="p-4" className="bg-brand-500/[0.05]">
+          <Card padding="p-4" className="bg-surface-0 border-brand-200 dark:border-brand-800">
             <CardHeader>
               <CardTitle sub="Daily Flash · fixed market schedule">Current Lock window</CardTitle>
               {activeWindow && <Badge variant={stateBadge[activeWindow.status] || "gray"} size="xs">{readableState(activeWindow.status)}</Badge>}
@@ -203,34 +203,56 @@ export default function MarketLocks() {
                 <Badge variant={stateBadge[flash.status] || "gray"} size="xs">{readableState(flash.status)}</Badge>
               </div>
               {flash.clusters.length ? (
-                <div className="grid gap-2 md:grid-cols-2">
+                <div className="grid gap-3 md:grid-cols-2">
                   {flash.clusters.map((cluster) => {
                     const myPick = cluster.my_pick;
                     const canWithdraw = myPick && cluster.status === "collecting" && ["open", "rolling"].includes(flash.status) && clock < new Date(flash.closes_at).getTime();
+                    const threshold = Number(cluster.minimum_to_bid || 0);
+                    const pct = threshold > 0 ? Math.min(100, Math.round((Number(cluster.quantity || 0) / threshold) * 100)) : 0;
                     return (
-                      <Card key={cluster.id} padding="p-3">
+                      <Card key={cluster.id} padding="p-4" className="space-y-2.5">
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
-                            <h3 className="truncate text-xs font-semibold text-ink-1">{cluster.product?.name}</h3>
-                            <p className="mt-1 text-2xs text-ink-4">{num(cluster.quantity)} {cluster.product?.unit_of_measure} · {cluster.vendor_count} vendor{cluster.vendor_count === 1 ? "" : "s"}</p>
+                            <h3 className="truncate text-sm font-semibold text-ink-1">{cluster.product?.name}</h3>
+                            <p className="mt-0.5 text-2xs text-ink-4">
+                              {num(cluster.quantity)} {cluster.product?.unit_of_measure} pooled · {cluster.vendor_count} vendor{cluster.vendor_count === 1 ? "" : "s"} participating
+                            </p>
                           </div>
                           <Badge variant={stateBadge[cluster.status] || "gray"} size="xs">{readableState(cluster.status)}</Badge>
                         </div>
+                        {threshold > 0 && (
+                          <div className="rounded-xl bg-surface-1 border border-edge-1 p-2.5 space-y-1.5">
+                            <div className="flex items-center justify-between text-micro text-ink-3 font-mono">
+                              <span>{num(cluster.quantity)} / {num(threshold)} {cluster.product?.unit_of_measure} threshold</span>
+                              <span>{pct}%</span>
+                            </div>
+                            <div className="h-1.5 rounded-full bg-surface-3 overflow-hidden">
+                              <div className={cn("h-full rounded-full", pct >= 100 ? "bg-brand-600" : "bg-accent-500")} style={{ width: `${pct}%` }} />
+                            </div>
+                          </div>
+                        )}
                         {cluster.status === "collecting" && (
-                          <p className="mt-2 text-2xs text-ink-4">
+                          <p className="text-2xs text-ink-4">
                             {cluster.minimum_to_bid ? `${cluster.eligible_supplier_count} supplier${cluster.eligible_supplier_count === 1 ? "" : "s"} reachable at ≥ ${num(cluster.minimum_to_bid)} units.` : "Waiting for verified supplier MOQs."}
                             {cluster.roll_count > 0 && " One extension remains open."}
                           </p>
                         )}
-                        {cluster.status === "bidding" && <p className="mt-2 text-2xs text-blue-600 dark:text-blue-400">Threshold met. A market negotiator is collecting prices for exactly {num(cluster.bid_quantity)} {cluster.product?.unit_of_measure}.</p>}
-                        {cluster.status === "locked" && cluster.locked && <p className="mt-2 text-xs text-brand-600 dark:text-brand-400">{num(cluster.locked.quantity)} at {currency(cluster.locked.unit_price)} / {cluster.product?.unit_of_measure} · @{cluster.locked.supplier_handle}</p>}
-                        {cluster.status === "dissolved" && <p className="mt-2 text-2xs text-ink-4">{cluster.dissolved_reason || "The threshold was not reached after the one-day roll."}</p>}
-                        {myPick && <div className="mt-2 flex items-center justify-between border-t border-edge-1 pt-2 text-2xs"><span className="text-brand-600 dark:text-brand-400">Your Lock: {num(myPick.quantity)} {cluster.product?.unit_of_measure}</span>{canWithdraw && <Button size="xs" variant="ghost" onClick={() => withdraw(myPick.id)}>Withdraw</Button>}</div>}
+                        {cluster.status === "bidding" && <p className="text-2xs text-blue-600 dark:text-blue-400">Threshold met. A market negotiator is collecting prices for exactly {num(cluster.bid_quantity)} {cluster.product?.unit_of_measure}.</p>}
+                        {cluster.status === "locked" && cluster.locked && <p className="text-xs font-semibold text-brand-600 dark:text-brand-400">{num(cluster.locked.quantity)} at {currency(cluster.locked.unit_price)} / {cluster.product?.unit_of_measure} · @{cluster.locked.supplier_handle}</p>}
+                        {cluster.status === "dissolved" && <p className="text-2xs text-ink-4">{cluster.dissolved_reason || "The threshold was not reached after the one-day roll."}</p>}
+                        {myPick && <div className="flex items-center justify-between border-t border-edge-1 pt-2 text-2xs"><span className="font-semibold text-brand-600 dark:text-brand-400">Your Lock: {num(myPick.quantity)} {cluster.product?.unit_of_measure}</span>{canWithdraw && <Button size="xs" variant="ghost" onClick={() => withdraw(myPick.id)}>Withdraw</Button>}</div>}
                       </Card>
                     );
                   })}
                 </div>
-              ) : <p className="rounded-lg bg-surface-2 p-3 text-center text-2xs text-ink-4">No product requests in this window yet.</p>}
+              ) : (
+                <EmptyState
+                  compact
+                  illustration="consolidation"
+                  title="No product requests in this window yet"
+                  description="Submit a quantity above during the Daily Flash window to start pooling demand in your zone."
+                />
+              )}
             </section>
           ))}
         </>
