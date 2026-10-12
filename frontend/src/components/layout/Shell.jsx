@@ -31,7 +31,7 @@ export default function Shell() {
   }, [pathname, setSections]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-surface-0 text-ink-2">
+    <div className="min-h-screen flex flex-col bg-surface-1 text-ink-2">
       <a href="#main" className="skip-link">
         Skip to content
       </a>

@@ -20,7 +20,7 @@ export default function MobileTabBar() {
   return (
     <nav
       aria-label="Primary mobile"
-      className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-surface-0/95 backdrop-blur-md border-t border-edge-1 pb-safe"
+      className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-surface-0 border-t border-edge-1 shadow-md pb-safe"
     >
       <ul className="flex items-stretch">
         {PRIMARY_NAV.map((item) => {

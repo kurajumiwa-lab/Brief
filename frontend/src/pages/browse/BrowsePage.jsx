@@ -20,6 +20,12 @@ import StockCard from "@/components/stock/StockCard";
 import SourceDialog from "@/components/stock/SourceDialog";
 import StockCompareModal from "@/components/stock/StockCompareModal";
 import ResultCard from "@/components/discovery/ResultCard";
+import {
+  TemporaryJobsHero,
+  JobCategoryGrid,
+  JobDetailsModal,
+  PostJobModal,
+} from "@/components/tasks/TemporaryJobsSection";
 import RequestComposer from "@/components/requests/RequestComposer";
 import RequestCard from "@/components/requests/RequestCard";
 import { JOB_TILES } from "@/config/navigation";
@@ -382,6 +388,9 @@ function PeopleResults({ search, onSearch, onPost }) {
   const navigate = useNavigate();
   const [calls, setCalls] = useState(null);
   const [error, setError] = useState("");
+  const [selectedSkill, setSelectedSkill] = useState("");
+  const [selectedCall, setSelectedCall] = useState(null);
+  const [postJobOpen, setPostJobOpen] = useState(false);
 
   const load = useCallback(() => {
     setError("");
@@ -397,17 +406,37 @@ function PeopleResults({ search, onSearch, onPost }) {
   useEffect(() => { load(); }, [load]);
 
   const accept = async (_action, call) => {
+    const target = call || _action;
     try {
-      await squadAPI.accept(call.id);
+      await squadAPI.accept(target.id);
       toast.success("Accepted — check Work for the contract");
+      setSelectedCall(null);
       load();
     } catch (e) {
       toast.error(apiError(e, "The job call could not be accepted"));
     }
   };
 
+  const filteredCalls = useMemo(() => {
+    if (!calls) return null;
+    if (!selectedSkill) return calls;
+    return calls.filter((c) => c.skill === selectedSkill);
+  }, [calls, selectedSkill]);
+
   return (
-    <header className="space-y-3">
+    <header className="space-y-4">
+      <TemporaryJobsHero
+        onBrowseJobs={() => {}}
+        onPostJob={squadAPI.postCall ? () => setPostJobOpen(true) : onPost}
+        openCount={(calls || []).length}
+      />
+
+      <JobCategoryGrid
+        activeSkill={selectedSkill}
+        onSelectSkill={setSelectedSkill}
+        calls={calls || []}
+      />
+
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="min-w-0">
           <h1 className="text-xl font-bold text-ink-1 tracking-tight">People ready to work</h1>
@@ -420,18 +449,50 @@ function PeopleResults({ search, onSearch, onPost }) {
       </div>
       {error ? (
         <ErrorState description={error} onRetry={load} />
-      ) : !calls ? (
+      ) : !filteredCalls ? (
         <SkeletonGrid count={4} />
-      ) : calls.length === 0 ? (
-        <EmptyState icon={Users} tone="brand" title="No open calls right now"
+      ) : filteredCalls.length === 0 ? (
+        <EmptyState
+          icon={Users}
+          illustration={selectedSkill || search ? "search" : "jobs"}
+          tone="brand"
+          title={selectedSkill ? "No open calls in that category" : "No open calls right now"}
           description="Post a worker request and let people come to you — or find specialist suppliers on the network."
-          action={<Button size="sm" icon={Sparkles} onClick={onPost}>Post a request</Button>}
-          secondaryAction={<Button size="sm" variant="secondary" onClick={() => navigate("/network")}>Find suppliers</Button>} />
+          action={
+            selectedSkill ? (
+              <Button size="sm" variant="secondary" onClick={() => setSelectedSkill("")}>Show all categories</Button>
+            ) : (
+              <Button size="sm" icon={Sparkles} onClick={onPost}>Post a request</Button>
+            )
+          }
+          secondaryAction={<Button size="sm" variant="secondary" onClick={() => navigate("/network")}>Find suppliers</Button>}
+        />
       ) : (
-        <div className="grid gap-2 lg:grid-cols-2">
-          {calls.map((call) => <ResultCard key={call.id} kind="people" item={call} onAction={accept} />)}
+        <div className="grid gap-3 lg:grid-cols-2">
+          {filteredCalls.map((call) => (
+            <ResultCard
+              key={call.id}
+              kind="people"
+              item={call}
+              onAction={accept}
+              onInspect={setSelectedCall}
+            />
+          ))}
         </div>
       )}
+
+      <JobDetailsModal
+        call={selectedCall}
+        open={!!selectedCall}
+        onClose={() => setSelectedCall(null)}
+        onApply={(c) => accept("accept", c)}
+      />
+
+      <PostJobModal
+        open={postJobOpen}
+        onClose={() => setPostJobOpen(false)}
+        onPosted={load}
+      />
     </header>
   );
 }

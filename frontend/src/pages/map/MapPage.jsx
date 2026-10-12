@@ -288,7 +288,7 @@ export default function MapPage() {
 
             {/* status line — what the screen is actually showing, network first */}
             <div className="absolute top-2 left-2 right-2 z-[500] flex items-start gap-1.5 pointer-events-none">
-              <p className="text-2xs px-2 py-1 rounded-full bg-ink-1/50 text-white/80 backdrop-blur-sm">
+              <p className="text-2xs px-2 py-1 rounded-full bg-surface-inverse text-ink-inverse">
                 {loading
                   ? (searching ? "Searching the network…" : "Loading this area…")
                   : searching
@@ -358,7 +358,7 @@ export default function MapPage() {
 function MapButton({ children, onClick, label }) {
   return (
     <button type="button" onClick={onClick} aria-label={label} title={label}
-      className="w-9 h-9 rounded-xl bg-ink-1/50 text-white/85 hover:text-white hover:bg-ink-1/50 backdrop-blur-sm inline-flex items-center justify-center cursor-pointer">
+      className="w-9 h-9 rounded-xl bg-surface-inverse text-ink-inverse hover:opacity-90 inline-flex items-center justify-center cursor-pointer">
       {children}
     </button>
   );

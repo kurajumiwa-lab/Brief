@@ -473,6 +473,11 @@ function EditProfileDrawer({ open, onClose, vendor, profile, onSaved }) {
         preferred_regions: (profile?.preferred_regions || []).join(", "),
         accepts_bulk: profile?.accepts_bulk ?? true,
         offers_credit: profile?.offers_credit ?? false,
+        logo_url: profile?.logo_url || "",
+        avatar_url: profile?.avatar_url || profile?.chat_identity?.avatar_url || "",
+        chat_mode: profile?.chat_identity?.mode || "combined",
+        sender_name: profile?.chat_identity?.sender_name || "",
+        sender_role: profile?.chat_identity?.sender_role || "Owner",
       });
   }, [open, vendor, profile]);
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.type === "checkbox" ? e.target.checked : e.target.value }));
@@ -495,6 +500,20 @@ function EditProfileDrawer({ open, onClose, vendor, profile, onSaved }) {
           preferred_regions: splitList(form.preferred_regions),
           accepts_bulk: !!form.accepts_bulk,
           offers_credit: !!form.offers_credit,
+          ...(form.logo_url ? { logo_url: form.logo_url.trim() } : {}),
+          ...(form.avatar_url ? { avatar_url: form.avatar_url.trim() } : {}),
+          ...(form.sender_name || form.logo_url || form.avatar_url
+            ? {
+                chat_identity: {
+                  ...(profile?.chat_identity || {}),
+                  mode: form.chat_mode || "combined",
+                  sender_name: form.sender_name.trim(),
+                  sender_role: form.sender_role || "Owner",
+                  logo_url: form.logo_url.trim() || null,
+                  avatar_url: form.avatar_url.trim() || null,
+                },
+              }
+            : {}),
         }),
       ]);
       toast.success("Profile updated");
@@ -536,6 +555,15 @@ function EditProfileDrawer({ open, onClose, vendor, profile, onSaved }) {
           <Input label="Preferred regions" value={form.preferred_regions || ""} onChange={set("preferred_regions")} placeholder="Nairobi, Kiambu" hint="Comma separated" />
           <Check checked={form.accepts_bulk} onChange={set("accepts_bulk")} label="Accepts bulk orders" />
           <Check checked={form.offers_credit} onChange={set("offers_credit")} label="Offers trade credit" />
+        </div>
+        <div className="pt-2 border-t border-edge-1 space-y-3">
+          <p className="text-xs font-semibold text-ink-1">Brand &amp; chat identity</p>
+          <Input label="Business logo URL" value={form.logo_url || ""} onChange={set("logo_url")} placeholder="https://…" />
+          <Input label="Personal profile photo URL" value={form.avatar_url || ""} onChange={set("avatar_url")} placeholder="https://…" />
+          <div className="grid grid-cols-2 gap-2">
+            <Input label="Sender name" value={form.sender_name || ""} onChange={set("sender_name")} placeholder="e.g. Amina" />
+            <Input label="Sender role" value={form.sender_role || ""} onChange={set("sender_role")} placeholder="Owner" />
+          </div>
         </div>
       </div>
     </Drawer>

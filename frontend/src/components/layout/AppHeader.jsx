@@ -30,7 +30,7 @@ export default function AppHeader() {
   const isHome = pathname === "/";
 
   return (
-    <header className="sticky top-0 z-40 bg-surface-0/95 backdrop-blur-md border-b border-edge-1">
+    <header className="sticky top-0 z-40 bg-surface-0 border-b border-edge-1 shadow-xs">
       <div className="container-app">
         <div className="flex items-center gap-2.5" style={{ height: "var(--header-h)" }}>
           <button
@@ -114,7 +114,7 @@ export default function AppHeader() {
 
 function BrowseRail() {
   return (
-    <div className="border-t border-edge-1 bg-surface-0/95">
+    <div className="border-t border-edge-1 bg-surface-0">
       <div className="container-app">
         <nav aria-label="Browse sections" className="flex items-center gap-1 overflow-x-auto no-scrollbar py-1.5 -mx-1 px-1">
           {BROWSE_NAV.map(({ to, label, icon: Icon, end }) => (

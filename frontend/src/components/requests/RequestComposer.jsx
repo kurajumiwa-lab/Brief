@@ -125,7 +125,7 @@ export default function RequestComposer({ open, onClose, defaultType = "stock", 
 
   return (
     <div className="fixed inset-0 z-[700] flex items-end sm:items-center justify-center p-0 sm:p-4" role="dialog" aria-modal="true" aria-label="Post a business request">
-      <button type="button" aria-label="Close" className="absolute inset-0 bg-ink-1/40 backdrop-blur-[2px] cursor-default" onClick={onClose} />
+      <button type="button" aria-label="Close" className="absolute inset-0 bg-ink-1/50 cursor-default" onClick={onClose} />
       <form
         onSubmit={submit}
         className="relative w-full sm:max-w-lg max-h-[92vh] overflow-y-auto bg-surface-0 rounded-t-3xl sm:rounded-3xl border border-edge-1 shadow-2xl p-4 sm:p-5 space-y-4 animate-slide-up"

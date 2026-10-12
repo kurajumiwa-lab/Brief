@@ -97,7 +97,7 @@ export default function HomeHub() {
         <div className="absolute inset-0 -z-10 bg-gradient-to-br from-brand-950/20 via-transparent to-orchid-900/15" aria-hidden="true" />
         <div className="max-w-3xl px-5 py-7 sm:px-9 sm:py-10 lg:px-12 lg:py-12">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3 py-1 text-micro font-bold uppercase tracking-[0.12em] text-white/90 backdrop-blur-sm">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-brand-900 px-3 py-1 text-micro font-bold uppercase tracking-[0.12em] text-white">
               <Sparkles size={12} aria-hidden="true" /> Ogallo · the trade network
             </span>
             <Badge variant="purple" size="sm" className="!bg-white/15 !text-white !border !border-white/20">

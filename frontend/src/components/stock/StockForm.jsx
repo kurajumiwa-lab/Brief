@@ -89,7 +89,7 @@ function PhotoNoteForm({ onDone }) {
         <button
           type="button"
           onClick={() => fileRef.current?.click()}
-          className="w-full rounded-2xl border border-dashed border-brand-500/40 bg-surface-1 hover:bg-surface-2 transition-colors p-4 flex items-center gap-3 text-left"
+          className="w-full rounded-2xl border border-edge-2 bg-surface-1 hover:bg-surface-2 transition-colors p-4 flex items-center gap-3 text-left"
         >
           <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onFile} />
           {photo ? (

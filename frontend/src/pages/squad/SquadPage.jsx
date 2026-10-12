@@ -273,7 +273,7 @@ function Matches({ me, onChanged }) {
                   <p className="text-xs font-medium text-ink-2">Finish: photo proof + the client's 6-digit code</p>
                   <div className="flex gap-2 items-center">
                     <button type="button" onClick={() => fileRef.current?.click()}
-                      className="rounded-xl border border-dashed border-brand-500/40 px-3 h-10 text-xs text-ink-2 hover:bg-surface-2 flex items-center gap-2">
+                      className="rounded-xl border border-edge-2 bg-surface-1 px-3 h-10 text-xs text-ink-2 hover:bg-surface-2 flex items-center gap-2">
                       <Image size={14} /> {photo ? "Photo attached ✓" : uploading ? "Uploading…" : "Add photo (optional)"}
                     </button>
                     <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={takePhoto} />

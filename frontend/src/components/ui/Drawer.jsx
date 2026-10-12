@@ -23,7 +23,7 @@ export default function Drawer({ open, onClose, title, description, side = "righ
       {open && (
         <div className="fixed inset-0 z-50">
           <motion.div
-            className="absolute inset-0 bg-ink-1/50 backdrop-blur-[2px]"
+            className="absolute inset-0 bg-ink-1/50"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
