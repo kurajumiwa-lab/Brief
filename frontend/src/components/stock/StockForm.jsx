@@ -50,8 +50,18 @@ function PhotoNoteForm({ onDone }) {
     setUploading(true);
     setError("");
     try {
-      const { data } = await fileAPI.upload(file);
-      setPhoto({ url: data.url, name: file.name });
+      const res = await fileAPI?.upload?.(file);
+      if (res?.data?.url) {
+        setPhoto({ url: res.data.url, name: file.name });
+      } else {
+        const dataUrl = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+        setPhoto({ url: String(dataUrl), name: file.name });
+      }
     } catch (err) {
       setError(apiError(err, "The photo could not be uploaded"));
     } finally {
@@ -67,11 +77,13 @@ function PhotoNoteForm({ onDone }) {
     setSaving(true);
     setError("");
     try {
+      const qty = form.quantity === "" ? 1 : Number(form.quantity || 0);
       const saved = await add({
         name: form.name.trim(),
-        quantity_in_stock: Number(form.quantity || 0),
+        quantity_in_stock: qty,
         unit_of_measure: form.unit,
         unit_price: price,
+        visible_to_network: true,
         images: photo ? [photo.url] : [],
       });
       toast.success(`${saved.name} is on the shelf`);

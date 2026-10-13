@@ -516,6 +516,9 @@ export const opsAPI = {
   slow: (thresholdMs) => api.get("/ops/slow", { params: noEmpty({ threshold_ms: thresholdMs }) }),
   /** /metrics answers Prometheus text, not JSON — ask axios for the raw string. */
   metrics: () => api.get("/metrics", { responseType: "text", transformResponse: [(d) => d] }),
+  jobs: (params) => api.get("/ops/jobs", { params: noEmpty(params) }),
+  createJob: (body) => api.post("/ops/jobs", body),
+  actOnJob: (id, body) => api.post(`/ops/jobs/${id}/action`, body),
 };
 
 export default api;

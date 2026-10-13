@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Swords, ListChecks, Trophy, Briefcase, MapPin, Star, ArrowUpRight, Zap, Medal,
-  Plus, ShieldCheck, Flame, Coins, Award,
+  Plus, ShieldCheck, Flame, Coins, Award, Sparkles,
 } from "lucide-react";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
@@ -18,6 +18,7 @@ import {
   PostJobModal,
   categoryForSkill,
 } from "@/components/tasks/TemporaryJobsSection";
+import CreativePortfolioPage from "@/pages/portfolio/CreativePortfolioPage";
 import { useAuthStore } from "@/stores/authStore";
 import { squadAPI, apiError } from "@/lib/api";
 import { toast } from "@/components/ui/Toast";
@@ -34,8 +35,17 @@ const STATUS_TONE = {
 
 export default function TasksPortal() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const vendor = useAuthStore((s) => s.vendor);
   const jobsRef = useRef(null);
+
+  const portalMode = searchParams.get("mode") === "portfolio" ? "portfolio" : "operations";
+  const setPortalMode = (mode) => {
+    const next = new URLSearchParams(searchParams);
+    if (mode === "portfolio") next.set("mode", "portfolio");
+    else next.delete("mode");
+    setSearchParams(next, { replace: true });
+  };
 
   const [me, setMe] = useState(null);
   const [calls, setCalls] = useState(null);
@@ -130,13 +140,71 @@ export default function TasksPortal() {
 
   return (
     <div className="space-y-6">
-      {/* ── 1. Temporary-Jobs Hero Section ────────────────────────────── */}
-      <TemporaryJobsHero
-        onBrowseJobs={scrollToJobs}
-        onPostJob={() => setPostOpen(true)}
-        openCount={allCalls.filter((c) => c.status === "open" && !c.mine).length}
-        activeContract={active}
-      />
+      {/* ── Hybrid Platform Switcher: Creative Portfolio Studio vs Operational Board ── */}
+      <div
+        role="region"
+        aria-label="Creative studio and operations mode switcher"
+        className="rounded-2xl border border-[#23392D] bg-[#0D100F] text-white px-4 py-3 flex flex-wrap items-center justify-between gap-3"
+      >
+        <div className="flex items-center gap-2.5 min-w-0">
+          <span className="grid place-items-center w-8 h-8 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 shrink-0">
+            <Sparkles size={15} aria-hidden="true" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-xs font-extrabold text-white">
+              Creative Portfolio &amp; Freelance Studio
+            </p>
+            <p className="text-[11px] text-[#B8C9BF] truncate">
+              Switch between your public creative portfolio (“I design brands that people remember.”) and operational shifts.
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setPortalMode("portfolio")}
+            className={cn(
+              "rounded-xl px-3 py-1.5 text-xs font-bold transition-colors cursor-pointer",
+              portalMode === "portfolio"
+                ? "bg-emerald-500 text-[#071912]"
+                : "border border-white/15 bg-white/5 text-[#D1E0D7] hover:bg-white/10"
+            )}
+          >
+            Creative Portfolio &amp; Services
+          </button>
+          <button
+            type="button"
+            onClick={() => setPortalMode("operations")}
+            className={cn(
+              "rounded-xl px-3 py-1.5 text-xs font-bold transition-colors cursor-pointer",
+              portalMode === "operations"
+                ? "bg-emerald-500 text-[#071912]"
+                : "border border-white/15 bg-white/5 text-[#D1E0D7] hover:bg-white/10"
+            )}
+          >
+            Operational Shift Board
+          </button>
+          <Link
+            to="/portfolio"
+            className="inline-flex items-center gap-1 rounded-xl border border-emerald-500/35 bg-emerald-500/15 hover:bg-emerald-500/25 px-3 py-1.5 text-xs font-bold text-emerald-300 transition-colors"
+          >
+            <span>Full Studio View</span>
+            <ArrowUpRight size={13} aria-hidden="true" />
+          </Link>
+        </div>
+      </div>
+
+      {portalMode === "portfolio" ? (
+        <CreativePortfolioPage embedded />
+      ) : (
+        <>
+          {/* ── 1. Temporary-Jobs Hero Section ────────────────────────────── */}
+          <TemporaryJobsHero
+            onBrowseJobs={scrollToJobs}
+            onPostJob={() => setPostOpen(true)}
+            openCount={allCalls.filter((c) => c.status === "open" && !c.mine).length}
+            activeContract={active}
+          />
 
       {/* ── 2. Worker Standing & Active Contract Strip ────────────────── */}
       <div className="grid lg:grid-cols-[1.2fr_0.8fr] gap-4">
@@ -430,6 +498,8 @@ export default function TasksPortal() {
           <p className="text-2xs text-ink-4 mt-0.5">Your workspace — numbers, feed &amp; suggestions</p>
         </button>
       </div>
+        </>
+      )}
 
       <JobDetailsModal
         call={selectedCall}

@@ -60,7 +60,11 @@ vi.mock("@/lib/api", () => {
     // v2.1
     notificationAPI: { list: vi.fn(() => ok({ unread_count: 0, notifications: [] })), unreadCount: vi.fn(() => ok({ unread_count: 0 })), markRead: vi.fn(() => ok({})), markAllRead: vi.fn(() => ok({})) },
     collectiveAPI: { list: vi.fn(() => ok([])), get: vi.fn(), create: vi.fn(), pledge: vi.fn(), withdraw: vi.fn(), setStatus: vi.fn() },
-    fileAPI: { upload: vi.fn(), limits: vi.fn(() => ok({ max_mb: 10, allowed: [".pdf"] })) },
+    fileAPI: { upload: vi.fn((file) => ok({ url: `/api/files/test/${file?.name || "photo.jpg"}` })), limits: vi.fn(() => ok({ max_mb: 10, allowed: [".pdf", ".jpg", ".png"] })) },
+    passportAPI: { publicView: vi.fn(() => ok({ score: { trust_score: 75, tier: "established" }, public_claims: [] })), catalog: vi.fn(() => ok({ claims: [], checklists: [] })), of: vi.fn(() => ok({ score: { trust_score: 75, tier: "established" }, public_claims: [] })) },
+    growthAPI: { blueprint: vi.fn(() => ok({})), pulse: vi.fn(() => ok({ tasks: { done_count: 2, total_count: 5 } })) },
+    requestsAPI: { list: vi.fn(() => ok([])) },
+    onboardingAPI: { get: vi.fn(() => ok({ completion: 1, steps: [] })) },
     // the home hub reads four live counts
     newsAPI: { feed: vi.fn(() => ok({ window_days: 7, new_today: 2, generated_at: new Date().toISOString(), items: [], counts: {} })) },
     squadAPI: { calls: vi.fn(() => ok({ calls: [] })) },
@@ -102,6 +106,7 @@ function LocationProbe() {
 }
 
 beforeEach(() => {
+  window.scrollTo = vi.fn();
   window.localStorage.clear();
   useAuthStore.setState({ token: "tok", vendor: ME, ready: true, loading: false });
   useChatStore.setState({ rooms: [], activeRoom: null, messages: [], live: false });
@@ -317,3 +322,187 @@ describe("Chat", () => {
     expect(screen.queryByLabelText("Send")).not.toBeInTheDocument();
   });
 });
+
+describe("Business Control Centre, Stock Visibility, Shop Front & Gallery Photos", () => {
+  it("renders the Business Control Centre quick actions, Add stock CTA, and grouped secondary sections", async () => {
+    useStockStore.setState({ mine: STOCK, movements: MOVEMENTS });
+    mount(<MePage />, "/me");
+
+    expect(await screen.findByRole("heading", { name: "Mama Mboga Fresh" })).toBeInTheDocument();
+    // Prominent Add stock CTA in the header card
+    const addStockLink = screen.getByRole("link", { name: /add stock/i });
+    expect(addStockLink).toHaveAttribute("href", "/stock?new=1");
+
+    // Quick actions grid
+    const quickActions = screen.getByRole("region", { name: /quick actions/i });
+    expect(within(quickActions).getByRole("link", { name: /my shelf/i })).toHaveAttribute("href", "/stock");
+    expect(within(quickActions).getByRole("link", { name: /shop front/i })).toHaveAttribute("href", "/@mama_mboga");
+    expect(within(quickActions).getByRole("link", { name: /orders & trades/i })).toHaveAttribute("href", "/orders");
+    expect(within(quickActions).getByRole("link", { name: /find suppliers/i })).toHaveAttribute("href", "/network");
+    expect(within(quickActions).getByRole("link", { name: /analytics/i })).toHaveAttribute("href", "/analytics");
+    expect(within(quickActions).getByRole("link", { name: /business passport/i })).toHaveAttribute("href", "/passport");
+
+    // Reorganized secondary groups
+    expect(screen.getByRole("heading", { name: /stock & integrations/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /work & sourcing/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /^network$/i })).toBeInTheDocument();
+  });
+
+  it("displays stock visibility status badges (Published, Draft, Hidden, Unavailable) and 3-step shelf check in StockRoom", async () => {
+    const mixedShelf = [
+      { id: "s-pub", name: "Published Tomatoes", sku: "TOM-1", category: "vegetables", quantity_in_stock: 50, quantity_available: 50, unit_of_measure: "crates", unit_price: 2500, min_order_quantity: 1, visible_to_network: true },
+      { id: "s-draft", name: "Draft Onions", sku: "ONI-1", category: "vegetables", quantity_in_stock: 30, quantity_available: 30, unit_of_measure: "bags", unit_price: 0, min_order_quantity: 1, visible_to_network: true },
+      { id: "s-hidden", name: "Hidden Garlic", sku: "GAR-1", category: "vegetables", quantity_in_stock: 20, quantity_available: 20, unit_of_measure: "kg", unit_price: 300, min_order_quantity: 1, visible_to_network: false },
+      { id: "s-unavail", name: "Out of Stock Potatoes", sku: "POT-1", category: "vegetables", quantity_in_stock: 0, quantity_available: 0, unit_of_measure: "bags", unit_price: 1800, min_order_quantity: 1, visible_to_network: true },
+    ];
+    api.stockAPI.mine.mockResolvedValueOnce(ok(mixedShelf));
+    mount(<StockRoom />, "/stock");
+
+    expect(await screen.findByText("Published Tomatoes")).toBeInTheDocument();
+    expect(screen.getByText("Draft Onions")).toBeInTheDocument();
+    expect(screen.getByText("Hidden Garlic")).toBeInTheDocument();
+    expect(screen.getByText("Out of Stock Potatoes")).toBeInTheDocument();
+
+    // 3-step shelf visibility check
+    expect(screen.getByTestId("shelf-visibility-summary")).toBeInTheDocument();
+    expect(screen.getByText(/Step 1 — Check each listing/i)).toBeInTheDocument();
+    expect(screen.getByText(/Step 2 — Preview your public shop/i)).toBeInTheDocument();
+    expect(screen.getByText(/Step 3 — Test discovery/i)).toBeInTheDocument();
+
+    // Filter by Draft status
+    fireEvent.click(screen.getByRole("button", { name: /^Draft/i }));
+    expect(screen.getByText("Draft Onions")).toBeInTheDocument();
+    expect(screen.queryByText("Published Tomatoes")).not.toBeInTheDocument();
+  });
+
+  it("renders VendorProfile as a real Shop front with Products/Verification/Contact, own-shelf diagnostics, and gallery photo pickers instead of URL inputs", async () => {
+    const { default: VendorProfile } = await import("@/pages/vendor/VendorProfile");
+    const ownShelf = [
+      { id: "s-pub", name: "Fresh Sukuma", sku: "SUK-1", category: "vegetables", quantity_in_stock: 100, quantity_available: 100, unit_of_measure: "bunches", unit_price: 25, min_order_quantity: 10, visible_to_network: true, vendor_handle: "mama_mboga" },
+      { id: "s-draft", name: "Unpriced Cabbage", sku: "CAB-1", category: "vegetables", quantity_in_stock: 40, quantity_available: 40, unit_of_measure: "heads", unit_price: 0, min_order_quantity: 5, visible_to_network: true, vendor_handle: "mama_mboga" },
+    ];
+    api.vendorAPI.byHandle.mockResolvedValueOnce(ok({ ...ME, portfolio_images: ["/api/files/test/stall.jpg"] }));
+    api.stockAPI.network.mockResolvedValueOnce(ok([ownShelf[0]]));
+    api.stockAPI.mine.mockResolvedValueOnce(ok(ownShelf));
+
+    render(
+      <MemoryRouter initialEntries={["/@mama_mboga"]}>
+        <Routes>
+          <Route path="/:rawHandle" element={<VendorProfile />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByRole("heading", { name: "Mama Mboga Fresh" })).toBeInTheDocument();
+    // Direct shop navigation tiles: Products, Verification, Contact
+    const shopNav = screen.getByRole("navigation", { name: /shop navigation/i });
+    expect(within(shopNav).getByText(/Products/i)).toBeInTheDocument();
+    expect(within(shopNav).getByText("Verification")).toBeInTheDocument();
+    expect(within(shopNav).getByText("Contact")).toBeInTheDocument();
+
+    // Published product shown on shop front
+    expect(await screen.findByText("Fresh Sukuma")).toBeInTheDocument();
+    // Owner diagnostic explaining why 1 of 2 items is not visible
+    const diag = screen.getByTestId("shop-visibility-diagnostic");
+    expect(diag).toHaveTextContent(/1 published · 1 item on your shelf not shown to buyers/i);
+
+    // Shop & product gallery
+    expect(screen.getByTestId("shop-photo-gallery")).toBeInTheDocument();
+
+    // Open Edit profile drawer and verify Gallery Photo Addition (no URL text inputs!)
+    fireEvent.click(screen.getByRole("button", { name: /edit profile/i }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByLabelText("Business logo")).toHaveAttribute("type", "file");
+    expect(within(dialog).getByLabelText("Personal profile photo")).toHaveAttribute("type", "file");
+    expect(within(dialog).getByLabelText("Upload shop gallery photos")).toHaveAttribute("type", "file");
+    expect(within(dialog).queryByPlaceholderText(/https:\/\//i)).not.toBeInTheDocument();
+  });
+
+  it("shows Your shop section on Home with published listings and Preview/Share shop actions alongside Fresh on the network", async () => {
+    const { default: HomeHub } = await import("@/pages/home/HomeHub");
+    api.stockAPI.mine.mockResolvedValueOnce(ok(STOCK));
+    api.stockAPI.network.mockResolvedValueOnce(ok(NETWORK_STOCK));
+    mount(<HomeHub />, "/");
+
+    const yourShop = await screen.findByTestId("home-your-shop");
+    expect(within(yourShop).getByRole("heading", { name: /your shop/i })).toBeInTheDocument();
+    expect(within(yourShop).getByText(/your published listings/i)).toBeInTheDocument();
+    expect(within(yourShop).getByRole("link", { name: /preview shop/i })).toHaveAttribute("href", "/@mama_mboga");
+    expect(within(yourShop).getByRole("button", { name: /share shop/i })).toBeInTheDocument();
+    expect(within(yourShop).getByText("Sukuma wiki")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /fresh on the network/i })).toBeInTheDocument();
+  });
+
+  it("routes /browse?search=... to GoodsResults and displays the On your own shelf diagnostic", async () => {
+    const { default: BrowsePage } = await import("@/pages/browse/BrowsePage");
+    useStockStore.setState({ mine: STOCK, network: NETWORK_STOCK, categories: ["vegetables"] });
+    api.stockAPI.mine.mockResolvedValueOnce(ok(STOCK));
+    api.stockAPI.network.mockResolvedValueOnce(ok(NETWORK_STOCK));
+    mount(<BrowsePage />, "/browse?search=Sukuma");
+
+    const ownShelfDiag = await screen.findByTestId("browse-own-shelf-matches");
+    expect(within(ownShelfDiag).getByText(/On your own shelf/i)).toBeInTheDocument();
+    expect(within(ownShelfDiag).getByText("Sukuma wiki")).toBeInTheDocument();
+  });
+
+  it("routes /@handle through App directly to the public Shop front", async () => {
+    api.vendorAPI.byHandle.mockResolvedValueOnce(ok(ME));
+    api.stockAPI.network.mockResolvedValueOnce(ok(STOCK));
+    api.stockAPI.mine.mockResolvedValueOnce(ok(STOCK));
+    mount(<App />, "/@mama_mboga");
+
+    expect(await screen.findByRole("heading", { name: "Mama Mboga Fresh" })).toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: /shop navigation/i })).toBeInTheDocument();
+  });
+
+  it("renders the Creative Portfolio & Freelance Services Platform with discipline filters, editorial case studies, services, and project inquiry flow", async () => {
+    const { default: CreativePortfolioPage } = await import("@/pages/portfolio/CreativePortfolioPage");
+    mount(<CreativePortfolioPage />, "/portfolio");
+
+    // 1. Creative identity hero & CTAs
+    expect(
+      await screen.findByRole("heading", { name: /I design brands that people remember\./i })
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Explore My Work/i })).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: /Start a Project/i }).length).toBeGreaterThan(0);
+
+    // 2. Discipline filter chips (All, Branding, Web Design, Print, Motion)
+    expect(screen.getByTestId("portfolio-filter-all")).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(screen.getByTestId("portfolio-filter-web-design"));
+    expect(screen.getByTestId("portfolio-filter-web-design")).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByText(/Solstice Roasters — Digital Flagship/i)).toBeInTheDocument();
+    expect(screen.queryByTestId("portfolio-project-card-proj-print-03")).not.toBeInTheDocument();
+
+    // Reset filter to All
+    fireEvent.click(screen.getByTestId("portfolio-filter-all"));
+
+    // 3. Editorial case study sections
+    const caseStudy = screen.getByTestId("editorial-case-study");
+    expect(within(caseStudy).getByText(/01 · The Challenge/i)).toBeInTheDocument();
+    expect(within(caseStudy).getByText(/02 · Creative Process/i)).toBeInTheDocument();
+    expect(within(caseStudy).getByText(/03 · Concepts/i)).toBeInTheDocument();
+    expect(within(caseStudy).getByText(/04 · Final Deliverables/i)).toBeInTheDocument();
+    expect(within(caseStudy).getByText(/05 · Results & Outcome/i)).toBeInTheDocument();
+
+    // 4. Submit a project inquiry and verify confirmation + Studio Dashboard
+    const inquiryForm = screen.getByRole("form", { name: /start a project inquiry form/i });
+    fireEvent.change(within(inquiryForm).getByLabelText(/Your name or studio/i), {
+      target: { value: "Zuri Collective" },
+    });
+    fireEvent.change(within(inquiryForm).getByLabelText(/Project brief & goals/i), {
+      target: { value: "We need a full brand identity and web flagship for our Q4 launch." },
+    });
+    fireEvent.click(within(inquiryForm).getByRole("button", { name: /Send Project Brief/i }));
+
+    const confirmation = await screen.findByTestId("inquiry-confirmation");
+    expect(confirmation).toHaveTextContent(/Zuri Collective/i);
+
+    // Switch to Studio Operations Dashboard and verify the inquiry is listed
+    fireEvent.click(within(confirmation).getByRole("button", { name: /View in Studio Dashboard/i }));
+    const dashboard = await screen.findByTestId("studio-operations-dashboard");
+    expect(within(dashboard).getByText("Zuri Collective")).toBeInTheDocument();
+  });
+});
+
+
+

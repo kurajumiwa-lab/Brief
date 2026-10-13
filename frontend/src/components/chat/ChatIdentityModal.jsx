@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Building2, CheckCircle2, Eye, Lock, ShieldCheck, Sparkles, User, Users } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Building2, CheckCircle2, Eye, ImagePlus, Lock, ShieldCheck, Sparkles, User, Users, X } from "lucide-react";
 import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
@@ -9,7 +9,7 @@ import Badge from "@/components/ui/Badge";
 import { toast } from "@/components/ui/Toast";
 import { useChatStore, DEFAULT_CHAT_IDENTITY } from "@/stores/chatStore";
 import { useAuthStore } from "@/stores/authStore";
-import { apiError } from "@/lib/api";
+import { apiError, fileAPI } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 export const CHAT_IDENTITY_MODES = [
@@ -342,7 +342,7 @@ export default function ChatIdentityModal({ open, onClose }) {
           </div>
         </fieldset>
 
-        {/* Sender Name, Role, Personal Photo URL & Business Logo URL */}
+        {/* Sender Name, Role, Personal Photo & Business Logo (Gallery Photo Addition) */}
         <div className="grid sm:grid-cols-2 gap-3">
           <Input
             label="Sender display name"
@@ -357,17 +357,17 @@ export default function ChatIdentityModal({ open, onClose }) {
             onChange={(e) => setField("sender_role", e.target.value)}
             options={ROLE_OPTIONS}
           />
-          <Input
-            label="Personal profile photo URL"
-            placeholder="https://… (or leave blank for personal monogram)"
+          <IdentityGalleryPicker
+            label="Personal profile photo"
+            hint="Select your photo from your gallery"
             value={form.avatar_url}
-            onChange={(e) => setField("avatar_url", e.target.value)}
+            onChange={(url) => setField("avatar_url", url)}
           />
-          <Input
-            label="Business logo URL"
-            placeholder="https://… (or leave blank for business emblem)"
+          <IdentityGalleryPicker
+            label="Business logo"
+            hint="Select your business logo from your gallery"
             value={form.logo_url}
-            onChange={(e) => setField("logo_url", e.target.value)}
+            onChange={(url) => setField("logo_url", url)}
             disabled={!canManageOrg && form.scope === "organization"}
           />
         </div>
@@ -484,3 +484,79 @@ export default function ChatIdentityModal({ open, onClose }) {
     </Modal>
   );
 }
+
+function IdentityGalleryPicker({ label, hint, value, onChange, disabled }) {
+  const inputRef = useRef(null);
+  const [uploading, setUploading] = useState(false);
+
+  const onFile = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const res = await fileAPI?.upload?.(file);
+      if (res?.data?.url) {
+        onChange(res.data.url);
+      } else {
+        const dataUrl = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result));
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+        onChange(dataUrl);
+      }
+    } catch (err) {
+      toast.error(apiError(err, "Could not load photo from gallery"));
+    } finally {
+      setUploading(false);
+      if (e.target) e.target.value = "";
+    }
+  };
+
+  return (
+    <div className={cn("space-y-1.5", disabled && "opacity-50 pointer-events-none")}>
+      <span className="block text-xs font-medium text-ink-2">{label}</span>
+      <div className="flex items-center gap-2.5 rounded-xl border border-edge-1 bg-surface-0 p-2.5">
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/*"
+          disabled={disabled}
+          className="hidden"
+          aria-label={label}
+          onChange={onFile}
+        />
+        {value ? (
+          <img src={value} alt={label} className="w-10 h-10 rounded-lg object-cover border border-edge-1 shrink-0" />
+        ) : (
+          <span className="w-10 h-10 rounded-lg bg-brand-500/10 text-brand-700 dark:text-brand-300 grid place-items-center shrink-0">
+            <ImagePlus size={16} aria-hidden="true" />
+          </span>
+        )}
+        <div className="min-w-0 flex-1">
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={() => inputRef.current?.click()}
+            className="text-xs font-semibold text-brand-700 dark:text-brand-300 hover:underline text-left"
+          >
+            {uploading ? "Adding…" : value ? "Change from gallery" : "Choose from gallery"}
+          </button>
+          {hint && <p className="text-micro text-ink-4 truncate">{hint}</p>}
+        </div>
+        {value && !disabled && (
+          <button
+            type="button"
+            onClick={() => onChange("")}
+            aria-label={`Remove ${label}`}
+            className="p-1 rounded-md text-ink-4 hover:text-red-600"
+          >
+            <X size={13} />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
