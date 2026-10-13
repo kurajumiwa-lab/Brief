@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
-  BadgeCheck, Box, Clock, CreditCard, Crown, Award, Layers, MapPin, MessageSquare,
-  Package, Pencil, Plug, Search, Share2, ShieldCheck, Truck,
+  Award, BadgeCheck, Box, CheckCircle2, Clock, CreditCard, Crown, ImagePlus,
+  Layers, MapPin, MessageSquare, Package, Pencil, Plug, Plus, Search, Share2,
+  ShieldCheck, Trash2, Truck, X,
 } from "lucide-react";
 import Avatar from "@/components/ui/Avatar";
 import Badge from "@/components/ui/Badge";
@@ -15,51 +16,71 @@ import Textarea from "@/components/ui/Textarea";
 import EmptyState from "@/components/ui/EmptyState";
 import ErrorState from "@/components/ui/ErrorState";
 import Breadcrumbs from "@/components/ui/Breadcrumbs";
-import { SkeletonGrid } from "@/components/ui/Skeleton";
 import { PageSpinner } from "@/components/ui/Spinner";
 import { toast } from "@/components/ui/Toast";
 import { TrustRow, ReliabilityMeter, vendorLevel } from "@/components/trust/TrustSignals";
 import { VerifiedStrip } from "@/components/trust/VerifiedFacts";
 import ParasitismBadge from "@/components/vendor/ParasitismBadge";
 import ConnectionButton from "@/components/vendor/ConnectionButton";
-import StockCard from "@/components/stock/StockCard";
+import StockCard, { getStockVisibilityStatus } from "@/components/stock/StockCard";
 import SourceDialog from "@/components/stock/SourceDialog";
 import { Check } from "@/components/forms/GroupForm";
 import { useAuthStore } from "@/stores/authStore";
 import { useChatStore } from "@/stores/chatStore";
-import { vendorAPI, stockAPI, passportAPI, apiError } from "@/lib/api";
+import { vendorAPI, stockAPI, passportAPI, fileAPI, apiError } from "@/lib/api";
 import { ROLE_BADGE, VENDOR_ROLES } from "@/config/constants";
 import { currency, num } from "@/lib/formatters";
-import { splitList } from "@/lib/utils";
+import { cn, splitList } from "@/lib/utils";
+
+/**
+ * Read a File into a URL: uploads through `/api/files/upload` when available,
+ * and falls back to a local data URL so gallery selection works offline or in tests.
+ */
+export async function readGalleryPhoto(file) {
+  try {
+    const res = await fileAPI?.upload?.(file);
+    if (res?.data?.url) return res.data.url;
+  } catch {
+    /* fall back to local data URL preview */
+  }
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error("Could not read image file"));
+    reader.readAsDataURL(file);
+  });
+}
 
 /* ═══════════════════════════════════════════════════════════════════════════
    SHOP FRONT — /@handle
    ---------------------------------------------------------------------------
-   WHAT CHANGED   The vendor page was a header card, four stats and a grid.
-                  It is now a shop front: identity and trust above the fold,
-                  the shelf as the main body, the trade record and the
-                  business details behind tabs.
-   WHY            This is the page a buyer lands on from every card, every
-                  movement and every chat room. It has to answer "can I trust
-                  them, and what can I buy" without scrolling.
-   PRESERVED      Same endpoints (vendors/{handle}, vendors/me/profile,
-                  network-stock?vendor_handle=, vendors/{handle}/performance),
-                  the same edit drawer with the same fields, the same
-                  ?edit=1 deep link, connect/message, and the same
-                  SourceDialog — a buyer can still source straight from here.
+   Organizes the public shop into:
+     1. Business identity & storefront header with direct Products, Verification,
+        and Contact actions
+     2. Available stock — published listings eligible for display, plus an
+        owner-only visibility diagnostic when shelf items are Draft/Hidden/Unavailable
+     3. Shop photo gallery — gallery photo addition (no URL links)
+     4. Verification & trade record, and Contact & business details
    ═══════════════════════════════════════════════════════════════════════════ */
 
 export default function VendorProfile() {
-  const { handle } = useParams();
+  const rawParams = useParams();
+  const handle = String(
+    rawParams.handle ||
+    rawParams.rawHandle ||
+    (typeof window !== "undefined" ? window.location.pathname.replace(/^\//, "") : "")
+  ).replace(/^@/, "");
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
   const me = useAuthStore((s) => s.vendor);
   const setMe = useAuthStore((s) => s.setVendor);
   const openDirect = useChatStore((s) => s.openDirect);
+  const openDeal = useChatStore((s) => s.openDeal);
 
   const [vendor, setVendor] = useState(null);
   const [passport, setPassport] = useState(null);
   const [stock, setStock] = useState([]);
+  const [ownShelf, setOwnShelf] = useState([]);
   const [profile, setProfile] = useState(null);
   const [perf, setPerf] = useState(null);
   const [error, setError] = useState(null);
@@ -67,6 +88,8 @@ export default function VendorProfile() {
   const [sourcing, setSourcing] = useState(null);
   const [tab, setTab] = useState("shelf");
   const [q, setQ] = useState("");
+  const [uploadingGallery, setUploadingGallery] = useState(false);
+  const galleryInputRef = useRef(null);
 
   const own = me?.vendor_handle === handle;
 
@@ -75,6 +98,7 @@ export default function VendorProfile() {
     setVendor(null);
     setError(null);
     setStock([]);
+    setOwnShelf([]);
     (async () => {
       try {
         const [{ data: v }, { data: items }] = await Promise.all([
@@ -83,19 +107,26 @@ export default function VendorProfile() {
         ]);
         if (!alive) return;
         setVendor(v);
-        setStock(items);
-        // The passport is public: live verified facts and the owner's own
-        // headline. Evidence files and unverified rows never travel here.
-        passportAPI.of(handle)
-          .then(({ data }) => alive && setPassport(data))
-          .catch(() => {});
-        vendorAPI
-          .performance(handle)
-          .then(({ data }) => alive && setPerf(data))
-          .catch(() => {});
+        setStock(Array.isArray(items) ? items : []);
+
+        passportAPI?.of?.(handle)
+          ?.then(({ data }) => alive && setPassport(data))
+          ?.catch(() => {});
+        vendorAPI?.performance?.(handle)
+          ?.then(({ data }) => alive && setPerf(data))
+          ?.catch(() => {});
+
         if (me?.vendor_handle === handle) {
-          const { data: p } = await vendorAPI.profile();
-          if (alive) setProfile(p);
+          stockAPI?.mine?.()
+            ?.then(({ data: mineItems }) => {
+              if (!alive) return;
+              const list = Array.isArray(mineItems) ? mineItems : [];
+              setOwnShelf(list);
+            })
+            ?.catch(() => {});
+          vendorAPI?.profile?.()
+            ?.then(({ data: p }) => alive && setProfile(p))
+            ?.catch(() => {});
         }
       } catch (e) {
         if (alive) setError(apiError(e, "Vendor not found"));
@@ -121,6 +152,18 @@ export default function VendorProfile() {
     }
   };
 
+  const onEnquire = async (item) => {
+    try {
+      if (openDeal) {
+        navigate(`/chat?room=${await openDeal(item.id)}`);
+      } else {
+        await message();
+      }
+    } catch (e) {
+      toast.error(apiError(e, "Couldn't open enquiry room"));
+    }
+  };
+
   const share = async () => {
     const url = `${window.location.origin}/@${handle}`;
     try {
@@ -134,13 +177,75 @@ export default function VendorProfile() {
     }
   };
 
+  // Merge published stock from network endpoint and (for owner) published items from ownShelf
+  const publishedStock = useMemo(() => {
+    const map = new Map();
+    for (const item of stock) {
+      if (item?.id) map.set(item.id, item);
+    }
+    if (own) {
+      for (const item of ownShelf) {
+        if (item?.id && getStockVisibilityStatus(item).isPublished && !map.has(item.id)) {
+          map.set(item.id, item);
+        }
+      }
+    }
+    return Array.from(map.values());
+  }, [stock, own, ownShelf]);
+
+  const unpublishedOwnItems = useMemo(() => {
+    if (!own) return [];
+    return ownShelf.filter((item) => !getStockVisibilityStatus(item).isPublished);
+  }, [own, ownShelf]);
+
   const shelf = useMemo(() => {
     const needle = q.trim().toLowerCase();
-    if (!needle) return stock;
-    return stock.filter((i) =>
+    if (!needle) return publishedStock;
+    return publishedStock.filter((i) =>
       [i.name, i.category, i.subcategory, i.sku, ...(i.tags || [])].filter(Boolean).join(" ").toLowerCase().includes(needle)
     );
-  }, [stock, q]);
+  }, [publishedStock, q]);
+
+  const galleryPhotos = useMemo(() => {
+    const fromProfile = profile?.portfolio_images || profile?.supply_capacity?.gallery_photos;
+    const fromVendor = vendor?.portfolio_images;
+    return Array.isArray(fromProfile) ? fromProfile : Array.isArray(fromVendor) ? fromVendor : [];
+  }, [profile, vendor]);
+
+  const handleAddGalleryPhotos = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    setUploadingGallery(true);
+    try {
+      const urls = await Promise.all(files.map((file) => readGalleryPhoto(file)));
+      const nextGallery = [...galleryPhotos, ...urls.filter(Boolean)];
+      const { data: updatedProfile } = await vendorAPI.updateProfile({
+        portfolio_images: nextGallery,
+      });
+      setProfile((prev) => ({ ...(prev || {}), ...(updatedProfile || {}), portfolio_images: nextGallery }));
+      setVendor((prev) => (prev ? { ...prev, portfolio_images: nextGallery } : prev));
+      toast.success(files.length === 1 ? "Photo added to your shop gallery" : `${files.length} photos added to your shop gallery`);
+    } catch (err) {
+      toast.error(apiError(err, "Couldn't add photo from gallery"));
+    } finally {
+      setUploadingGallery(false);
+      if (e.target) e.target.value = "";
+    }
+  };
+
+  const handleRemoveGalleryPhoto = async (indexToRemove) => {
+    const nextGallery = galleryPhotos.filter((_, idx) => idx !== indexToRemove);
+    try {
+      const { data: updatedProfile } = await vendorAPI.updateProfile({
+        portfolio_images: nextGallery,
+      });
+      setProfile((prev) => ({ ...(prev || {}), ...(updatedProfile || {}), portfolio_images: nextGallery }));
+      setVendor((prev) => (prev ? { ...prev, portfolio_images: nextGallery } : prev));
+      toast.success("Photo removed from gallery");
+    } catch (err) {
+      toast.error(apiError(err, "Couldn't update gallery"));
+    }
+  };
 
   if (error)
     return (
@@ -159,25 +264,28 @@ export default function VendorProfile() {
   const role = VENDOR_ROLES.find((r) => r.value === vendor.current_role);
   const level = vendorLevel(vendor);
   const categories = vendor.business_categories || [];
+  const avatarSrc = profile?.logo_url || vendor?.logo_url || profile?.avatar_url || vendor?.avatar_url || undefined;
+  const bannerSrc = profile?.banner_url || vendor?.banner_url || undefined;
 
   return (
     <div className="space-y-6">
       <Breadcrumbs items={[{ label: "Network", to: "/network" }, { label: `@${vendor.vendor_handle}` }]} />
 
-      {/* ══ identity + trust, above the fold ═══════════════════════════ */}
+      {/* ══ identity + public storefront header, above the fold ═════════ */}
       <header className="overflow-hidden rounded-3xl border border-edge-1 bg-surface-0">
         <div
-          className="h-24 sm:h-32 w-full"
+          className="h-24 sm:h-32 w-full bg-cover bg-center"
           style={{
-            backgroundImage:
-              "linear-gradient(135deg, rgb(var(--brand-600) / 0.92), rgb(var(--brand-500) / 0.65) 45%, rgb(var(--accent-500) / 0.5))",
+            backgroundImage: bannerSrc
+              ? `linear-gradient(180deg, rgb(0 0 0 / 0.15), rgb(0 0 0 / 0.45)), url('${bannerSrc}')`
+              : "linear-gradient(135deg, rgb(var(--brand-600) / 0.92), rgb(var(--brand-500) / 0.65) 45%, rgb(var(--accent-500) / 0.5))",
           }}
           aria-hidden="true"
         />
         <div className="px-5 sm:px-7 pb-5 sm:pb-6">
           <div className="flex flex-col sm:flex-row sm:items-end gap-4 -mt-10 sm:-mt-12">
-            <div className="rounded-3xl ring-4 ring-surface-0 w-fit">
-              <Avatar name={vendor.business_name} size="xl" />
+            <div className="rounded-3xl ring-4 ring-surface-0 w-fit bg-surface-0">
+              <Avatar name={vendor.business_name} src={avatarSrc} size="xl" />
             </div>
             <div className="flex-1 min-w-0 sm:pb-1">
               <div className="flex flex-wrap items-center gap-2">
@@ -191,6 +299,7 @@ export default function VendorProfile() {
                     {role.emoji} {role.label}
                   </Badge>
                 )}
+                <span>Business profile and public storefront</span>
                 {vendor.physical_location && (
                   <span className="inline-flex items-center gap-1">
                     <MapPin size={12} aria-hidden="true" /> {vendor.physical_location}
@@ -208,6 +317,9 @@ export default function VendorProfile() {
             <div className="flex flex-wrap items-center gap-2 sm:pb-1">
               {own ? (
                 <>
+                  <Button size="sm" icon={Plus} onClick={() => navigate("/stock?new=1")}>
+                    Add stock
+                  </Button>
                   <Button size="sm" variant="secondary" icon={Pencil} onClick={() => setEditing(true)}>
                     Edit profile
                   </Button>
@@ -245,6 +357,49 @@ export default function VendorProfile() {
             </div>
           )}
 
+          {/* ── Quick Shop Sections: Products · Verification · Contact ── */}
+          <nav aria-label="Shop navigation" className="mt-5 grid grid-cols-3 gap-2.5">
+            <button
+              type="button"
+              onClick={() => setTab("shelf")}
+              className={cn(
+                "flex flex-col sm:flex-row items-center justify-center gap-2 rounded-2xl border p-3 text-xs font-semibold transition-colors cursor-pointer",
+                tab === "shelf"
+                  ? "border-brand-600 bg-brand-50 text-brand-800 dark:bg-brand-500/15 dark:text-brand-300"
+                  : "border-edge-1 bg-surface-1 text-ink-2 hover:border-edge-2"
+              )}
+            >
+              <Package size={16} aria-hidden="true" />
+              <span>Products ({publishedStock.length})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab("record")}
+              className={cn(
+                "flex flex-col sm:flex-row items-center justify-center gap-2 rounded-2xl border p-3 text-xs font-semibold transition-colors cursor-pointer",
+                tab === "record"
+                  ? "border-brand-600 bg-brand-50 text-brand-800 dark:bg-brand-500/15 dark:text-brand-300"
+                  : "border-edge-1 bg-surface-1 text-ink-2 hover:border-edge-2"
+              )}
+            >
+              <ShieldCheck size={16} aria-hidden="true" />
+              <span>Verification</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => (own ? setTab("about") : message())}
+              className={cn(
+                "flex flex-col sm:flex-row items-center justify-center gap-2 rounded-2xl border p-3 text-xs font-semibold transition-colors cursor-pointer",
+                tab === "about"
+                  ? "border-brand-600 bg-brand-50 text-brand-800 dark:bg-brand-500/15 dark:text-brand-300"
+                  : "border-edge-1 bg-surface-1 text-ink-2 hover:border-edge-2"
+              )}
+            >
+              <MessageSquare size={16} aria-hidden="true" />
+              <span>Contact</span>
+            </button>
+          </nav>
+
           {/* the four numbers a buyer actually judges on */}
           <div className="mt-5 grid grid-cols-2 lg:grid-cols-4 gap-3">
             <div className="rounded-2xl border border-edge-1 bg-surface-1 p-4">
@@ -260,39 +415,148 @@ export default function VendorProfile() {
         </div>
       </header>
 
+      {/* ══ Shop photo gallery (gallery photo addition, no URL links) ═══ */}
+      {(galleryPhotos.length > 0 || own) && (
+        <section aria-labelledby="shop-gallery-heading" className="rounded-3xl border border-edge-1 bg-surface-0 p-5 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 id="shop-gallery-heading" className="text-base font-bold text-ink-1">
+                Shop &amp; product gallery
+              </h2>
+              <p className="text-2xs text-ink-3">
+                Photos added directly from the business gallery so buyers can see the stall, warehouse or stock.
+              </p>
+            </div>
+            {own && (
+              <div>
+                <input
+                  ref={galleryInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  aria-label="Add photos from gallery"
+                  onChange={handleAddGalleryPhotos}
+                />
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  icon={ImagePlus}
+                  loading={uploadingGallery}
+                  onClick={() => galleryInputRef.current?.click()}
+                >
+                  Add from gallery
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {galleryPhotos.length === 0 ? (
+            <button
+              type="button"
+              onClick={() => galleryInputRef.current?.click()}
+              className="w-full rounded-2xl border border-dashed border-edge-2 bg-surface-1 hover:bg-surface-2 p-5 text-center transition-colors cursor-pointer"
+            >
+              <ImagePlus size={22} className="mx-auto text-brand-700 dark:text-brand-300" aria-hidden="true" />
+              <p className="mt-2 text-xs font-semibold text-ink-1">Add photos from your gallery</p>
+              <p className="mt-0.5 text-micro text-ink-4">
+                Select photos of your shop, stock or warehouse directly from your device — no links needed.
+              </p>
+            </button>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3" data-testid="shop-photo-gallery">
+              {galleryPhotos.map((src, idx) => (
+                <div key={`${src}-${idx}`} className="group relative aspect-[4/3] rounded-2xl overflow-hidden border border-edge-1 bg-surface-2">
+                  <img src={src} alt={`${vendor.business_name} gallery ${idx + 1}`} className="w-full h-full object-cover" />
+                  {own && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveGalleryPhoto(idx)}
+                      aria-label={`Remove gallery photo ${idx + 1}`}
+                      className="absolute top-2 right-2 w-7 h-7 rounded-lg bg-ink-1/80 text-white grid place-items-center opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
       {/* ══ the shelf is the body of the page ═════════════════════════ */}
       <Tabs
         value={tab}
         onChange={setTab}
         tabs={[
-          { value: "shelf", label: own ? "Visible shelf" : "Shelf", icon: Package, count: stock.length },
+          { value: "shelf", label: own ? "Visible shelf" : "Shelf", icon: Package, count: publishedStock.length },
           { value: "record", label: "Trade record", icon: Truck },
           { value: "about", label: "About", icon: Box },
         ]}
       />
 
       {tab === "shelf" && (
-        <section className="space-y-4">
-          {stock.length > 6 && (
-            <Input
-              id="shop-search"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder={`Search ${stock.length} items on this shelf`}
-              icon={Search}
-              aria-label="Search this shelf"
-              wrapperClassName="max-w-sm"
-            />
+        <section aria-labelledby="available-stock-heading" className="space-y-4">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 id="available-stock-heading" className="text-lg font-bold text-ink-1">
+                Available stock
+              </h2>
+              <p className="text-2xs text-ink-3 mt-0.5">
+                Only published listings that are currently eligible for display should appear here.
+              </p>
+            </div>
+            {publishedStock.length > 6 && (
+              <Input
+                id="shop-search"
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder={`Search ${publishedStock.length} items on this shelf`}
+                icon={Search}
+                aria-label="Search this shelf"
+                wrapperClassName="w-full sm:w-72"
+              />
+            )}
+          </div>
+
+          {/* Owner-only visibility diagnostic when some shelf items are Hidden/Draft/Unavailable */}
+          {own && unpublishedOwnItems.length > 0 && (
+            <div className="rounded-2xl border border-edge-1 bg-surface-1 p-4 space-y-2.5" data-testid="shop-visibility-diagnostic">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs font-bold text-ink-1">
+                  {publishedStock.length} published · {unpublishedOwnItems.length} item{unpublishedOwnItems.length === 1 ? "" : "s"} on your shelf not shown to buyers
+                </p>
+                <Link to="/stock" className="text-micro font-bold text-brand-700 dark:text-brand-400 hover:underline">
+                  Manage in My shelf →
+                </Link>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {unpublishedOwnItems.map((item) => {
+                  const st = getStockVisibilityStatus(item);
+                  return (
+                    <div key={item.id} className="rounded-xl border border-edge-1 bg-surface-0 px-3 py-2 flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-ink-1 truncate">{item.name}</p>
+                        <p className="text-micro text-ink-4 mt-0.5 leading-snug">{st.reason}</p>
+                      </div>
+                      <Badge variant={st.variant} size="xs" className="shrink-0">{st.label}</Badge>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           )}
-          {stock.length === 0 ? (
+
+          {publishedStock.length === 0 ? (
             <EmptyState
               compact
               icon={Package}
-              title={own ? "Nothing visible to the network" : "Nothing visible right now"}
+              title="Published products appear here"
               description={
                 own
-                  ? "Items are private until you mark them visible. A shelf nobody can see cannot be sourced from."
-                  : "Stock may be off-network or fully reserved. Message them — most vendors will list something on request."
+                  ? "Each listing shows a product name, photo, vendor-stated price, availability and a way to enquire. Items are private until you mark them visible with available stock."
+                  : "Each listing shows a product name, photo, vendor-stated price, availability and a way to enquire. Message them to ask what is currently in stock."
               }
               action={
                 own ? (
@@ -305,13 +569,32 @@ export default function VendorProfile() {
                   </Button>
                 )
               }
+              secondaryAction={
+                own ? (
+                  <Button size="sm" variant="secondary" icon={Plus} onClick={() => navigate("/stock?new=1")}>
+                    Add stock
+                  </Button>
+                ) : undefined
+              }
             />
           ) : shelf.length === 0 ? (
-            <EmptyState compact icon={Search} title={`Nothing matches "${q}"`} description="Try a shorter word, or clear the search to see the whole shelf." action={<Button size="sm" variant="secondary" onClick={() => setQ("")}>Clear search</Button>} />
+            <EmptyState
+              compact
+              icon={Search}
+              title={`Nothing matches "${q}"`}
+              description="Try a shorter word, or clear the search to see the whole shelf."
+              action={<Button size="sm" variant="secondary" onClick={() => setQ("")}>Clear search</Button>}
+            />
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {shelf.map((item) => (
-                <StockCard key={item.id} item={item} mode="network" onSource={own ? undefined : setSourcing} />
+                <StockCard
+                  key={item.id}
+                  item={item}
+                  mode="network"
+                  onSource={own ? undefined : setSourcing}
+                  onDeal={own ? undefined : onEnquire}
+                />
               ))}
             </div>
           )}
@@ -391,6 +674,13 @@ export default function VendorProfile() {
                 </Badge>
               )}
             </div>
+            {!own && (
+              <div className="pt-2">
+                <Button size="sm" icon={MessageSquare} onClick={message}>
+                  Contact {vendor.business_name}
+                </Button>
+              </div>
+            )}
           </div>
 
           <div className="rounded-2xl border border-edge-1 bg-surface-0 p-5 space-y-3">
@@ -434,7 +724,7 @@ export default function VendorProfile() {
           vendor={vendor}
           profile={profile}
           onSaved={(v, p) => {
-            setVendor((cur) => ({ ...cur, ...v }));
+            setVendor((cur) => ({ ...cur, ...v, ...(p ? { logo_url: p.logo_url, avatar_url: p.avatar_url, portfolio_images: p.portfolio_images } : {}) }));
             setMe(v);
             setProfile(p);
             setEditing(false);
@@ -457,9 +747,75 @@ function Detail({ label, value, mono }) {
   );
 }
 
+function GallerySinglePicker({ label, hint, value, onChange, testId }) {
+  const inputRef = useRef(null);
+  const [uploading, setUploading] = useState(false);
+
+  const onSelectFile = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const url = await readGalleryPhoto(file);
+      onChange(url);
+    } catch (err) {
+      toast.error(apiError(err, "Could not load photo from gallery"));
+    } finally {
+      setUploading(false);
+      if (e.target) e.target.value = "";
+    }
+  };
+
+  return (
+    <div className="space-y-1.5" data-testid={testId}>
+      <span className="block text-xs font-medium text-ink-2">{label}</span>
+      <div className="flex items-center gap-3 rounded-2xl border border-edge-2 bg-surface-1 p-3">
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          aria-label={label}
+          onChange={onSelectFile}
+        />
+        {value ? (
+          <img src={value} alt={label} className="w-12 h-12 rounded-xl object-cover border border-edge-1 shrink-0" />
+        ) : (
+          <span className="w-12 h-12 rounded-xl bg-brand-500/10 text-brand-700 dark:text-brand-300 grid place-items-center shrink-0">
+            <ImagePlus size={18} aria-hidden="true" />
+          </span>
+        )}
+        <div className="min-w-0 flex-1">
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            className="text-xs font-semibold text-brand-700 dark:text-brand-300 hover:underline text-left"
+          >
+            {uploading ? "Adding from gallery…" : value ? "Change photo from gallery" : "Choose photo from gallery"}
+          </button>
+          {hint && <p className="text-micro text-ink-4 mt-0.5">{hint}</p>}
+        </div>
+        {value && (
+          <button
+            type="button"
+            onClick={() => onChange("")}
+            aria-label={`Remove ${label}`}
+            className="p-1.5 rounded-lg text-ink-4 hover:text-red-600 hover:bg-surface-2 transition-colors"
+          >
+            <X size={14} />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function EditProfileDrawer({ open, onClose, vendor, profile, onSaved }) {
   const [form, setForm] = useState({});
   const [busy, setBusy] = useState(false);
+  const [uploadingGallery, setUploadingGallery] = useState(false);
+  const multiGalleryRef = useRef(null);
+
   useEffect(() => {
     if (open)
       setForm({
@@ -473,14 +829,45 @@ function EditProfileDrawer({ open, onClose, vendor, profile, onSaved }) {
         preferred_regions: (profile?.preferred_regions || []).join(", "),
         accepts_bulk: profile?.accepts_bulk ?? true,
         offers_credit: profile?.offers_credit ?? false,
-        logo_url: profile?.logo_url || "",
-        avatar_url: profile?.avatar_url || profile?.chat_identity?.avatar_url || "",
+        logo_url: profile?.logo_url || vendor?.logo_url || "",
+        avatar_url: profile?.avatar_url || profile?.chat_identity?.avatar_url || vendor?.avatar_url || "",
+        portfolio_images: Array.isArray(profile?.portfolio_images)
+          ? profile.portfolio_images
+          : Array.isArray(vendor?.portfolio_images)
+          ? vendor.portfolio_images
+          : [],
         chat_mode: profile?.chat_identity?.mode || "combined",
         sender_name: profile?.chat_identity?.sender_name || "",
         sender_role: profile?.chat_identity?.sender_role || "Owner",
       });
   }, [open, vendor, profile]);
+
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.type === "checkbox" ? e.target.checked : e.target.value }));
+
+  const onAddGalleryFiles = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    setUploadingGallery(true);
+    try {
+      const urls = await Promise.all(files.map((file) => readGalleryPhoto(file)));
+      setForm((f) => ({
+        ...f,
+        portfolio_images: [...(f.portfolio_images || []), ...urls.filter(Boolean)],
+      }));
+    } catch (err) {
+      toast.error(apiError(err, "Could not add gallery photos"));
+    } finally {
+      setUploadingGallery(false);
+      if (e.target) e.target.value = "";
+    }
+  };
+
+  const removeGalleryIndex = (idx) => {
+    setForm((f) => ({
+      ...f,
+      portfolio_images: (f.portfolio_images || []).filter((_, i) => i !== idx),
+    }));
+  };
 
   const save = async () => {
     if (!form.business_name?.trim()) return toast.error("Business name is required");
@@ -500,8 +887,9 @@ function EditProfileDrawer({ open, onClose, vendor, profile, onSaved }) {
           preferred_regions: splitList(form.preferred_regions),
           accepts_bulk: !!form.accepts_bulk,
           offers_credit: !!form.offers_credit,
-          ...(form.logo_url ? { logo_url: form.logo_url.trim() } : {}),
-          ...(form.avatar_url ? { avatar_url: form.avatar_url.trim() } : {}),
+          logo_url: form.logo_url || "",
+          avatar_url: form.avatar_url || "",
+          portfolio_images: form.portfolio_images || [],
           ...(form.sender_name || form.logo_url || form.avatar_url
             ? {
                 chat_identity: {
@@ -509,8 +897,8 @@ function EditProfileDrawer({ open, onClose, vendor, profile, onSaved }) {
                   mode: form.chat_mode || "combined",
                   sender_name: form.sender_name.trim(),
                   sender_role: form.sender_role || "Owner",
-                  logo_url: form.logo_url.trim() || null,
-                  avatar_url: form.avatar_url.trim() || null,
+                  logo_url: form.logo_url || null,
+                  avatar_url: form.avatar_url || null,
                 },
               }
             : {}),
@@ -556,11 +944,68 @@ function EditProfileDrawer({ open, onClose, vendor, profile, onSaved }) {
           <Check checked={form.accepts_bulk} onChange={set("accepts_bulk")} label="Accepts bulk orders" />
           <Check checked={form.offers_credit} onChange={set("offers_credit")} label="Offers trade credit" />
         </div>
+
+        {/* Brand, Gallery Photos & Chat Identity — Gallery Photo Addition only (no URL links) */}
         <div className="pt-2 border-t border-edge-1 space-y-3">
-          <p className="text-xs font-semibold text-ink-1">Brand &amp; chat identity</p>
-          <Input label="Business logo URL" value={form.logo_url || ""} onChange={set("logo_url")} placeholder="https://…" />
-          <Input label="Personal profile photo URL" value={form.avatar_url || ""} onChange={set("avatar_url")} placeholder="https://…" />
-          <div className="grid grid-cols-2 gap-2">
+          <p className="text-xs font-semibold text-ink-1">Photos &amp; chat identity</p>
+          <GallerySinglePicker
+            label="Business logo"
+            hint="Select your logo or storefront emblem from your gallery"
+            value={form.logo_url || ""}
+            onChange={(url) => setForm((f) => ({ ...f, logo_url: url }))}
+            testId="gallery-picker-business-logo"
+          />
+          <GallerySinglePicker
+            label="Personal profile photo"
+            hint="Select your personal photo from your gallery"
+            value={form.avatar_url || ""}
+            onChange={(url) => setForm((f) => ({ ...f, avatar_url: url }))}
+            testId="gallery-picker-personal-photo"
+          />
+
+          <div className="space-y-1.5" data-testid="gallery-picker-shop-photos">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-ink-2">Shop gallery photos</span>
+              <input
+                ref={multiGalleryRef}
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                aria-label="Upload shop gallery photos"
+                onChange={onAddGalleryFiles}
+              />
+              <button
+                type="button"
+                onClick={() => multiGalleryRef.current?.click()}
+                className="inline-flex items-center gap-1 text-2xs font-semibold text-brand-700 dark:text-brand-300 hover:underline"
+              >
+                <ImagePlus size={13} aria-hidden="true" />
+                {uploadingGallery ? "Adding…" : "Add from gallery"}
+              </button>
+            </div>
+            {(form.portfolio_images || []).length > 0 ? (
+              <div className="grid grid-cols-3 gap-2 pt-1">
+                {(form.portfolio_images || []).map((src, idx) => (
+                  <div key={`${src}-${idx}`} className="relative aspect-[4/3] rounded-xl overflow-hidden border border-edge-1 bg-surface-2">
+                    <img src={src} alt={`Shop gallery ${idx + 1}`} className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => removeGalleryIndex(idx)}
+                      aria-label={`Remove shop photo ${idx + 1}`}
+                      className="absolute top-1.5 right-1.5 w-6 h-6 rounded-md bg-ink-1/80 text-white grid place-items-center"
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-micro text-ink-4">No gallery photos added yet. Tap “Add from gallery” to select images from your device.</p>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 pt-1">
             <Input label="Sender name" value={form.sender_name || ""} onChange={set("sender_name")} placeholder="e.g. Amina" />
             <Input label="Sender role" value={form.sender_role || ""} onChange={set("sender_role")} placeholder="Owner" />
           </div>

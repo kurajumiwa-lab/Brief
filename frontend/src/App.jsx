@@ -40,6 +40,7 @@ const POSBridge = lazy(() => import("@/pages/pos/POSBridge"));
 const Analytics = lazy(() => import("@/pages/analytics/Analytics"));
 const Ops = lazy(() => import("@/pages/ops/Ops"));
 const VendorProfile = lazy(() => import("@/pages/vendor/VendorProfile"));
+const CreativePortfolioPage = lazy(() => import("@/pages/portfolio/CreativePortfolioPage"));
 
 /** Gate: no token → /auth (remembering where to return); token but vendor not
     loaded yet → spinner. */
@@ -143,7 +144,10 @@ export default function App() {
           <Route path="/ops" element={<Ops />} />
           <Route path="/passport" element={<PassportPage />} />
           <Route path="/growth" element={<GrowthPlannerPage />} />
+          <Route path="/portfolio" element={<CreativePortfolioPage />} />
+          <Route path="/studio" element={<CreativePortfolioPage />} />
           <Route path="/@:handle" element={<VendorProfile />} />
+          <Route path="/:handle" element={<VendorHandleRoute />} />
 
           {/* ── v2 URLs that moved ────────────────────────────────────── */}
           <Route path="/movements" element={<Navigate to="/orders" replace />} />
@@ -153,6 +157,14 @@ export default function App() {
       </Route>
     </Routes>
   );
+}
+
+function VendorHandleRoute() {
+  const { pathname } = useLocation();
+  if (pathname.startsWith("/@") && pathname.length > 2) {
+    return <VendorProfile />;
+  }
+  return <Navigate to="/" replace />;
 }
 
 function ListingRedirect() {

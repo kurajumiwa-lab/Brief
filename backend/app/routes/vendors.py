@@ -45,6 +45,11 @@ class VendorOut(BaseModel):
     movements_completed: int = 0
     fulfillment_mark: Optional[dict] = None
     reliability_score: Optional[float] = None  # filled where the performance row is loaded
+    # Storefront media & gallery photos
+    logo_url: Optional[str] = None
+    banner_url: Optional[str] = None
+    avatar_url: Optional[str] = None
+    portfolio_images: list = []
 
 
 class VendorUpdate(BaseModel):
@@ -73,6 +78,7 @@ class ProfileUpdate(BaseModel):
     logo_url: Optional[str] = None
     banner_url: Optional[str] = None
     avatar_url: Optional[str] = None
+    portfolio_images: Optional[list[str]] = None
     chat_identity: Optional[dict] = None
 
 
@@ -143,6 +149,7 @@ def _extended_profile_dict(profile: VendorProfile) -> dict:
         "logo_url": profile.logo_url,
         "banner_url": profile.banner_url,
         "avatar_url": avatar_url,
+        "portfolio_images": list(profile.portfolio_images or []),
         "chat_identity": {
             "mode": chat_identity.get("mode", "business_logo"),
             "scope": chat_identity.get("scope", "organization"),
@@ -364,6 +371,14 @@ async def vendor_by_handle(
         raise HTTPException(404, "Vendor not found")
     out = vendor_out(target, connected=await vendor_network.are_connected(db, vendor.id, target.id))
     out.reliability_score = await _reliability(db, target.id)
+    profile = (await db.execute(select(VendorProfile).where(VendorProfile.vendor_id == target.id))).scalars().first()
+    if profile is not None:
+        cap = dict(profile.supply_capacity or {})
+        chat_identity = cap.get("chat_identity") or {}
+        out.logo_url = profile.logo_url or chat_identity.get("logo_url") or None
+        out.banner_url = profile.banner_url
+        out.avatar_url = cap.get("avatar_url") or chat_identity.get("avatar_url") or None
+        out.portfolio_images = list(profile.portfolio_images or [])
     return out
 
 

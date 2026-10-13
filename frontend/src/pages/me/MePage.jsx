@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  ArrowUpRight, BarChart3, ChevronRight, ClipboardList, Layers3,
-  List, Package, ShoppingBasket, ShieldCheck, Sparkles, Store, Terminal,
-  Truck,
+  ArrowUpRight, BarChart3, ChevronRight, ClipboardList, FileCheck, Layers3,
+  List, Package, PlusCircle, Settings, ShoppingBag, ShoppingBasket, ShieldCheck,
+  Sparkles, Store, Terminal, Truck, Users,
 } from "lucide-react";
 import Avatar from "@/components/ui/Avatar";
 import Badge from "@/components/ui/Badge";
@@ -12,46 +12,53 @@ import { useAuthStore } from "@/stores/authStore";
 import { useStockStore } from "@/stores/stockStore";
 import { cn } from "@/lib/utils";
 
-const DESTINATIONS = [
+const QUICK_ACTIONS = [
   {
-    title: "Shop front",
-    description: "Your public business page and shareable shelf.",
+    title: "My shelf",
+    description: "Manage stock and visibility",
+    to: () => "/stock",
+    icon: Package,
+  },
+  {
+    title: "View my shop · Shop front",
+    description: "Preview the public profile",
     to: (vendor) => `/@${vendor.vendor_handle}`,
     icon: Store,
-    tone: "brand",
-    group: "Business",
+  },
+  {
+    title: "Orders & trades",
+    description: "Track active transactions",
+    to: () => "/orders",
+    icon: ShoppingBag,
+  },
+  {
+    title: "Find suppliers",
+    description: "Discover and contact vendors",
+    to: () => "/network",
+    icon: Users,
+  },
+  {
+    title: "Analytics",
+    description: "Review trade and price performance",
+    to: () => "/analytics",
+    icon: BarChart3,
   },
   {
     title: "Business passport",
-    description: "Verified facts, documents and the readiness buyers check.",
+    description: "Manage verification and documents",
     to: () => "/passport",
-    icon: ShieldCheck,
-    tone: "brand",
-    group: "Business",
+    icon: FileCheck,
   },
+];
+
+const DESTINATIONS = [
   {
     title: "Growth planner",
     description: "Inverted pyramid plan, live pulse, 5-gear motions and plan tiers.",
     to: () => "/growth",
     icon: Sparkles,
     tone: "purple",
-    group: "Business",
-  },
-  {
-    title: "My shelf",
-    description: "Manage quantities, visibility, provenance and imports.",
-    to: () => "/stock",
-    icon: Package,
-    tone: "green",
-    group: "Business",
-  },
-  {
-    title: "Analytics",
-    description: "Review settled trade, fulfilment and price position.",
-    to: () => "/analytics",
-    icon: BarChart3,
-    tone: "purple",
-    group: "Business",
+    group: "Stock & integrations",
   },
   {
     title: "POS Bridge",
@@ -59,7 +66,15 @@ const DESTINATIONS = [
     to: () => "/pos",
     icon: Terminal,
     tone: "amber",
-    group: "Business",
+    group: "Stock & integrations",
+  },
+  {
+    title: "Creative portfolio",
+    description: "Showcase branding, web design, print & motion case studies and client services.",
+    to: () => "/portfolio",
+    icon: Sparkles,
+    tone: "green",
+    group: "Work & sourcing",
   },
   {
     title: "Tasks",
@@ -67,7 +82,7 @@ const DESTINATIONS = [
     to: () => "/tasks",
     icon: ClipboardList,
     tone: "purple",
-    group: "Workspace",
+    group: "Work & sourcing",
   },
   {
     title: "Vendor lists",
@@ -75,7 +90,7 @@ const DESTINATIONS = [
     to: () => "/lists",
     icon: List,
     tone: "green",
-    group: "Workspace",
+    group: "Work & sourcing",
   },
   {
     title: "Market Locks",
@@ -83,7 +98,7 @@ const DESTINATIONS = [
     to: () => "/locks",
     icon: ShoppingBasket,
     tone: "amber",
-    group: "Workspace",
+    group: "Work & sourcing",
   },
   {
     title: "Rentals & logistics",
@@ -91,11 +106,11 @@ const DESTINATIONS = [
     to: () => "/tools",
     icon: Truck,
     tone: "blue",
-    group: "Workspace",
+    group: "Work & sourcing",
   },
   {
     title: "Our Network",
-    description: "Participate in the governance of the trading network.",
+    description: "Vote on proposals, review rules and participate in the governance of the trading network.",
     to: () => "/governance",
     icon: ShieldCheck,
     tone: "green",
@@ -103,7 +118,7 @@ const DESTINATIONS = [
   },
   {
     title: "Surfaces",
-    description: "See the wider stream of network activity.",
+    description: "Follow the wider stream of verified network trades, price restatements and activity.",
     to: () => "/feed",
     icon: Layers3,
     tone: "blue",
@@ -118,6 +133,27 @@ const TONE_CLASSES = {
   amber: "bg-accent-100 text-accent-800 dark:bg-accent-500/15 dark:text-accent-300",
   blue: "bg-blue-100 text-blue-800 dark:bg-blue-500/15 dark:text-blue-300",
 };
+
+function QuickActionCard({ item, vendor }) {
+  const Icon = item.icon;
+  return (
+    <Link
+      to={item.to(vendor)}
+      className="group flex flex-col justify-between gap-2 rounded-2xl border border-edge-1 bg-surface-0 p-4 hover:border-brand-500/50 hover:shadow-xs transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50"
+    >
+      <div className="flex items-center justify-between">
+        <span className="grid place-items-center w-10 h-10 rounded-xl bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300">
+          <Icon size={20} aria-hidden="true" />
+        </span>
+        <ArrowUpRight size={15} className="text-ink-4 group-hover:text-brand-700 dark:group-hover:text-brand-300 transition-colors" aria-hidden="true" />
+      </div>
+      <div>
+        <p className="text-sm font-bold text-ink-1">{item.title}</p>
+        <p className="mt-0.5 text-2xs text-ink-3 leading-relaxed">{item.description}</p>
+      </div>
+    </Link>
+  );
+}
 
 function WorkspaceLink({ item, vendor }) {
   const Icon = item.icon;
@@ -144,25 +180,35 @@ function WorkspaceLink({ item, vendor }) {
 export default function MePage() {
   const vendor = useAuthStore((s) => s.vendor);
   const mine = useStockStore((s) => s.mine);
+  const movements = useStockStore((s) => s.movements);
   const fetchMine = useStockStore((s) => s.fetchMine);
+  const fetchMovements = useStockStore((s) => s.fetchMovements);
   const [shelfReady, setShelfReady] = useState(false);
 
   useEffect(() => {
     let live = true;
-    fetchMine()
-      .then(() => live && setShelfReady(true))
-      .catch(() => live && setShelfReady(true));
+    fetchMine?.()
+      ?.then(() => live && setShelfReady(true))
+      ?.catch(() => live && setShelfReady(true));
+    fetchMovements?.()?.catch(() => {});
     return () => {
       live = false;
     };
-  }, [fetchMine]);
+  }, [fetchMine, fetchMovements]);
 
   const role = VENDOR_ROLES.find((item) => item.value === vendor?.current_role) || VENDOR_ROLES[2];
   const sections = useMemo(
-    () => ["Business", "Workspace", "Network"].map((group) => ({ group, items: DESTINATIONS.filter((item) => item.group === group) })),
+    () =>
+      ["Stock & integrations", "Work & sourcing", "Network"].map((group) => ({
+        group,
+        items: DESTINATIONS.filter((item) => item.group === group),
+      })),
     []
   );
   const visibleCount = mine.filter((item) => item.visible_to_network).length;
+  const openTrades = (movements || []).filter((m) =>
+    ["pending", "confirmed", "shipped", "in_transit"].includes(m.status)
+  ).length;
   const score = Number(vendor?.network_score || 0);
   const scoreLabel = score > 0 ? score.toFixed(1) : "—";
   const fulfilment = vendor?.fulfillment_rate == null ? "—" : `${Math.round(Number(vendor.fulfillment_rate))}%`;
@@ -171,30 +217,114 @@ export default function MePage() {
 
   return (
     <div className="space-y-8 sm:space-y-10">
-      <section className="relative isolate overflow-hidden rounded-[1.75rem] sm:rounded-[2rem] bg-ink-1 text-white px-5 py-6 sm:px-8 sm:py-8">
+      {/* ── Business Control Centre Hero ─────────────────────────────────── */}
+      <section
+        aria-label="Business control centre"
+        className="relative isolate overflow-hidden rounded-[1.75rem] sm:rounded-[2rem] bg-[#17251E] text-white px-5 py-6 sm:px-8 sm:py-8 space-y-5"
+      >
         <div
           className="absolute inset-0 -z-10"
-          style={{ backgroundImage: "radial-gradient(circle at 88% 12%, rgb(var(--orchid-500) / 0.55), transparent 34%), radial-gradient(circle at 18% 120%, rgb(var(--brand-500) / 0.38), transparent 55%)" }}
+          style={{
+            backgroundImage:
+              "radial-gradient(circle at 88% 12%, rgb(var(--orchid-500) / 0.35), transparent 34%), radial-gradient(circle at 18% 120%, rgb(var(--brand-500) / 0.28), transparent 55%)",
+          }}
           aria-hidden="true"
         />
-        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-          <Avatar name={vendor.business_name} size="lg" className="ring-2 ring-white/20 rounded-2xl" />
+
+        <div className="flex items-center gap-4">
+          <Avatar
+            name={vendor.business_name}
+            src={vendor.logo_url || vendor.avatar_url || undefined}
+            size="lg"
+            className="ring-2 ring-white/20 rounded-2xl shrink-0"
+          />
           <div className="min-w-0 flex-1">
-            <p className="text-micro font-bold uppercase tracking-[0.14em] text-brand-100 dark:text-brand-300">Your business workspace</p>
-            <h1 className="mt-1 text-2xl sm:text-3xl font-extrabold tracking-tight text-white">{vendor.business_name}</h1>
-            <p className="mt-1 text-sm text-white/70">@{vendor.vendor_handle} · {role.hint}</p>
+            <p className="text-micro font-bold uppercase tracking-[0.14em] text-brand-100 dark:text-brand-300">
+              Your business workspace
+            </p>
+            <h1 className="mt-1 text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
+              {vendor.business_name}
+            </h1>
+            <p className="mt-0.5 text-sm text-[#C4D1C8]">
+              @{vendor.vendor_handle} · {role.hint}
+            </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="purple" size="md" className="!bg-white/10 !text-white !border !border-white/20">
               {role.emoji} Currently {role.label.toLowerCase()}
             </Badge>
+            <Link
+              to={`/@${vendor.vendor_handle}?edit=1`}
+              aria-label="Edit business profile"
+              className="grid place-items-center w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors"
+            >
+              <Settings size={18} aria-hidden="true" />
+            </Link>
           </div>
         </div>
-        <p className="mt-5 max-w-3xl text-sm text-white/75 leading-relaxed">
-          Keep your shop, stock and trading tools close. Your operating mode is shared across Ogallo; change it once from your profile menu.
-        </p>
+
+        {/* Live counts row */}
+        <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
+          <div className="rounded-2xl bg-[#314238] px-3.5 py-3">
+            <p className="text-micro font-semibold text-[#D5E4D9]">Stock items</p>
+            <p className="mt-1 text-2xl font-extrabold text-white tabular-nums">
+              {shelfReady ? String(mine.length) : "—"}
+            </p>
+          </div>
+          <div className="rounded-2xl bg-[#314238] px-3.5 py-3">
+            <p className="text-micro font-semibold text-[#D5E4D9]">Visible listings</p>
+            <p className="mt-1 text-2xl font-extrabold text-white tabular-nums">
+              {shelfReady ? String(visibleCount) : "—"}
+            </p>
+          </div>
+          <div className="rounded-2xl bg-[#314238] px-3.5 py-3">
+            <p className="text-micro font-semibold text-[#D5E4D9]">Open trades</p>
+            <p className="mt-1 text-2xl font-extrabold text-white tabular-nums">
+              {String(openTrades)}
+            </p>
+          </div>
+        </div>
+
+        {/* Prominent Add stock CTA */}
+        <Link
+          to="/stock?new=1"
+          className="group block rounded-2xl bg-[#DDF5E7] hover:bg-[#CBEED9] text-[#175C43] p-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+        >
+          <div className="flex items-center gap-2.5">
+            <PlusCircle size={20} className="text-[#175C43] shrink-0" aria-hidden="true" />
+            <span className="text-base font-extrabold text-[#175C43]">Add stock</span>
+            <ArrowUpRight
+              size={18}
+              className="ml-auto text-[#175C43] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform"
+              aria-hidden="true"
+            />
+          </div>
+          <p className="mt-1 text-xs text-[#175C43]/90">
+            List a product or service for buyers to discover.
+          </p>
+        </Link>
       </section>
 
+      {/* ── Quick actions ─────────────────────────────────────────────────── */}
+      <section aria-labelledby="quick-actions-heading" className="space-y-3">
+        <div className="flex items-end justify-between gap-4">
+          <div>
+            <p className="text-micro font-bold uppercase tracking-[0.14em] text-brand-700 dark:text-brand-300">
+              Control centre
+            </p>
+            <h2 id="quick-actions-heading" className="mt-1 text-xl font-bold text-ink-1">
+              Quick actions
+            </h2>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+          {QUICK_ACTIONS.map((item) => (
+            <QuickActionCard key={item.title} item={item} vendor={vendor} />
+          ))}
+        </div>
+      </section>
+
+      {/* ── Business snapshot ─────────────────────────────────────────────── */}
       <section aria-label="Business snapshot" className="grid grid-cols-2 sm:grid-cols-4 border-y border-edge-1 divide-x divide-edge-1">
         <Snapshot label="Fulfilment" value={fulfilment} note="recorded deliveries" />
         <Snapshot label="Network score" value={scoreLabel} note="earned through completed trade" />
@@ -202,16 +332,23 @@ export default function MePage() {
         <Snapshot label="Trading mode" value={role.label} note="shared with every screen" />
       </section>
 
+      {/* ── Secondary organized tools ─────────────────────────────────────── */}
       {sections.map(({ group, items }, index) => (
-        <section key={group} aria-labelledby={`workspace-${group.toLowerCase()}`}>
+        <section key={group} aria-labelledby={`workspace-${group.toLowerCase().replace(/\s+/g, "-")}`}>
           <div className="flex items-end justify-between gap-4 border-b border-edge-1 pb-3">
             <div>
-              <p className="text-micro font-bold uppercase tracking-[0.14em] text-orchid-700 dark:text-orchid-300">0{index + 1} / Workspace</p>
-              <h2 id={`workspace-${group.toLowerCase()}`} className="mt-1 text-xl font-bold text-ink-1">{group}</h2>
+              <p className="text-micro font-bold uppercase tracking-[0.14em] text-orchid-700 dark:text-orchid-300">
+                0{index + 1} / Workspace
+              </p>
+              <h2 id={`workspace-${group.toLowerCase().replace(/\s+/g, "-")}`} className="mt-1 text-xl font-bold text-ink-1">
+                {group}
+              </h2>
             </div>
           </div>
           <div className="grid gap-x-8 sm:grid-cols-2 lg:grid-cols-3">
-            {items.map((item) => <WorkspaceLink key={item.title} item={item} vendor={vendor} />)}
+            {items.map((item) => (
+              <WorkspaceLink key={item.title} item={item} vendor={vendor} />
+            ))}
           </div>
         </section>
       ))}

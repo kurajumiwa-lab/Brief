@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { Plus, Upload, Package, Globe, ArrowLeftRight, Filter } from "lucide-react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Plus, Upload, Package, Globe, ArrowLeftRight, Filter, Store, Search, CheckCircle2 } from "lucide-react";
 import Tabs from "@/components/ui/Tabs";
 import Button from "@/components/ui/Button";
 import Modal from "@/components/ui/Modal";
@@ -10,7 +10,7 @@ import { PageSpinner } from "@/components/ui/Spinner";
 import Badge from "@/components/ui/Badge";
 import { toast } from "@/components/ui/Toast";
 import { useConfirm } from "@/components/ui/ConfirmDialog";
-import StockCard from "@/components/stock/StockCard";
+import StockCard, { getStockVisibilityStatus } from "@/components/stock/StockCard";
 import StockForm from "@/components/stock/StockForm";
 import SourceDialog from "@/components/stock/SourceDialog";
 import StockCompareModal from "@/components/stock/StockCompareModal";
@@ -29,6 +29,14 @@ const TABS = [
   { value: "movements", label: "Movements", icon: ArrowLeftRight },
 ];
 
+const STATUS_FILTERS = [
+  { value: "", label: "All statuses" },
+  { value: "published", label: "Published" },
+  { value: "draft", label: "Draft" },
+  { value: "hidden", label: "Hidden" },
+  { value: "unavailable", label: "Unavailable" },
+];
+
 export default function StockRoom() {
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
@@ -36,17 +44,20 @@ export default function StockRoom() {
   const tab = TABS.some((t) => t.value === params.get("tab")) ? params.get("tab") : "mine";
   const search = params.get("search") || "";
   const category = params.get("category") || "";
+  const statusFilter = params.get("status") || "";
   const direction = params.get("direction") || "";
 
   const { mine, network, movements, categories, loading, networkLoading, fetchMine, fetchNetwork, fetchMovements, fetchCategories, remove, update, replaceItem } = useStockStore();
   const openDeal = useChatStore((s) => s.openDeal);
-  const isPatron = useAuthStore((s) => !!s.vendor?.is_patron);
+  const vendor = useAuthStore((s) => s.vendor);
+  const isPatron = !!vendor?.is_patron;
 
   const [editing, setEditing] = useState(null); // null | "new" | item
   const [importing, setImporting] = useState(false);
   const [sourcing, setSourcing] = useState(null);
   const [comparing, setComparing] = useState(null);
   const [verifying, setVerifying] = useState(null);
+  const [checkOpen, setCheckOpen] = useState(false);
 
   const setParam = useCallback(
     (patch) => {
@@ -74,10 +85,24 @@ export default function StockRoom() {
     if (tab === "movements") fetchMovements({ direction }).catch((e) => toast.error(apiError(e)));
   }, [tab, search, category, direction, fetchMine, fetchNetwork, fetchMovements]);
 
+  const statusCounts = useMemo(() => {
+    const counts = { published: 0, draft: 0, hidden: 0, unavailable: 0 };
+    for (const item of mine) {
+      const st = getStockVisibilityStatus(item).key;
+      counts[st] = (counts[st] || 0) + 1;
+    }
+    return counts;
+  }, [mine]);
+
   const filteredMine = useMemo(() => {
     const q = search.toLowerCase();
-    return mine.filter((i) => (!category || i.category === category) && (!q || `${i.name} ${i.sku || ""} ${(i.tags || []).join(" ")}`.toLowerCase().includes(q)));
-  }, [mine, search, category]);
+    return mine.filter((i) => {
+      if (category && i.category !== category) return false;
+      if (statusFilter && getStockVisibilityStatus(i).key !== statusFilter) return false;
+      if (q && !`${i.name} ${i.sku || ""} ${(i.tags || []).join(" ")}`.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [mine, search, category, statusFilter]);
 
   const onRemove = async (item) => {
     if (!(await confirm({ title: `Remove ${item.name}?`, message: "It disappears from your shelf and the network. Existing movements keep their record.", confirmLabel: "Remove", danger: true }))) return;
@@ -159,6 +184,86 @@ export default function StockRoom() {
               </div>
             )}
           </div>
+
+          {tab === "mine" && mine.length > 0 && (
+            <div className="rounded-2xl border border-edge-1 bg-surface-1 p-3.5 space-y-3" data-testid="shelf-visibility-summary">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {STATUS_FILTERS.map(({ value, label }) => {
+                    const count = value ? statusCounts[value] : mine.length;
+                    return (
+                      <Chip
+                        key={value || "all"}
+                        active={statusFilter === value}
+                        onClick={() => setParam({ status: statusFilter === value ? "" : value })}
+                      >
+                        {label} ({count})
+                      </Chip>
+                    );
+                  })}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setCheckOpen((v) => !v)}
+                  className="text-2xs font-semibold text-brand-700 dark:text-brand-400 hover:underline underline-offset-2"
+                >
+                  {checkOpen ? "Hide visibility check" : "Why isn't my stock showing?"}
+                </button>
+              </div>
+
+              {(checkOpen || statusCounts.published < mine.length) && (
+                <div className="grid gap-2.5 sm:grid-cols-3 pt-2 border-t border-edge-1 text-micro text-ink-3">
+                  <div className="flex items-start gap-2.5 rounded-xl bg-surface-0 border border-edge-1 p-2.5">
+                    <span className="grid place-items-center w-8 h-8 rounded-lg bg-surface-2 text-brand-700 dark:text-brand-300 shrink-0">
+                      <CheckCircle2 size={16} aria-hidden="true" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="font-bold text-ink-1">Step 1 — Check each listing</p>
+                      <p className="mt-0.5 leading-snug">
+                        Confirm each item is marked <strong>Published</strong> (visible to network, stated price, and available quantity ≥ minimum order).
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2.5 rounded-xl bg-surface-0 border border-edge-1 p-2.5">
+                    <span className="grid place-items-center w-8 h-8 rounded-lg bg-surface-2 text-brand-700 dark:text-brand-300 shrink-0">
+                      <Store size={16} aria-hidden="true" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="font-bold text-ink-1">Step 2 — Preview your public shop</p>
+                      <p className="mt-0.5 leading-snug">
+                        See your storefront as buyers see it ({statusCounts.published} published item{statusCounts.published === 1 ? "" : "s"} eligible).
+                      </p>
+                      {vendor?.vendor_handle && (
+                        <Link
+                          to={`/@${vendor.vendor_handle}`}
+                          className="mt-1 inline-block font-bold text-brand-700 dark:text-brand-400 hover:underline"
+                        >
+                          Open Shop front →
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2.5 rounded-xl bg-surface-0 border border-edge-1 p-2.5">
+                    <span className="grid place-items-center w-8 h-8 rounded-lg bg-surface-2 text-brand-700 dark:text-brand-300 shrink-0">
+                      <Search size={16} aria-hidden="true" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="font-bold text-ink-1">Step 3 — Test discovery</p>
+                      <p className="mt-0.5 leading-snug">
+                        Note: Home's <em>Fresh on the network</em> only shows other vendors' stock. Search in Browse to verify your listing's eligibility.
+                      </p>
+                      <Link
+                        to="/browse?type=goods"
+                        className="mt-1 inline-block font-bold text-brand-700 dark:text-brand-400 hover:underline"
+                      >
+                        Test in Browse →
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {tab === "mine" &&
             (loading && mine.length === 0 ? (

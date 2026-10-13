@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Globe, Package, SlidersHorizontal, Sparkles, X, Megaphone, Map as MapIcon,
-  MapPin, Newspaper, Network, Users,
+  MapPin, Newspaper, Network, Users, List, ShoppingBasket, Store,
 } from "lucide-react";
 import Button from "@/components/ui/Button";
 import Chip from "@/components/ui/Chip";
@@ -16,7 +16,7 @@ import { SkeletonGrid } from "@/components/ui/Skeleton";
 import { PageSpinner } from "@/components/ui/Spinner";
 import { toast } from "@/components/ui/Toast";
 import { useConfirm } from "@/components/ui/ConfirmDialog";
-import StockCard from "@/components/stock/StockCard";
+import StockCard, { getStockVisibilityStatus } from "@/components/stock/StockCard";
 import SourceDialog from "@/components/stock/SourceDialog";
 import StockCompareModal from "@/components/stock/StockCompareModal";
 import ResultCard from "@/components/discovery/ResultCard";
@@ -140,6 +140,8 @@ function ActionCenter({ search, onSearch, onPost, onPosted, goType, refreshKey }
         <ContextLink to="/map" icon={MapIcon}>Map view</ContextLink>
         <ContextLink to="/markets" icon={MapPin}>Markets</ContextLink>
         <ContextLink to="/network" icon={Network}>Suppliers</ContextLink>
+        <ContextLink to="/lists" icon={List}>Vendor lists</ContextLink>
+        <ContextLink to="/locks" icon={ShoppingBasket}>Market locks</ContextLink>
         <ContextLink to="/nearby" icon={Globe}>Around you</ContextLink>
         <ContextLink to="/news" icon={Newspaper}>Market news</ContextLink>
       </section>
@@ -188,7 +190,7 @@ function GoodsResults({ search, onSearch }) {
   const quality = params.get("quality") || "";
   const inStock = params.get("stock") !== "all";
 
-  const { network, networkLoading, categories, fetchNetwork, fetchCategories, replaceItem } = useStockStore();
+  const { mine, network, networkLoading, categories, fetchMine, fetchNetwork, fetchCategories, replaceItem } = useStockStore();
   const openDeal = useChatStore((s) => s.openDeal);
   const isPatron = useAuthStore((s) => !!s.vendor?.is_patron);
 
@@ -208,8 +210,9 @@ function GoodsResults({ search, onSearch }) {
   );
 
   useEffect(() => {
-    fetchCategories().catch(() => {});
-  }, [fetchCategories]);
+    fetchCategories?.()?.catch?.(() => {});
+    fetchMine?.()?.catch?.(() => {});
+  }, [fetchCategories, fetchMine]);
 
   const load = useCallback(() => {
     setError("");
@@ -219,6 +222,22 @@ function GoodsResults({ search, onSearch }) {
   }, [fetchNetwork, search, category, inStock]);
 
   useEffect(() => { load(); }, [load]);
+
+  const matchingMine = useMemo(() => {
+    if (!search && !category) return [];
+    const q = search.trim().toLowerCase();
+    return (mine || []).filter((i) => {
+      if (category && (i.category || "").toLowerCase() !== category.toLowerCase()) return false;
+      if (q) {
+        const hay = [i.name, i.sku, i.category, i.subcategory, i.description, ...(i.tags || [])]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [mine, search, category]);
 
   const results = useMemo(() => {
     let rows = network;
@@ -335,6 +354,48 @@ function GoodsResults({ search, onSearch }) {
           </div>
         )}
       </header>
+
+      {matchingMine.length > 0 && (
+        <section
+          aria-label="Your own matching listings"
+          data-testid="browse-own-shelf-matches"
+          className="rounded-2xl border border-edge-1 bg-surface-1 p-4 space-y-2.5"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Store size={15} className="text-brand-700 dark:text-brand-300 shrink-0" aria-hidden="true" />
+              <p className="text-xs font-bold text-ink-1">
+                On your own shelf ({matchingMine.length} matching item{matchingMine.length === 1 ? "" : "s"})
+              </p>
+            </div>
+            <Link to="/stock" className="text-micro font-bold text-brand-700 dark:text-brand-400 hover:underline">
+              Manage in My shelf →
+            </Link>
+          </div>
+          <p className="text-micro text-ink-3">
+            Sourcing results below exclude your own stock so you only order from other vendors, but here is how your matching listings appear to other accounts:
+          </p>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {matchingMine.map((item) => {
+              const st = getStockVisibilityStatus(item);
+              return (
+                <Link
+                  key={item.id}
+                  to={`/listing/${item.id}`}
+                  className="rounded-xl border border-edge-1 bg-surface-0 p-3 flex flex-col justify-between gap-1 hover:border-brand-500/50 transition-colors"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-semibold text-ink-1 truncate">{item.name}</span>
+                    <Badge variant={st.variant} size="xs">{st.label}</Badge>
+                  </div>
+                  <p className="text-micro text-ink-3">{st.summary}</p>
+                  <p className="text-micro text-ink-4 leading-snug">{st.reason}</p>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {error ? (
         <ErrorState description={error} onRetry={load} />
@@ -563,7 +624,8 @@ export default function BrowsePage() {
   const [refreshKey, setRefreshKey] = useState(0);
 
   const rawType = params.get("type") || "";
-  const type = TYPES.includes(rawType) ? rawType : "";
+  const hasGoodsQuery = Boolean(params.get("category") || params.get("search"));
+  const type = TYPES.includes(rawType) ? rawType : hasGoodsQuery ? "goods" : "";
   const search = params.get("search") || "";
 
   const setParam = useCallback(

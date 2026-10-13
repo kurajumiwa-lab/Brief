@@ -315,20 +315,28 @@ async def browse_network_stock(
     category: Optional[str] = None,
     search: Optional[str] = None,
     vendor_handle: Optional[str] = None,
+    include_mine: bool = Query(False),
     min_quantity: int = Query(1, ge=0),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
     vendor: Vendor = Depends(get_current_vendor),
     db: AsyncSession = Depends(get_db),
 ):
-    """Browse stock available across the vendor network"""
+    """Browse stock available across the vendor network.
+
+    Excludes the viewer's own shelf on the general network feed so traders only
+    see stock they can source from others, but includes a vendor's own published
+    shelf when `vendor_handle` is explicitly requested (e.g. Shop front preview)
+    or when `include_mine=True`.
+    """
     query = (
         select(StockItem, Vendor)
         .join(Vendor, StockItem.vendor_id == Vendor.id)
         .where(StockItem.visible_to_network.is_(True))
         .where(StockItem.quantity_available >= min_quantity)
-        .where(StockItem.vendor_id != vendor.id)
     )
+    if not vendor_handle and not include_mine:
+        query = query.where(StockItem.vendor_id != vendor.id)
     if category:
         query = query.where(StockItem.category.ilike(category))
     if vendor_handle:
@@ -338,6 +346,8 @@ async def browse_network_stock(
             StockItem.name.ilike(f"%{search}%"),
             StockItem.description.ilike(f"%{search}%"),
             StockItem.sku.ilike(f"%{search}%"),
+            StockItem.category.ilike(f"%{search}%"),
+            StockItem.subcategory.ilike(f"%{search}%"),
             StockItem.tags.contains([search]),
         ))
 

@@ -150,6 +150,72 @@ vi.mock("@/lib/api", () => {
       status: vi.fn(() => ok(OPS)),
       slow: vi.fn(() => ok({ threshold_ms: 1000, slow_routes: OPS.http.slow_routes })),
       metrics: vi.fn(() => ok("brief_up 1\nbrief_requests_total 240\n")),
+      jobs: vi.fn(() =>
+        ok({
+          summary: { running: 1, queued: 2, succeeded: 4, failed: 1 },
+          worker_health: {
+            scheduler_on_api: true,
+            execution_mode: "in_process_asyncio",
+            rate_limiter_backend: "_MemoryBackend",
+          },
+          supported_workflows: [],
+          jobs: [
+            {
+              id: "job-seed-1",
+              name: "Transactional Outbox Drain",
+              workflow_type: "outbox_drain",
+              workflow_label: "Transactional Outbox Drain",
+              created_by: "@mama_mboga",
+              status: "succeeded",
+              params: { batch_size: 200 },
+              created_at: "2026-10-13T08:00:00Z",
+              completed_at: "2026-10-13T08:00:01Z",
+              duration_ms: 18.4,
+              result_summary: "Drained 12 outbox events (0 remaining in queue).",
+            },
+          ],
+        })
+      ),
+      createJob: vi.fn((body) =>
+        body.dry_run
+          ? ok({
+              valid: true,
+              dry_run: true,
+              workflow_type: body.workflow_type,
+              endpoint: "POST /api/squad/job-calls",
+              normalized_params: body.params,
+              warnings: ["Shift call-up will be posted as open."],
+            })
+          : ok({
+              valid: true,
+              dry_run: false,
+              job: {
+                id: "job-new-99",
+                name: body.params?.title || body.title || "Dispatched Job",
+                workflow_type: body.workflow_type,
+                workflow_label: "Marketplace Shift / Squad Call-Up",
+                created_by: "@mama_mboga",
+                status: "queued",
+                params: body.params || {},
+                created_at: "2026-10-13T09:00:00Z",
+                result_summary: "Shift call-up posted (KES 600 · mover · common). Awaiting worker acceptance.",
+              },
+            })
+      ),
+      actOnJob: vi.fn((id, body) =>
+        ok({
+          message: `Job ${body.action}`,
+          job: {
+            id,
+            name: "Retried Job",
+            workflow_type: "outbox_drain",
+            workflow_label: "Transactional Outbox Drain",
+            created_by: "@mama_mboga",
+            status: body.action === "cancel" ? "failed" : "succeeded",
+            result_summary: "Action completed.",
+          },
+        })
+      ),
     },
   };
 });
@@ -324,5 +390,49 @@ describe("Ops console", () => {
     fireEvent.click(screen.getByRole("button", { name: /raw scrape/i }));
     await waitFor(() => expect(api.opsAPI.metrics).toHaveBeenCalled());
     expect(await screen.findByText(/brief_up 1/)).toBeInTheDocument();
+  });
+
+  it("renders the Operations Center, validates job parameters, and dispatches a job", async () => {
+    mount(<Ops />, "/ops");
+    expect(await screen.findByRole("heading", { name: /Operations Center/i })).toBeInTheDocument();
+    expect(screen.getByText("Live job status")).toBeInTheDocument();
+    expect(screen.getByText("Awaiting execution")).toBeInTheDocument();
+    expect(screen.getByText("Drained 12 outbox events (0 remaining in queue).")).toBeInTheDocument();
+
+    // Open Create & Execute Job modal
+    fireEvent.click(screen.getByRole("button", { name: /\+ Create Job/i }));
+    expect(await screen.findByRole("heading", { name: /Create & Execute Job/i })).toBeInTheDocument();
+
+    // Validate minimum wage guard first
+    const payInput = screen.getByLabelText(/Pay \(KES\)/i);
+    fireEvent.change(payInput, { target: { value: "100" } });
+    fireEvent.click(screen.getByRole("button", { name: /Validate & Review/i }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(/Minimum wage guard/i);
+
+    // Fix pay_kes, validate via dry_run, then start job
+    fireEvent.change(payInput, { target: { value: "600" } });
+    const titleInput = screen.getByLabelText(/Shift title/i);
+    fireEvent.change(titleInput, { target: { value: "Morning Market Grading Shift" } });
+    fireEvent.click(screen.getByRole("button", { name: /Validate & Review/i }));
+    await waitFor(() =>
+      expect(api.opsAPI.createJob).toHaveBeenCalledWith(
+        expect.objectContaining({
+          workflow_type: "squad_job_call",
+          dry_run: true,
+        })
+      )
+    );
+    expect(await screen.findByText(/Pre-flight Validation Passed/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /Start Job Now/i }));
+    await waitFor(() =>
+      expect(api.opsAPI.createJob).toHaveBeenCalledWith(
+        expect.objectContaining({
+          workflow_type: "squad_job_call",
+          dry_run: false,
+        })
+      )
+    );
+    expect(await screen.findByText("Morning Market Grading Shift")).toBeInTheDocument();
   });
 });

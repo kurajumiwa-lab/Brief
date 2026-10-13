@@ -14,6 +14,99 @@ import { currency, num, relativeTime, shortDate } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 
 /**
+ * Compute the explicit visibility & publishing status of a shelf item:
+ *   - Published   — visible to other users and eligible for trade
+ *   - Draft       — saved but not published (missing price / incomplete)
+ *   - Hidden      — intentionally not shared with the network
+ *   - Unavailable — not currently available for trade (0 available, below MOQ, or expired)
+ */
+export function getStockVisibilityStatus(item) {
+  if (!item) {
+    return {
+      key: "draft",
+      label: "Draft",
+      variant: "gray",
+      summary: "Draft — saved but not published.",
+      reason: "Complete the listing details to publish.",
+      isPublished: false,
+    };
+  }
+  const available = item.quantity_available ?? item.quantity_in_stock ?? 0;
+  const moq = item.min_order_quantity ?? item.minimum_order_quantity ?? 1;
+  const expired = Boolean(item.expiry_date && new Date(item.expiry_date) < Date.now());
+  const hasPrice = Number(item.unit_price) > 0 || Number(item.wholesale_price) > 0;
+
+  if (item.visible_to_network === false) {
+    return {
+      key: "hidden",
+      label: "Hidden",
+      variant: "gray",
+      summary: "Hidden — intentionally not shared with the network.",
+      reason: "Turn on network visibility so buyers can see this listing on your Shop front and in Browse.",
+      isPublished: false,
+    };
+  }
+
+  if (item.status === "draft" || !hasPrice) {
+    return {
+      key: "draft",
+      label: "Draft",
+      variant: "amber",
+      summary: "Draft — saved but not published.",
+      reason: "Add a stated price and stock quantity to publish this listing to buyers.",
+      isPublished: false,
+    };
+  }
+
+  if (expired) {
+    return {
+      key: "unavailable",
+      label: "Unavailable",
+      variant: "red",
+      summary: "Unavailable — not currently available for trade.",
+      reason: "The batch expiry date has passed. Update the batch or expiry date to resume trading.",
+      isPublished: false,
+    };
+  }
+
+  if (available <= 0) {
+    return {
+      key: "unavailable",
+      label: "Unavailable",
+      variant: "red",
+      summary: "Unavailable — not currently available for trade.",
+      reason:
+        (item.quantity_reserved || 0) > 0
+          ? `All ${item.quantity_reserved} units are currently reserved by open trades.`
+          : "Available quantity is 0. Increase stock quantity so it appears on your Shop front and in Browse.",
+      isPublished: false,
+    };
+  }
+
+  if (available < moq) {
+    return {
+      key: "unavailable",
+      label: "Unavailable",
+      variant: "amber",
+      summary: "Unavailable — not currently available for trade.",
+      reason: `Available quantity (${available}) is below your minimum order quantity (${moq}).`,
+      isPublished: false,
+    };
+  }
+
+  return {
+    key: "published",
+    label: "Published",
+    variant: "brand",
+    summary: "Published — visible to other users.",
+    reason: hasPrice
+      ? "Live on your public Shop front and searchable by other accounts in Browse."
+      : "Visible on your Shop front and Browse. Add a unit price so buyers can order immediately.",
+    isPublished: true,
+  };
+}
+
+/**
  * THE LISTING CARD — Amazon-style B2B marketplace card with progressive disclosure.
  *
  * Hierarchy:
@@ -46,6 +139,7 @@ export default function StockCard({
   const batch = item.batch_number || item.batch_code;
   const origin = item.origin_country || item.origin_region;
   const provenance = batch || origin || item.expiry_date || item.spec_sheet_url;
+  const visibility = getStockVisibilityStatus(item);
   const hasDetails = Boolean(
     provenance || item.description || (item.tags && item.tags.length > 0) || item.updated_at || item.wholesale_price != null
   );
@@ -57,7 +151,11 @@ export default function StockCard({
       <Link to={to} className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50" tabIndex={-1} aria-hidden="true">
         <StockThumb item={item} ratio="aspect-[16/9]">
           <div className="absolute top-2.5 left-2.5 flex flex-wrap gap-1">
-            {out ? (
+            {mode === "mine" ? (
+              <Badge variant={visibility.variant} size="xs" data-testid={`stock-status-${visibility.key}`}>
+                {visibility.label}
+              </Badge>
+            ) : out ? (
               <Badge variant="red" size="xs">
                 Sold out
               </Badge>
@@ -68,6 +166,11 @@ export default function StockCard({
             ) : (
               <Badge variant="brand" size="xs">
                 Available now
+              </Badge>
+            )}
+            {mode === "mine" && low && visibility.isPublished && (
+              <Badge variant="amber" size="xs">
+                Low stock
               </Badge>
             )}
             {expired && (
@@ -133,6 +236,14 @@ export default function StockCard({
             )}
             {item.sku && <span className="text-micro text-ink-4 font-mono">{item.sku}</span>}
           </div>
+          {mode === "mine" && (
+            <div className="mt-2 rounded-lg border border-edge-1 bg-surface-1 px-2.5 py-1.5 text-micro text-ink-3">
+              <p className="font-semibold text-ink-1">{visibility.summary}</p>
+              {!visibility.isPublished && (
+                <p className="mt-0.5 text-ink-4 leading-snug">{visibility.reason}</p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* ── price + availability + MOQ at first glance ────────────── */}
