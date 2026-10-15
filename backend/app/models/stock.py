@@ -116,6 +116,9 @@ class StockItem(Base):
 class StockMovement(Base):
     """Track every stock movement between vendors"""
     __tablename__ = "stock_movements"
+    __table_args__ = (
+        Index("uq_stock_movements_buyer_reorder_key", "to_vendor_id", "reorder_key_hash", unique=True),
+    )
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     stock_item_id = Column(UUID(as_uuid=True), ForeignKey('stock_items.id'), nullable=False, index=True)
@@ -129,6 +132,12 @@ class StockMovement(Base):
 
     movement_type = Column(String(50), default="sourcing", nullable=False)  # sale, transfer, return, sourcing
     status = Column(String(50), default=MovementStatus.PENDING.value, nullable=False, index=True)
+
+    # A repeat order is still a normal movement. These nullable fields make a
+    # buyer's retry durable across processes; ordinary sourcing remains unchanged.
+    # The unique index on (to_vendor_id, reorder_key_hash) is in migration 0020.
+    reorder_key_hash = Column(String(64), nullable=True)
+    reorder_request_hash = Column(String(64), nullable=True)
 
     notes = Column(Text)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)

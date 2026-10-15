@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
-  AlertTriangle, ArrowLeft, Check, CheckCircle2, Clock3, Copy,
-  HelpCircle, MapPin, MessageCircle, PackageCheck, Phone, ShieldCheck, Truck, XCircle,
+  AlertTriangle, ArrowLeft, BookOpen, Check, CheckCircle2, Clock3, Copy,
+  HelpCircle, MapPin, MessageCircle, PackageCheck, Phone, RotateCcw, ShieldCheck, Truck, XCircle,
 } from "lucide-react";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
@@ -16,7 +16,8 @@ import { toast } from "@/components/ui/Toast";
 import { useConfirm } from "@/components/ui/ConfirmDialog";
 import { useAuthStore } from "@/stores/authStore";
 import { apiError, chatAPI, ordersAPI, stockAPI, toolAPI } from "@/lib/api";
-import { currency, num, parseApiDate } from "@/lib/formatters";
+import { currency, num, parseApiDate, preciseCurrency } from "@/lib/formatters";
+import { readPendingReceipt, queuePendingReceipt, clearPendingReceipt } from "@/lib/offlineReceipt";
 import { cn, titleCase } from "@/lib/utils";
 
 const DISPUTE_CATEGORIES = [
@@ -70,7 +71,7 @@ function when(value) {
 }
 
 function showMoney(value) {
-  return value === null || value === undefined ? "Not set" : currency(Number(value));
+  return value === null || value === undefined ? "Not set" : preciseCurrency(Number(value));
 }
 
 function statusTone(status) {
@@ -101,6 +102,10 @@ export default function OrderDetailPage() {
   const [receiptCode, setReceiptCode] = useState("");
   const [receiptExpires, setReceiptExpires] = useState("");
   const [providerCode, setProviderCode] = useState("");
+  const [pendingReceipt, setPendingReceipt] = useState(() => readPendingReceipt(vendor?.id, id));
+  const [receiptError, setReceiptError] = useState("");
+  const [receiptNow, setReceiptNow] = useState(Date.now());
+  const sendingReceipt = useRef(false);
   const [trackingForm, setTrackingForm] = useState({ status: "picked_up", note: "", tracking_reference: "", tracking_url: "" });
   const [disputeOpen, setDisputeOpen] = useState(false);
   const [dispute, setDispute] = useState({ category: "other", description: "" });
@@ -113,6 +118,13 @@ export default function OrderDetailPage() {
     try {
       const { data } = await ordersAPI.get(id);
       setOrder(data);
+      if (data.status === "received" || data.status === "cancelled") {
+        if (data.status === "cancelled" && readPendingReceipt(vendor?.id, id)) {
+          setReceiptError("The order was cancelled before your queued acknowledgement was accepted");
+        }
+        clearPendingReceipt(vendor?.id, id);
+        setPendingReceipt(null);
+      }
       if (!pickupDirty) {
         setPickup({
           address: data.pickup?.address || "",
@@ -129,17 +141,27 @@ export default function OrderDetailPage() {
         delivery_issue: "in_transit",
       })[lastTrackingStatus] || "picked_up";
       setTrackingForm((current) => ({ ...current, status: nextTrackingStatus }));
+      return data;
     } catch (err) {
       if (!quiet) setError(apiError(err, "This order could not be loaded"));
+      return null;
     } finally {
       if (!quiet) setLoading(false);
     }
-  }, [id, pickupDirty]);
+  }, [id, pickupDirty, vendor?.id]);
+
+  useEffect(() => {
+    setPendingReceipt(readPendingReceipt(vendor?.id, id));
+    setReceiptCode("");
+    setReceiptExpires("");
+    setReceiptError("");
+  }, [vendor?.id, id]);
 
   useEffect(() => {
     load();
     const timer = window.setInterval(() => load(true), 15000);
-    return () => window.clearInterval(timer);
+    const clock = window.setInterval(() => setReceiptNow(Date.now()), 30000);
+    return () => { window.clearInterval(timer); window.clearInterval(clock); };
   }, [load]);
 
   const isBuyer = order?.direction === "incoming";
@@ -154,6 +176,39 @@ export default function OrderDetailPage() {
   const paymentLocked = order && ["processing", "paid", "refund_processing", "partially_refunded", "refunded"].includes(order.payment?.status);
   const paymentNeedsSupport = order && ["processing", "paid", "refund_processing", "partially_refunded"].includes(order.payment?.status);
   const cancellationNeedsSupport = paymentNeedsSupport || order?.status === "shipped" && selectedQuote?.provider_type !== "self_pickup";
+
+  const flushPendingReceipt = useCallback(async () => {
+    if (!pendingReceipt || !vendor?.id || order?.status !== "shipped" || !navigator.onLine || sendingReceipt.current) return;
+    sendingReceipt.current = true;
+    try {
+      const { data } = await ordersAPI.receive(id, pendingReceipt.code);
+      clearPendingReceipt(vendor.id, id);
+      setPendingReceipt(null);
+      setOrder(data);
+      setReceiptError("");
+      toast.success("Handover confirmed by the server");
+    } catch (err) {
+      if (err.response) {
+        // Do not keep retrying a refused acknowledgement. Fetch the actual
+        // state (which may be 'received' if our previous response was lost).
+        clearPendingReceipt(vendor.id, id);
+        setPendingReceipt(null);
+        const truth = await load(true);
+        if (truth?.status !== "received") setReceiptError(apiError(err, "The handover could not be confirmed"));
+      }
+      // A transport failure leaves the same code queued until reconnection.
+    } finally {
+      sendingReceipt.current = false;
+    }
+  }, [id, vendor?.id, pendingReceipt, order?.status, load]);
+
+  useEffect(() => {
+    if (!pendingReceipt || order?.status !== "shipped") return;
+    flushPendingReceipt();
+    window.addEventListener("online", flushPendingReceipt);
+    const retry = window.setInterval(flushPendingReceipt, 15000);
+    return () => { window.removeEventListener("online", flushPendingReceipt); window.clearInterval(retry); };
+  }, [pendingReceipt, order?.status, flushPendingReceipt]);
 
   useEffect(() => {
     if (!isBuyer || order?.status !== "confirmed") return;
@@ -252,11 +307,21 @@ export default function OrderDetailPage() {
   const confirmOrder = async () => act("Order confirmed", () => stockAPI.advance(id, "confirm"));
 
   const createCode = async () => {
+    if (!navigator.onLine) {
+      toast.error("Connect to issue a new receipt code. An already-issued code can still be shared until it expires.");
+      return;
+    }
+    if (receiptCode && parseApiDate(receiptExpires)?.getTime() > Date.now() && !(await confirm({
+      title: "Replace the current code?",
+      message: "The old six-digit code will stop working immediately. Tell the provider to use the new one.",
+      confirmLabel: "Replace code",
+    }))) return;
     setBusy("Creating receipt code");
     try {
       const { data } = await ordersAPI.createReceiptCode(id);
       setReceiptCode(data.receipt_code);
       setReceiptExpires(data.expires_at);
+      setReceiptNow(Date.now());
       toast.success("One-time receipt code created. Share it with the selected fulfilment provider when the goods arrive.");
       await load(true);
     } catch (err) {
@@ -268,11 +333,39 @@ export default function OrderDetailPage() {
 
   const confirmReceipt = async (event) => {
     event.preventDefault();
-    await act("Receipt confirmed", async () => {
-      await ordersAPI.receive(id, providerCode.trim());
+    if (!/^\d{6}$/.test(providerCode) || busy) return;
+    setReceiptError("");
+    const code = providerCode;
+    if (!navigator.onLine) {
+      setPendingReceipt(queuePendingReceipt(vendor.id, id, code));
       setProviderCode("");
-      setReceiptCode("");
-    });
+      toast("Queued locally — receipt is NOT confirmed until the server accepts the code.");
+      return;
+    }
+    setBusy("Receipt confirmed");
+    try {
+      const { data } = await ordersAPI.receive(id, code);
+      setProviderCode("");
+      setOrder(data);
+      toast.success("Receipt confirmed by the server");
+    } catch (err) {
+      if (!err.response) {
+        setPendingReceipt(queuePendingReceipt(vendor.id, id, code));
+        setProviderCode("");
+        toast("Connection lost. Code queued, but receipt is NOT confirmed yet.");
+      } else {
+        setReceiptError(apiError(err, "The server refused the code"));
+        await load(true);
+      }
+    } finally {
+      setBusy("");
+    }
+  };
+
+  const discardPendingReceipt = async () => {
+    if (!(await confirm({ title: "Discard pending code?", message: "The server has not accepted it. The buyer may need to issue another code if you enter a different one.", confirmLabel: "Discard code" }))) return;
+    clearPendingReceipt(vendor?.id, id);
+    setPendingReceipt(null);
   };
 
   const updateTracking = async (event) => {
@@ -358,6 +451,8 @@ export default function OrderDetailPage() {
           <p className="mt-1 font-mono text-micro text-ink-4">Order {order.id}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {isBuyer && order.status === "received" && <Link to="/orders/repeat" className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand-600 px-3 text-xs font-semibold text-white hover:bg-brand-700"><RotateCcw size={14} aria-hidden="true" /> Repeat an order</Link>}
+          {isParticipant && <Link to="/orders/records" className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-edge-2 px-3 text-xs font-semibold text-ink-2 hover:bg-surface-2"><BookOpen size={14} aria-hidden="true" /> My records</Link>}
           {isParticipant && <Button size="sm" variant="secondary" icon={MessageCircle} loading={busy === "Opening conversation"} onClick={openChat}>Order chat</Button>}
           {isBuyer && order.supplier?.call_phone && <a className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-edge-2 px-3 text-xs font-semibold text-ink-2 hover:bg-surface-2" href={`tel:${order.supplier.call_phone}`} aria-label={`Call ${supplierName}`}><Phone size={14} aria-hidden="true" /> Call supplier</a>}
           {isSupplier && order.buyer?.call_phone && <a className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-edge-2 px-3 text-xs font-semibold text-ink-2 hover:bg-surface-2" href={`tel:${order.buyer.call_phone}`} aria-label={`Call ${buyerName}`}><Phone size={14} aria-hidden="true" /> Call buyer</a>}
@@ -429,16 +524,19 @@ export default function OrderDetailPage() {
           />
           <ReceiptCard
             order={order}
-            isBuyer={isBuyer}
             canCreate={codeCanBeCreated}
             canEnter={canEnterReceiptCode}
             receiptCode={receiptCode}
             receiptExpires={receiptExpires}
+            receiptNow={receiptNow}
             providerCode={providerCode}
             setProviderCode={setProviderCode}
             createCode={createCode}
             confirmReceipt={confirmReceipt}
             shareCode={shareCode}
+            pendingReceipt={pendingReceipt}
+            receiptError={receiptError}
+            discardPendingReceipt={discardPendingReceipt}
             busy={busy}
           />
           <SettlementCard settlement={order.settlement} />
@@ -674,12 +772,42 @@ function PaymentCard({ order, isBuyer, canPay, phone, setPhone, pay, busy }) {
   );
 }
 
-function ReceiptCard({ order, canCreate, canEnter, receiptCode, receiptExpires, providerCode, setProviderCode, createCode, confirmReceipt, shareCode, busy }) {
+function ReceiptCard({
+  order, canCreate, canEnter, receiptCode, receiptExpires, receiptNow,
+  providerCode, setProviderCode, createCode, confirmReceipt, shareCode,
+  pendingReceipt, receiptError, discardPendingReceipt, busy,
+}) {
+  const expired = receiptExpires && parseApiDate(receiptExpires)?.getTime() <= receiptNow;
+  const smsBody = `Brief_ order ${order.id}: receipt code ${receiptCode}. Only use after the goods arrive.`;
   return (
     <section className="rounded-2xl border border-edge-1 bg-surface-0 p-4 sm:p-5" aria-labelledby="receipt-heading">
-      <div className="flex items-start gap-3"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"><PackageCheck size={17} aria-hidden="true" /></span><div><h2 id="receipt-heading" className="text-sm font-bold text-ink-1">Proof of receipt</h2><p className="mt-1 text-2xs text-ink-3">The buyer creates a one-time code; the selected provider enters it at hand-off.</p></div></div>
-      {canCreate && <div className="mt-4 space-y-3">{receiptCode ? <div className="rounded-xl border border-brand-300 bg-brand-50 p-3"><p className="text-micro font-bold uppercase tracking-wide text-brand-800">Share this code with the selected provider</p><div className="mt-2 flex items-center justify-between gap-3"><code className="text-2xl font-extrabold tracking-[0.25em] text-brand-900">{receiptCode}</code><Button size="xs" variant="secondary" icon={Copy} onClick={shareCode}>Copy</Button></div>{receiptExpires && <p className="mt-1 text-micro text-brand-800">Expires {when(receiptExpires)}</p>}</div> : <p className="text-2xs text-ink-3">Create the code when the goods are physically with you. Only the buyer can view it here.</p>}<Button size="sm" variant={receiptCode ? "secondary" : "primary"} loading={busy === "Creating receipt code"} onClick={createCode}>{receiptCode ? "Replace one-time code" : "Create receipt code"}</Button></div>}
-      {canEnter && <form onSubmit={confirmReceipt} className="mt-4 space-y-3"><p className="text-2xs text-ink-3">Ask the buyer to share their current six-digit code only when the goods have arrived.</p><Input label="Buyer receipt code" required pattern="[0-9]{6}" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={providerCode} onChange={(event) => setProviderCode(event.target.value.replace(/\D/g, "").slice(0, 6))} /><Button size="sm" type="submit" icon={CheckCircle2} loading={busy === "Receipt confirmed"}>Verify code and confirm receipt</Button></form>}
+      <div className="flex items-start gap-3">
+        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"><PackageCheck size={17} aria-hidden="true" /></span>
+        <div><h2 id="receipt-heading" className="text-sm font-bold text-ink-1">Proof of receipt</h2><p className="mt-1 text-2xs text-ink-3">The buyer creates a one-time code; the selected provider enters it at hand-off. Only the server can confirm receipt.</p></div>
+      </div>
+      {canCreate && <div className="mt-4 space-y-3">
+        {receiptCode && !expired ? <div className="rounded-xl border border-brand-300 bg-brand-50 p-3">
+          <p className="text-micro font-bold uppercase tracking-wide text-brand-800">Share this code with the selected provider</p>
+          <code className="mt-2 block text-2xl font-extrabold tracking-[0.25em] text-brand-900">{receiptCode}</code>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <Button size="xs" variant="secondary" icon={Copy} onClick={shareCode}>Copy</Button>
+            <a className="inline-flex items-center rounded-lg border border-brand-300 px-3 py-1.5 text-2xs font-bold text-brand-800" href={`sms:?body=${encodeURIComponent(smsBody)}`}>Share via SMS</a>
+          </div>
+          {receiptExpires && <p className="mt-1 text-micro text-brand-800">Expires {when(receiptExpires)}. Code is shown only here, until you leave or reload.</p>}
+        </div> : <p className="text-2xs text-ink-3">{expired ? "The previous code expired. Generate a new one while connected." : "Create the code when the goods are physically with you. A new code needs a connection."}</p>}
+        <Button size="sm" variant={receiptCode && !expired ? "secondary" : "primary"} loading={busy === "Creating receipt code"} onClick={createCode}>{receiptCode && !expired ? "Replace one-time code" : "Create receipt code"}</Button>
+      </div>}
+      {canEnter && pendingReceipt && <div role="status" className="mt-4 rounded-xl border border-accent-500/50 bg-accent-50 p-3 text-xs text-accent-900 dark:bg-accent-500/10 dark:text-accent-200">
+        <strong>Queued locally — NOT confirmed.</strong> This device will retry when online. Do not hand over goods based on this status; wait for server confirmation.
+        {!pendingReceipt.saved && <p className="mt-1">Keep this page open: this browser blocked session storage.</p>}
+        <Button size="xs" variant="ghost" className="mt-2" onClick={discardPendingReceipt}>Discard pending code</Button>
+      </div>}
+      {canEnter && !pendingReceipt && <form onSubmit={confirmReceipt} className="mt-4 space-y-3">
+        <p className="text-2xs text-ink-3">Ask the buyer to share their current six-digit code only when the goods have arrived. If offline, your acknowledgement is queued — not completed.</p>
+        <Input label="Buyer receipt code" required pattern="[0-9]{6}" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={providerCode} onChange={(event) => setProviderCode(event.target.value.replace(/\D/g, "").slice(0, 6))} />
+        <Button size="sm" type="submit" icon={CheckCircle2} loading={busy === "Receipt confirmed"}>Verify code and confirm receipt</Button>
+      </form>}
+      {receiptError && <p role="alert" className="mt-3 text-xs text-red-700 dark:text-red-400">{receiptError}. Check the current order state or ask the buyer to issue a new code.</p>}
       {order.status === "shipped" && !canCreate && !canEnter && <p className="mt-3 text-2xs text-ink-4">The buyer must share their code with the selected fulfilment provider. Receipt is not final until that code is verified.</p>}
       {order.status === "received" && <p className="mt-3 flex items-start gap-2 text-2xs text-emerald-800"><CheckCircle2 size={14} className="mt-0.5 shrink-0" aria-hidden="true" />Receipt confirmed with the buyer's one-time code{order.completed_at ? ` at ${when(order.completed_at)}` : ""}.</p>}
       {order.status !== "shipped" && order.status !== "received" && <p className="mt-3 text-micro text-ink-4">Available after the supplier dispatches or marks the order ready.</p>}

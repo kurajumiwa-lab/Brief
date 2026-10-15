@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 
 const api = vi.hoisted(() => ({
@@ -46,6 +46,7 @@ vi.mock("@/lib/api", () => ({
 import OrderDetailPage from "@/pages/orders/OrderDetailPage";
 import OrderSupportInbox from "@/pages/orders/OrderSupportInbox";
 import { useAuthStore } from "@/stores/authStore";
+import { clearAllPendingReceipts, queuePendingReceipt, readPendingReceipt } from "@/lib/offlineReceipt";
 
 const buyerOrder = {
   id: "order-1",
@@ -72,6 +73,15 @@ const buyerOrder = {
   disputes: [],
 };
 
+const shippedProvider = {
+  ...buyerOrder,
+  status: "shipped",
+  direction: "fulfillment",
+  selected_quote_id: "quote-courier",
+  terms: { ...buyerOrder.terms, product_amount_ksh: null, platform_fee_ksh: null, total_amount_ksh: null, delivery_amount_ksh: 325 },
+  delivery_quotes: [{ ...buyerOrder.delivery_quotes[0], id: "quote-courier", provider_type: "courier", provider_vendor_id: "courier-1", status: "selected", price_ksh: 325 }],
+};
+
 function renderOrder(order = buyerOrder) {
   useAuthStore.setState({ vendor: { id: order.direction === "fulfillment" ? "courier-1" : "buyer-1" } });
   return render(
@@ -89,9 +99,10 @@ beforeEach(() => {
   api.setPickup.mockResolvedValue({ data: {} });
   api.requestQuote.mockResolvedValue({ data: {} });
   api.advance.mockResolvedValue({ data: {} });
+  clearAllPendingReceipts();
 });
 
-afterEach(() => cleanup());
+afterEach(() => { cleanup(); clearAllPendingReceipts(); vi.restoreAllMocks(); });
 
 describe("live order detail", () => {
   it("shows transaction-backed amounts, readiness and provider state", async () => {
@@ -146,6 +157,110 @@ describe("live order detail", () => {
     await waitFor(() => expect(api.advance).toHaveBeenCalledWith("order-1", "ship"));
     // and the page reloaded the order afterwards, without an unhandled crash
     await waitFor(() => expect(api.getOrder.mock.calls.length).toBeGreaterThan(1));
+  });
+
+  it("shares a short-lived code only to the buyer and marks expired codes", async () => {
+    const order = { ...buyerOrder, status: "shipped", selected_quote_id: "quote-pickup" };
+    api.getOrder.mockResolvedValue({ data: order });
+    api.createReceiptCode.mockResolvedValue({ data: { receipt_code: "123456", expires_at: new Date(Date.now() + 600000).toISOString() } });
+    renderOrder(order);
+    fireEvent.click(await screen.findByRole("button", { name: "Create receipt code" }));
+    expect(await screen.findByText("123456")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Share via SMS" })).toHaveAttribute("href", expect.stringContaining("123456"));
+    expect(api.createReceiptCode).toHaveBeenCalledWith("order-1");
+  });
+
+  it("visibly expires a buyer code and offers server-side regeneration", async () => {
+    const order = { ...buyerOrder, status: "shipped", selected_quote_id: "quote-pickup" };
+    api.getOrder.mockResolvedValue({ data: order });
+    api.createReceiptCode.mockResolvedValue({ data: { receipt_code: "123456", expires_at: new Date(Date.now() - 1000).toISOString() } });
+    renderOrder(order);
+    fireEvent.click(await screen.findByRole("button", { name: "Create receipt code" }));
+    expect(await screen.findByText(/previous code expired/i)).toBeInTheDocument();
+    expect(screen.queryByText("123456")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Create receipt code" })).toBeInTheDocument();
+  });
+
+  it("expires a locally queued provider acknowledgement after the server's 24-hour window", () => {
+    const start = Date.now();
+    const clock = vi.spyOn(Date, "now").mockReturnValue(start);
+    queuePendingReceipt("courier-1", "order-1", "123456");
+    expect(readPendingReceipt("courier-1", "order-1")?.code).toBe("123456");
+    clock.mockReturnValue(start + 24 * 60 * 60 * 1000);
+    expect(readPendingReceipt("courier-1", "order-1")).toBeNull();
+  });
+
+  it("queues an offline provider code with no false confirmation, then accepts only server acknowledgement", async () => {
+    const connected = vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
+    api.getOrder.mockResolvedValue({ data: shippedProvider });
+    api.receive.mockResolvedValue({ data: { ...shippedProvider, status: "received" } });
+    renderOrder(shippedProvider);
+    fireEvent.change(await screen.findByLabelText(/Buyer receipt code/), { target: { value: "102030" } });
+    fireEvent.click(screen.getByRole("button", { name: "Verify code and confirm receipt" }));
+    expect(await screen.findByText(/Queued locally — NOT confirmed/)).toBeInTheDocument();
+    expect(api.receive).not.toHaveBeenCalled();
+    expect(readPendingReceipt("courier-1", "order-1")?.code).toBe("102030");
+    expect(readPendingReceipt("other-provider", "order-1")).toBeNull();
+    connected.mockReturnValue(true);
+    await act(async () => { fireEvent(window, new Event("online")); });
+    await waitFor(() => expect(api.receive).toHaveBeenCalledWith("order-1", "102030"));
+    expect(await screen.findByText(/Receipt confirmed with the buyer's one-time code/)).toBeInTheDocument();
+    expect(readPendingReceipt("courier-1", "order-1")).toBeNull();
+  });
+
+  it("rejects an expired code without claiming a completed handover", async () => {
+    const connected = vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
+    api.getOrder.mockResolvedValue({ data: shippedProvider });
+    api.receive.mockRejectedValue({ response: { status: 409, data: { detail: "The receipt code expired" } } });
+    renderOrder(shippedProvider);
+    fireEvent.change(await screen.findByLabelText(/Buyer receipt code/), { target: { value: "102030" } });
+    fireEvent.click(screen.getByRole("button", { name: "Verify code and confirm receipt" }));
+    expect(await screen.findByText(/Queued locally — NOT confirmed/)).toBeInTheDocument();
+    connected.mockReturnValue(true);
+    await act(async () => { fireEvent(window, new Event("online")); });
+    expect(await screen.findByRole("alert")).toHaveTextContent("The receipt code expired");
+    expect(screen.queryByText(/Queued locally — NOT confirmed/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Receipt confirmed with the buyer/)).not.toBeInTheDocument();
+    expect(readPendingReceipt("courier-1", "order-1")).toBeNull();
+  });
+
+  it("replaces a rejected pending handover with the server's cancelled state and verbatim conflict", async () => {
+    const connected = vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
+    api.getOrder.mockResolvedValueOnce({ data: shippedProvider })
+      .mockResolvedValue({ data: { ...shippedProvider, status: "cancelled" } });
+    api.receive.mockRejectedValue({ response: { status: 409, data: { detail: "Movement is 'cancelled', expected 'shipped' to receive" } } });
+    renderOrder(shippedProvider);
+    fireEvent.change(await screen.findByLabelText(/Buyer receipt code/), { target: { value: "102030" } });
+    fireEvent.click(screen.getByRole("button", { name: "Verify code and confirm receipt" }));
+    expect(await screen.findByText(/Queued locally — NOT confirmed/)).toBeInTheDocument();
+    connected.mockReturnValue(true);
+    await act(async () => { fireEvent(window, new Event("online")); });
+    expect(await screen.findByRole("alert")).toHaveTextContent("Movement is 'cancelled', expected 'shipped' to receive");
+    expect(screen.getByText(/This order was cancelled/)).toBeInTheDocument();
+    expect(screen.queryByText(/Queued locally — NOT confirmed/)).not.toBeInTheDocument();
+    expect(readPendingReceipt("courier-1", "order-1")).toBeNull();
+  });
+
+  it("keeps a transport-failed code pending through reload but clears it at logout", async () => {
+    const connected = vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+    api.getOrder.mockResolvedValue({ data: shippedProvider });
+    api.receive.mockImplementation(async () => {
+      connected.mockReturnValue(false);
+      throw new Error("Network Error");
+    });
+    const view = renderOrder(shippedProvider);
+    fireEvent.change(await screen.findByLabelText(/Buyer receipt code/), { target: { value: "778899" } });
+    fireEvent.click(screen.getByRole("button", { name: "Verify code and confirm receipt" }));
+    expect(await screen.findByText(/Queued locally — NOT confirmed/)).toBeInTheDocument();
+    expect(readPendingReceipt("courier-1", "order-1")?.code).toBe("778899");
+    view.unmount();
+    // Remount without a connection: status must remain pending, never 'received'.
+    const remount = renderOrder(shippedProvider);
+    expect(await screen.findByText(/Queued locally — NOT confirmed/)).toBeInTheDocument();
+    remount.unmount();
+    act(() => { useAuthStore.getState().logout(); });
+    expect(readPendingReceipt("courier-1", "order-1")).toBeNull();
+    connected.mockRestore();
   });
 
   it("lets configured support request a provider-verified refund with a recorded note", async () => {

@@ -217,9 +217,13 @@ async def test_vendor_list_reviews(client):
 # --- discovery algorithm (§4.5) ----------------------------------------------------------------
 
 async def test_discovery_algorithm(client):
-    _, me = await _register(client, "sourcer", ["retail"], "sourcing")
-    _, complement = await _register(client, "grower", ["fresh produce"], "selling")
-    _, irrelevant = await _register(client, "hardware", ["hardware"], "selling")
+    # The session fixture contains vendors from every other test. Restrict this
+    # comparison to a unique area: a low-ranked unrelated vendor will otherwise
+    # fall outside the first 25 candidates as the suite grows.
+    area = f"Discovery_{uuid.uuid4().hex[:8]}"
+    _, me = await _register(client, "sourcer", ["retail"], "sourcing", physical_location=area)
+    _, complement = await _register(client, "grower", ["fresh produce"], "selling", physical_location=area)
+    _, irrelevant = await _register(client, "hardware", ["hardware"], "selling", physical_location=area)
 
     # what I source, and what I stock
     r = await client.put("/api/vendors/me/profile", headers=me,
@@ -229,7 +233,7 @@ async def test_discovery_algorithm(client):
     await _add_stock(client, complement, name="Spinach (bunch)", category="fresh produce")
     await _add_stock(client, irrelevant, name="Padlocks", category="hardware")
 
-    r = await client.get("/api/vendors/discover", headers=me, params={"limit": 25})
+    r = await client.get("/api/vendors/discover", headers=me, params={"limit": 25, "location": area})
     assert r.status_code == 200, r.text
     ranked = r.json()
     assert ranked, "expected at least one discovery candidate"

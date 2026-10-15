@@ -17,6 +17,8 @@ import { useAuthStore } from "@/stores/authStore";
 const BrowsePage = lazy(() => import("@/pages/browse/BrowsePage"));
 const ListingPage = lazy(() => import("@/pages/listing/ListingPage"));
 const OrdersPage = lazy(() => import("@/pages/orders/OrdersPage"));
+const RepeatOrderPage = lazy(() => import("@/pages/orders/RepeatOrderPage"));
+const TradeRecordsPage = lazy(() => import("@/pages/orders/TradeRecordsPage"));
 const OrderDetailPage = lazy(() => import("@/pages/orders/OrderDetailPage"));
 const WorkPage = lazy(() => import("@/pages/work/WorkPage"));
 const SurfaceFeed = lazy(() => import("@/pages/surface/SurfaceFeed"));
@@ -109,6 +111,8 @@ export default function App() {
           <Route path="/browse" element={<BrowsePage />} />
           <Route path="/listing/:id" element={<ListingPage />} />
           <Route path="/orders" element={<OrdersPage />} />
+          <Route path="/orders/repeat" element={<RepeatOrderPage />} />
+          <Route path="/orders/records" element={<TradeRecordsPage />} />
           <Route path="/orders/:id" element={<OrderDetailPage />} />
           <Route path="/work" element={<WorkPage />} />
           <Route path="/chat" element={<ChatPage />} />

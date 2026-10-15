@@ -12,7 +12,8 @@ from datetime import datetime, timedelta
 from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response
+from fastapi.responses import StreamingResponse
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
@@ -26,7 +27,10 @@ from app.models.tools import CourierRegistration, CourierShipment
 from app.models.vendor import Vendor
 from app.modules.orders.audit import ensure_order_transaction, record_movement_event
 from app.modules.orders.models import DeliveryQuote, DeliveryQuoteRequest, MovementEvent, OrderDispute, OrderTransaction
+from app.modules.orders.repeat import repeat_order, repeatable_orders
+from app.modules.orders.trade_records import csv_lines, records_page
 from app.modules.orders.schemas import (
+    RepeatOrderIn,
     DeliveryQuoteIn,
     DeliveryRequestIn,
     OrderDisputeIn,
@@ -498,6 +502,58 @@ async def delivery_quote_inbox(
             "customer_note": request.customer_note, "created_at": request.created_at.isoformat(),
         })
     return out
+
+
+@router.get("/repeatable")
+async def list_repeatable_orders(
+    limit: int = Query(30, ge=1, le=50),
+    vendor: Vendor = Depends(get_current_vendor),
+    db: AsyncSession = Depends(get_db),
+):
+    return await repeatable_orders(db, vendor, limit)
+
+
+@router.post("/repeat", status_code=201)
+async def create_repeat_order(
+    body: RepeatOrderIn,
+    response: Response,
+    idempotency_key: Optional[str] = Header(default=None, alias="Idempotency-Key"),
+    vendor: Vendor = Depends(get_current_vendor),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await repeat_order(db, vendor, body, idempotency_key)
+    if result["replayed"]:
+        response.status_code = 200
+    return result
+
+
+@router.get("/records")
+async def list_trade_records(
+    limit: int = Query(30, ge=1, le=100),
+    cursor: Optional[str] = Query(None, max_length=256),
+    q: Optional[str] = Query(None, max_length=100),
+    vendor: Vendor = Depends(get_current_vendor),
+    db: AsyncSession = Depends(get_db),
+):
+    return await records_page(db, vendor.id, limit=limit, cursor=cursor, q=q, include_summary=True)
+
+
+@router.get("/records.csv")
+async def export_trade_records(
+    limit: int = Query(30, ge=1, le=100),
+    cursor: Optional[str] = Query(None, max_length=256),
+    q: Optional[str] = Query(None, max_length=100),
+    vendor: Vendor = Depends(get_current_vendor),
+    db: AsyncSession = Depends(get_db),
+):
+    # Exactly the same bounded page/filter/order as the screen. The bearer
+    # token stays in the Authorization header; it is never put in a download URL.
+    page = await records_page(db, vendor.id, limit=limit, cursor=cursor, q=q)
+    return StreamingResponse(csv_lines(page["items"]), media_type="text/csv; charset=utf-8", headers={
+        "Content-Disposition": 'attachment; filename="brief-trade-records.csv"',
+        "Cache-Control": "private, no-store",
+        "X-Content-Type-Options": "nosniff",
+    })
 
 
 @router.get("/{movement_id}")
