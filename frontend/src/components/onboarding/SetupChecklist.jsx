@@ -28,6 +28,7 @@ export default function SetupChecklist({ className }) {
   const mine = useStockStore((s) => s.mine);
   const movements = useStockStore((s) => s.movements);
   const fetchMine = useStockStore((s) => s.fetchMine);
+  const shelfLoaded = useStockStore((s) => s.mineLoaded);
   const [connections, setConnections] = useState(null);
   const [mineLoaded, setMineLoaded] = useState(false);
   const [dismissed, setDismissed] = useState(() => {
@@ -40,7 +41,9 @@ export default function SetupChecklist({ className }) {
 
   useEffect(() => {
     let live = true;
-    if (mine.length) setMineLoaded(true);
+    // A shelf already read (by the shop summary, or earlier in this session) is
+    // not read again — an empty shelf is still an answer.
+    if (mine.length || shelfLoaded) setMineLoaded(true);
     else {
       fetchMine?.()
         .then(() => live && setMineLoaded(true))
@@ -57,7 +60,7 @@ export default function SetupChecklist({ className }) {
     return () => {
       live = false;
     };
-  }, [fetchMine, mine.length]);
+  }, [fetchMine, mine.length, shelfLoaded]);
 
   const steps = useMemo(() => {
     const visible = mine.filter((i) => i.visible_to_network).length;

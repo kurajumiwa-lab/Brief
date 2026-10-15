@@ -2,12 +2,11 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Package, Zap, ArrowLeftRight, CalendarDays, MapPin, Building2, Store,
-  Sigma, LayoutGrid, ChevronUp,
+  Sigma, LayoutGrid, 
 } from "lucide-react";
 import EmptyState from "@/components/ui/EmptyState";
 import { PageSpinner } from "@/components/ui/Spinner";
 import { surfaceAPI, apiError } from "@/lib/api";
-import { toast } from "@/components/ui/Toast";
 import { num, relativeTime } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 

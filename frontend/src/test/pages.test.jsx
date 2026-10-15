@@ -70,6 +70,12 @@ vi.mock("@/lib/api", () => {
     squadAPI: { calls: vi.fn(() => ok({ calls: [] })) },
     marketsAPI: { mine: vi.fn(() => ok({ markets: [] })) },
     mapAPI: { counts: vi.fn(() => ok({ markets: 0, vendors: 0, places: 0 })) },
+    // v2.13 enterprise workspaces, reachable at /enterprise through App
+    enterpriseAPI: {
+      plans: vi.fn(() => ok({ plans: [] })), myWorkspaces: vi.fn(() => ok([])), discover: vi.fn(() => ok([])),
+      dashboard: vi.fn(() => ok({})), members: vi.fn(() => ok([])), devices: vi.fn(() => ok([])),
+      commands: vi.fn(() => ok([])), workspace: vi.fn(() => ok({})),
+    },
   };
 });
 
@@ -105,7 +111,10 @@ function LocationProbe() {
   return <output data-testid="current-location">{pathname}{search}</output>;
 }
 
-beforeEach(() => {
+beforeEach(async () => {
+  // the discovery feed caches its shelves; a new test gets an empty one
+  const { useHomeFeedStore } = await import("@/stores/homeFeedStore");
+  useHomeFeedStore.setState({ shelves: {} });
   window.scrollTo = vi.fn();
   window.localStorage.clear();
   useAuthStore.setState({ token: "tok", vendor: ME, ready: true, loading: false });
@@ -418,19 +427,32 @@ describe("Business Control Centre, Stock Visibility, Shop Front & Gallery Photos
     expect(within(dialog).queryByPlaceholderText(/https:\/\//i)).not.toBeInTheDocument();
   });
 
-  it("shows Your shop section on Home with published listings and Preview/Share shop actions alongside Fresh on the network", async () => {
+  it("leads Home with other vendors' stock and keeps My Shop collapsed until it is asked for", async () => {
     const { default: HomeHub } = await import("@/pages/home/HomeHub");
-    api.stockAPI.mine.mockResolvedValueOnce(ok(STOCK));
+    const { useHomeFeedStore } = await import("@/stores/homeFeedStore");
+    useHomeFeedStore.setState({ shelves: {} });
+    useStockStore.setState({ mine: STOCK, mineLoaded: true });
     api.stockAPI.network.mockResolvedValueOnce(ok(NETWORK_STOCK));
     mount(<HomeHub />, "/");
 
-    const yourShop = await screen.findByTestId("home-your-shop");
-    expect(within(yourShop).getByRole("heading", { name: /your shop/i })).toBeInTheDocument();
-    expect(within(yourShop).getByText(/your published listings/i)).toBeInTheDocument();
+    // discovery first — a real record from another vendor, via the existing endpoint
+    const stockShelf = await screen.findByTestId("home-shelf-stock");
+    expect(within(stockShelf).getByRole("heading", { name: /fresh on the network/i })).toBeInTheDocument();
+    expect(within(stockShelf).getByText("Kitenge 6-yard")).toBeInTheDocument();
+
+    // My Shop is folded: the door and the count, no listing cards
+    const yourShop = screen.getByTestId("home-your-shop");
+    expect(yourShop).toHaveAttribute("data-shop-state", "collapsed");
+    expect(within(yourShop).getByRole("heading", { name: /my shop/i })).toBeInTheDocument();
+    expect(within(yourShop).getByText(/manage your published listings/i)).toBeInTheDocument();
+    expect(within(yourShop).getByRole("link", { name: /manage shop/i })).toHaveAttribute("href", "/stock");
+    expect(within(yourShop).getByTestId("my-shop-counts")).toHaveTextContent(/1 published/);
+    expect(within(yourShop).queryByText("Sukuma wiki")).not.toBeInTheDocument();
+
+    // expanding gives the shop back its own actions, unchanged
+    fireEvent.click(within(yourShop).getByRole("button", { name: /expand/i }));
     expect(within(yourShop).getByRole("link", { name: /preview shop/i })).toHaveAttribute("href", "/@mama_mboga");
     expect(within(yourShop).getByRole("button", { name: /share shop/i })).toBeInTheDocument();
-    expect(within(yourShop).getByText("Sukuma wiki")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /fresh on the network/i })).toBeInTheDocument();
   });
 
   it("routes /browse?search=... to GoodsResults and displays the On your own shelf diagnostic", async () => {
@@ -443,6 +465,14 @@ describe("Business Control Centre, Stock Visibility, Shop Front & Gallery Photos
     const ownShelfDiag = await screen.findByTestId("browse-own-shelf-matches");
     expect(within(ownShelfDiag).getByText(/On your own shelf/i)).toBeInTheDocument();
     expect(within(ownShelfDiag).getByText("Sukuma wiki")).toBeInTheDocument();
+  });
+
+  it("routes the enterprise workspaces to their own screen", async () => {
+    // The page was lazy-imported and named in ME_ROOTS, but no route was ever
+    // registered — /enterprise fell through to the catch-all and bounced home.
+    mount(<App />, "/enterprise");
+    expect(await screen.findByRole("heading", { name: /enterprise workspaces/i })).toBeInTheDocument();
+    expect(await screen.findByText("Start a workspace")).toBeInTheDocument();
   });
 
   it("routes /@handle through App directly to the public Shop front", async () => {

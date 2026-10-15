@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Routes, Route } from "react-router-dom";
 
 const catalogue = vi.hoisted(() => ({
   price_honesty: "All prices are test ranges to validate with buyers.",
@@ -85,5 +85,25 @@ describe("StorefrontPage", () => {
     expect(screen.getByText("The whole device can never be wiped")).toBeInTheDocument();
     // Signed out: the enquiry route asks for sign-in rather than faking checkout.
     expect(screen.getByRole("button", { name: /sign in to enquire/i })).toBeInTheDocument();
+  });
+
+  it("honours a deep link to one offer from a home shelf card", async () => {
+    const { default: StorefrontPage } = await import("@/pages/storefront/StorefrontPage");
+    render(
+      <MemoryRouter initialEntries={["/storefront?offer=business_website"]}>
+        <Routes>
+          <Route path="/storefront" element={<StorefrontPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    // the offer the feed linked to is the one already chosen — every other one is not
+    await screen.findByRole("heading", { name: /sell what businesses already buy/i });
+    const pressed = (name) =>
+      screen
+        .getAllByRole("button", { name })
+        .filter((b) => b.getAttribute("aria-pressed") === "true").length;
+    expect(pressed(/business website/i)).toBe(1);
+    expect(pressed(/membership management/i)).toBe(0);
   });
 });

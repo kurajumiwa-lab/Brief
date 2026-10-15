@@ -4,7 +4,6 @@ import { useEffect } from "react";
 import {
   Newspaper, Package, ArrowLeftRight, CalendarDays, Users, ShoppingBasket, ChevronDown, ArrowUpRight,
 } from "lucide-react";
-import Card from "@/components/ui/Card";
 import EmptyState from "@/components/ui/EmptyState";
 import { PageSpinner } from "@/components/ui/Spinner";
 import Badge from "@/components/ui/Badge";

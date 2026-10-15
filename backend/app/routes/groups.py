@@ -2,7 +2,7 @@ import re
 from typing import List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -131,6 +131,8 @@ async def browse_groups(
     category: Optional[str] = None,
     region: Optional[str] = None,
     search: Optional[str] = None,
+    skip: int = Query(0, ge=0),
+    limit: Optional[int] = Query(None, ge=1, le=200, description="Preview pages (home shelves) ask for a few; the directory omits it"),
     vendor: Vendor = Depends(get_current_vendor),
     db: AsyncSession = Depends(get_db),
 ):
@@ -147,7 +149,9 @@ async def browse_groups(
         query = query.where(VendorGroup.region.ilike(f"%{region}%"))
     if search:
         query = query.where(VendorGroup.name.ilike(f"%{search}%") | VendorGroup.description.ilike(f"%{search}%"))
-    query = query.order_by(VendorGroup.member_count.desc(), VendorGroup.created_at.desc())
+    query = query.order_by(VendorGroup.member_count.desc(), VendorGroup.created_at.desc()).offset(skip)
+    if limit is not None:
+        query = query.limit(limit)
     rows = (await db.execute(query)).all()
 
     roles = await _my_roles(db, vendor)

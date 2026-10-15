@@ -94,7 +94,6 @@ export default function PublicPlaces() {
     }
   };
 
-  const selectedZone = useMemo(() => zones?.find((z) => z.id === zoneId) || null, [zones, zoneId]);
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return (places || []).filter(

@@ -129,6 +129,25 @@ describe("live order detail", () => {
     expect(screen.getByText(/The total is shown after the customer confirms an option/i)).toBeInTheDocument();
   });
 
+  // The supplier's dispatch button was wired to identifiers that did not exist in
+  // its scope: clicking it threw before it ever reached the API. The bug is fixed,
+  // and this is the test that would have caught it.
+  it("dispatches a confirmed order from the supplier's own controls", async () => {
+    const supplierOrder = {
+      ...buyerOrder,
+      direction: "outgoing",
+      selected_quote_id: "quote-pickup",
+      delivery_quotes: [{ ...buyerOrder.delivery_quotes[0], status: "selected" }],
+    };
+    api.getOrder.mockResolvedValue({ data: supplierOrder });
+    renderOrder(supplierOrder);
+
+    fireEvent.click(await screen.findByRole("button", { name: /mark ready for collection|confirm hand-off to courier|mark supplier delivery dispatched/i }));
+    await waitFor(() => expect(api.advance).toHaveBeenCalledWith("order-1", "ship"));
+    // and the page reloaded the order afterwards, without an unhandled crash
+    await waitFor(() => expect(api.getOrder.mock.calls.length).toBeGreaterThan(1));
+  });
+
   it("lets configured support request a provider-verified refund with a recorded note", async () => {
     const supportCase = {
       id: "case-1",

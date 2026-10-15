@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ClipboardList, Megaphone, Receipt, ListChecks, Lock, CalendarDays, Truck,
-  ChevronRight, CheckCircle2,
+  ChevronRight, 
 } from "lucide-react";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
@@ -25,7 +25,6 @@ import { num } from "@/lib/formatters";
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function WorkPage() {
-  const navigate = useNavigate();
   const movements = useStockStore((s) => s.movements);
   const [mine, setMine] = useState(null);
   const [error, setError] = useState("");

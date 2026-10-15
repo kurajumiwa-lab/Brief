@@ -63,7 +63,7 @@ const TYPE_TABS = [
 
 /* ── the action-center root ──────────────────────────────────────────────────── */
 
-function ActionCenter({ search, onSearch, onPost, onPosted, goType, refreshKey }) {
+function ActionCenter({ search, onSearch, onPost, goType, refreshKey }) {
   const vendor = useAuthStore((s) => s.vendor);
   const [requests, setRequests] = useState(null);
   const [requestsError, setRequestsError] = useState("");

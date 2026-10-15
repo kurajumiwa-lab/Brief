@@ -399,6 +399,8 @@ export default function OrderDetailPage() {
             requestQuote={requestQuote}
             chooseQuote={chooseQuote}
             busy={busy}
+            setBusy={setBusy}
+            load={load}
             paymentLocked={paymentLocked}
             onConfirm={confirmOrder}
           />
@@ -526,7 +528,7 @@ function FulfilmentCard(props) {
     order, selectedQuote, isBuyer, isSupplier, isFulfiller, canSetPickup, canRequestDelivery,
     pickup, setPickup, pickupDirty, savePickup, deliveryMode, setDeliveryMode, couriers,
     couriersLoading, courierId, setCourierId, destination, setDestination, customerNote,
-    setCustomerNote, requestQuote, chooseQuote, busy, paymentLocked, onConfirm,
+    setCustomerNote, requestQuote, chooseQuote, busy, setBusy, load, paymentLocked, onConfirm,
   } = props;
   const [quoteBusy, setQuoteBusy] = useState("");
   const currentQuotes = (order.delivery_quotes || []).filter((quote) => ["offered", "selected"].includes(quote.status));
@@ -672,7 +674,7 @@ function PaymentCard({ order, isBuyer, canPay, phone, setPhone, pay, busy }) {
   );
 }
 
-function ReceiptCard({ order, isBuyer, canCreate, canEnter, receiptCode, receiptExpires, providerCode, setProviderCode, createCode, confirmReceipt, shareCode, busy }) {
+function ReceiptCard({ order, canCreate, canEnter, receiptCode, receiptExpires, providerCode, setProviderCode, createCode, confirmReceipt, shareCode, busy }) {
   return (
     <section className="rounded-2xl border border-edge-1 bg-surface-0 p-4 sm:p-5" aria-labelledby="receipt-heading">
       <div className="flex items-start gap-3"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"><PackageCheck size={17} aria-hidden="true" /></span><div><h2 id="receipt-heading" className="text-sm font-bold text-ink-1">Proof of receipt</h2><p className="mt-1 text-2xs text-ink-3">The buyer creates a one-time code; the selected provider enters it at hand-off.</p></div></div>

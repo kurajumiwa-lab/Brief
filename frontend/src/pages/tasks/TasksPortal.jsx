@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
-  Swords, ListChecks, Trophy, Briefcase, MapPin, Star, ArrowUpRight, Zap, Medal,
-  Plus, ShieldCheck, Flame, Coins, Award, Sparkles,
+  Swords, ListChecks, Trophy, Briefcase, Star, ArrowUpRight, Zap, Medal,
+  Plus, Flame, Award, Sparkles,
 } from "lucide-react";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
@@ -349,8 +349,7 @@ export default function TasksPortal() {
         </div>
 
         {viewTab === "available" && (
-          <>
-            {calls === null ? (
+            calls === null ? (
               <PageSpinner />
             ) : openCalls.length === 0 ? (
               <EmptyState
@@ -396,8 +395,7 @@ export default function TasksPortal() {
                   />
                 ))}
               </div>
-            )}
-          </>
+            )
         )}
 
         {viewTab === "portfolio" && (

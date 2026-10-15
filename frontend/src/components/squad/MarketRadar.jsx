@@ -15,15 +15,7 @@ import { cn } from "@/lib/utils";
 // writes no row is a tap that should not exist, so there are none.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const KIND_META = {
-  vendor: { icon: Store, tint: "text-brand-600 dark:text-brand-400", label: "suppliers" },
-  place: { icon: Building2, tint: "text-blue-600 dark:text-blue-400", label: "places" },
-  call: { icon: Swords, tint: "text-accent-600 dark:text-accent-400", label: "call-ups" },
-  tool: { icon: Truck, tint: "text-purple-600 dark:text-purple-400", label: "rentals" },
-  event: { icon: CalendarDays, tint: "text-ink-2", label: "events" },
-};
-
-function Row({ icon, tint, title, meta, distance, action, busy }) {
+function Row({ icon, tint, title, meta, distance, action }) {
   const Icon = icon;
   return (
     <div className="flex items-center gap-3 py-2.5">

@@ -1,17 +1,14 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import {
   Package, Users, Truck, Wrench, Footprints, HeartHandshake, MapPin, Check, Clock3, X,
 } from "lucide-react";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import { requestsAPI, apiError } from "@/lib/api";
-import { useAuthStore } from "@/stores/authStore";
 import { useConfirm } from "@/components/ui/ConfirmDialog";
 import { toast } from "@/components/ui/Toast";
 import FitChecklist from "@/components/requests/FitChecklist";
 import { num, relativeTime } from "@/lib/formatters";
-import { cn } from "@/lib/utils";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // RequestCard — a business request, whichever side of it you are on.
@@ -45,8 +42,6 @@ const STATUS_BADGES = {
 };
 
 export default function RequestCard({ request, mode = "open", onChange }) {
-  const navigate = useNavigate();
-  const me = useAuthStore((s) => s.vendor);
   const confirm = useConfirm();
   const [busy, setBusy] = useState(false);
   const [offering, setOffering] = useState(false);

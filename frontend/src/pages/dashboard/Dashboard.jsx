@@ -154,7 +154,7 @@ function NumberPopup({ which, onClose, data }) {
 }
 
 /** The home feed — a social stream mixing network movements and notifications. */
-function Feed({ movements, todo, notifications, onOpenMovement, onOpenNotification, onBrowse }) {
+function Feed({ movements, todo, notifications, onOpenNotification, onBrowse }) {
   const items = useMemo(() => {
     const ms = (todo.length ? todo : movements).slice(0, 6).map((m) => ({ kind: "movement", at: m.created_at || m.updated_at, m }));
     const ns = notifications.slice(0, 8).map((n) => ({ kind: "notification", at: n.created_at, n }));

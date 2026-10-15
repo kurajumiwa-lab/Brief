@@ -5,6 +5,13 @@ const PENDING_ON_ME = (m) =>
   (m.direction === "outgoing" && (m.status === "pending" || m.status === "confirmed")) ||
   (m.direction === "incoming" && m.status === "shipped");
 
+/**
+ * Two surfaces on the same screen (the setup checklist and the My Shop summary)
+ * both need the shelf. One in-flight promise means one request: the second
+ * caller joins the first instead of asking the API again.
+ */
+let mineInFlight = null;
+
 export const useStockStore = create((set, get) => ({
   mine: [],
   network: [],
@@ -12,16 +19,23 @@ export const useStockStore = create((set, get) => ({
   categories: [],
   loading: false,
   networkLoading: false,
+  /** Has `/stock/my-stock` been read for this session? (An empty shelf is a real answer.) */
+  mineLoaded: false,
 
   fetchMine: async () => {
+    if (mineInFlight) return mineInFlight;
     set({ loading: true });
-    try {
-      const { data } = await stockAPI.mine();
-      set({ mine: data });
-      return data;
-    } finally {
-      set({ loading: false });
-    }
+    mineInFlight = stockAPI
+      .mine()
+      .then(({ data }) => {
+        set({ mine: data, mineLoaded: true });
+        return data;
+      })
+      .finally(() => {
+        set({ loading: false });
+        mineInFlight = null;
+      });
+    return mineInFlight;
   },
   fetchNetwork: async (params = {}) => {
     set({ networkLoading: true });

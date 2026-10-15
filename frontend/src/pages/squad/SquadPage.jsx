@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  Trophy, Zap, Coins, Flame, Plus, X, Star, MapPin, Image, Users, Swords, Medal, Map,
+  Trophy, Zap, Plus, Star, MapPin, Image, Users, Swords, Medal, Map,
 } from "lucide-react";
 import Tabs from "@/components/ui/Tabs";
 import Button from "@/components/ui/Button";
@@ -113,7 +113,7 @@ function PlayerPlate({ me }) {
 }
 
 // ── Call-ups tab ─────────────────────────────────────────────────────────────
-function CallUps({ me, onPost, onChanged }) {
+function CallUps({ onPost, onChanged }) {
   const [calls, setCalls] = useState(null);
   const [skill, setSkill] = useState("");
   const [accepting, setAccepting] = useState(null);
@@ -185,7 +185,6 @@ function CallUps({ me, onPost, onChanged }) {
 
 // ── Matches tab (the active contract + history, both sides) ─────────────────
 function Matches({ me, onChanged }) {
-  const [history, setHistory] = useState([]);
   const [otp, setOtp] = useState("");
   const [photo, setPhoto] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -515,7 +514,7 @@ function Squads({ onChanged }) {
 }
 
 // ── Post call-up modal ───────────────────────────────────────────────────────
-function PostCall({ open, onClose, squads, onChanged }) {
+function PostCall({ open, onClose, onChanged }) {
   const [form, setForm] = useState({ title: "", skill: "errand", required_tier: "common", pay: "", location: "" });
   const [geo, setGeo] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -591,12 +590,10 @@ function PostCall({ open, onClose, squads, onChanged }) {
 export default function SquadPage() {
   const [tab, setTab] = useState("callups");
   const [me, setMe] = useState(null);
-  const [squads, setSquads] = useState([]);
   const [postOpen, setPostOpen] = useState(false);
 
   const refresh = useCallback(() => {
     squadAPI.me().then((r) => setMe(r.data)).catch((e) => toast.error(apiError(e, "Your player card could not be loaded")));
-    squadAPI.squads().then((r) => setSquads(r.data.squads)).catch(() => {});
   }, []);
   useEffect(() => { refresh(); }, [refresh]);
 
@@ -607,12 +604,12 @@ export default function SquadPage() {
       <PlayerPlate me={me} />
       <Tabs tabs={TABS} value={tab} onChange={setTab} />
       {tab === "mypage" && <MyPage />}
-      {tab === "callups" && <CallUps me={me} onPost={() => setPostOpen(true)} onChanged={refresh} />}
+      {tab === "callups" && <CallUps onPost={() => setPostOpen(true)} onChanged={refresh} />}
       {tab === "matches" && <Matches me={me} onChanged={refresh} />}
       {tab === "weekly" && <Weekly me={me} />}
       {tab === "league" && <League />}
       {tab === "squads" && <Squads onChanged={refresh} />}
-      <PostCall open={postOpen} onClose={() => setPostOpen(false)} squads={squads} onChanged={refresh} />
+      <PostCall open={postOpen} onClose={() => setPostOpen(false)} onChanged={refresh} />
     </div>
   );
 }

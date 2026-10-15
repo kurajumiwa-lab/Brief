@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   BadgeCheck, Building2, CreditCard, Palette, ShieldCheck, Smartphone,
 } from "lucide-react";
@@ -38,7 +38,9 @@ export default function StorefrontPage() {
   const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
-  const [selected, setSelected] = useState(null); // offer key
+  // ?offer=<key> opens that offer's scope directly — the home feed links here.
+  const [params] = useSearchParams();
+  const [selected, setSelected] = useState(() => params.get("offer")); // offer key
   const [form, setForm] = useState({ kind: "purchase", tier_key: "business", organisation_name: "", contact_name: "", contact_phone: "", notes: "", acknowledged_first_charge: false });
   const [mine, setMine] = useState([]);
   const [busy, setBusy] = useState(false);

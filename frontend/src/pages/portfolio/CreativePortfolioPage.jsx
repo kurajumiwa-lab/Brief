@@ -1,34 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
 import {
-  ArrowLeft,
   ArrowRight,
   ArrowUpRight,
   BookOpen,
-  Briefcase,
-  Calendar,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
-  Clock,
-  Compass,
-  Eye,
-  FileText,
   ImagePlus,
-  Layers,
   LayoutGrid,
-  Mail,
-  MessageSquare,
-  Palette,
   Pencil,
   Plus,
   Quote,
   Send,
-  ShieldCheck,
   Sparkles,
-  Star,
   Trash2,
-  X,
 } from "lucide-react";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
@@ -1293,7 +1278,6 @@ export default function CreativePortfolioPage({ embedded = false }) {
 }
 
 function StudioOperationsDashboard({
-  identity,
   projects,
   inquiries,
   onBackToPortfolio,

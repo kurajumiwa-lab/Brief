@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  Activity, ArrowRight, BadgeCheck, Calendar, CheckCircle2, Crown,
-  Layers, Lock, Package, Plus, RefreshCw, ShieldCheck, Sparkles,
-  Trash2, TrendingUp, Truck, Users,
+  Activity, ArrowRight, BadgeCheck, CheckCircle2, 
+  Package, Plus, RefreshCw, ShieldCheck, 
+  Trash2, Truck, Users,
 } from "lucide-react";
 import Badge from "@/components/ui/Badge";
 import Breadcrumbs from "@/components/ui/Breadcrumbs";

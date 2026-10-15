@@ -28,7 +28,7 @@
 - `npm test -- --reporter=dot` — **10 test files, 98 tests passed**.
 - `npm run build` — **passed** (Vite production build).
 - Coverage added or updated for primary-route ownership, unique secondary destinations, the Brief compatibility inventory, AccountMenu identity/mode/profile settings, Me workspace destinations, onboarding-to-insights handoff, live Home categories/search/trust/recent-trade behavior, and market/rental query routing.
-- `npm run lint` — **not runnable in the current frontend package**: the script invokes `eslint`, but ESLint is not installed or declared in `frontend/package.json` (`sh: eslint: not found`). No repository-wide lint result is claimed.
+- `npm run lint` — **runs** (added in v3.1): ESLint 9 with a flat config at `frontend/eslint.config.js`, `eslint-plugin-react` and `eslint-plugin-react-hooks` declared as devDependencies. Result on this tree: **0 errors, 10 `react-hooks/exhaustive-deps` warnings**, exit 0.
 
 ## Known limitations
 
