@@ -1,5 +1,5 @@
 import { MapPin } from "lucide-react";
-import CardShell, { CardBody, CardMedia, CardTitle, CardMeta } from "./CardShell";
+import CardShell, { CardBody, CardPoster, CardTitle, CardMeta } from "./CardShell";
 import { num } from "@/lib/formatters";
 
 /**
@@ -14,13 +14,17 @@ export default function MarketCard({ item }) {
       to={item.to}
       label={`${item.title}${item.city ? `, ${item.city}` : ""} — ${item.members} registered vendors. Open the market`}
     >
-      <CardMedia tint="bg-orchid-50 dark:bg-surface-2" fallback={<MapPin size={26} className="text-orchid-700 dark:text-orchid-300" />}>
-        {item.distanceKm != null && (
-          <span className="absolute bottom-2 left-2 rounded-full bg-surface-0/90 px-2 py-0.5 text-micro font-semibold text-ink-2">
-            {item.distanceKm} km away
-          </span>
-        )}
-      </CardMedia>
+      <CardPoster
+        icon={MapPin}
+        label={item.city || item.country || "Market"}
+        corner={
+          item.distanceKm != null ? (
+            <span className="absolute bottom-2 left-2 rounded-full bg-surface-0/90 px-2 py-0.5 text-micro font-semibold text-ink-2 shadow-xs">
+              {item.distanceKm} km away
+            </span>
+          ) : null
+        }
+      />
       <CardBody>
         <CardTitle>{item.title}</CardTitle>
         <CardMeta>{[item.city, item.country].filter(Boolean).join(" · ") || "Location not stated"}</CardMeta>

@@ -30,7 +30,6 @@ export default function SetupChecklist({ className }) {
   const fetchMine = useStockStore((s) => s.fetchMine);
   const shelfLoaded = useStockStore((s) => s.mineLoaded);
   const [connections, setConnections] = useState(null);
-  const [mineLoaded, setMineLoaded] = useState(false);
   const [dismissed, setDismissed] = useState(() => {
     try {
       return localStorage.getItem(KEY(vendor?.vendor_handle)) === "1";
@@ -43,12 +42,7 @@ export default function SetupChecklist({ className }) {
     let live = true;
     // A shelf already read (by the shop summary, or earlier in this session) is
     // not read again — an empty shelf is still an answer.
-    if (mine.length || shelfLoaded) setMineLoaded(true);
-    else {
-      fetchMine?.()
-        .then(() => live && setMineLoaded(true))
-        .catch(() => live && setMineLoaded(true));
-    }
+    if (!mine.length && !shelfLoaded) fetchMine?.().catch(() => {});
     (async () => {
       try {
         const { data } = await vendorAPI.connections();
@@ -113,9 +107,10 @@ export default function SetupChecklist({ className }) {
     }
   }, [complete, vendor]);
 
-  if (dismissed || complete) {
-    return <BusinessPulse vendor={vendor} mine={mine} mineLoaded={mineLoaded} movements={movements} connections={connections} complete={complete} className={className} />;
-  }
+  // Completed or dismissed: this component has nothing left to say. The live
+  // business read it used to fall back to is `components/home/BusinessPulse`,
+  // which belongs to the home screen's business band — not to onboarding.
+  if (dismissed || complete) return null;
 
   const dismiss = () => {
     try {
@@ -170,50 +165,6 @@ export default function SetupChecklist({ className }) {
           </li>
         ))}
       </ol>
-    </section>
-  );
-}
-
-function BusinessPulse({ vendor, mine, mineLoaded, movements, connections, complete, className }) {
-  const visible = mine.filter((item) => item.visible_to_network).length;
-  const openTrades = movements.filter((movement) => ["pending", "confirmed", "shipped", "in_transit"].includes(movement.status)).length;
-  const fulfilment = vendor?.fulfillment_rate == null ? "—" : `${Math.round(Number(vendor.fulfillment_rate))}%`;
-  const stats = [
-    { label: "Visible listings", value: mineLoaded ? visible : "—", note: "on your shelf" },
-    { label: "Open trades", value: openTrades, note: "moving through Orders" },
-    { label: "Supplier links", value: connections == null ? "—" : connections, note: "recorded connections" },
-    { label: "Fulfilment", value: fulfilment, note: vendor?.fulfillment_rate == null ? "build a record through completed trades" : "from completed movements" },
-  ];
-
-  return (
-    <section aria-labelledby="business-pulse-title" className={cn("border-y border-edge-1 py-4 sm:py-5", className)}>
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="text-micro font-bold uppercase tracking-[0.14em] text-brand-700 dark:text-brand-300">Business pulse</p>
-          <h2 id="business-pulse-title" className="mt-1 text-lg font-bold tracking-tight text-ink-1">
-            {complete ? "Your business, at a glance" : "A live read on your trading"}
-          </h2>
-        </div>
-        <div className="flex items-center gap-3">
-          <Link
-            to="/growth"
-            className="inline-flex items-center gap-1 text-micro font-bold text-brand-700 dark:text-brand-400 hover:underline underline-offset-2"
-          >
-            Growth planner
-            <ArrowRight size={11} aria-hidden="true" />
-          </Link>
-          <span className="text-micro text-ink-4">{complete ? "Setup complete" : "Quick view"}</span>
-        </div>
-      </div>
-      <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-4 sm:grid-cols-4 sm:divide-x sm:divide-edge-1">
-        {stats.map((stat) => (
-          <div key={stat.label} className="min-w-0 sm:px-4 first:pl-0">
-            <dt className="text-micro font-bold uppercase tracking-[0.1em] text-ink-4">{stat.label}</dt>
-            <dd className="mt-1 text-xl font-bold leading-none text-ink-1 tabular-nums">{stat.value}</dd>
-            <dd className="mt-1.5 text-micro text-ink-4 leading-snug">{stat.note}</dd>
-          </div>
-        ))}
-      </dl>
     </section>
   );
 }

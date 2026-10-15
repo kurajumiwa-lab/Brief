@@ -1,7 +1,7 @@
 import { CalendarDays, MapPin } from "lucide-react";
 import Badge from "@/components/ui/Badge";
-import CardShell, { CardBody, CardMedia, CardTitle, CardPrice, CardMeta, CardVendor } from "./CardShell";
-import { currency, dayLabel, timeOnly } from "@/lib/formatters";
+import CardShell, { CardBody, CardPoster, CardTitle, CardPrice, CardMeta, CardVendor } from "./CardShell";
+import { currency, dayLabel, num, timeOnly } from "@/lib/formatters";
 
 /**
  * EVENT CARD — a market day, trade fair or sourcing trip on the calendar.
@@ -23,31 +23,42 @@ export default function EventCard({ item }) {
 
   return (
     <CardShell to={item.to} label={`${item.title} — ${dayLabel(item.startDate)}${item.location ? ` at ${item.location}` : ""}. Open events`}>
-      <CardMedia tint="bg-accent-50 dark:bg-surface-2" fallback={<CalendarDays size={26} className="text-accent-700 dark:text-accent-300" />}>
-        <span className="absolute left-2 top-2">
-          <Badge variant="amber" size="xs">{TYPE_LABELS[item.eventType] || "Event"}</Badge>
-        </span>
-        {item.myStatus && (
-          <span className="absolute right-2 top-2">
-            <Badge variant="brand" size="xs">{item.myStatus === "registered" ? "Going" : item.myStatus}</Badge>
-          </span>
-        )}
-      </CardMedia>
+      <CardPoster
+        icon={CalendarDays}
+        label={TYPE_LABELS[item.eventType] || "Event"}
+        tone="amber"
+        corner={
+          <>
+            <span className="absolute left-2 top-2">
+              <Badge variant="amber" size="xs">{TYPE_LABELS[item.eventType] || "Event"}</Badge>
+            </span>
+            {item.myStatus && (
+              <span className="absolute right-2 top-2">
+                <Badge variant="brand" size="xs">{item.myStatus === "registered" ? "Going" : item.myStatus}</Badge>
+              </span>
+            )}
+          </>
+        }
+      />
 
       <CardBody>
         <CardTitle>{item.title}</CardTitle>
         <CardPrice>{dayLabel(item.startDate)}{item.virtual ? "" : ` · ${timeOnly(item.startDate)}`}</CardPrice>
-        {item.location ? (
-          <CardMeta>
-            <span className="inline-flex items-center gap-1">
-              <MapPin size={10} aria-hidden="true" />
-              {item.location}
-            </span>
-          </CardMeta>
-        ) : null}
         <CardMeta>
-          {item.fee ? `${currency(item.fee)} entry` : "Free entry"}
-          {item.capacity != null ? ` · ${item.registered}/${item.capacity} registered` : spotsLeft != null ? ` · ${spotsLeft} spots left` : ""}
+          <span className="inline-flex items-center gap-1">
+            <MapPin size={10} aria-hidden="true" />
+            {item.location || "Venue not stated"}
+          </span>
+        </CardMeta>
+        <CardMeta>
+          {item.freeEntry ? "Free entry" : item.fee != null ? `${currency(item.fee)} entry` : "Entry not stated"}
+          {item.capacity != null
+            ? ` · ${num(item.registered)}/${num(item.capacity)} registered`
+            : spotsLeft != null
+              ? ` · ${num(spotsLeft)} spots left`
+              : item.registered != null
+                ? ` · ${num(item.registered)} registered`
+                : ""}
         </CardMeta>
         <CardVendor name={item.organizer} />
       </CardBody>
