@@ -127,6 +127,10 @@ export const stockAPI = {
 // ── Live orders and fulfilment ────────────────────────────────────────────
 export const ordersAPI = {
   get: (id) => api.get(`/orders/${id}`),
+  repeatable: () => api.get("/orders/repeatable"),
+  repeat: (body, idempotencyKey) => api.post("/orders/repeat", body, { headers: { "Idempotency-Key": idempotencyKey } }),
+  records: (params) => api.get("/orders/records", { params: noEmpty(params) }),
+  exportRecords: (params) => api.get("/orders/records.csv", { params: noEmpty(params), responseType: "blob" }),
   supportDisputes: (params) => api.get("/orders/support/disputes", { params: noEmpty(params) }),
   resolveDispute: (movementId, disputeId, data) => api.post(`/orders/${movementId}/disputes/${disputeId}/resolve`, data),
   setPickup: (id, data) => api.put(`/orders/${id}/pickup`, data),

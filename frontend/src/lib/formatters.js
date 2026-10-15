@@ -15,6 +15,10 @@ export const currency = (n, opts = {}) =>
     ? "—"
     : new Intl.NumberFormat("en-KE", { style: "currency", currency: "KES", maximumFractionDigits: 0, ...opts }).format(Number(n));
 
+// Display exact cents where prices or ledger amounts have them. Rounding a
+// proposed 240.25/crate to 240/crate would hide a real price difference.
+export const preciseCurrency = (n) => currency(n, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+
 export const num = (n) => (n === null || n === undefined ? "—" : new Intl.NumberFormat("en-KE").format(Number(n)));
 
 export const compactNum = (n) =>

@@ -1,6 +1,7 @@
 """Validated request bodies for customer/supplier transaction actions."""
 
 from datetime import datetime, timezone
+from decimal import Decimal
 from typing import Literal, Optional
 from uuid import UUID
 
@@ -55,6 +56,21 @@ class DeliveryQuoteIn(BaseModel):
 class OrderPaymentIn(BaseModel):
     phone: Optional[str] = Field(default=None, min_length=8, max_length=20)
     provider: Literal["MPESA"] = "MPESA"
+
+
+class RepeatOrderIn(BaseModel):
+    source_movement_id: UUID
+    quantity: int = Field(gt=0, le=1_000_000)
+    # Omission proposes the old movement's recorded price, not today's shelf
+    # price. It is a request; only the supplier can confirm the new order.
+    proposed_price: Optional[Decimal] = Field(default=None, ge=0, le=100_000_000)
+
+    @field_validator("proposed_price")
+    @classmethod
+    def cents_only(cls, value):
+        if value is not None and value.as_tuple().exponent < -2:
+            raise ValueError("A proposed unit price may have at most 2 decimal places")
+        return value
 
 
 class ReceiptCodeIn(BaseModel):

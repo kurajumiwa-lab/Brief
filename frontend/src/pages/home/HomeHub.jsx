@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import SetupChecklist from "@/components/onboarding/SetupChecklist";
 import SourceDialog from "@/components/stock/SourceDialog";
 import HomeHero from "@/components/home/HomeHero";
+import TradePulse from "@/components/home/TradePulse";
 import HomeFeed from "@/components/home/HomeFeed";
 
 /**
@@ -42,6 +43,10 @@ export default function HomeHub() {
 
       {/* New vendors get four steps; established traders get nothing here. */}
       <SetupChecklist />
+
+      {/* The repeat trade is the least expensive reliable way into the ledger.
+          Keep the market search above it and every existing shelf below it. */}
+      <TradePulse />
 
       {/* ── the marketplace itself ─────────────────────────────────────── */}
       <HomeFeed onSource={setSourcing} />

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeftRight, Bell, LayoutGrid, Receipt, ShieldCheck, Truck } from "lucide-react";
+import { ArrowLeftRight, Bell, BookOpen, LayoutGrid, Receipt, RotateCcw, ShieldCheck, Truck } from "lucide-react";
 import Button from "@/components/ui/Button";
 import Chip from "@/components/ui/Chip";
 import Stat from "@/components/ui/Stat";
@@ -99,6 +99,8 @@ export default function OrdersPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Button size="sm" icon={RotateCcw} onClick={() => navigate("/orders/repeat")}>Repeat an order</Button>
+          <Button size="sm" variant="secondary" icon={BookOpen} onClick={() => navigate("/orders/records")}>My records</Button>
           {(["admin", "clerk"].includes(opsRole)) && <Button size="sm" variant="secondary" icon={ShieldCheck} aria-expanded={showSupportInbox} onClick={() => { const next = !showSupportInbox; setShowSupportInbox(next); setParam({ support: next ? "1" : "" }); }}>
             {showSupportInbox ? "Hide support cases" : "Platform support cases"}
           </Button>}

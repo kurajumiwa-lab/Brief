@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { authAPI, vendorAPI } from "@/lib/api";
 import { ws } from "@/lib/ws";
+import { clearAllPendingReceipts } from "@/lib/offlineReceipt";
 
 export const useAuthStore = create(
   persist(
@@ -73,6 +74,7 @@ export const useAuthStore = create(
 
       logout: () => {
         ws.disconnectAll();
+        clearAllPendingReceipts();
         set({ token: null, refreshToken: null, vendor: null, ready: true });
       },
     }),
