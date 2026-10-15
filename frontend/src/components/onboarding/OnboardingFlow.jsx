@@ -5,7 +5,6 @@ import Input from "@/components/ui/Input";
 import MarketRadar from "@/components/squad/MarketRadar";
 import { onboardingAPI, vendorAPI, geoAPI, apiError } from "@/lib/api";
 import { toast } from "@/components/ui/Toast";
-import { num } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -32,7 +31,7 @@ const DISMISS_KEY = "squad.onboarding.dismissed";
 export default function OnboardingFlow() {
   const [data, setData] = useState(null);
   const [show, setShow] = useState(false);
-  const [step, setStep] = useState(0);
+  const [, setStep] = useState(0);
   const [locText, setLocText] = useState("");
   const [cats, setCats] = useState([]);
   const [locating, setLocating] = useState(false);

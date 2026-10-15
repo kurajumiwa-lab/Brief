@@ -1,12 +1,11 @@
 import { useMemo, useState } from "react";
 import {
   Briefcase, CheckCircle2, ClipboardList, Clock, Footprints, Info, Lock, MapPin,
-  Package, Plus, ShieldCheck, Sparkles, Star, Store, Truck, Users, Utensils, Wrench, AlertTriangle,
+  Package, Plus, ShieldCheck, Store, Truck, Users, Utensils, Wrench, AlertTriangle,
 } from "lucide-react";
 import Avatar from "@/components/ui/Avatar";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
-import EmptyState from "@/components/ui/EmptyState";
 import Input from "@/components/ui/Input";
 import Modal from "@/components/ui/Modal";
 import Select from "@/components/ui/Select";

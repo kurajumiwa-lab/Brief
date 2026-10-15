@@ -149,6 +149,10 @@ export default function App() {
           <Route path="/ops" element={<Ops />} />
           <Route path="/passport" element={<PassportPage />} />
           <Route path="/growth" element={<GrowthPlannerPage />} />
+          {/* v2.13 enterprise workspaces — the paid, private side of the dual
+              model. Lazy-imported above and named in ME_ROOTS, so the surface is
+              reachable at the URL the README and the API both use. */}
+          <Route path="/enterprise" element={<EnterprisePage />} />
           <Route path="/portfolio" element={<CreativePortfolioPage />} />
           <Route path="/studio" element={<CreativePortfolioPage />} />
           <Route path="/@:handle" element={<VendorProfile />} />

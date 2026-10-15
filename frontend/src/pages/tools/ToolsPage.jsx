@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
   Plus, Wrench, Truck, MapPin, Star, CalendarCheck, CalendarDays, Power, Warehouse,
-  Package, Store, Hotel, Box, Snowflake, Route, Info, ShieldCheck, Layers,
+  Package, Store, Hotel, Box, Snowflake, Route, Info, 
 } from "lucide-react";
 import Tabs from "@/components/ui/Tabs";
 import Button from "@/components/ui/Button";
@@ -74,6 +74,11 @@ export default function ToolsPage() {
   const [courier, setCourier] = useState(false);
   const [booking, setBooking] = useState(null);
   const [inspecting, setInspecting] = useState(null);
+  // Deep link from Home: ?listing=<id> opens THAT listing's details here, so an
+  // equipment card on the feed lands on the record it showed rather than the
+  // top of a list.
+  const deepLinkId = params.get("listing");
+  const [deepLinkOpened, setDeepLinkOpened] = useState(null);
   const [shipping, setShipping] = useState(null); // courier being booked for a parcel
   const [courierOpen, setCourierOpen] = useState(false);
   const me = useAuthStore((s) => s.vendor);
@@ -84,6 +89,14 @@ export default function ToolsPage() {
     if (tab === "couriers") fetchCouriers({ area }).catch((e) => toast.error(apiError(e)));
     if (tab === "mine") fetchMine().catch((e) => toast.error(apiError(e)));
   }, [tab, category, search, area, fetchTools, fetchCouriers, fetchMine]);
+
+  useEffect(() => {
+    if (!deepLinkId || deepLinkOpened === deepLinkId || loading) return;
+    const hit = tools.find((t) => t.id === deepLinkId);
+    if (!hit) return;
+    setDeepLinkOpened(deepLinkId);
+    setInspecting(hit);
+  }, [deepLinkId, deepLinkOpened, tools, loading]);
 
   const toggle = (t) => setAvailability(t.id, !t.is_available).catch((e) => toast.error(apiError(e)));
 

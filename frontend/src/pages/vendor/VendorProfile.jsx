@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
-  Award, BadgeCheck, Box, CheckCircle2, Clock, CreditCard, Crown, ImagePlus,
+  Award, BadgeCheck, Box, Clock, CreditCard, Crown, ImagePlus,
   Layers, MapPin, MessageSquare, Package, Pencil, Plug, Plus, Search, Share2,
   ShieldCheck, Trash2, Truck, X,
 } from "lucide-react";

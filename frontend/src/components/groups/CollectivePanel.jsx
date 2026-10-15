@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   ShoppingBasket, Plus, Coins, Undo2, ChevronRight, ChevronDown, ChevronUp,
-  Clock, Users, CheckCircle2, Info,
+  CheckCircle2, 
 } from "lucide-react";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";

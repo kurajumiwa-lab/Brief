@@ -8,7 +8,7 @@
 #
 #   push / PR → main   : backend tests (Postgres service, migrations applied and
 #                        checked), a load-test smoke run against a live API,
-#                        frontend tests + build
+#                        frontend lint (eslint.config.js) + tests + build
 #   push → main        : build & push both images to GHCR, then SSH to the host and
 #                        `docker compose -f docker-compose.prod.yml up -d` (migrations run in the entrypoint)
 #
@@ -137,6 +137,9 @@ jobs:
       - name: Install
         working-directory: frontend
         run: npm ci --no-audit --no-fund
+      - name: Lint
+        working-directory: frontend
+        run: npm run lint
       - name: Unit tests
         working-directory: frontend
         run: npx vitest run

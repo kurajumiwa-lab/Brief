@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
-  Radar, MapPin, Store, Users, Trophy, Plus, Check, X, Search, Navigation, Medal, Pencil, ChevronRight,
+  Radar, Store, Users, Plus, Check, X, Navigation, Medal, Pencil, ChevronRight,
 } from "lucide-react";
 import Tabs from "@/components/ui/Tabs";
 import Button from "@/components/ui/Button";

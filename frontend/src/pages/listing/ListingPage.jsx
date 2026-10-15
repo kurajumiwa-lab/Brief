@@ -18,7 +18,7 @@ import QualityBadge from "@/components/stock/QualityBadge";
 import StockThumb from "@/components/stock/StockThumb";
 import StockCard from "@/components/stock/StockCard";
 import SourceDialog from "@/components/stock/SourceDialog";
-import { LevelBadge, ReliabilityMeter, TrustRow } from "@/components/trust/TrustSignals";
+import { ReliabilityMeter, TrustRow } from "@/components/trust/TrustSignals";
 import { useAuthStore } from "@/stores/authStore";
 import { useChatStore } from "@/stores/chatStore";
 import { useStockStore } from "@/stores/stockStore";

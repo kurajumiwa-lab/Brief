@@ -83,6 +83,7 @@ async def list_markets(
     city: Optional[str] = None,
     lat: Optional[float] = None,
     lng: Optional[float] = None,
+    limit: Optional[int] = Query(None, ge=1, le=200, description="Preview pages (home shelves) ask for a few; the directory omits it"),
     vendor: Vendor = Depends(get_current_vendor),
     db: AsyncSession = Depends(get_db),
 ):
@@ -97,6 +98,8 @@ async def list_markets(
     if la is not None:
         out.sort(key=lambda x: (x.get("distance_km") is None, x.get("distance_km") or 0))
     countries = sorted({z.country for z in zones if z.country})
+    if limit is not None:
+        out = out[:limit]
     return {"markets": out, "countries": countries}
 
 

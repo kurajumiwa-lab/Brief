@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -140,6 +140,8 @@ async def browse_vendor_lists(
     category: Optional[str] = None,
     region: Optional[str] = None,
     include_closed: bool = False,
+    skip: int = Query(0, ge=0),
+    limit: Optional[int] = Query(None, ge=1, le=200, description="Preview pages (home shelves) ask for a few; the directory omits it"),
     vendor: Vendor = Depends(get_current_vendor),
     db: AsyncSession = Depends(get_db),
 ):
@@ -154,7 +156,9 @@ async def browse_vendor_lists(
         query = query.where(VendorList.category.ilike(category))
     if region:
         query = query.where(VendorList.region.ilike(f"%{region}%"))
-    query = query.order_by(VendorList.member_count.desc(), VendorList.created_at.desc())
+    query = query.order_by(VendorList.member_count.desc(), VendorList.created_at.desc()).offset(skip)
+    if limit is not None:
+        query = query.limit(limit)
     rows = (await db.execute(query)).all()
 
     mine = dict((await db.execute(

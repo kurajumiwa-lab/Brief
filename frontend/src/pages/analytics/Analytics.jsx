@@ -13,7 +13,6 @@ import EmptyState from "@/components/ui/EmptyState";
 import { PageSpinner } from "@/components/ui/Spinner";
 import ParasitismBadge from "@/components/vendor/ParasitismBadge";
 import { useAnalyticsStore } from "@/stores/analyticsStore";
-import { useAuthStore } from "@/stores/authStore";
 import { apiError } from "@/lib/api";
 import { compactNum, currency, num, relativeTime, shortDate } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
@@ -34,7 +33,6 @@ const POSITION_TONE = { below: "brand", above: "red", "in line": "gray" };
  */
 export default function Analytics() {
   const navigate = useNavigate();
-  const vendor = useAuthStore((s) => s.vendor);
   const { overview, counterparty, weights, loading, loadingCounterparty, fetch, fetchWeights, fetchCounterparty, clearCounterparty } =
     useAnalyticsStore();
   const [days, setDays] = useState(90);

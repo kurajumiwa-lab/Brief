@@ -38,6 +38,7 @@ there are the vendors who move it between each other.
 | **Market Runs (v2.15)** | Scheduled buying runs on Market Locks — Run A Ruiru Fresh (chicken/fish, cold-chain plan required), Run B Githurai Sukari (sugar: wholesale bags vs repacked retail on one pooled line), Daraja Mbili consolidated supply (customers outside the walkable ring order in; hub/collection-shop/delivery fulfilment). Each run is an order ledger: request ≠ confirmed order ≠ supplier purchase; pooled demand, confirmed demand and the wholesale threshold are three separate figures; actual prices, receipts, weight loss/rejected stock, allocations, fees, amount paid and balance due are recorded per order. Payment is the customer's choice — advance, cash/M-Pesa on delivery, or shop-backed collection — with money responsibility named per order and large on-delivery orders flagged (never blocked) with a deposit recommendation. `GET/POST /api/locks/runs/*`, Market Runs section of `/locks`. Model: [`docs/briefs/market-runs-model.md`](docs/briefs/market-runs-model.md). |
 | **Storefront catalogue (v2.14)** | Sell what businesses already buy: 12 offers in three lines — digital services (one-off, people-delivered), business software (subscriptions on what is operational), field operations (setup + monthly, BYOD-first) — each with a KSh test price, readiness (`available_now`/`pilot`/`service`/`scoped`), deliverables and exclusions fixed before payment. Account tiers Junior (KSh 0, public label "Junior — Free account") → Professional → Business → Enterprise sit beside, never instead of, Passport verification; the 30-day Business trial discloses its exact first charge and stays `not_yet_live` until recurring billing is verified. Public `GET /api/catalog`, enquiries `POST /api/catalog/enquiries`, storefront at `/storefront`. Plan: [`docs/briefs/storefront-catalogue-and-pricing.md`](docs/briefs/storefront-catalogue-and-pricing.md). |
 | **Monitoring & ops** | In-process metrics registry (`/metrics`, Prometheus text) with per-route percentiles and a slow-request list, `X-Request-ID` on every response, and an **Ops** console (`/ops`) showing version, environment, p50/p95/p99, error rate, pool and the raw scrape. Prometheus + Grafana + alerts ship in `deploy/monitoring/`. |
+| **Home discovery feed (v3.1)** | `/` leads with the market, not with your own shelf: six compact shortcuts (goods · people · services · equipment · rentals & logistics · jobs), then eight curated shelves of real records — stock, storefront services, vendors, tools & rentals, requests + call-ups, events, groups/vendor lists, markets — each with a **See all** door into its own module and its own loading / empty / error state (an empty shelf hides; one failed shelf cannot take the feed down). A Fiverr-style invite banner sits between the shelves and calls the app's existing share flow, promising no reward. **Your own stock never appears on a public shelf** (filtered at the API and again by owner handle/id) and My Shop ends the feed collapsed, with live counts and the way back to full management. Every shelf reuses an existing endpoint — with optional `skip`/`limit` added to `/groups/browse`, `/vendor-lists/browse` and `/markets` — and no new dependency, model or category. Plan: [`docs/briefs/home-discovery-feed.md`](docs/briefs/home-discovery-feed.md). |
 
 ## Stack
 
@@ -185,7 +186,8 @@ check-in. Password for all four is `Brief-demo-2026`, email
 
 ```bash
 cd backend && pytest            # boots an embedded Postgres, walks the whole vendor loop (incl. v2.1, v2.2, v2.5 payment/chama and v2.6 halal flows)
-cd frontend && npm test         # renders every page against a fake API (37 specs)
+cd frontend && npm test         # renders every page against a fake API
+cd frontend && npm run lint     # eslint 9, flat config (eslint.config.js) — 0 errors
 cd backend && alembic upgrade head && alembic check && alembic downgrade base   # migrations replay cleanly
 ```
 
@@ -427,7 +429,9 @@ backend/     app/{models,services,routes,middleware,worker.py,wait_for_db.py}, a
              services: psp_client.py (provider + mock) · payments.py · custody.py · chamas.py · lock_settlement.py · halal.py · biashara.py
              routes: analytics.py · reviews.py · bookings.py · route_planner.py · ops.py · payments.py · chamas.py · murabaha.py · map.py
              services: map_viewport.py (bbox queries, grid clustering, viewport cache) · map_indexes.py (the bbox DDL)
-frontend/    src/{config,lib,stores,components/{layout,ui,vendor,stock,chat,groups,tools,lists,notifications,forms,map},pages/*,test}
+frontend/    eslint.config.js (flat config for `npm run lint`), vite.config.js (incl. the vitest setup)
+             src/{config,lib,stores,components/{layout,ui,vendor,stock,chat,groups,tools,lists,notifications,forms,map,home},pages/*,test}
+             components/home/ (the discovery feed: shelves, carousels, cards) · config/homeShelves.js (shelf registry)
              pages/analytics/ (trade dashboard) · pages/ops/ (monitoring console)
              components/map/{MarketMap,MapSheet}.jsx · lib/{mapViewport,useMapViewport}.js (viewport maths, debounce, cancel)
              components/tools/{RoutePlanner,BookingPanel}.jsx · components/lists/ReviewPanel.jsx

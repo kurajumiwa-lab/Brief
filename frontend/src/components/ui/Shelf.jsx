@@ -4,23 +4,48 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
- * "Moving shelf" — a horizontal swipe carousel.
+ * "Moving shelf" — THE horizontal carousel.
  *
- * Swipe on touch (native scroll + snap), drag with the mouse (pointer
- * handler), arrow keys / buttons on desktop. Children enter with a stagger
- * and drift gently while idle (the `float` animation).
+ * One implementation serves every horizontal surface in the product (the home
+ * feed's discovery shelves, the dashboard's rails): swipe on touch (native
+ * scroll + snap), drag with the mouse, arrow buttons on desktop, arrow keys
+ * when the rail has focus.
+ *
+ * Wrapped inside `components/home/HorizontalCarousel` for the home feed, so
+ * the feed never grows a second carousel of its own.
+ *
+ * SWIPE IS NOT A TAP. A gesture that moves more than `SWIPE_SLOP` px marks the
+ * following click as a swipe and suppresses it, so dragging a shelf can never
+ * open the card under the thumb. The guard only lives for `SUPPRESS_MS` after
+ * the drag, so a deliberate tap straight afterwards still works.
  */
-export default function Shelf({ title, sub, action, children, className, itemClassName, fade = true }) {
+
+const SWIPE_SLOP = 8;
+const SUPPRESS_MS = 320;
+
+export default function Shelf({
+  title,
+  sub,
+  action,
+  children,
+  className,
+  fade = true,
+  arrows = "hover",
+  ariaLabel,
+  tabIndex = 0,
+}) {
   const scroller = useRef(null);
   const [canLeft, setCanLeft] = useState(false);
   const [canRight, setCanRight] = useState(false);
   const drag = useRef(null);
+  const touchStart = useRef({ x: 0, y: 0, moved: false });
+  const suppressClickUntil = useRef(0);
 
   const updateArrows = useCallback(() => {
     const el = scroller.current;
     if (!el) return;
-    setCanLeft(el.scrollLeft > 8);
-    setCanRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 8);
+    setCanLeft(el.scrollLeft > SWIPE_SLOP);
+    setCanRight(el.scrollLeft < el.scrollWidth - el.clientWidth - SWIPE_SLOP);
   }, []);
 
   const nudge = (dir) => {
@@ -29,7 +54,40 @@ export default function Shelf({ title, sub, action, children, className, itemCla
     el.scrollBy({ left: dir * el.clientWidth * 0.7, behavior: "smooth" });
   };
 
-  // mouse drag-to-scroll (pointer events; touch keeps native momentum)
+  /** A swipe just ended — the click it produces is the swipe, not a choice. */
+  const guardClick = () => {
+    suppressClickUntil.current = Date.now() + SUPPRESS_MS;
+  };
+
+  const onClickCapture = (e) => {
+    if (Date.now() < suppressClickUntil.current) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  };
+
+  // touch: the browser owns the scroll; we only watch whether it was a swipe
+  const onTouchStart = (e) => {
+    const t = e.touches?.[0];
+    if (!t) return;
+    touchStart.current = { x: t.clientX, y: t.clientY, moved: false };
+  };
+  const onTouchMove = (e) => {
+    const t = e.touches?.[0];
+    if (!t) return;
+    if (
+      Math.abs(t.clientX - touchStart.current.x) > SWIPE_SLOP ||
+      Math.abs(t.clientY - touchStart.current.y) > SWIPE_SLOP
+    ) {
+      touchStart.current.moved = true;
+    }
+  };
+  const onTouchEnd = () => {
+    if (touchStart.current.moved) guardClick();
+    touchStart.current.moved = false;
+  };
+
+  // mouse drag-to-scroll
   const onPointerDown = (e) => {
     if (e.pointerType !== "mouse") return;
     const el = scroller.current;
@@ -38,29 +96,38 @@ export default function Shelf({ title, sub, action, children, className, itemCla
   const onPointerMove = (e) => {
     if (!drag.current || e.pointerType !== "mouse") return;
     const dx = e.clientX - drag.current.x;
-    if (Math.abs(dx) > 4) drag.current.moved = true;
+    if (Math.abs(dx) > SWIPE_SLOP) drag.current.moved = true;
     scroller.current.scrollLeft = drag.current.left - dx;
   };
   const endDrag = () => {
     if (drag.current?.moved) {
       const el = scroller.current;
       el.scrollTo({ left: el.scrollLeft, behavior: "smooth" }); // re-snap
+      guardClick();
     }
     drag.current = null;
   };
+
+  const label = ariaLabel || (typeof title === "string" ? title : "shelf");
 
   return (
     <section className={cn("group/shelf relative", className)}>
       {(title || action) && (
         <div className="flex items-center justify-between gap-3 mb-2.5 px-0.5">
           <div className="min-w-0">
-            <h3 className="text-sm font-semibold text-ink-1 leading-tight">{title}</h3>
+            {title && <h3 className="text-sm font-semibold text-ink-1 leading-tight">{title}</h3>}
             {sub && <p className="text-xs text-ink-4 mt-0.5">{sub}</p>}
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {action}
-            <div className="hidden md:flex items-center gap-1 opacity-0 group-hover/shelf:opacity-100 transition-opacity">
+            <div
+              className={cn(
+                "hidden md:flex items-center gap-1 transition-opacity",
+                arrows === "hover" && "opacity-0 group-hover/shelf:opacity-100 focus-within:opacity-100"
+              )}
+            >
               <button
+                type="button"
                 onClick={() => nudge(-1)}
                 disabled={!canLeft}
                 aria-label="Scroll shelf left"
@@ -69,6 +136,7 @@ export default function Shelf({ title, sub, action, children, className, itemCla
                 <ChevronLeft size={14} />
               </button>
               <button
+                type="button"
                 onClick={() => nudge(1)}
                 disabled={!canRight}
                 aria-label="Scroll shelf right"
@@ -88,9 +156,15 @@ export default function Shelf({ title, sub, action, children, className, itemCla
           onPointerMove={onPointerMove}
           onPointerUp={endDrag}
           onPointerLeave={endDrag}
-          className={cn("shelf select-none", "cursor-grab active:cursor-grabbing")}
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+          onClickCapture={onClickCapture}
+          tabIndex={tabIndex}
+          className={cn("shelf select-none", "cursor-grab active:cursor-grabbing focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40")}
           role="list"
-          aria-label={typeof title === "string" ? title : "shelf"}
+          aria-roledescription="carousel"
+          aria-label={label}
         >
           {children}
         </div>

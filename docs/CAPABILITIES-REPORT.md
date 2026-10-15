@@ -175,7 +175,7 @@ noted in §8) or **[config-gated]** (behaviour requires an operator to set a val
 | v2.11 suite alone | `.venv/bin/python -m pytest tests/test_v211_standing.py -q` | 21 tests (included in the 195 above) |
 | Frontend suite | `cd frontend && npx vitest run` | **12 files, 112 tests passed**, exit 0 |
 | Production build | `cd frontend && npm run build` | exit 0, 2176 modules, `PassportPage` chunk emitted |
-| Lint | `npm run lint` | **cannot run** — `eslint` is not installed in this checkout (§8) |
+| Lint | `cd frontend && npm run lint` | **0 errors, 10 warnings**, exit 0 — ESLint 9 + flat config (`frontend/eslint.config.js`) |
 
 The suite is the same harness as before v2.11: bundled Postgres 16 via `pgserver`,
 `AUTO_CREATE_TABLES=true`, lifespan-aware client, rate-limit reset fixture. The 174 tests
@@ -297,8 +297,12 @@ Capability gaps, kept honest because the product's position depends on it:
    intelligence and integrations are a hook, not a feature.
 4. **Verifier desk is config-gated.** Appointing a verifier means editing `VERIFIER_HANDLES`
    and restarting; there is no in-app admin screen, and no SLA metrics surfaced yet.
-5. **`npm run lint` cannot run** — `eslint` is not installed in this checkout, so lint is
-   not part of the verified state.
+5. **Lint runs, with ten warnings held open on purpose.** `npm run lint` (ESLint 9, flat
+   config at `frontend/eslint.config.js`) reports 0 errors. The ten remaining warnings are
+   `react-hooks/exhaustive-deps` smells on screens this work did not touch — adding a missing
+   dependency to an effect that already reacts to the URL can loop, so each needs a read
+   rather than a blind fix. The React Compiler readiness rules are off with their reasons
+   written in the config.
 6. **Evidence access control is "unguessable URL".** No signed or expiring URLs, no
    per-download audit.
 7. **Fit is advisory.** `eligible_on_paper` never blocks an offer — deliberate, but it means

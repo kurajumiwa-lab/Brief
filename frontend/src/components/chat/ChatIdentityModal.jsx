@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Building2, CheckCircle2, Eye, ImagePlus, Lock, ShieldCheck, Sparkles, User, Users, X } from "lucide-react";
+import { Building2, CheckCircle2, Eye, ImagePlus, Lock, ShieldCheck, User, Users, X } from "lucide-react";
 import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";

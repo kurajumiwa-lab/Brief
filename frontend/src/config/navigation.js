@@ -1,6 +1,6 @@
 import {
   Home, Compass, ClipboardList, MessageSquare, Store, Map, Newspaper, Package,
-  Truck, MapPin, Users, Wrench, CalendarDays, Terminal, UserRound,
+  Truck, MapPin, Users, Wrench, CalendarDays, Terminal, UserRound, Building2,
 } from "lucide-react";
 
 /**
@@ -56,6 +56,23 @@ export const JOB_TILES = [
     blurb: "Tools, machinery and rentals",
     tint: "bg-orchid-50 text-orchid-700 dark:bg-orchid-500/10 dark:text-orchid-300",
   },
+];
+
+/**
+ * Compact discovery shortcuts for Home (v3.1).
+ *
+ * Six doors into six REAL destinations — the same URLs Browse's tiles and the
+ * Work area already use. This row is a set of links, not a taxonomy: it adds no
+ * category, and every item resolves to a screen that already exists, so the
+ * Browse taxonomy stays the only taxonomy.
+ */
+export const DISCOVERY_SHORTCUTS = [
+  { to: "/browse?type=goods", label: "Goods", icon: Package },
+  { to: "/browse?type=people", label: "People", icon: Users },
+  { to: "/browse?type=services", label: "Services", icon: Truck },
+  { to: "/browse?type=equipment", label: "Equipment", icon: Wrench },
+  { to: "/tools", label: "Rentals & logistics", icon: Building2 },
+  { to: "/tasks", label: "Jobs & opportunities", icon: ClipboardList },
 ];
 
 /** Browse-area destinations. Job views first; context views after. */

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -108,9 +108,12 @@ vi.mock("@/lib/api", () => {
   };
 });
 
-vi.mock("@/stores/authStore", () => ({
-  useAuthStore: (selector) => selector({ vendor: VENDOR, token: "tok", ready: true }),
-}));
+vi.mock("@/stores/authStore", () => {
+  const state = { vendor: VENDOR, token: "tok", ready: true };
+  return {
+    useAuthStore: Object.assign((selector) => selector(state), { getState: () => state }),
+  };
+});
 
 /** Renders with a REAL route pattern so useParams() resolves — a screen that
     reads its subject from the URL has to be tested through that URL. */
@@ -134,7 +137,11 @@ const renderRoutes = (path, extra) =>
     </MemoryRouter>,
   );
 
-beforeEach(() => {
+beforeEach(async () => {
+  // The feed is cached in a store: a test that creates its own feed must not
+  // inherit the shelves the previous one loaded.
+  const { useHomeFeedStore } = await import("@/stores/homeFeedStore");
+  useHomeFeedStore.setState({ shelves: {} });
   calls.nearby.length = 0;
   calls.place.length = 0;
   calls.market.length = 0;
@@ -144,58 +151,76 @@ beforeEach(() => {
 
 // ── the hub ──────────────────────────────────────────────────────────────────
 describe("Home trading feed", () => {
-  it("prioritises search and marketplace activity rather than a destination grid", async () => {
+  it("opens with search and the marketplace, not a wall of destination tiles", async () => {
     const { default: HomeHub } = await import("@/pages/home/HomeHub");
     renderAt("/", "/", <HomeHub />);
 
     expect(screen.getByRole("search")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /fresh on the network/i })).toBeInTheDocument();
+    // the compact rail: six doors into screens that already exist
+    const shortcuts = await screen.findByRole("navigation", { name: /find your way around the network/i });
+    expect(within(shortcuts).getAllByRole("link").map((a) => a.getAttribute("href"))).toEqual([
+      "/browse?type=goods", "/browse?type=people", "/browse?type=services",
+      "/browse?type=equipment", "/tools", "/tasks",
+    ]);
+    // the old hub's tile wall is gone
     expect(screen.queryByText("Your shelf of doors")).not.toBeInTheDocument();
-    for (const label of ["Around you", "Map", "News", "Rentals", "Markets", "Groups", "Events", "Tasks"]) {
-      expect(screen.queryByRole("link", { name: new RegExp(label, "i") })).not.toBeInTheDocument();
-    }
+    expect(screen.queryByRole("link", { name: /^around you$/i })).not.toBeInTheDocument();
   });
 
-  it("uses live network categories as one-tap Browse filters", async () => {
+  it("leads with the network's own records, and hides a module with nothing to show", async () => {
     const { default: HomeHub } = await import("@/pages/home/HomeHub");
     renderAt("/", "/", <HomeHub />);
-    const category = await screen.findByRole("link", { name: "Fresh Produce" });
-    expect(category).toHaveAttribute("href", "/browse?category=fresh%20produce");
-    expect(screen.queryByRole("link", { name: "Convenience" })).not.toBeInTheDocument();
+
+    // the module that answered shows its records …
+    const markets = await screen.findByTestId("home-shelf-markets");
+    expect(within(markets).getByText("Kibuye Market")).toBeInTheDocument();
+    expect(within(markets).getByRole("link", { name: /Kibuye Market/i })).toHaveAttribute("href", "/markets/z-1");
+    // … and a module with no rows contributes no shelf, and no filler
+    expect(screen.queryByTestId("home-shelf-stock")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("home-shelf-events")).not.toBeInTheDocument();
   });
 
-  it("keeps trust claims visible without inventing activity or market prices", async () => {
+  it("keeps every shelf honest about where its numbers come from", async () => {
     const { default: HomeHub } = await import("@/pages/home/HomeHub");
     renderAt("/", "/", <HomeHub />);
-    expect(screen.getByText(/prices are vendor-stated and timestamped/i)).toBeInTheDocument();
-    expect(screen.getByText(/trust is earned from completed movements/i)).toBeInTheDocument();
+
+    expect(screen.getByText(/your own shelf never appears in the shelves above/i)).toBeInTheDocument();
+    expect(screen.getByText(/prices and availability are stated by the vendor who published them/i)).toBeInTheDocument();
     expect(screen.queryByText(/market rate/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/popular/i)).not.toBeInTheDocument();
   });
 
-  it("shows an honest recovery action when the live stock request fails", async () => {
+  it("contains a module's failure to its own shelf, with an honest retry", async () => {
     const { stockAPI } = await import("@/lib/api");
     stockAPI.network.mockRejectedValueOnce(new Error("offline"));
     const { default: HomeHub } = await import("@/pages/home/HomeHub");
     renderAt("/", "/", <HomeHub />);
 
-    expect(await screen.findByRole("heading", { name: "Fresh stock didn't load" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /try again/i }));
-    expect(await screen.findByRole("heading", { name: "No stock is showing yet" })).toBeInTheDocument();
+    const failed = await screen.findByTestId("home-shelf-stock");
+    expect(failed).toHaveAttribute("data-shelf-status", "error");
+    expect(within(failed).getByText(/didn't load/i)).toBeInTheDocument();
+    expect(within(failed).getByRole("button", { name: /try again/i })).toBeInTheDocument();
+    // everything else on the feed is still standing
+    expect(await screen.findByTestId("home-shelf-markets")).toBeInTheDocument();
   });
 
-  it("resumes recent completed trades through the existing Orders history", async () => {
+  it("keeps outstanding work reachable in one line, and My Shop folded shut", async () => {
     const { stockAPI } = await import("@/lib/api");
     stockAPI.movements.mockResolvedValueOnce(ok([{
-      id: "move-1", stock_item_id: "stock-4", stock_name: "Red onions", direction: "incoming",
-      status: "received", from_handle: "east_market", to_handle: "mama_mboga", quantity: 4,
+      id: "move-1", stock_item_id: "stock-4", stock_name: "Red onions", direction: "outgoing",
+      status: "pending", from_handle: "mama_mboga", to_handle: "east_market", quantity: 4,
       unit_price: 120, total_value: 480, created_at: new Date().toISOString(),
     }]));
     const { default: HomeHub } = await import("@/pages/home/HomeHub");
     renderAt("/", "/", <HomeHub />);
 
-    expect(await screen.findByRole("heading", { name: "Recent trade activity" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Order history" })).toHaveAttribute("href", "/orders");
-    expect(screen.getByRole("link", { name: "Red onions" })).toHaveAttribute("href", "/listing/stock-4");
+    const line = await screen.findByTestId("home-needs-action");
+    expect(line).toHaveAttribute("href", "/orders?needs=me");
+    expect(line).toHaveTextContent(/1 trade needs your next step/i);
+
+    const shop = screen.getByTestId("home-your-shop");
+    expect(shop).toHaveAttribute("data-shop-state", "collapsed");
+    expect(within(shop).queryByRole("link", { name: /preview shop/i })).not.toBeInTheDocument();
   });
 
   it("submits the hero search to the existing Browse results route", async () => {
@@ -316,6 +341,22 @@ describe("Rentals search", () => {
     renderAt("/tools", "/tools?search=warehouse", <ToolsPage />);
     await waitFor(() => expect(calls.tools).toContainEqual({ category: "", search: "warehouse" }));
     expect(screen.getByPlaceholderText("Search tools")).toHaveValue("warehouse");
+  });
+
+  it("opens the listing a home card deep-linked to", async () => {
+    const { toolAPI } = await import("@/lib/api");
+    // The feed's equipment cards link to /tools?listing={id}; the page must open
+    // that listing's own drawer rather than dropping the vendor on a list.
+    toolAPI.browse.mockResolvedValueOnce(ok([{
+      id: "tool-1", vendor_handle: "boda_express", vendor_business: "Boda Express", category: "cold_storage",
+      title: "Shared cold room space", location: "Ngara, Nairobi", price_per_unit: 4500,
+      price_unit: "per_day", min_booking: 1, is_available: true, times_booked: 3, features: ["Driver included"],
+    }]));
+    const { default: ToolsPage } = await import("@/pages/tools/ToolsPage");
+    renderAt("/tools", "/tools?listing=tool-1", <ToolsPage />);
+    expect(await screen.findByText("Shared cold room space")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /request booking/i })).toBeInTheDocument();
+    expect(screen.getByText(/hosted by boda express/i)).toBeInTheDocument();
   });
 });
 

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Store, MapPin, Building2, Crosshair, Plus, Minus, List, X, ChevronRight,
-  CloudOff, ZoomIn, Eye, EyeOff, ShieldCheck,
+  CloudOff, ZoomIn, Eye, EyeOff, 
 } from "lucide-react";
 import MarketMap from "@/components/map/MarketMap";
 import MapSheet from "@/components/map/MapSheet";
@@ -364,7 +364,7 @@ function MapButton({ children, onClick, label }) {
   );
 }
 
-function NearbyList({ items, kind, loading, selectedId, onSelect, onOpenMarkets }) {
+function NearbyList({ items, loading, selectedId, onSelect, onOpenMarkets }) {
   if (loading && !items.length) return <PageSpinner label="Reading this area…" />;
   if (!items.length) {
     return (

@@ -4,9 +4,8 @@ import { MemoryRouter } from "react-router-dom";
 
 import {
   areaSummary, bboxString, categoryLabel, clusterColor, clusterRadius,
-  clusterStyle, formatCount, pointStyle, sortNetworkFirst, tierTag,
+  formatCount, 
   zoomTier, rememberView, clearViews,
-  NETWORK_COLOR, MUTED_COLOR, KIND_COLORS,
 } from "@/lib/mapViewport";
 import useMapViewport from "@/lib/useMapViewport";
 

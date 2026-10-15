@@ -1,4 +1,4 @@
-import { Building2, User } from "lucide-react";
+import { Building2 } from "lucide-react";
 import { cn, initials } from "@/lib/utils";
 
 const sizes = {
