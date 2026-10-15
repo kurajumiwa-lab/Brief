@@ -66,6 +66,12 @@ class Settings(BaseSettings):
     SIX_MONTH_PROGRAM_ENABLED: bool = True
     SIX_MONTH_PROGRAM_END_DATE: str = "2027-04-12"
 
+    # Enterprise workspaces & managed devices (v2.13). Brief_ is not an MDM:
+    # device commands are only dispatched when a workspace has bound its own
+    # Android Enterprise / EMM *and* this deployment switch is on. Otherwise
+    # commands stay `requested` (audited, never reported as carried out).
+    ENTERPRISE_DEVICE_COMMANDS_DISPATCH_ENABLED: bool = False
+
     # Database — Postgres only. Either shape is accepted; both derived URLs are
     # normalised in the validators below.
     DATABASE_URL: str = "postgresql+asyncpg://brief:brief@db:5432/brief_vendors"

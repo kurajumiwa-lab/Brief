@@ -219,6 +219,21 @@ export const locksAPI = {
   closeWindow: (id) => api.post(`/locks/ops/windows/${id}/close`),
   addQuote: (clusterId, data) => api.post(`/locks/ops/clusters/${clusterId}/quotes`, data),
   selectQuote: (clusterId, quoteId) => api.post(`/locks/ops/clusters/${clusterId}/select/${quoteId}`),
+  // Market Runs (v2.15): scheduled buying runs + the per-run order ledger.
+  runTemplates: () => api.get("/locks/runs/templates"),
+  createRun: (body) => api.post("/locks/runs", body),
+  runs: (params) => api.get("/locks/runs", { params: noEmpty(params) }),
+  runLedger: (runId) => api.get(`/locks/runs/${runId}/ledger`),
+  setRunStatus: (runId, status) => api.post(`/locks/runs/${runId}/status`, { status }),
+  createRunOrder: (runId, body) => api.post(`/locks/runs/${runId}/orders`, body),
+  confirmRunOrder: (orderId) => api.post(`/locks/runs/orders/${orderId}/confirm`),
+  cancelRunOrder: (orderId) => api.post(`/locks/runs/orders/${orderId}/cancel`),
+  allocateRunOrder: (orderId, body) => api.post(`/locks/runs/orders/${orderId}/allocate`, body),
+  recordRunPayment: (orderId, body) => api.post(`/locks/runs/orders/${orderId}/payments`, body),
+  handoverRunOrder: (orderId, outcome) => api.post(`/locks/runs/orders/${orderId}/handover`, { outcome }),
+  recordRunPurchase: (runId, body) => api.post(`/locks/runs/${runId}/purchases`, body),
+  recordRunExpense: (runId, body) => api.post(`/locks/runs/${runId}/expenses`, body),
+  myRunOrders: () => api.get("/locks/runs/orders/mine"),
 };
 
 // ── Governance, appeals, transparent rules and non-cash benefits ─────────────
@@ -508,6 +523,36 @@ export const growthAPI = {
   seats: () => api.get("/growth/seats"),
   addSeat: (body) => api.post("/growth/seats", body),
   removeSeat: (id) => api.delete(`/growth/seats/${id}`),
+};
+
+// ── Enterprise workspaces & managed devices (v2.13) ────────────────────────
+// The paid, private side of the dual model: an organisation workspace inside
+// Brief_, its member register, field-officer activity and managed Android
+// devices. Commands report `dispatched` honestly — see the plans payload.
+export const enterpriseAPI = {
+  plans: () => api.get("/enterprise/plans"),
+  createWorkspace: (body) => api.post("/enterprise/workspaces", body),
+  myWorkspaces: () => api.get("/enterprise/workspaces"),
+  discover: (q) => api.get("/enterprise/discover", { params: noEmpty({ q }) }),
+  workspace: (id) => api.get(`/enterprise/workspaces/${id}`),
+  updateWorkspace: (id, body) => api.put(`/enterprise/workspaces/${id}`, body),
+  dashboard: (id) => api.get(`/enterprise/workspaces/${id}/dashboard`),
+  members: (id) => api.get(`/enterprise/workspaces/${id}/members`),
+  addMember: (id, body) => api.post(`/enterprise/workspaces/${id}/members`, body),
+  revokeMember: (id, membershipId) => api.delete(`/enterprise/workspaces/${id}/members/${membershipId}`),
+  devices: (id) => api.get(`/enterprise/workspaces/${id}/devices`),
+  enrolDevice: (id, body) => api.post(`/enterprise/workspaces/${id}/devices`, body),
+  commands: (id) => api.get(`/enterprise/workspaces/${id}/commands`),
+  requestCommand: (id, deviceId, body) => api.post(`/enterprise/workspaces/${id}/devices/${deviceId}/commands`, body),
+};
+
+// ── Storefront catalogue & enquiries (v2.14) ───────────────────────────────
+// Public catalogue (offers, account tiers, trial terms, BYOD); enquiries
+// attach to the signed-in vendor so a human can follow up and invoice.
+export const catalogAPI = {
+  catalogue: () => api.get("/catalog"),
+  createEnquiry: (body) => api.post("/catalog/enquiries", body),
+  myEnquiries: () => api.get("/catalog/enquiries/mine"),
 };
 
 // ── Ops / monitoring (v2.2) ────────────────────────────────────────────────

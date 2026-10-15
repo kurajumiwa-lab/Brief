@@ -16,9 +16,12 @@ from app.middleware.rate_limiter import RateLimitMiddleware, configure_backend
 from app.middleware.vendor_only import VendorOnlyMiddleware
 from app.modules.standing import router as passport_routes
 from app.modules.standing import sweep as standing_sweep
+from app.modules.catalog import router as catalog_routes
+from app.modules.enterprise import router as enterprise_routes
 from app.modules.growth import router as growth_routes
 from app.modules.trade import router as requests_routes
 from app.modules.orders.router import router as orders_routes
+from app.modules.runs import router as runs_routes
 from app.platform import event_outbox
 from app.routes import (
     analytics,
@@ -155,6 +158,8 @@ app.include_router(vendor_lists.router, prefix="/api/vendor-lists", tags=["Vendo
 app.include_router(groups.router, prefix="/api/groups", tags=["Vendor Groups"])
 app.include_router(chat.router, prefix="/api/chat", tags=["Chat & Topics"])
 app.include_router(market_locks.router, prefix="/api/locks", tags=["Market Locks"])
+# v2.15 — Market Runs (Ruiru Fresh · Githurai Sukari · Daraja Mbili consolidated)
+app.include_router(runs_routes.router, prefix="/api/locks", tags=["Market Runs"])
 app.include_router(payments.router, prefix="/api/payments", tags=["Payments & Custody"])
 app.include_router(chamas.router, prefix="/api/chamas", tags=["Digital Chamas (Table Banking)"])
 app.include_router(murabaha.router, prefix="/api/murabaha", tags=["Murabaha Advances (Halal Trade)"])
@@ -172,6 +177,10 @@ app.include_router(requests_routes, prefix="/api/requests", tags=["Business Requ
 # v2.11 — verified standing, the passport, renewal reminders and the verifier desk
 app.include_router(passport_routes.router, prefix="/api/passport", tags=["Business Passport"])
 app.include_router(growth_routes.router, prefix="/api/growth", tags=["Growth & Business Planner"])
+# v2.13 — enterprise workspaces: the paid, private side of the dual model
+app.include_router(enterprise_routes.router, prefix="/api/enterprise", tags=["Enterprise Workspaces"])
+# v2.14 — public storefront catalogue (offers/tiers/trial) + enquiries
+app.include_router(catalog_routes.router, prefix="/api/catalog", tags=["Storefront Catalogue"])
 app.include_router(orders_routes, prefix="/api/orders", tags=["Order Transactions"])
 # v2.7 — the marketplace map: viewport queries, server-side clustering, lazy details
 app.include_router(map_routes.router, prefix="/api/map", tags=["Map"])
@@ -215,6 +224,7 @@ async def api_root():
             "notifications": "/api/notifications",
             "passport": "/api/passport",
             "growth": "/api/growth",
+            "enterprise": "/api/enterprise",
             "files": "/api/files",
             "collective": "/api/collective",
             "market_locks": "/api/locks",

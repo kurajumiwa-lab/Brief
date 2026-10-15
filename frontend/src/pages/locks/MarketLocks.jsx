@@ -9,6 +9,8 @@ import Spinner from "@/components/ui/Spinner";
 import EmptyState from "@/components/ui/EmptyState";
 import { toast } from "@/components/ui/Toast";
 import { locksAPI, apiError } from "@/lib/api";
+import MarketRunsSection from "@/components/locks/MarketRunsSection";
+import { useAuthStore } from "@/stores/authStore";
 import { currency, num } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 
@@ -24,6 +26,7 @@ function isAccepting(window, now) {
 }
 
 export default function MarketLocks() {
+  const currentHandle = useAuthStore((s) => s.vendor?.vendor_handle);
   const [home, setHome] = useState(null);
   const [opsBoard, setOpsBoard] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -159,6 +162,8 @@ export default function MarketLocks() {
         {home.vendor_zone?.walkable_ring && <p className="mt-2 text-2xs text-ink-4">Zone boundary: {home.vendor_zone.walkable_ring}</p>}
         {!canChangeZone && home.zone_change_available_at && <p className="mt-2 text-2xs text-accent-600 dark:text-accent-400">Zone change available {dateLabel(home.zone_change_available_at.slice(0, 10))} (30-day rule).</p>}
       </Card>
+
+      <MarketRunsSection currentHandle={currentHandle} />
 
       {!home.vendor_zone ? (
         <EmptyState icon={MapPin} title="Pick your market first" description="Locks only combine orders from your selected market zone. Set it above to see eligible products and the Daily Flash window." />

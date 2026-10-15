@@ -14,6 +14,14 @@ from app.services import discovery, patron_service, stock_engine, vendor_network
 router = APIRouter()
 
 
+def _account_tier(v: Vendor) -> dict:
+    # Imported lazily: the catalogue is static data, and this keeps the
+    # vendors router free of a module-load dependency cycle.
+    from app.modules.catalog.service import account_tier_for_plan
+
+    return account_tier_for_plan(getattr(v, "plan_tier", None))
+
+
 class VendorOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -38,6 +46,9 @@ class VendorOut(BaseModel):
     finance_mode: str = "conventional"
     # v2.12 plan & server-side entitlements
     plan_tier: str = "starter"
+    # v2.14 public account-tier label (Junior — Free account, …). This
+    # describes the subscription only; verification stays `is_verified`.
+    account_tier: Optional[dict] = None
     plan_seats_limit: int = 1
     plan_watches_limit: int = 10
     # SRM-lite (v2.1 §4.4)
@@ -103,6 +114,7 @@ def vendor_out(v: Vendor, connected: bool = False) -> VendorOut:
         connected=connected,
         finance_mode=getattr(v, "finance_mode", None) or "conventional",
         plan_tier=getattr(v, "plan_tier", None) or "starter",
+        account_tier=_account_tier(v),
         plan_seats_limit=int(getattr(v, "plan_seats_limit", 1) or 1),
         plan_watches_limit=int(getattr(v, "plan_watches_limit", 10) or 10),
         fulfillment_rate=stock_engine.fulfillment_rate(v),

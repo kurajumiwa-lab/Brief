@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  ArrowUpRight, BarChart3, ChevronRight, ClipboardList, FileCheck, Layers3,
+  ArrowUpRight, BarChart3, Building2, ChevronRight, ClipboardList, FileCheck, Layers3,
   List, Package, PlusCircle, Settings, ShoppingBag, ShoppingBasket, ShieldCheck,
   Sparkles, Store, Terminal, Truck, Users,
 } from "lucide-react";
@@ -52,6 +52,22 @@ const QUICK_ACTIONS = [
 ];
 
 const DESTINATIONS = [
+  {
+    title: "Storefront & catalogue",
+    description: "Sell services, software and field operations: offers, account tiers, trial and enquiries.",
+    to: () => "/storefront",
+    icon: ShoppingBag,
+    tone: "green",
+    group: "Work & sourcing",
+  },
+  {
+    title: "Enterprise workspace",
+    description: "For associations & organisations: member register, field officers and managed Android devices.",
+    to: () => "/enterprise",
+    icon: Building2,
+    tone: "blue",
+    group: "Work & sourcing",
+  },
   {
     title: "Growth planner",
     description: "Inverted pyramid plan, live pulse, 5-gear motions and plan tiers.",

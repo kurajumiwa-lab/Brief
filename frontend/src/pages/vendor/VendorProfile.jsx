@@ -299,6 +299,12 @@ export default function VendorProfile() {
                     {role.emoji} {role.label}
                   </Badge>
                 )}
+                {vendor.account_tier && (
+                  <Badge variant={vendor.account_tier.is_free ? "amber" : "gray"} size="xs"
+                    title={vendor.account_tier.verification_note}>
+                    {vendor.account_tier.label}
+                  </Badge>
+                )}
                 <span>Business profile and public storefront</span>
                 {vendor.physical_location && (
                   <span className="inline-flex items-center gap-1">
