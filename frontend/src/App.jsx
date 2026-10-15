@@ -8,6 +8,7 @@ import NearbyPage from "@/pages/nearby/NearbyPage";
 import PlaceProfile from "@/pages/nearby/PlaceProfile";
 import MarketDetail from "@/pages/markets/MarketDetail";
 import TaskTrack from "@/pages/tasks/TaskTrack";
+import StorefrontPage from "@/pages/storefront/StorefrontPage";
 import { useAuthStore } from "@/stores/authStore";
 
 // Every page is lazy. The home screen downloads only what it renders —
@@ -27,6 +28,7 @@ const MarketsPage = lazy(() => import("@/pages/markets/MarketsPage"));
 const MePage = lazy(() => import("@/pages/me/MePage"));
 const PassportPage = lazy(() => import("@/pages/standing/PassportPage"));
 const GrowthPlannerPage = lazy(() => import("@/pages/growth/GrowthPlannerPage"));
+const EnterprisePage = lazy(() => import("@/pages/enterprise/EnterprisePage"));
 const StockRoom = lazy(() => import("@/pages/stock/StockRoom"));
 const Network = lazy(() => import("@/pages/network/Network"));
 const VendorLists = lazy(() => import("@/pages/lists/VendorLists"));
@@ -85,6 +87,9 @@ export default function App() {
   return (
     <Routes>
       <Route path="/auth" element={<AuthPage />} />
+      {/* Public storefront (v2.14): catalogue, tiers, trial — readable without
+          an account; enquiring attaches to a vendor @handle. */}
+      <Route path="/storefront" element={<StorefrontPage />} />
       <Route
         element={
           <RequireVendor>

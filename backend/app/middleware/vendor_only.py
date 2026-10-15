@@ -15,7 +15,7 @@ from starlette.responses import JSONResponse
 # production — see app/routes/ops.py). Everything else under /api needs a vendor.
 # The PSP webhook is signed (HMAC-SHA256) instead of bearer-authenticated.
 OPEN_PREFIXES = ("/api/auth/", "/api/health", "/api/metrics", "/api/payments/webhook",
-                 "/docs", "/redoc", "/openapi.json")
+                 "/api/catalog", "/docs", "/redoc", "/openapi.json")
 
 
 class VendorOnlyMiddleware(BaseHTTPMiddleware):

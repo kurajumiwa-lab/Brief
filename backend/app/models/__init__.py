@@ -23,6 +23,11 @@ from app.modules.trade.models import BusinessRequest, RequestEvent, RequestOffer
 from app.modules.standing.models import BusinessClaim, ClaimEvent, ClaimMethod, ClaimStatus, StandingProfile
 from app.modules.orders.models import OrderTransaction, DeliveryQuoteRequest, DeliveryQuote, MovementEvent, OrderDispute
 from app.modules.growth.models import VendorTeamMember, PlanEntitlementEvent
+from app.modules.enterprise.models import (
+    DeviceCommand, EnterpriseMembership, EnterpriseWorkspace, ManagedDevice,
+)
+from app.modules.catalog.models import CatalogEnquiry
+from app.modules.runs.models import MarketRun, RunExpense, RunOrder, RunPurchase
 from app.modules.trade.models import RequestWatch
 from app.platform.event_outbox import OutboxEvent
 from app.models.governance import (
@@ -59,6 +64,8 @@ __all__ = [
     "MarketZone", "MarketMember", "LockProduct", "SupplierMOQ", "LockWindow", "LockCluster", "LockPick", "SupplierQuote",
     "OrderTransaction", "DeliveryQuoteRequest", "DeliveryQuote", "MovementEvent", "OrderDispute",
     "VendorTeamMember", "PlanEntitlementEvent",
+    "EnterpriseWorkspace", "EnterpriseMembership", "ManagedDevice", "DeviceCommand",
+    "CatalogEnquiry", "MarketRun", "RunOrder", "RunPurchase", "RunExpense",
     "BusinessClaim", "ClaimEvent", "ClaimMethod", "ClaimStatus", "StandingProfile",
     "RequestWatch",
     "VendorActivityDay", "GovernanceProposal", "GovernanceVote", "CouncilTerm", "RuleVersion",

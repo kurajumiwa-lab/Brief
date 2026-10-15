@@ -80,7 +80,7 @@ const WORK_ROOTS = ["/work", "/orders", "/tasks", "/locks", "/tools"];
 
 const ME_ROOTS = [
   "/me", "/stock", "/analytics", "/pos", "/brief", "/passport", "/growth",
-  "/groups", "/lists", "/events", "/governance", "/ops", "/feed",
+  "/enterprise", "/groups", "/lists", "/events", "/governance", "/ops", "/feed",
 ];
 
 const inArea = (pathname, roots) => roots.some((root) => pathname === root || pathname.startsWith(`${root}/`));
