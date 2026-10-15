@@ -1,6 +1,6 @@
 import { List, ShieldCheck, Star, Users } from "lucide-react";
 import Badge from "@/components/ui/Badge";
-import CardShell, { CardBody, CardMedia, CardTitle, CardMeta, CardVendor } from "./CardShell";
+import CardShell, { CardBody, CardPoster, CardTitle, CardMeta, CardVendor } from "./CardShell";
 import { num } from "@/lib/formatters";
 
 /**
@@ -11,6 +11,9 @@ import { num } from "@/lib/formatters";
  * list ratings are the records' own numbers; groups you are already in, and
  * lists you run, are filtered out before they reach here.
  */
+/** A group's own type, in the words the product already uses. */
+const GROUP_TYPE_LABELS = { trade: "Trade group", buyer: "Buyer group", niche: "Niche group", open: "Open group" };
+
 export default function CommunityCard({ item }) {
   const isList = item.subtype === "list";
   const Icon = isList ? List : Users;
@@ -20,22 +23,29 @@ export default function CommunityCard({ item }) {
       to={item.to}
       label={`${item.title} — ${isList ? "vendor list" : "group"} with ${item.members} ${item.members === 1 ? "member" : "members"}. Open ${isList ? "vendor lists" : "groups"}`}
     >
-      <CardMedia
-        tint={isList ? "bg-orchid-50 dark:bg-surface-2" : "bg-brand-50 dark:bg-surface-2"}
-        fallback={<Icon size={26} className={isList ? "text-orchid-700 dark:text-orchid-300" : "text-brand-700 dark:text-brand-300"} />}
-      >
-        <span className="absolute left-2 top-2">
-          <Badge variant={isList ? "purple" : "brand"} size="xs">{isList ? "Vendor list" : "Group"}</Badge>
-        </span>
-        {item.requiresApproval && (
-          <span className="absolute right-2 top-2">
-            <Badge variant="gray" size="xs">Approval</Badge>
-          </span>
-        )}
-      </CardMedia>
+      <CardPoster
+        icon={Icon}
+        label={isList ? "Vendor list" : GROUP_TYPE_LABELS[item.groupType] || "Group"}
+        tone={isList ? "orchid" : "brand"}
+        corner={
+          <>
+            <span className="absolute left-2 top-2">
+              <Badge variant={isList ? "purple" : "brand"} size="xs">{isList ? "Vendor list" : "Group"}</Badge>
+            </span>
+            {item.requiresApproval && (
+              <span className="absolute right-2 top-2">
+                <Badge variant="gray" size="xs">Approval</Badge>
+              </span>
+            )}
+          </>
+        }
+      />
 
       <CardBody>
         <CardTitle>{item.title}</CardTitle>
+        {item.description ? (
+          <p className="line-clamp-2 text-micro leading-snug text-ink-3">{item.description}</p>
+        ) : null}
         <CardMeta>{num(item.members)} member{item.members === 1 ? "" : "s"}{item.maxMembers ? ` of ${num(item.maxMembers)}` : ""}</CardMeta>
         {item.category || item.region ? <CardMeta>{[item.category, item.region].filter(Boolean).join(" · ")}</CardMeta> : null}
         {isList && item.rating ? (

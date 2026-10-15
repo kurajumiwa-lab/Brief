@@ -32,7 +32,12 @@ export default function CuratedShelf({ shelf, state, onSource, className }) {
   if (status === "ready" && items.length === 0) return null;
 
   return (
-    <section className={className} aria-labelledby={headingId} data-testid={`home-shelf-${shelf.key}`} data-shelf-status={status}>
+    <section
+      className={className}
+      aria-labelledby={headingId}
+      data-testid={`home-shelf-${shelf.key}`}
+      data-shelf-status={status}
+    >
       <SectionHeader
         as="h2"
         id={headingId}
@@ -43,7 +48,7 @@ export default function CuratedShelf({ shelf, state, onSource, className }) {
       />
 
       {status === "idle" || status === "loading" ? (
-        <ShelfSkeleton label={shelf.title} />
+        <ShelfSkeleton label={shelf.title} className="mt-0.5 -mx-4 px-4 sm:-mx-1 sm:px-1" />
       ) : status === "error" ? (
         <ShelfEmptyState
           tone="danger"
@@ -57,7 +62,10 @@ export default function CuratedShelf({ shelf, state, onSource, className }) {
           }
         />
       ) : (
-        <HorizontalCarousel label={shelf.title}>
+        // the rail bleeds to the phone's edge; the title and See all above it
+        // keep the page gutter, so the cards read as content rather than a box
+        // inside a box
+        <HorizontalCarousel label={shelf.title} className="-mx-4 px-4 sm:-mx-1 sm:px-1">
           {items.map((item, index) => (
             <CarouselItem key={`${shelf.key}-${item.id}`} index={index}>
               {renderCard(shelf.card, { item, onSource })}

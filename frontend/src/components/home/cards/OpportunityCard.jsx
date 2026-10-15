@@ -1,6 +1,6 @@
 import { Footprints, HeartHandshake, MapPin, Package, Timer, Truck, Users, Wrench, Zap } from "lucide-react";
 import Badge from "@/components/ui/Badge";
-import CardShell, { CardBody, CardMedia, CardTitle, CardPrice, CardMeta } from "./CardShell";
+import CardShell, { CardBody, CardPoster, CardTitle, CardPrice, CardMeta } from "./CardShell";
 import { currency, num, relativeTime } from "@/lib/formatters";
 
 /**
@@ -20,14 +20,16 @@ export default function OpportunityCard({ item }) {
   if (item.subtype === "job") {
     return (
       <CardShell to={item.to} label={`${item.title} — paid work${item.pay ? ` at ${currency(item.pay)}` : ""}. Open the call-up board`}>
-        <CardMedia
-          tint="bg-accent-50 dark:bg-surface-2"
-          fallback={<Zap size={26} className="text-accent-600 dark:text-accent-400" />}
-        >
-          <span className="absolute left-2 top-2">
-            <Badge variant="amber" size="xs">{item.squad ? "Squad mission" : "Call-up"}</Badge>
-          </span>
-        </CardMedia>
+        <CardPoster
+          icon={Zap}
+          label={item.squad ? "Squad mission" : "Paid call-up"}
+          tone="amber"
+          corner={
+            <span className="absolute left-2 top-2">
+              <Badge variant="amber" size="xs">{item.squad ? "Squad mission" : "Call-up"}</Badge>
+            </span>
+          }
+        />
         <CardBody>
           <CardTitle>{item.title}</CardTitle>
           <CardPrice>{item.pay ? `${currency(item.pay)} for the job` : "Pay on agreement"}</CardPrice>
@@ -59,11 +61,16 @@ export default function OpportunityCard({ item }) {
       to={item.to}
       label={`${TYPE_LABELS[item.requestType] || "Business"} request: ${item.title}. Open the requests feed`}
     >
-      <CardMedia tint="bg-blue-50 dark:bg-surface-2" fallback={<Icon size={26} className="text-blue-700 dark:text-blue-300" />}>
-        <span className="absolute left-2 top-2">
-          <Badge variant="blue" size="xs">{TYPE_LABELS[item.requestType] || "Request"}</Badge>
-        </span>
-      </CardMedia>
+      <CardPoster
+        icon={Icon}
+        label={`${TYPE_LABELS[item.requestType] || "Business"} request`}
+        tone="blue"
+        corner={
+          <span className="absolute left-2 top-2">
+            <Badge variant="blue" size="xs">{TYPE_LABELS[item.requestType] || "Request"}</Badge>
+          </span>
+        }
+      />
       <CardBody>
         <CardTitle>{item.title}</CardTitle>
         <CardPrice>{item.budget ? `${currency(item.budget)} budget` : "Budget not stated"}</CardPrice>

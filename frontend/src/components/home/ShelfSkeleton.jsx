@@ -9,9 +9,9 @@ import { CARD_MEDIA_RATIO, CARD_SLOT } from "./cards/CardShell";
  * move a pixel when the records land — the single biggest cause of a janky
  * feed on a low-end Android phone.
  */
-export default function ShelfSkeleton({ count = 4, label }) {
+export default function ShelfSkeleton({ count = 4, label, className }) {
   return (
-    <div className="flex gap-3 overflow-hidden px-1 -mx-1" role="status" aria-label={label ? `Loading ${label}` : "Loading"}>
+    <div className={cn("flex gap-3 overflow-hidden px-1 -mx-1", className)} role="status" aria-label={label ? `Loading ${label}` : "Loading"}>
       {Array.from({ length: count }).map((_, i) => (
         <div
           key={i}

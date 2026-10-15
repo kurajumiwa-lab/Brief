@@ -2,24 +2,46 @@ import { Link } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-/** The shelf header used on every home/profile section: title, why, a way on. */
-export default function SectionHeader({ title, description, to, action, linkLabel = "See all", className, id, as: Tag = "h2" }) {
+/**
+ * The shelf header used on every home/profile section: title, why, a way on.
+ *
+ * v3.2 tightened the type scale — a wall of 18px bold headings down a feed
+ * makes every shelf shout equally, which is the same as none of them speaking.
+ * The title is now 16px with a real rule between the header and the cards, so
+ * the eye reads section → records → section instead of one continuous column of
+ * bold text. Nothing about where a header links, or what it says, changed.
+ */
+export default function SectionHeader({
+  title,
+  description,
+  to,
+  action,
+  linkLabel = "See all",
+  className,
+  id,
+  as: Tag = "h2",
+}) {
+  const lead =
+    action ||
+    (to ? (
+      <Link
+        to={to}
+        className="inline-flex shrink-0 items-center gap-0.5 rounded px-1 py-0.5 text-micro font-bold text-brand-700 hover:underline underline-offset-2 dark:text-brand-400"
+      >
+        {linkLabel}
+        <ChevronRight size={13} aria-hidden="true" />
+      </Link>
+    ) : null);
+
   return (
-    <div className={cn("flex items-end justify-between gap-4 mb-3", className)}>
-      <div className="min-w-0">
-        <Tag id={id} className="text-lg font-bold text-ink-1 tracking-tight">{title}</Tag>
-        {description && <p className="text-2xs text-ink-3 mt-0.5 text-pretty">{description}</p>}
+    <div className={cn("mb-3 border-b border-edge-1 pb-2.5", className)}>
+      <div className="flex items-baseline justify-between gap-3">
+        <Tag id={id} className="text-base font-bold tracking-tight text-ink-1">
+          {title}
+        </Tag>
+        {lead}
       </div>
-      {action ||
-        (to && (
-          <Link
-            to={to}
-            className="shrink-0 inline-flex items-center gap-0.5 text-2xs font-semibold text-brand-700 dark:text-brand-400 hover:underline underline-offset-2 rounded px-1 py-0.5"
-          >
-            {linkLabel}
-            <ChevronRight size={14} aria-hidden="true" />
-          </Link>
-        ))}
+      {description && <p className="mt-0.5 text-pretty text-micro text-ink-4">{description}</p>}
     </div>
   );
 }

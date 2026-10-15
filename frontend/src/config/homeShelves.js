@@ -295,10 +295,16 @@ export const SHELVES = [
         eventType: event.event_type || null,
         startDate: event.start_date || null,
         endDate: event.end_date || null,
-        location: event.is_virtual ? "Online" : event.location || null,
+        // `location` is the venue the organizer typed ("Kinangop, Nyandarua").
+        // When they declared the event virtual it is Online; when they left it
+        // blank the card says the venue is not stated rather than showing a gap.
+        location: event.is_virtual ? "Online" : text(event.location) || null,
         virtual: Boolean(event.is_virtual),
         fee: money(event.entry_fee),
-        registered: event.registered_count ?? 0,
+        // 0 is a stated price ("free entry"); null is silence ("entry not
+        // stated"). Collapsing the two would put words in the organizer's mouth.
+        freeEntry: Number(event.entry_fee) === 0,
+        registered: Number.isFinite(Number(event.registered_count)) ? Number(event.registered_count) : null,
         capacity: event.max_vendors ?? null,
         spotsLeft: event.spots_left ?? null,
         organizer: event.organizer_business || (event.organizer ? `@${event.organizer}` : null),
@@ -332,6 +338,8 @@ export const SHELVES = [
           owner: { id: null, handle: group.created_by, name: null },
           title: text(group.name) || "Group",
           description: text(group.description),
+          // The card poster says "Trade group" / "Buyer group": the group's own
+          // `group_type`, with the taxonomy's wording, never a new label.
           groupType: group.group_type || null,
           category: group.category || null,
           region: group.region || null,

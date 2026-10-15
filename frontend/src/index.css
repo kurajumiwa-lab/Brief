@@ -106,6 +106,22 @@
     border-color: rgb(var(--edge-2));
   }
 
+  /* ── The deep-green market surface (v3.2) ────────────────────────────
+     The hero, the market strip and the shop plate all wear this one green,
+     so "Ogallo" reads the same everywhere and the dark theme deepens it
+     instead of inverting it. Screen readers get nothing from it: every
+     caller keeps its own text contrast. */
+  .market-forest {
+    background-image: linear-gradient(135deg, rgb(var(--market-1)), rgb(var(--market-2)));
+  }
+
+  /* The home hero's search field: it sits *inside* a designed white card, so
+     the field's own chrome stands down and the card carries the focus ring. */
+  .home-search-field,
+  .home-search-field:focus-within {
+    @apply border-transparent bg-transparent shadow-none;
+  }
+
   /* ── Skeletons: loading looks like the content, never like a spinner ── */
   .skeleton {
     @apply rounded-lg bg-surface-2 relative overflow-hidden;
@@ -145,6 +161,15 @@
   .shelf-fade {
     mask-image: linear-gradient(90deg, transparent, black 24px, black calc(100% - 24px), transparent);
     -webkit-mask-image: linear-gradient(90deg, transparent, black 24px, black calc(100% - 24px), transparent);
+  }
+  /* On a phone the rail runs to the screen edge (see components/home/CuratedShelf),
+     so fading its left end would look like a rendering fault rather than a hint
+     that more is coming. One-sided fade below `sm`. */
+  @media (max-width: 639px) {
+    .shelf-fade {
+      mask-image: linear-gradient(90deg, black 0, black calc(100% - 28px), transparent);
+      -webkit-mask-image: linear-gradient(90deg, black 0, black calc(100% - 28px), transparent);
+    }
   }
 
   /* ── Digital readout — now opt-in, for hero figures only ───────────── */

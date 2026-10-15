@@ -68,6 +68,14 @@
   --orchid-900: 54 29 87;
   --orchid-950: 32 15 52;
 
+  /* ── The deep-green market surface (v3.2) ────────────────────────────────
+     One pair of stops for every place the product wears Ogallo forest green
+     as a *surface* rather than a colour: the home hero, the market strip and
+     the shop plate. Declared here so the dark theme deepens the same surface
+     instead of inverting it, and so no screen has to invent its own green. */
+  --market-1: 11 50 33; /* brand-900 */
+  --market-2: 5 29 18; /* brand-950 */
+
   /* ── Elevation ───────────────────────────────────────────────────────── */
   --shadow-xs: 0 1px 2px 0 rgb(30 38 31 / 0.05);
   --shadow-sm: 0 1px 3px 0 rgb(30 38 31 / 0.07), 0 1px 2px -1px rgb(30 38 31 / 0.06);
@@ -89,6 +97,9 @@
 
 .dark {
   color-scheme: dark;
+
+  --market-1: 14 68 44;
+  --market-2: 8 40 27;
 
   --surface-0: 12 15 13;
   --surface-1: 20 24 21;

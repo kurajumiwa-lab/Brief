@@ -96,6 +96,7 @@ import Sidebar from "@/components/layout/Sidebar";
 import AccountMenu from "@/components/layout/AccountMenu";
 import MePage from "@/pages/me/MePage";
 import SetupChecklist from "@/components/onboarding/SetupChecklist";
+import BusinessPulse from "@/components/home/BusinessPulse";
 
 const mount = (ui, path = "/") =>
   render(
@@ -183,18 +184,24 @@ describe("Me workspace", () => {
 });
 
 describe("Onboarding handoff", () => {
-  it("removes completed steps and replaces onboarding with live business insights", async () => {
+  // v3.2 moved the live business read out of onboarding and into the home
+  // screen's own business band (components/home/BusinessPulse), so these two
+  // specs now protect two independent promises:
+  //
+  //   · the checklist disappears the moment there is nothing left to do, and
+  //   · the home pulse is a real read of the vendor's own records — loaded
+  //     shelf, open movements, recorded connections — not a marketing panel.
+  it("removes completed steps once the vendor is trading", async () => {
     useStockStore.setState({ mine: STOCK, movements: MOVEMENTS });
     mount(<SetupChecklist />, "/");
 
-    const pulse = await screen.findByRole("region", { name: /your business, at a glance/i });
-    expect(within(pulse).getByText("Visible listings").parentElement).toHaveTextContent("1");
-    expect(within(pulse).getByText("Open trades").parentElement).toHaveTextContent("1");
-    expect(within(pulse).getByText("Supplier links").parentElement).toHaveTextContent("1");
-    expect(screen.queryByRole("heading", { name: /get trading/i })).not.toBeInTheDocument();
+    // the last step is settled by the connections read, so the card goes away
+    // once the network has answered — not a frame before
+    await waitFor(() => expect(screen.queryByRole("heading", { name: /get trading/i })).not.toBeInTheDocument());
+    expect(screen.queryByRole("heading", { name: /put one item on the shelf/i })).not.toBeInTheDocument();
   });
 
-  it("shows only remaining setup steps and turns a dismissal into a useful pulse", async () => {
+  it("shows only remaining setup steps, and dismisses cleanly", async () => {
     useStockStore.setState({ mine: STOCK, movements: [] });
     mount(<SetupChecklist />, "/");
 
@@ -202,8 +209,25 @@ describe("Onboarding handoff", () => {
     expect(screen.queryByText("Say what you trade")).not.toBeInTheDocument();
     expect(screen.queryByText("Put one item on the shelf")).not.toBeInTheDocument();
     expect(screen.queryByText("Connect with a supplier")).not.toBeInTheDocument();
+
     fireEvent.click(screen.getByRole("button", { name: /dismiss setup checklist/i }));
-    expect(await screen.findByRole("region", { name: /a live read on your trading/i })).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole("heading", { name: /get trading/i })).not.toBeInTheDocument());
+  });
+
+  it("reads the home business pulse from the vendor's own records", async () => {
+    useStockStore.setState({ mine: STOCK, movements: MOVEMENTS, mineLoaded: true });
+    api.vendorAPI.connections.mockResolvedValueOnce(ok([{ id: "c-1" }]));
+    mount(<BusinessPulse />, "/");
+
+    const pulse = await screen.findByRole("region", { name: /your business today/i });
+    expect(within(pulse).getByText("Listings live").parentElement).toHaveTextContent("1");
+    expect(within(pulse).getByText("Open trades").parentElement).toHaveTextContent("1");
+    // an unknown figure stays unknown: connections only become real when the
+    // endpoint answers, and a vendor with no completed trades shows no rate
+    await waitFor(() => expect(within(pulse).getByText("Supplier links").parentElement).toHaveTextContent("1"));
+    expect(within(pulse).getByText("Fulfilment").parentElement).toHaveTextContent("—");
+    // and it never invents a word it cannot back: no scores, no rates
+    expect(pulse.textContent).not.toMatch(/market rate|popular|trending/i);
   });
 });
 
