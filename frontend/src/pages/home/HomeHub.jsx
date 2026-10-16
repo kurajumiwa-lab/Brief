@@ -3,14 +3,13 @@ import { useNavigate } from "react-router-dom";
 import SetupChecklist from "@/components/onboarding/SetupChecklist";
 import SourceDialog from "@/components/stock/SourceDialog";
 import HomeHero from "@/components/home/HomeHero";
-import TradePulse from "@/components/home/TradePulse";
+import TradeOverviewShelf from "@/components/home/TradeOverviewShelf";
 import HomeFeed from "@/components/home/HomeFeed";
 
 /**
- * HOME — the trade network, shown rather than described.
+ * HOME — the trade network, shown rather than described (v3.3).
  *
- * The hierarchy, and the order it is read in (v3.1 discovered it, v3.2 made the
- * type and spacing say it out loud):
+ * The hierarchy, and the order it is read in:
  *
  *   1  **identity and search** — the market hero: who you are, one field that
  *      finds goods, suppliers, people, markets and rentals, and the suggestions
@@ -21,32 +20,28 @@ import HomeFeed from "@/components/home/HomeFeed";
  *   3  **the marketplace** — discovery doors, then shelves of real records from
  *      other vendors, then your business band, then the wider network.
  *
+ * What changed in v3.3:
+ *   · Trade overview is now a compact shelf instead of oversized cards
+ *   · Business pulse simplified to focus on growth, metrics moved to dedicated screens
+ *   · Reduced vertical space substantially without removing functionality
+ *
  * What stays exactly where it was: the header and its own search (owned by the
  * app shell), the first-run checklist, the sourcing dialog, the bottom
  * navigation and every route anything links to.
- *
- * What moved, deliberately, in v3.2:
- *   · the four business metrics         → the "your business" band, beside My
- *                                         Shop, instead of above the market
- *   · the search suggestions            → inside the search card, as one
- *                                         designed interaction rather than
- *                                         chips loose on a photograph
- *   · the "network is quiet" message    → a designed panel with real doors
  */
 export default function HomeHub() {
   const navigate = useNavigate();
   const [sourcing, setSourcing] = useState(null);
 
   return (
-    <div className="space-y-6 sm:space-y-7">
+    <div className="space-y-5 sm:space-y-6">
       <HomeHero />
 
       {/* New vendors get four steps; established traders get nothing here. */}
       <SetupChecklist />
 
-      {/* The repeat trade is the least expensive reliable way into the ledger.
-          Keep the market search above it and every existing shelf below it. */}
-      <TradePulse />
+      {/* Compact trade overview - replaces oversized cards (v3.3) */}
+      <TradeOverviewShelf />
 
       {/* ── the marketplace itself ─────────────────────────────────────── */}
       <HomeFeed onSource={setSourcing} />
