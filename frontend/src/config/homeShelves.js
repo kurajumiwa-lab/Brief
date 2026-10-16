@@ -28,6 +28,7 @@
 
 import {
   catalogAPI,
+  commercialAPI,
   eventAPI,
   groupAPI,
   listAPI,
@@ -395,6 +396,44 @@ export const SHELVES = [
         places: market.places ?? 0,
         claimed: market.claimed ?? 0,
         distanceKm: typeof market.distance_km === "number" ? market.distance_km : null,
+      }));
+    },
+  },
+
+  {
+    key: "commercial",
+    group: "discovery",
+    card: "commercial",
+    title: "Commercial shelf — save more together",
+    subtitle: "Group buys and verified savings from vendors near you",
+    seeAll: { to: "/commercial", label: "See all offers" },
+    limit: 12,
+    async load() {
+      const payload = await fetchFrom(() => commercialAPI?.shelf, { limit: 12 });
+      const shelf = payload?.shelf || [];
+      return shelf.map((post) => ({
+        id: String(post.id),
+        kind: "commercial",
+        to: `/commercial/${post.id}`,
+        owner: { id: post.vendor_id, handle: post.vendor_handle, name: post.vendor_business },
+        title: post.title || post.content.slice(0, 80),
+        content: post.content,
+        postType: post.post_type,
+        individualPrice: post.individual_price,
+        groupPrice: post.group_price,
+        savingsAmount: post.savings_amount,
+        savingsPct: post.savings_percentage,
+        currency: post.currency,
+        currentInterested: post.current_interested,
+        currentQty: post.current_quantity_pledged,
+        targetQty: post.target_quantity,
+        minGroup: post.min_group_size,
+        location: post.location,
+        category: post.category,
+        tags: post.tags,
+        vendorName: post.vendor_business || (post.vendor_handle ? `@${post.vendor_handle}` : "A vendor"),
+        createdAt: post.created_at,
+        raw: post,
       }));
     },
   },

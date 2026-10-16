@@ -25,6 +25,13 @@ from app.models.tools import ToolListing
 from app.models.vendor import Vendor
 from app.routes.auth import get_current_vendor
 
+# Commercial shelf — harness existing without replacing
+try:
+    from app.models.commercial import CommercialPost, CommercialPostStatus
+    HAS_COMMERCIAL = True
+except ImportError:
+    HAS_COMMERCIAL = False
+
 router = APIRouter()
 
 MONEY = "KES"
@@ -228,6 +235,50 @@ async def market_news(
                 "roll_count": w.roll_count,
             },
         })
+
+    # ── Commercial shelf — offers, group buys, savings (v3.2) ─────────────
+    if HAS_COMMERCIAL:
+        try:
+            comm_res = await db.execute(
+                select(CommercialPost).where(
+                    CommercialPost.created_at >= since,
+                    CommercialPost.status == CommercialPostStatus.ACTIVE,
+                    CommercialPost.is_commercial.is_(True),
+                )
+            )
+            for cp in comm_res.scalars().all():
+                v = vendors.get(cp.vendor_id)
+                at = cp.created_at or now
+                savings = None
+                if cp.individual_price and cp.group_price:
+                    savings = round(cp.individual_price - cp.group_price, 2)
+                items.append({
+                    "id": f"commercial-{cp.id}",
+                    "kind": "commercial",
+                    "at": at.isoformat(),
+                    "fresh": fresh(at),
+                    "link": {"to": f"/commercial/{cp.id}", "q": {}},
+                    "data": {
+                        "title": cp.title or cp.content[:80],
+                        "content": _clip(cp.content, 200),
+                        "post_type": _enum(cp.post_type),
+                        "vendor": v.business_name if v else "A vendor",
+                        "vendor_handle": v.vendor_handle if v else None,
+                        "individual_price": _money(cp.individual_price),
+                        "group_price": _money(cp.group_price),
+                        "savings": _money(savings),
+                        "savings_percentage": cp.savings_percentage,
+                        "currency": cp.currency,
+                        "target_quantity": cp.target_quantity,
+                        "current_interested": cp.current_interested,
+                        "current_quantity": cp.current_quantity_pledged,
+                        "location": cp.location,
+                        "category": cp.category,
+                        "tags": list(cp.tags or [])[:4],
+                    },
+                })
+        except Exception:
+            pass
 
     items.sort(key=lambda x: x["at"], reverse=True)
     items = items[:30]

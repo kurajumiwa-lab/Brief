@@ -559,6 +559,35 @@ export const catalogAPI = {
   myEnquiries: () => api.get("/catalog/enquiries/mine"),
 };
 
+// ── Commercial shelf — social commerce layer (v3.2) ───────────────────────
+// Harnesses existing stock, collective, locks without replacing them.
+// Moat: salesperson distribution, group-demand data, verified savings.
+export const commercialAPI = {
+  // Feed — Twitter/X-style posting with commercial shelf
+  feed: (params) => api.get("/commercial/feed", { params: noEmpty(params) }), // commercial_only, group_buy_only, category, location, search, vendor_handle, saved_only, limit, skip
+  shelf: (params) => api.get("/commercial/shelf", { params: noEmpty(params) }), // curated offers for home
+  get: (id) => api.get(`/commercial/posts/${id}`),
+  create: (data) => api.post("/commercial/posts", data),
+  update: (id, data) => api.put(`/commercial/posts/${id}`, data),
+  remove: (id) => api.delete(`/commercial/posts/${id}`),
+  // Engagement
+  save: (id) => api.post(`/commercial/posts/${id}/save`),
+  unsave: (id) => api.delete(`/commercial/posts/${id}/save`),
+  share: (id, data) => api.post(`/commercial/posts/${id}/share`, data), // { share_channel, share_target }
+  shares: (id) => api.get(`/commercial/posts/${id}/shares`),
+  // Group-buying
+  joinInterest: (id, data) => api.post(`/commercial/posts/${id}/interest`, data), // { quantity, notes, referred_by }
+  leaveInterest: (id) => api.delete(`/commercial/posts/${id}/interest`),
+  interests: (id, params) => api.get(`/commercial/posts/${id}/interests`, { params: noEmpty(params) }),
+  convertToCollective: (id, group_id) => api.post(`/commercial/posts/${id}/convert-to-collective`, null, { params: noEmpty({ group_id }) }),
+  // Personal
+  myPosts: (params) => api.get("/commercial/my-posts", { params: noEmpty(params) }),
+  mySaves: (params) => api.get("/commercial/my-saves", { params: noEmpty(params) }),
+  myInterests: (params) => api.get("/commercial/my-interests", { params: noEmpty(params) }),
+  stats: () => api.get("/commercial/stats"),
+  categories: () => api.get("/commercial/categories"),
+};
+
 // ── Ops / monitoring (v2.2) ────────────────────────────────────────────────
 export const opsAPI = {
   status: () => api.get("/ops/status"),

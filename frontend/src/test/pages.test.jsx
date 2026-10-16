@@ -76,6 +76,26 @@ vi.mock("@/lib/api", () => {
       dashboard: vi.fn(() => ok({})), members: vi.fn(() => ok([])), devices: vi.fn(() => ok([])),
       commands: vi.fn(() => ok([])), workspace: vi.fn(() => ok({})),
     },
+    catalogAPI: { catalogue: vi.fn(() => ok({ offers: [] })) },
+    commercialAPI: {
+      feed: vi.fn(() => ok({ posts: [], total: 0, has_more: false })),
+      shelf: vi.fn(() => ok({ shelf: [], title: "Commercial shelf", subtitle: "No offers yet" })),
+      get: vi.fn(() => ok({})),
+      create: vi.fn(() => ok({})),
+      save: vi.fn(() => ok({})),
+      unsave: vi.fn(() => ok({})),
+      share: vi.fn(() => ok({ share_url: "/commercial/1", referral_code: "test:abc" })),
+      joinInterest: vi.fn(() => ok({})),
+      interests: vi.fn(() => ok({ interests: [] })),
+      stats: vi.fn(() => ok({ posts_created: 0, commercial_posts: 0, interests_received: 0, shares_made: 0, conversions_via_shares: 0, commission_earned: 0, my_interests: 0, moat_metrics: {} })),
+    },
+    opsAPI: { status: vi.fn(() => ok({})), slow: vi.fn(() => ok([])), metrics: vi.fn(() => ok("")), jobs: vi.fn(() => ok([])) },
+    analyticsAPI: { overview: vi.fn(() => ok({})), trend: vi.fn(() => ok([])), categories: vi.fn(() => ok([])), pricePosition: vi.fn(() => ok([])), network: vi.fn(() => ok({})), counterparties: vi.fn(() => ok([])), weights: vi.fn(() => ok({})) },
+    locksAPI: { me: vi.fn(() => ok({})), zones: vi.fn(() => ok([])), board: vi.fn(() => ok({})) },
+    governanceAPI: { me: vi.fn(() => ok({})), proposals: vi.fn(() => ok([])) },
+    surfaceAPI: { feed: vi.fn(() => ok({ cards: [] })), index: vi.fn(() => ok({})) },
+    geoAPI: { geocode: vi.fn(() => ok([])), nearby: vi.fn(() => ok([])), zones: vi.fn(() => ok([])), publicPlaces: vi.fn(() => ok([])) },
+    nearbyAPI: { list: vi.fn(() => ok([])) },
   };
 });
 

@@ -45,6 +45,7 @@ const Analytics = lazy(() => import("@/pages/analytics/Analytics"));
 const Ops = lazy(() => import("@/pages/ops/Ops"));
 const VendorProfile = lazy(() => import("@/pages/vendor/VendorProfile"));
 const CreativePortfolioPage = lazy(() => import("@/pages/portfolio/CreativePortfolioPage"));
+const CommercialFeed = lazy(() => import("@/pages/commercial/CommercialFeed"));
 
 /** Gate: no token → /auth (remembering where to return); token but vendor not
     loaded yet → spinner. */
@@ -136,6 +137,11 @@ export default function App() {
           <Route path="/events" element={<EventsPage />} />
           <Route path="/lists" element={<VendorLists />} />
           <Route path="/locks" element={<MarketLocks />} />
+          {/* v3.2 — commercial shelf: social commerce layer with offers, savings, group-buying */}
+          <Route path="/commercial" element={<CommercialFeed />} />
+          <Route path="/commercial/:id" element={<CommercialFeed />} />
+          <Route path="/deals" element={<Navigate to="/commercial" replace />} />
+          <Route path="/offers" element={<Navigate to="/commercial" replace />} />
 
           {/* ── Tasks (Squad league + Brief workspace) ─────────────────── */}
           <Route path="/squad" element={<Navigate to="/tasks/squad" replace />} />

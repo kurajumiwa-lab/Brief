@@ -135,6 +135,10 @@ vi.mock("@/lib/api", () => {
     listAPI: { browse: vi.fn(() => ok([LIST])) },
     marketsAPI: { list: vi.fn(() => ok({ markets: [MARKET], countries: ["Kenya"] })) },
     catalogAPI: { catalogue: vi.fn(() => ok(CATALOGUE)) },
+    commercialAPI: {
+      shelf: vi.fn(() => ok({ shelf: [], title: "Commercial shelf", subtitle: "No offers", total_savings_potential: 0 })),
+      feed: vi.fn(() => ok({ posts: [] })),
+    },
   };
 });
 
@@ -274,6 +278,7 @@ describe("Home discovery shelves", () => {
     api.listAPI.browse.mockResolvedValueOnce(ok([]));
     api.marketsAPI.list.mockResolvedValueOnce(ok({ markets: [] }));
     api.catalogAPI.catalogue.mockResolvedValueOnce(ok({ offers: [] }));
+    api.commercialAPI.shelf.mockResolvedValueOnce(ok({ shelf: [] }));
 
     mount();
     expect(await screen.findByText(/the network is quiet right now/i)).toBeInTheDocument();
@@ -296,6 +301,7 @@ describe("Home discovery shelves", () => {
   it("can be asked to look again, without leaving Home", async () => {
     api.stockAPI.network.mockResolvedValueOnce(ok([]));
     api.toolAPI.browse.mockResolvedValueOnce(ok([]));
+    api.commercialAPI.shelf.mockResolvedValueOnce(ok({ shelf: [] }));
     api.vendorAPI.discover.mockResolvedValueOnce(ok([])).mockResolvedValueOnce(ok([]));
     api.requestsAPI.list.mockResolvedValueOnce(ok([]));
     api.squadAPI.calls.mockResolvedValueOnce(ok({ calls: [] }));
@@ -478,13 +484,14 @@ describe("Shortcuts and outstanding work", () => {
     mount();
     const shortcuts = await screen.findByRole("navigation", { name: /find your way around the network/i });
     const hrefs = within(shortcuts).getAllByRole("link").map((a) => a.getAttribute("href"));
+    // v3.2: commercial deals replaces tasks in shortcuts — harnessing, not replacing
     expect(hrefs).toEqual([
       "/browse?type=goods",
       "/browse?type=people",
       "/browse?type=services",
       "/browse?type=equipment",
+      "/commercial",
       "/tools",
-      "/tasks",
     ]);
   });
 

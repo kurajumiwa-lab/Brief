@@ -283,6 +283,20 @@ vi.mock("@/lib/api", () => {
     },
     geoAPI: { claim: vi.fn(() => Promise.resolve({ data: { changed: true } })) },
     marketsAPI: { join: vi.fn(() => Promise.resolve({ data: {} })) },
+    commercialAPI: {
+      feed: vi.fn(() => Promise.resolve({ data: { posts: [], total: 0, has_more: false } })),
+      shelf: vi.fn(() => Promise.resolve({ data: { shelf: [], title: "Commercial shelf", subtitle: "No offers" } })),
+      get: vi.fn(() => Promise.resolve({ data: {} })),
+      create: vi.fn(() => Promise.resolve({ data: {} })),
+      save: vi.fn(() => Promise.resolve({ data: {} })),
+      unsave: vi.fn(() => Promise.resolve({ data: {} })),
+      share: vi.fn(() => Promise.resolve({ data: { share_url: "" } })),
+      joinInterest: vi.fn(() => Promise.resolve({ data: {} })),
+      interests: vi.fn(() => Promise.resolve({ data: { interests: [] } })),
+      stats: vi.fn(() => Promise.resolve({ data: {} })),
+      categories: vi.fn(() => Promise.resolve({ data: { categories: [] } })),
+    },
+
   };
 });
 

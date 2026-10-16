@@ -43,6 +43,20 @@ const apiMocks = vi.hoisted(() => ({
 vi.mock("@/lib/api", () => ({
   apiError: (e, f = "Error") => e?.message || f,
   locksAPI: apiMocks,
+
+  commercialAPI: {
+    feed: vi.fn(() => Promise.resolve({ data: { posts: [] } })),
+    shelf: vi.fn(() => Promise.resolve({ data: { shelf: [] } })),
+    get: vi.fn(() => Promise.resolve({ data: {} })),
+    create: vi.fn(() => Promise.resolve({ data: {} })),
+    save: vi.fn(() => Promise.resolve({ data: {} })),
+    unsave: vi.fn(() => Promise.resolve({ data: {} })),
+    share: vi.fn(() => Promise.resolve({ data: { share_url: "" } })),
+    joinInterest: vi.fn(() => Promise.resolve({ data: {} })),
+    interests: vi.fn(() => Promise.resolve({ data: { interests: [] } })),
+    stats: vi.fn(() => Promise.resolve({ data: {} })),
+    categories: vi.fn(() => Promise.resolve({ data: { categories: [] } })),
+  },
 }));
 
 describe("MarketRunsSection", () => {

@@ -30,6 +30,7 @@ from app.routes import (
     chamas,
     chat,
     collective,
+    commercial,
     events,
     files,
     governance,
@@ -190,6 +191,8 @@ app.include_router(notifications.router, prefix="/api/notifications", tags=["Not
 app.include_router(files.router, prefix="/api/files", tags=["Files"])
 app.include_router(verification.router, prefix="/api/stock", tags=["Stock Verification"])
 app.include_router(collective.router, prefix="/api/collective", tags=["Collective Sourcing"])
+# v3.2 — commercial shelf: social commerce layer with offers, savings, group-buying
+app.include_router(commercial.router, prefix="/api/commercial", tags=["Commercial Shelf"])
 # v2.2 — analytics, list reviews, tool bookings & calendars, courier routing, ops
 app.include_router(analytics.router, prefix="/api/analytics", tags=["Trade Analytics"])
 app.include_router(reviews.router, prefix="/api/vendor-lists", tags=["Vendor List Reviews"])

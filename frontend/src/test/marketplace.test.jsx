@@ -99,6 +99,20 @@ vi.mock("@/lib/api", () => {
       byHandle: vi.fn(() => ok({ id: "v2", handle: "gikomba_textiles", business_name: "Gikomba Textiles" })),
     },
     chatAPI: { rooms: vi.fn(() => ok([])) },
+    commercialAPI: {
+      feed: vi.fn(() => Promise.resolve({ data: { posts: [], total: 0, has_more: false } })),
+      shelf: vi.fn(() => Promise.resolve({ data: { shelf: [], title: "Commercial shelf", subtitle: "No offers" } })),
+      get: vi.fn(() => Promise.resolve({ data: {} })),
+      create: vi.fn(() => Promise.resolve({ data: {} })),
+      save: vi.fn(() => Promise.resolve({ data: {} })),
+      unsave: vi.fn(() => Promise.resolve({ data: {} })),
+      share: vi.fn(() => Promise.resolve({ data: { share_url: "" } })),
+      joinInterest: vi.fn(() => Promise.resolve({ data: {} })),
+      interests: vi.fn(() => Promise.resolve({ data: { interests: [] } })),
+      stats: vi.fn(() => Promise.resolve({ data: {} })),
+      categories: vi.fn(() => Promise.resolve({ data: { categories: [] } })),
+    },
+
   };
 });
 

@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useEffect } from "react";
 import {
-  Newspaper, Package, ArrowLeftRight, CalendarDays, Users, ShoppingBasket, ChevronDown, ArrowUpRight,
+  Newspaper, Package, ArrowLeftRight, CalendarDays, Users, ShoppingBasket, ChevronDown, ArrowUpRight, PiggyBank, Store,
 } from "lucide-react";
 import EmptyState from "@/components/ui/EmptyState";
 import { PageSpinner } from "@/components/ui/Spinner";
@@ -25,6 +25,7 @@ import { cn } from "@/lib/utils";
 const KIND_FILTERS = [
   { value: "all", label: "All", icon: Newspaper },
   { value: "stock", label: "Prices", icon: Package },
+  { value: "commercial", label: "Offers", icon: PiggyBank },
   { value: "movement", label: "Moves", icon: ArrowLeftRight },
   { value: "event", label: "Events", icon: CalendarDays },
   { value: "group", label: "Groups", icon: Users },
@@ -240,7 +241,45 @@ function LockCard({ it, open, onToggle, onOpen }) {
   );
 }
 
-const TEMPLATES = { stock: StockCard, movement: MovementCard, event: EventCard, group: GroupCard, lock: LockCard };
+// ── COMMERCIAL template (offers, group buys, savings) ──────────────────────
+function CommercialCard({ it, open, onToggle, onOpen }) {
+  const d = it.data;
+  const hasGroup = d.group_price != null && d.individual_price != null && d.group_price < d.individual_price;
+  return (
+    <CardShell open={open} onToggle={onToggle} onOpenLink={onOpen}
+      expanded={
+        <div className="space-y-1 pt-2">
+          <Meta k="individual" v={d.individual_price != null ? `KES ${num(d.individual_price)}` : "—"} />
+          <Meta k="group price" v={d.group_price != null ? `KES ${num(d.group_price)}` : "—"} />
+          {d.savings != null && <Meta k="savings" v={`KES ${num(d.savings)}${d.savings_percentage ? ` · ${d.savings_percentage}% off` : ""}`} />}
+          <Meta k="interested" v={`${d.current_interested || 0} buyers · ${d.current_quantity || 0}/${d.target_quantity || "?"} units`} />
+          {d.location && <Meta k="location" v={d.location} />}
+          {d.category && <Meta k="category" v={d.category} />}
+          {d.tags?.length > 0 && <Meta k="tags" v={d.tags.join(", ")} />}
+          {d.content && <p className="text-2xs text-ink-4 pt-1">{d.content}</p>}
+        </div>
+      }
+    >
+      <div className="w-24 shrink-0">
+        <p className="digital text-lg text-emerald-600 dark:text-emerald-400 leading-none">
+          {d.group_price != null ? num(d.group_price) : d.individual_price != null ? num(d.individual_price) : "—"}
+        </p>
+        <p className="text-2xs text-ink-4 mt-1">KES · {hasGroup ? "group price" : "offer"}</p>
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-medium text-ink-1 truncate flex items-center gap-1.5">
+          <FreshDot fresh={it.fresh} />{d.title}
+        </p>
+        <p className="text-2xs text-ink-4 mt-0.5 truncate">
+          {d.post_type} · {d.vendor}{d.location ? ` · ${d.location}` : ""}{d.current_interested ? ` · ${d.current_interested} interested` : ""}
+        </p>
+        {d.savings_percentage ? <p className="text-2xs font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">{d.savings_percentage}% savings vs individual</p> : null}
+      </div>
+    </CardShell>
+  );
+}
+
+const TEMPLATES = { stock: StockCard, commercial: CommercialCard, movement: MovementCard, event: EventCard, group: GroupCard, lock: LockCard };
 
 export default function News() {
   const navigate = useNavigate();

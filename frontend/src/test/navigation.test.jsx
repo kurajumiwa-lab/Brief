@@ -12,9 +12,9 @@ describe("Ogallo navigation map", () => {
     expect(new Set(PRIMARY_NAV.map(({ to }) => to)).size).toBe(5);
   });
 
-  it("organises Browse around the four business jobs, with map and markets as context", () => {
+  it("organises Browse around the four business jobs, with deals, map and markets as context", () => {
     expect(BROWSE_NAV.map(({ label }) => label)).toEqual(
-      ["Goods", "People", "Services", "Equipment", "Map", "Markets", "News"]);
+      ["Goods", "People", "Services", "Equipment", "Deals & group buys", "Map", "Markets", "News"]);
     // Every job view is the same results system, one URL contract.
     for (const { to } of BROWSE_NAV.slice(0, 4)) expect(to.startsWith("/browse?type=")).toBe(true);
   });
@@ -53,7 +53,7 @@ describe("Ogallo navigation map", () => {
     expect(isPrimaryActive(PRIMARY_NAV[4], "/@another_vendor", "mama_mboga")).toBe(false);
 
     const secondary = SECTION_GROUPS.flatMap((group) => group.items);
-    expect(secondary.map(({ to }) => to)).toEqual(["/groups", "/events", "/ops"]);
+    expect(secondary.map(({ to }) => to)).toEqual(["/commercial", "/commercial?filter=group_buy", "/groups", "/events", "/ops"]);
     expect(secondary.some((item) => item.to === "/" || item.label.toLowerCase() === "home")).toBe(false);
     expect(secondary.some((item) => ["/orders", "/chat", "/stock", "/analytics", "/tasks", "/lists", "/locks", "/tools", "/pos", "/feed", "/governance"].includes(item.to))).toBe(false);
   });

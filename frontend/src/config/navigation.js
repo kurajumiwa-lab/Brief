@@ -1,6 +1,7 @@
 import {
   Home, Compass, ClipboardList, MessageSquare, Store, Map, Newspaper, Package,
   Truck, MapPin, Users, Wrench, CalendarDays, Terminal, UserRound, Building2,
+  PiggyBank, ShoppingCart,
 } from "lucide-react";
 
 /**
@@ -71,8 +72,8 @@ export const DISCOVERY_SHORTCUTS = [
   { to: "/browse?type=people", label: "People", icon: Users },
   { to: "/browse?type=services", label: "Services", icon: Truck },
   { to: "/browse?type=equipment", label: "Equipment", icon: Wrench },
-  { to: "/tools", label: "Rentals & logistics", icon: Building2 },
-  { to: "/tasks", label: "Jobs & opportunities", icon: ClipboardList },
+  { to: "/commercial", label: "Deals", icon: PiggyBank },
+  { to: "/tools", label: "Rentals", icon: Building2 },
 ];
 
 /** Browse-area destinations. Job views first; context views after. */
@@ -81,6 +82,7 @@ export const BROWSE_NAV = [
   { to: "/browse?type=people", label: "People", icon: Users },
   { to: "/browse?type=services", label: "Services", icon: Truck },
   { to: "/browse?type=equipment", label: "Equipment", icon: Wrench },
+  { to: "/commercial", label: "Deals & group buys", icon: PiggyBank },
   { to: "/map", label: "Map", icon: Map },
   { to: "/markets", label: "Markets", icon: MapPin },
   { to: "/news", label: "News", icon: Newspaper },
@@ -88,7 +90,7 @@ export const BROWSE_NAV = [
 
 const BROWSE_ROOTS = [
   "/browse", "/network", "/nearby", "/map", "/markets", "/news",
-  "/search", "/listing", "/place",
+  "/search", "/listing", "/place", "/commercial", "/deals", "/offers",
 ];
 
 /** Work owns everything you owe or are owed: orders, tasks, locks, rentals,
@@ -119,6 +121,13 @@ export const isPrimaryActive = (item, pathname, vendorHandle) => {
 
 /** Long-tail tools that do not need a permanent primary tab. */
 export const SECTION_GROUPS = [
+  {
+    title: "Commerce",
+    items: [
+      { to: "/commercial", label: "Commercial shelf", icon: PiggyBank },
+      { to: "/commercial?filter=group_buy", label: "Group buys", icon: ShoppingCart },
+    ],
+  },
   {
     title: "Community",
     items: [

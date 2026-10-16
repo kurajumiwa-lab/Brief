@@ -5,6 +5,7 @@ import SourceDialog from "@/components/stock/SourceDialog";
 import HomeHero from "@/components/home/HomeHero";
 import TradeOverviewShelf from "@/components/home/TradeOverviewShelf";
 import HomeFeed from "@/components/home/HomeFeed";
+import CommercialShelf from "@/components/commercial/CommercialShelf";
 
 /**
  * HOME — the trade network, shown rather than described (v3.3).
@@ -42,6 +43,9 @@ export default function HomeHub() {
 
       {/* Compact trade overview - replaces oversized cards (v3.3) */}
       <TradeOverviewShelf />
+
+      {/* Commercial shelf — social commerce layer (v3.2) — harnesses existing stock/collective/groups */}
+      <CommercialShelf limit={8} />
 
       {/* ── the marketplace itself ─────────────────────────────────────── */}
       <HomeFeed onSource={setSourcing} />

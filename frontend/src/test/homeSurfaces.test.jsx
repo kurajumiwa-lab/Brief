@@ -105,6 +105,20 @@ vi.mock("@/lib/api", () => {
     nearbyAPI: {
       list: vi.fn((params) => { calls.nearby.push(params); return ok(NEARBY); }),
     },
+    commercialAPI: {
+      feed: vi.fn(() => Promise.resolve({ data: { posts: [], total: 0, has_more: false } })),
+      shelf: vi.fn(() => Promise.resolve({ data: { shelf: [], title: "Commercial shelf", subtitle: "No offers" } })),
+      get: vi.fn(() => Promise.resolve({ data: {} })),
+      create: vi.fn(() => Promise.resolve({ data: {} })),
+      save: vi.fn(() => Promise.resolve({ data: {} })),
+      unsave: vi.fn(() => Promise.resolve({ data: {} })),
+      share: vi.fn(() => Promise.resolve({ data: { share_url: "" } })),
+      joinInterest: vi.fn(() => Promise.resolve({ data: {} })),
+      interests: vi.fn(() => Promise.resolve({ data: { interests: [] } })),
+      stats: vi.fn(() => Promise.resolve({ data: {} })),
+      categories: vi.fn(() => Promise.resolve({ data: { categories: [] } })),
+    },
+
   };
 });
 
@@ -156,11 +170,11 @@ describe("Home trading feed", () => {
     renderAt("/", "/", <HomeHub />);
 
     expect(screen.getByRole("search")).toBeInTheDocument();
-    // the compact rail: six doors into screens that already exist
+    // the compact rail: six doors into screens that already exist — v3.2 adds commercial deals
     const shortcuts = await screen.findByRole("navigation", { name: /find your way around the network/i });
     expect(within(shortcuts).getAllByRole("link").map((a) => a.getAttribute("href"))).toEqual([
       "/browse?type=goods", "/browse?type=people", "/browse?type=services",
-      "/browse?type=equipment", "/tools", "/tasks",
+      "/browse?type=equipment", "/commercial", "/tools",
     ]);
     // the old hub's tile wall is gone
     expect(screen.queryByText("Your shelf of doors")).not.toBeInTheDocument();
