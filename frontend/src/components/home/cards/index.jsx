@@ -6,6 +6,7 @@ import OpportunityCard from "./OpportunityCard";
 import EventCard from "./EventCard";
 import CommunityCard from "./CommunityCard";
 import MarketCard from "./MarketCard";
+import NoticeCard from "./NoticeCard";
 
 /**
  * ONE carousel, many records. A shelf names its `card`, and that name resolves
@@ -20,6 +21,7 @@ export const CARD_RENDERERS = {
   event: EventCard,
   community: CommunityCard,
   market: MarketCard,
+  notice: NoticeCard,
 };
 
 export function renderCard(kind, props) {
@@ -30,4 +32,5 @@ export function renderCard(kind, props) {
 export {
   ProductCard, ServiceCard, PersonCard, EquipmentCard,
   OpportunityCard, EventCard, CommunityCard, MarketCard,
+  NoticeCard,
 };

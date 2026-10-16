@@ -398,6 +398,22 @@ export const SHELVES = [
       }));
     },
   },
+
+  {
+    key: "notices",
+    group: "more",
+    card: "notice",
+    title: "Byway Notice Board",
+    subtitle: "AI-assisted promotions, announcements, and opportunities from vendors",
+    seeAll: { to: "/notices", label: "See all notices" },
+    limit: 12,
+    async load() {
+      // Notice board uses the same API pattern as other shelves
+      // In production, this would call a notices API endpoint
+      // For now, return empty array to avoid errors
+      return [];
+    },
+  },
 ];
 
 export const SHELVES_BEFORE_BANNER = SHELVES.filter((s) => s.group === "discovery");

@@ -5,7 +5,7 @@ import CuratedShelf from "./CuratedShelf";
 import ReferralBanner from "./ReferralBanner";
 import DiscoveryShortcuts from "./DiscoveryShortcuts";
 import CollapsedMyShop from "./CollapsedMyShop";
-import BusinessPulse from "./BusinessPulse";
+import BusinessPulseSimplified from "./BusinessPulseSimplified";
 import { SHELVES_AFTER_BANNER, SHELVES_BEFORE_BANNER } from "@/config/homeShelves";
 import { feedIsQuiet, useHomeFeedStore } from "@/stores/homeFeedStore";
 import { needsMyAction, useStockStore } from "@/stores/stockStore";
@@ -14,16 +14,16 @@ import { num } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 
 /**
- * HOME FEED — the marketplace, in shelves.
+ * HOME FEED — the marketplace, in shelves (v3.3).
  *
- * v3.2 re-cut the order around one hierarchy: **trade first, your business
+ * v3.3 re-cut the order around one hierarchy: **trade first, your business
  * second, the rest of the network after that.** The shelves are unchanged in
  * where they come from; where they sit and how heavy they look changed.
  *
  *   1. the six doors (compact shortcuts — links, not a taxonomy)
  *   2. four discovery shelves of real inventory from other vendors
  *   3. anything waiting on the vendor — ONE quiet line, not a dashboard panel
- *   4. the business band: the pulse row and My Shop, folded shut
+ *   4. the business band: the simplified pulse row and My Shop, folded shut
  *   5. the invite banner, where a browsing vendor is most likely to act on it
  *   6. four more shelves widening the net: work, events, communities, markets
  *   7. the two trust claims, in one small footer
@@ -33,6 +33,11 @@ import { cn } from "@/lib/utils";
  * three things that genuinely help — look again, post a request, browse the
  * standing catalogue — instead of padding itself with products that do not
  * exist.
+ *
+ * What changed in v3.3:
+ *   - Business Pulse simplified to focus on growth only
+ *   - Duplicate metrics removed (now on dedicated screens)
+ *   - Single source of truth principle enforced
  */
 export default function HomeFeed({ onSource, className }) {
   const shelves = useHomeFeedStore((s) => s.shelves);
@@ -51,7 +56,7 @@ export default function HomeFeed({ onSource, className }) {
   const quiet = feedIsQuiet(shelves);
 
   return (
-    <div className={cn("space-y-7 sm:space-y-8", className)}>
+    <div className={cn("space-y-6 sm:space-y-7", className)}>
       <DiscoveryShortcuts />
 
       {SHELVES_BEFORE_BANNER.map((shelf) => (
@@ -84,14 +89,14 @@ export default function HomeFeed({ onSource, className }) {
 
       {quiet && <QuietNetworkPanel onRefresh={refreshFeed} />}
 
-      {/* ── your business: the numbers, then the shop they belong to ─────── */}
+      {/* ── your business: simplified pulse and the shop it belongs to ──── */}
       {vendor && (
         <section
           aria-labelledby="home-your-business"
           data-testid="home-your-business"
           className="space-y-3"
         >
-          <BusinessPulse headingId="home-your-business" />
+          <BusinessPulseSimplified headingId="home-your-business" />
           <CollapsedMyShop />
         </section>
       )}
