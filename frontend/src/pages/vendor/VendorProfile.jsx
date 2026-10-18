@@ -613,10 +613,17 @@ export default function VendorProfile() {
             <Stat label="Supplied" value={num(vendor.total_supplied || 0)} hint="movements as supplier" />
             <Stat label="Sourced" value={num(vendor.total_sourced || 0)} hint="movements as buyer" />
             <Stat label="Units moved" value={num(vendor.total_stock_moved || 0)} />
+            {/* Was "Trade value". A public profile used to render this person's
+                worth as a KSh figure, which is exactly the market-value scoring
+                Outside removes: it says nothing about someone who organises
+                parties, runs a cleanup or lends a neighbour chairs. The
+                underlying `vendor_performance.total_trade_value` column and its
+                API field are untouched — only this public claim went away.
+                What replaces it is participation, which everybody has. */}
             <Stat
-              label="Trade value"
-              value={perf?.total_trade_value ? currency(perf.total_trade_value) : "—"}
-              hint="across completed movements"
+              label="Completed"
+              value={num(vendor.movements_completed || 0)}
+              hint="things they followed through on"
             />
           </div>
 

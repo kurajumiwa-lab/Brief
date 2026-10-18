@@ -45,6 +45,9 @@ from app.models.halal import MurabahaContract
 from app.models.chamas import Chama, ChamaMember, ChamaDeposit, ChamaLoan, ChamaLoanVote, ChamaDividend
 from app.models.public_place import PublicPlace
 from app.models.hustle import HustleJobCall, HustleContract, HustleGoldLedger, HustleSquad, HustleSquadMember
+from app.modules.outside.models import (
+    OutsidePost, OutsideReaction, OutsideDiscoveryPref, OutsideContentReport,
+)
 
 __all__ = [
     "Vendor", "VendorProfile", "VendorRole", "vendor_connections",
@@ -78,4 +81,5 @@ __all__ = [
     "Chama", "ChamaMember", "ChamaDeposit", "ChamaLoan", "ChamaLoanVote", "ChamaDividend",
     "PublicPlace",
     "HustleJobCall", "HustleContract", "HustleGoldLedger", "HustleSquad", "HustleSquadMember",
+    "OutsidePost", "OutsideReaction", "OutsideDiscoveryPref", "OutsideContentReport",
 ]

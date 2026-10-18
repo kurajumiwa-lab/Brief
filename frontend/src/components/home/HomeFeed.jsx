@@ -4,6 +4,8 @@ import { ArrowRight, ClipboardCheck, Compass, RefreshCw, Search, Store } from "l
 import CuratedShelf from "./CuratedShelf";
 import ReferralBanner from "./ReferralBanner";
 import DiscoveryShortcuts from "./DiscoveryShortcuts";
+import LocationPrompt from "./LocationPrompt";
+import LocationBar from "@/components/outside/LocationBar";
 import CollapsedMyShop from "./CollapsedMyShop";
 import BusinessPulseSimplified from "./BusinessPulseSimplified";
 import { SHELVES_AFTER_BANNER, SHELVES_BEFORE_BANNER } from "@/config/homeShelves";
@@ -57,6 +59,8 @@ export default function HomeFeed({ onSource, className }) {
 
   return (
     <div className={cn("space-y-6 sm:space-y-7", className)}>
+      <LocationPrompt />
+      <LocationBar />
       <DiscoveryShortcuts />
 
       {SHELVES_BEFORE_BANNER.map((shelf) => (

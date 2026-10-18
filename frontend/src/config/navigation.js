@@ -1,33 +1,58 @@
 import {
-  Home, Compass, ClipboardList, MessageSquare, Store, Map, Newspaper, Package,
+  Home, Compass, ClipboardList, Store, Map, Newspaper, Package,
   Truck, MapPin, Users, Wrench, CalendarDays, Terminal, UserRound, Building2,
+  Plus, Bell,
 } from "lucide-react";
 
 /**
- * The business action network (v2.9 IA).
+ * OUTSIDE — five primary destinations (v4 IA).
  *
- * Five primary doors, one job each, organised around what an owner is trying
- * to *do* — not around our databases:
+ * The previous map (Home · Browse · Work · Inbox · Business) was organised
+ * around what a *trader* is doing. Outside is organised around what a *person*
+ * is doing, because trading is now one thing among several:
  *
- *   Home      your business overview and urgent actions
- *   Browse    the business action center: goods, people, services, equipment —
- *             one search, one results system, with the map and markets as
- *             views of the same results
- *   Work      orders, requests, bookings, rentals and jobs — what you owe and
- *             what is owed to you
- *   Inbox     calls, quotes, chat and coordination
- *   Business  profile, stock, team, trust and settings
+ *   Home      what is happening around you, in shelves
+ *   Explore   search and browse across every content type, with distance
+ *   Create    ONE publishing entry point for all six content types
+ *   Activity  notifications, invitations, replies and what is waiting on you
+ *   Profile   your identity, your published content, your settings
  *
- * What used to be separate destinations (Stock / Suppliers / Around you /
- * Map / Markets / News) are now filters and views inside Browse. Their URLs
- * all still resolve — nothing was deleted, only duplicated navigation.
+ * Nothing was deleted to get here. Every v3 URL still resolves and still
+ * highlights the right tab — the areas below absorb the old destinations:
+ * Browse's discovery surfaces became Explore, and Work + Inbox became
+ * Activity. See `docs/outside/01-route-map.md`.
  */
 export const PRIMARY_NAV = [
   { to: "/", label: "Home", icon: Home, end: true },
-  { to: "/browse", label: "Browse", icon: Compass, area: "browse" },
-  { to: "/work", label: "Work", icon: ClipboardList, area: "work", badge: "orders" },
-  { to: "/chat", label: "Inbox", icon: MessageSquare, badge: "chat" },
-  { to: "/me", label: "Business", icon: Store, area: "me" },
+  { to: "/explore", label: "Explore", icon: Compass, area: "explore" },
+  // `action` marks the one visually prominent tab. It is deliberately
+  // restrained — a filled pill, not a floating button competing with content.
+  { to: "/create", label: "Create", icon: Plus, action: true },
+  { to: "/activity", label: "Activity", icon: Bell, area: "activity", badge: "activity" },
+  { to: "/me", label: "Profile", icon: UserRound, area: "me" },
+];
+
+/** Explore: every discovery surface, old and new. */
+export const EXPLORE_NAV = [
+  { to: "/explore", label: "Everything", icon: Compass },
+  { to: "/explore?kind=event", label: "Events", icon: CalendarDays },
+  { to: "/explore?kind=community", label: "Communities", icon: Users },
+  { to: "/explore?kind=opportunity", label: "Opportunities", icon: ClipboardList },
+  { to: "/explore?kind=listing", label: "Goods", icon: Package },
+  { to: "/explore?kind=service", label: "Services", icon: Truck },
+  { to: "/map", label: "Map", icon: Map },
+  { to: "/markets", label: "Markets", icon: MapPin },
+  { to: "/news", label: "News", icon: Newspaper },
+];
+
+/** Content types the single Create page can publish. Order = display order. */
+export const CREATE_TYPES = [
+  { value: "post", label: "Post", icon: Newspaper, hint: "An update, a question or a recommendation" },
+  { value: "event", label: "Event", icon: CalendarDays, hint: "A party, meetup, trip or workshop" },
+  { value: "listing", label: "Listing", icon: Package, hint: "Something to sell, lend or give away" },
+  { value: "community", label: "Community", icon: Users, hint: "A group around a place or an interest" },
+  { value: "collection", label: "Collection", icon: Store, hint: "A curated shelf or a guide" },
+  { value: "opportunity", label: "Opportunity", icon: ClipboardList, hint: "A request, an offer or help wanted" },
 ];
 
 /**
@@ -86,32 +111,39 @@ export const BROWSE_NAV = [
   { to: "/news", label: "News", icon: Newspaper },
 ];
 
-const BROWSE_ROOTS = [
-  "/browse", "/network", "/nearby", "/map", "/markets", "/news",
-  "/search", "/listing", "/place",
+const EXPLORE_ROOTS = [
+  "/explore", "/browse", "/network", "/nearby", "/map", "/markets", "/news",
+  "/search", "/listing", "/place", "/feed", "/post", "/events", "/groups", "/lists",
 ];
 
-/** Work owns everything you owe or are owed: orders, tasks, locks, rentals,
-    bookings. Deep links stay; the aggregation lives at /work. */
-const WORK_ROOTS = ["/work", "/orders", "/tasks", "/locks", "/tools"];
+/** Activity owns everything waiting on you or waiting on someone else:
+    notifications, chat, orders, tasks, rentals and bookings. Deep links stay;
+    the aggregation lives at /activity. */
+const ACTIVITY_ROOTS = [
+  "/activity", "/work", "/orders", "/chat", "/tasks", "/locks", "/tools",
+];
 
 const ME_ROOTS = [
   "/me", "/stock", "/analytics", "/pos", "/brief", "/passport", "/growth",
-  "/enterprise", "/groups", "/lists", "/events", "/governance", "/ops", "/feed",
+  "/enterprise", "/governance", "/ops", "/portfolio", "/studio",
 ];
 
 const inArea = (pathname, roots) => roots.some((root) => pathname === root || pathname.startsWith(`${root}/`));
 
-export const isBrowsePath = (pathname = "") => inArea(pathname, BROWSE_ROOTS);
+export const isExplorePath = (pathname = "") => inArea(pathname, EXPLORE_ROOTS);
 
-export const isWorkPath = (pathname = "") => inArea(pathname, WORK_ROOTS);
+export const isActivityPath = (pathname = "") => inArea(pathname, ACTIVITY_ROOTS);
+
+/** Kept under their v3 names so nothing importing them breaks. */
+export const isBrowsePath = isExplorePath;
+export const isWorkPath = isActivityPath;
 
 export const isMePath = (pathname = "", vendorHandle = "") =>
   inArea(pathname, ME_ROOTS) || (vendorHandle && pathname === `/@${vendorHandle}`);
 
 export const isPrimaryActive = (item, pathname, vendorHandle) => {
-  if (item.area === "browse") return isBrowsePath(pathname);
-  if (item.area === "work") return isWorkPath(pathname);
+  if (item.area === "explore") return isExplorePath(pathname);
+  if (item.area === "activity") return isActivityPath(pathname);
   if (item.area === "me") return isMePath(pathname, vendorHandle);
   if (item.end) return pathname === item.to;
   return pathname === item.to || pathname.startsWith(`${item.to}/`);

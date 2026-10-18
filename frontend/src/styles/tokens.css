@@ -1,89 +1,139 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   OGALLO DESIGN TOKENS
+   OUTSIDE DESIGN TOKENS
    ---------------------------------------------------------------------------
-   Warm market paper, deep trading green, heritage gold for stated prices, and
-   a measured orchid accent for identity and moments worth noticing. Both
-   themes share the same semantic intent and accessible contrast.
+   One token file re-skins the product. Every colour is an RGB triplet that
+   `tailwind.config.js` resolves through `rgb(var(--token) / <alpha-value>)`,
+   so `.dark` is a true peer theme rather than a pile of `dark:` overrides.
+
+   What Outside changes, and why:
+
+     · BRAND is pine green (#176344 at 500) — the colour of going outside.
+       It replaces the brighter trading green, which read as "commerce"
+       before it read as "discovery".
+     · SURFACES stay near-neutral on purpose. Content and media are the
+       colour on this screen; chrome is not.
+     · SEMANTIC colours are named by meaning (ok / warn / danger / info),
+       not by hue, so a screen never has to invent a status colour.
+     · A SPACING SCALE and CARD tokens exist so a screen can stop choosing
+       arbitrary margins. `--space-*` is the only scale new layout should use.
+     · The type scale is compressed at the top end. `4xl`/`5xl` were hero
+       figures for a trading dashboard; on a discovery feed they competed
+       with the content. They are smaller now, and `--title-*` names the
+       three sizes a page is actually allowed to use.
+
+   Compatibility: the token *names* are unchanged, so every existing
+   `bg-brand-500` / `text-ink-3` / `border-edge-1` usage keeps working.
+   `--orchid-*` is retained under its legacy name — it is now a cool slate
+   used for identity and selected states, not a purple.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 :root {
   color-scheme: light;
 
-  /* ── Surfaces ────────────────────────────────────────────────────────── */
-  --surface-0: 250 248 242; /* warm paper */
-  --surface-1: 255 255 255; /* raised white */
-  --surface-2: 244 242 235; /* quiet field / hover */
-  --surface-3: 233 230 220;
-  --surface-4: 216 211 198;
-  --surface-inverse: 18 25 21;
+  /* ── Surfaces: near-neutral so media carries the colour ───────────────── */
+  --surface-0: 251 251 249; /* page */
+  --surface-1: 255 255 255; /* card */
+  --surface-2: 244 245 242; /* quiet field / hover */
+  --surface-3: 234 236 232;
+  --surface-4: 219 222 217;
+  --surface-inverse: 17 24 20;
 
   /* ── Ink ──────────────────────────────────────────────────────────────── */
-  --ink-1: 26 33 29;
-  --ink-2: 61 72 64;
-  --ink-3: 91 104 95;
-  --ink-4: 105 118 108;
+  --ink-1: 23 30 26;  /* titles            14.9:1 on surface-1 */
+  --ink-2: 55 66 60;  /* body               7.4:1 */
+  --ink-3: 88 101 94; /* secondary          4.6:1 */
+  --ink-4: 116 128 121; /* metadata         3.1:1 — large text & icons only */
   --ink-inverse: 255 255 255;
 
   /* ── Edges ───────────────────────────────────────────────────────────── */
-  --edge-1: 226 228 219;
-  --edge-2: 207 212 200;
-  --edge-3: 181 188 174;
+  --edge-1: 228 231 226;
+  --edge-2: 209 214 208;
+  --edge-3: 184 191 183;
 
-  /* ── Brand: forest green — trade, confirmation and trust ─────────────── */
-  --brand-50: 238 249 241;
-  --brand-100: 218 241 224;
-  --brand-200: 185 226 196;
-  --brand-300: 139 207 163;
-  --brand-400: 82 179 127;
-  --brand-500: 32 136 86;
-  --brand-600: 20 111 69;
-  --brand-700: 16 87 54;
-  --brand-800: 14 68 44;
-  --brand-900: 11 50 33;
-  --brand-950: 5 29 18;
+  /* ── Brand: pine green — discovery, confirmation, trust ──────────────── */
+  --brand-50: 236 246 240;
+  --brand-100: 214 236 225;
+  --brand-200: 180 220 201;
+  --brand-300: 132 197 168;
+  --brand-400: 74 165 126;
+  --brand-500: 23 99 68;   /* #176344 — the Outside green */
+  --brand-600: 20 88 60;
+  --brand-700: 17 71 49;
+  --brand-800: 14 56 39;
+  --brand-900: 11 42 30;
+  --brand-950: 5 24 17;
 
-  /* ── Accent: heritage gold — vendor-stated prices and market cues ────── */
+  /* ── Accent: warm amber — money and market cues only ─────────────────── */
   --accent-50: 255 251 235;
   --accent-100: 254 243 199;
   --accent-200: 253 230 138;
   --accent-300: 252 211 77;
   --accent-400: 251 191 36;
-  --accent-500: 245 158 11;
-  --accent-600: 217 119 6;
-  --accent-700: 180 83 9;
-  --accent-800: 146 64 14;
-  --accent-900: 120 53 15;
-  --accent-950: 69 26 3;
+  --accent-500: 217 119 6;   /* darkened from 245 158 11 for 4.5:1 on white */
+  --accent-600: 180 83 9;
+  --accent-700: 146 64 14;
+  --accent-800: 120 53 15;
+  --accent-900: 92 40 11;
+  --accent-950: 60 24 5;
 
-  /* ── Orchid: Ogallo identity, focus and selected actions ─────────────── */
-  --orchid-50: 249 246 255;
-  --orchid-100: 239 232 255;
-  --orchid-200: 224 211 252;
-  --orchid-300: 203 180 246;
-  --orchid-400: 177 143 232;
-  --orchid-500: 143 99 209;
-  --orchid-600: 115 71 178;
-  --orchid-700: 91 51 146;
-  --orchid-800: 72 38 116;
-  --orchid-900: 54 29 87;
-  --orchid-950: 32 15 52;
+  /* ── Slate: identity, selected state, focus (legacy name: orchid) ────── */
+  --orchid-50: 244 247 250;
+  --orchid-100: 228 235 243;
+  --orchid-200: 200 214 230;
+  --orchid-300: 163 186 211;
+  --orchid-400: 120 152 187;
+  --orchid-500: 62 96 133;
+  --orchid-600: 51 80 112;
+  --orchid-700: 42 65 92;
+  --orchid-800: 34 52 73;
+  --orchid-900: 26 40 57;
+  --orchid-950: 15 24 35;
 
-  /* ── The deep-green market surface (v3.2) ────────────────────────────────
-     One pair of stops for every place the product wears Ogallo forest green
-     as a *surface* rather than a colour: the home hero, the market strip and
-     the shop plate. Declared here so the dark theme deepens the same surface
-     instead of inverting it, and so no screen has to invent its own green. */
-  --market-1: 11 50 33; /* brand-900 */
-  --market-2: 5 29 18; /* brand-950 */
+  /* ── Semantic status. Named by meaning, never by hue ─────────────────── */
+  --ok: 23 99 68;        --ok-soft: 232 244 236;
+  --warn: 180 83 9;      --warn-soft: 254 243 214;
+  --danger: 176 42 42;   --danger-soft: 252 233 233;
+  --info: 51 80 112;     --info-soft: 228 236 245;
 
-  /* ── Elevation ───────────────────────────────────────────────────────── */
-  --shadow-xs: 0 1px 2px 0 rgb(30 38 31 / 0.05);
-  --shadow-sm: 0 1px 3px 0 rgb(30 38 31 / 0.07), 0 1px 2px -1px rgb(30 38 31 / 0.06);
-  --shadow-md: 0 4px 12px -2px rgb(30 38 31 / 0.09), 0 2px 4px -2px rgb(30 38 31 / 0.05);
-  --shadow-lg: 0 12px 28px -8px rgb(30 38 31 / 0.14), 0 4px 10px -4px rgb(30 38 31 / 0.07);
-  --shadow-xl: 0 24px 56px -12px rgb(30 38 31 / 0.20), 0 8px 20px -8px rgb(30 38 31 / 0.10);
+  /* ── The deep-green discovery surface ────────────────────────────────── */
+  --market-1: 11 42 30;  /* brand-900 */
+  --market-2: 5 24 17;   /* brand-950 */
 
-  /* ── Motion ──────────────────────────────────────────────────────────── */
+  /* ── Spacing scale. New layout uses this and nothing else ───────────────
+     4px base, so the rhythm is 4/8/12/16/24/32/48/64. Tailwind's own scale
+     still works; these are the values a *page* is expected to pick from,
+     which is what stops one-off margins accumulating again. */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4rem;
+
+  /* ── Cards: one radius, one padding, one gap ─────────────────────────── */
+  --card-radius: 1rem;
+  --card-radius-sm: 0.75rem;
+  --card-radius-lg: 1.5rem;
+  --card-pad: 1rem;
+  --card-gap: 0.75rem;
+  --card-image-ratio: 4 / 3;
+
+  /* ── Page rhythm ─────────────────────────────────────────────────────── */
+  --shelf-gap: 2.5rem;
+  --section-gap: 1.5rem;
+  --tap-target: 2.75rem;  /* 44px — the minimum touch target */
+
+  /* ── Elevation: quiet. Cards separate by line first, shadow second ──── */
+  --shadow-xs: 0 1px 2px 0 rgb(23 30 26 / 0.04);
+  --shadow-sm: 0 1px 3px 0 rgb(23 30 26 / 0.06), 0 1px 2px -1px rgb(23 30 26 / 0.05);
+  --shadow-md: 0 4px 12px -2px rgb(23 30 26 / 0.08), 0 2px 4px -2px rgb(23 30 26 / 0.04);
+  --shadow-lg: 0 12px 28px -8px rgb(23 30 26 / 0.12), 0 4px 10px -4px rgb(23 30 26 / 0.06);
+  --shadow-xl: 0 24px 56px -12px rgb(23 30 26 / 0.16), 0 8px 20px -8px rgb(23 30 26 / 0.08);
+
+  /* ── Motion. Every duration here has a prefers-reduced-motion counterpart
+     in index.css that sets it to 1ms ─────────────────────────────────── */
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
   --ease-spring: cubic-bezier(0.34, 1.26, 0.64, 1);
   --dur-1: 120ms;
@@ -93,13 +143,14 @@
   /* ── Chrome heights ──────────────────────────────────────────────────── */
   --header-h: 60px;
   --rail-h: 48px;
+  --tabbar-h: 64px;
 }
 
 .dark {
   color-scheme: dark;
 
-  --market-1: 14 68 44;
-  --market-2: 8 40 27;
+  --market-1: 14 56 39;
+  --market-2: 8 36 25;
 
   --surface-0: 12 15 13;
   --surface-1: 20 24 21;
@@ -109,36 +160,41 @@
   --surface-inverse: 247 248 246;
 
   --ink-1: 247 248 246;
-  --ink-2: 211 216 211;
-  --ink-3: 163 172 165;
-  --ink-4: 139 149 141;
+  --ink-2: 213 218 213;
+  --ink-3: 166 175 168;
+  --ink-4: 143 153 145;
   --ink-inverse: 12 15 13;
 
   --edge-1: 39 45 40;
   --edge-2: 54 62 55;
   --edge-3: 76 85 77;
 
-  --brand-50: 14 39 26;
-  --brand-100: 17 55 35;
-  --brand-200: 21 73 45;
-  --brand-300: 139 207 163;
-  --brand-400: 82 179 127;
-  --brand-500: 44 176 111;
-  --brand-600: 30 146 87;
-  --brand-700: 22 116 70;
-  --brand-800: 16 87 54;
+  --brand-50: 13 37 26;
+  --brand-100: 16 52 34;
+  --brand-200: 20 70 45;
+  --brand-300: 132 197 168;
+  --brand-400: 74 165 126;
+  --brand-500: 52 178 121;   /* lifted for 4.5:1 on surface-1 */
+  --brand-600: 36 150 100;
+  --brand-700: 26 118 79;
+  --brand-800: 19 92 62;
 
-  --orchid-50: 38 27 54;
-  --orchid-100: 52 36 75;
-  --orchid-200: 73 49 106;
-  --orchid-300: 208 185 247;
-  --orchid-400: 185 149 239;
-  --orchid-500: 166 125 224;
-  --orchid-600: 143 99 209;
-  --orchid-700: 115 71 178;
-  --orchid-800: 91 51 146;
-  --orchid-900: 54 29 87;
-  --orchid-950: 32 15 52;
+  --orchid-50: 24 34 46;
+  --orchid-100: 31 45 61;
+  --orchid-200: 42 62 84;
+  --orchid-300: 163 186 211;
+  --orchid-400: 130 160 193;
+  --orchid-500: 112 147 183;
+  --orchid-600: 84 121 158;
+  --orchid-700: 62 96 133;
+  --orchid-800: 46 72 100;
+  --orchid-900: 32 50 70;
+  --orchid-950: 18 29 41;
+
+  --ok: 74 165 126;      --ok-soft: 18 46 34;
+  --warn: 232 168 56;    --warn-soft: 48 36 14;
+  --danger: 226 110 110; --danger-soft: 52 24 24;
+  --info: 130 160 193;   --info-soft: 24 36 50;
 
   --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.4);
   --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.45), 0 1px 2px -1px rgb(0 0 0 / 0.4);

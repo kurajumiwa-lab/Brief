@@ -22,6 +22,7 @@ from app.modules.growth import router as growth_routes
 from app.modules.trade import router as requests_routes
 from app.modules.orders.router import router as orders_routes
 from app.modules.runs import router as runs_routes
+from app.modules.outside import router as outside_routes
 from app.platform import event_outbox
 from app.routes import (
     analytics,
@@ -174,6 +175,10 @@ app.include_router(squad_routes.router, prefix="/api/squad", tags=["Hustle Leagu
 app.include_router(markets_routes.router, prefix="/api/markets", tags=["Markets"])
 app.include_router(surface_routes.router, prefix="/api/surface", tags=["Surface"])
 app.include_router(requests_routes, prefix="/api/requests", tags=["Business Requests"])
+
+# Outside (v4): the location-aware discovery surface. One creation endpoint,
+# one ranked feed, one search — reading records the modules below already own.
+app.include_router(outside_routes.router, prefix="/api/outside", tags=["Outside Discovery"])
 # v2.11 — verified standing, the passport, renewal reminders and the verifier desk
 app.include_router(passport_routes.router, prefix="/api/passport", tags=["Business Passport"])
 app.include_router(growth_routes.router, prefix="/api/growth", tags=["Growth & Business Planner"])

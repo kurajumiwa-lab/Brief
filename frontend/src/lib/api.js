@@ -559,6 +559,30 @@ export const catalogAPI = {
   myEnquiries: () => api.get("/catalog/enquiries/mine"),
 };
 
+// ── Outside (v4) — location-aware discovery ────────────────────────────────
+// One feed, one search, one creation endpoint. Every call reads records the
+// other modules already own; Outside adds no parallel inventory of its own.
+export const outsideAPI = {
+  /** Shelf manifest — names, sources, radii and empty states as data. */
+  shelves: (keys) => api.get("/outside/shelves", { params: noEmpty({ keys: Array.isArray(keys) ? keys.join(",") : keys }) }),
+  /** One ranked page. `cursor` comes from the previous response. */
+  feed: (params) => api.get("/outside/feed", { params: noEmpty({ kinds: Array.isArray(params?.kinds) ? params.kinds.join(",") : undefined, ...params }) }),
+  search: (params) => api.get("/outside/search", {
+    params: noEmpty({ kinds: Array.isArray(params?.kinds) ? params.kinds.join(",") : undefined, ...params }),
+  }),
+  /** THE one publishing call. `content_type` decides which fields are read. */
+  create: (body) => api.post("/outside/content", body),
+  detail: (kind, id) => api.get(`/outside/content/${kind}/${id}`),
+  update: (kind, id, body) => api.patch(`/outside/content/${kind}/${id}`, body),
+  remove: (kind, id) => api.delete(`/outside/content/${kind}/${id}`),
+  react: (body) => api.post("/outside/reactions", body),
+  unreact: (body) => api.delete("/outside/reactions", { data: body }),
+  location: () => api.get("/outside/location"),
+  setLocation: (body) => api.put("/outside/location", body),
+  report: (body) => api.post("/outside/reports", body),
+  activity: (params) => api.get("/outside/activity", { params: noEmpty(params) }),
+};
+
 // ── Ops / monitoring (v2.2) ────────────────────────────────────────────────
 export const opsAPI = {
   status: () => api.get("/ops/status"),

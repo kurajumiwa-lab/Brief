@@ -9,12 +9,22 @@ import PlaceProfile from "@/pages/nearby/PlaceProfile";
 import MarketDetail from "@/pages/markets/MarketDetail";
 import TaskTrack from "@/pages/tasks/TaskTrack";
 import StorefrontPage from "@/pages/storefront/StorefrontPage";
+import CreatePage from "@/pages/create/CreatePage";
 import { useAuthStore } from "@/stores/authStore";
 
 // Every page is lazy. The home screen downloads only what it renders —
 // Leaflet (map), chat, analytics, ops and the rest split into chunks fetched
 // on first navigation.
 const BrowsePage = lazy(() => import("@/pages/browse/BrowsePage"));
+// Outside (v4) destinations. Explore and Activity are lazy like everything
+// else. Create is the one exception and it is deliberate: it is the middle tab
+// on every screen, and the app's primary action should not show a spinner.
+// Measured cost of keeping it in the main chunk: 14.3 kB raw / 3.9 kB gzip
+// (`npm run build`, index 327.90 kB vs 313.56 kB lazy). If first paint ever
+// needs those kilobytes back, making it lazy is a one-line change and the
+// Suspense fallback in Shell already handles it.
+const ExplorePage = lazy(() => import("@/pages/explore/ExplorePage"));
+const ActivityPage = lazy(() => import("@/pages/activity/ActivityPage"));
 const ListingPage = lazy(() => import("@/pages/listing/ListingPage"));
 const OrdersPage = lazy(() => import("@/pages/orders/OrdersPage"));
 const RepeatOrderPage = lazy(() => import("@/pages/orders/RepeatOrderPage"));
@@ -108,6 +118,13 @@ export default function App() {
               (/orders, /tasks, /locks, /tools) under Work; business routes
               under /me. Nothing was deleted — only duplicated navigation. */}
           <Route path="/" element={<HomeHub />} />
+          {/* ── Outside destinations (v4) ──────────────────────────────────
+              Explore absorbs Browse's discovery surfaces; Activity absorbs
+              Work and Inbox. Every older URL below still resolves and still
+              highlights the right tab (see config/navigation.js areas). */}
+          <Route path="/explore" element={<ExplorePage />} />
+          <Route path="/create" element={<CreatePage />} />
+          <Route path="/activity" element={<ActivityPage />} />
           <Route path="/browse" element={<BrowsePage />} />
           <Route path="/listing/:id" element={<ListingPage />} />
           <Route path="/orders" element={<OrdersPage />} />

@@ -6,7 +6,6 @@ import { SidebarContent } from "./Sidebar";
 import Footer from "./Footer";
 import Drawer from "@/components/ui/Drawer";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
-import OnboardingFlow from "@/components/onboarding/OnboardingFlow";
 import ErrorBoundary from "@/components/system/ErrorBoundary";
 import { PageSpinner } from "@/components/ui/Spinner";
 import { useUIStore } from "@/stores/uiStore";
@@ -66,8 +65,12 @@ export default function Shell() {
         </div>
       </Drawer>
 
+      {/* `OnboardingFlow` used to render here on every screen, opening itself
+          until a *business profile* was complete. That was shelf-specific
+          onboarding: you had to set up a shop before the app was usable. It is
+          now reachable from Profile, and the only first-run prompt is the
+          location card on Home (`components/home/LocationPrompt`). */}
       <ConfirmDialog />
-      <OnboardingFlow />
     </div>
   );
 }
