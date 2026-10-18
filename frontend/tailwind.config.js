@@ -20,9 +20,16 @@ export default {
         brand: scale("brand", RAMP),
         // The heritage gold, kept for money, markets and vendor-stated prices.
         accent: scale("accent", RAMP),
-        // Ogallo's orchid accent is reserved for identity and selected actions.
+        // Legacy name, cool slate value: identity, selected state, focus.
         orchid: scale("orchid", RAMP),
         surface: { ...scale("surface", [0, 1, 2, 3, 4]), inverse: token("surface-inverse") },
+        // Semantic status colours. A screen picks `danger`, never a hue, so
+        // there is exactly one red in the product and it always means the same
+        // thing. `-soft` is the matching tinted background.
+        ok: { DEFAULT: token("ok"), soft: token("ok-soft") },
+        warn: { DEFAULT: token("warn"), soft: token("warn-soft") },
+        danger: { DEFAULT: token("danger"), soft: token("danger-soft") },
+        info: { DEFAULT: token("info"), soft: token("info-soft") },
         // v3: hairlines are back. Separation is a line *and* elevation, which
         // is what makes a light UI readable in daylight and in forced-colours.
         edge: scale("edge", [1, 2, 3]),
@@ -33,6 +40,16 @@ export default {
         mono: ["JetBrains Mono", "ui-monospace", "SFMono-Regular", "monospace"],
         // Opt-in seven-segment readout, now reserved for hero figures only.
         digital: ['"DSEG7 Classic"', "Orbitron", "JetBrains Mono", "ui-monospace", "monospace"],
+      },
+      spacing: {
+        // The Outside spacing scale. Tailwind's own numeric scale still
+        // resolves; these are the eight values a page is expected to choose
+        // from, which is what stops arbitrary margins coming back.
+        s1: "var(--space-1)", s2: "var(--space-2)", s3: "var(--space-3)",
+        s4: "var(--space-4)", s5: "var(--space-5)", s6: "var(--space-6)",
+        s7: "var(--space-7)", s8: "var(--space-8)",
+        shelf: "var(--shelf-gap)", section: "var(--section-gap)",
+        tap: "var(--tap-target)",
       },
       fontSize: {
         // The meta floor is 12px — the audience reads this in market daylight.
@@ -46,10 +63,26 @@ export default {
         xl: ["1.25rem", { lineHeight: "1.75rem" }],
         "2xl": ["1.5rem", { lineHeight: "2rem", letterSpacing: "-0.015em" }],
         "3xl": ["1.875rem", { lineHeight: "2.25rem", letterSpacing: "-0.02em" }],
-        "4xl": ["2.25rem", { lineHeight: "2.5rem", letterSpacing: "-0.025em" }],
-        "5xl": ["3rem", { lineHeight: "1.1", letterSpacing: "-0.03em" }],
+        // The top of the scale is deliberately compressed. On a discovery
+        // feed a 3rem heading competes with the content it introduces; these
+        // are now the largest sizes a page may use, and `title-*` below names
+        // the three a page is *expected* to use.
+        "4xl": ["1.875rem", { lineHeight: "2.25rem", letterSpacing: "-0.02em" }],
+        "5xl": ["2.25rem", { lineHeight: "2.5rem", letterSpacing: "-0.025em" }],
+        // Semantic headings: page / section / card. Prefer these over picking
+        // a numeric size, so hierarchy is a decision and not a taste.
+        "title-page": ["1.75rem", { lineHeight: "2.125rem", letterSpacing: "-0.02em" }],
+        "title-section": ["1.125rem", { lineHeight: "1.5rem", letterSpacing: "-0.01em" }],
+        "title-card": ["0.9375rem", { lineHeight: "1.375rem" }],
+        meta: ["0.8125rem", { lineHeight: "1.25rem" }],
+        caption: ["0.75rem", { lineHeight: "1.125rem" }],
       },
-      borderRadius: { xl: "0.75rem", "2xl": "1rem", "3xl": "1.5rem", "4xl": "2rem" },
+      borderRadius: {
+        xl: "0.75rem", "2xl": "1rem", "3xl": "1.5rem", "4xl": "2rem",
+        // One radius per card size, so cards stop drifting apart.
+        card: "var(--card-radius)", "card-sm": "var(--card-radius-sm)",
+        "card-lg": "var(--card-radius-lg)",
+      },
       boxShadow: {
         xs: "var(--shadow-xs)",
         sm: "var(--shadow-sm)",

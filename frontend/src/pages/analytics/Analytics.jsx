@@ -86,18 +86,25 @@ export default function Analytics() {
         />
       ) : (
         <>
+          {/* Outside leads with participation, not with money. Trade value
+              still belongs here — this is your own private business report and
+              the figures are real settled movements — but it is no longer the
+              first thing the app says about you, and nothing outside this
+              screen reads it. The API still returns it unchanged. */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <Stat label="Trade value" value={currency(summary.trade_value)} icon={Coins} tone="brand"
-                  hint={`${num(summary.movements_settled)} settled · ${compactNum(summary.units_moved)} units`} />
+            <Stat label="Movements settled" value={num(summary.movements_settled)} icon={Activity} tone="brand"
+                  hint={`${compactNum(summary.units_moved)} units moved`} />
+            <Stat label="Counterparties" value={num(summary.counterparties)} icon={Users}
+                  hint={overview.network ? `${overview.share_of_network_pct}% of network trade` : undefined} />
             <Stat label="Supplied" value={currency(summary.supplied_value)} icon={ArrowUpRight} tone="amber"
                   hint={`${num(summary.supplied_units)} units sold out`} />
             <Stat label="Sourced" value={currency(summary.sourced_value)} icon={ArrowDownRight} tone="blue"
                   hint={`${num(summary.sourced_units)} units bought in`} />
-            <Stat label="Counterparties" value={num(summary.counterparties)} icon={Users}
-                  hint={overview.network ? `${overview.share_of_network_pct}% of network trade` : undefined} />
           </div>
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <Stat label="Trade value" value={currency(summary.trade_value)} icon={Coins}
+                  hint="commerce only — your events, posts and requests aren't counted here" />
             <Stat label="Avg movement" value={currency(summary.avg_movement_value)} icon={Scale} />
             <Stat label="Open work" value={num(openCount)} icon={Package} onClick={() => navigate("/stock?tab=movements")}
                   hint={Object.entries(summary.open_movements || {}).map(([k, v]) => `${v} ${k}`).join(" · ") || "nothing in flight"} />
