@@ -12,6 +12,9 @@ frontend/dist/
 frontend/coverage/
 .vite/
 
+# vercel (local `vercel build` / `vercel dev` output)
+.vercel/
+
 # env & local
 .env
 .env.*
