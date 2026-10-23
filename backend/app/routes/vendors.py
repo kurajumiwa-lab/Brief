@@ -7,7 +7,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.models.vendor import Vendor, VendorProfile, VendorRole, vendor_connections
+from app.models.vendor import ACCOUNT_KINDS, Vendor, VendorProfile, VendorRole, vendor_connections
 from app.routes.auth import get_current_vendor
 from app.services import discovery, patron_service, stock_engine, vendor_network
 
@@ -27,6 +27,10 @@ class VendorOut(BaseModel):
 
     id: str
     business_name: str
+    display_name: Optional[str] = None
+    account_kind: str = "business"
+    hide_exact_location: bool = True
+    home_storefront_config: dict = {}
     vendor_handle: str
     current_role: str
     business_categories: list
@@ -65,6 +69,10 @@ class VendorOut(BaseModel):
 
 class VendorUpdate(BaseModel):
     business_name: Optional[str] = None
+    display_name: Optional[str] = None
+    account_kind: Optional[str] = None
+    hide_exact_location: Optional[bool] = None
+    home_storefront_config: Optional[dict] = None
     current_role: Optional[VendorRole] = None
     business_categories: Optional[list[str]] = None
     business_description: Optional[str] = None
@@ -97,6 +105,10 @@ def vendor_out(v: Vendor, connected: bool = False) -> VendorOut:
     return VendorOut(
         id=str(v.id),
         business_name=v.business_name,
+        display_name=v.business_name,
+        account_kind=getattr(v, "account_kind", None) or "business",
+        hide_exact_location=bool(getattr(v, "hide_exact_location", True)),
+        home_storefront_config=dict(getattr(v, "home_storefront_config", None) or {}),
         vendor_handle=v.vendor_handle,
         current_role=v.current_role.value,
         business_categories=v.business_categories or [],
@@ -137,6 +149,13 @@ async def update_profile(
     payload = data.model_dump(exclude_none=True)
     if "finance_mode" in payload and payload["finance_mode"] not in ("conventional", "halal_sharia"):
         raise HTTPException(400, "finance_mode must be 'conventional' or 'halal_sharia'")
+    if "account_kind" in payload:
+        payload["account_kind"] = payload["account_kind"].strip().lower()
+        if payload["account_kind"] not in ACCOUNT_KINDS:
+            raise HTTPException(400, f"account_kind must be one of: {', '.join(ACCOUNT_KINDS)}")
+    display_name = payload.pop("display_name", None)
+    if display_name and "business_name" not in payload:
+        payload["business_name"] = display_name.strip()
     for field, value in payload.items():
         setattr(vendor, field, value)
     await db.commit()

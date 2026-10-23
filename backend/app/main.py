@@ -23,6 +23,7 @@ from app.modules.trade import router as requests_routes
 from app.modules.orders.router import router as orders_routes
 from app.modules.runs import router as runs_routes
 from app.modules.outside import router as outside_routes
+from app.modules.ledger import router as ledger_routes
 from app.platform import event_outbox
 from app.routes import (
     analytics,
@@ -114,7 +115,7 @@ async def lifespan(app: FastAPI):
     else:
         log.info("scheduler disabled here (RUN_SCHEDULER=false) — run `python -m app.worker` once")
     log.info("🏪 Brief_ Vendor Network v%s initialized", settings.VERSION)
-    log.info("📦 No consumers. Only vendors.")
+    log.info("📦 People, households, artisans, institutions and businesses.")
     try:
         yield
     finally:
@@ -179,6 +180,8 @@ app.include_router(requests_routes, prefix="/api/requests", tags=["Business Requ
 # Outside (v4): the location-aware discovery surface. One creation endpoint,
 # one ranked feed, one search — reading records the modules below already own.
 app.include_router(outside_routes.router, prefix="/api/outside", tags=["Outside Discovery"])
+# Local Activity Ledger: 4 posting types, non-custodial bookings, privacy & Phase 2
+app.include_router(ledger_routes.router, prefix="/api/ledger", tags=["Local Activity Ledger"])
 # v2.11 — verified standing, the passport, renewal reminders and the verifier desk
 app.include_router(passport_routes.router, prefix="/api/passport", tags=["Business Passport"])
 app.include_router(growth_routes.router, prefix="/api/growth", tags=["Growth & Business Planner"])
@@ -213,8 +216,8 @@ if _static_root:
 async def api_root():
     return {
         "platform": "Brief_",
-        "philosophy": "No consumers. Only vendors.",
-        "message": "You source today, you sell tomorrow.",
+        "philosophy": "People, households, artisans, institutions and businesses.",
+        "message": "Post what is available, wanted, scheduled, or an opportunity — and keep a record that helps next time.",
         "version": settings.VERSION,
         "endpoints": {
             "auth": "/api/auth",

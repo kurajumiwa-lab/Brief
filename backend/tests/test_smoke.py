@@ -37,7 +37,7 @@ async def _register(client, handle: str, categories: list[str]) -> dict:
 async def test_root_and_health(client):
     r = await client.get("/api")
     assert r.status_code == 200
-    assert r.json()["philosophy"] == "No consumers. Only vendors."
+    assert r.json()["philosophy"] == "People, households, artisans, institutions and businesses."
     r = await client.get("/api/health")
     assert r.status_code == 200 and r.json()["database"] is True
 
@@ -45,8 +45,8 @@ async def test_root_and_health(client):
 async def test_vendor_only_gate(client):
     r = await client.get("/api/vendors/me")
     assert r.status_code == 401
-    assert "vendors" in r.json()["detail"].lower()
-    assert r.headers["x-brief-network"] == "vendors-only"
+    assert "sign in" in r.json()["detail"].lower()
+    assert r.headers["x-brief-network"] == "members"
 
 
 async def test_full_loop(client):

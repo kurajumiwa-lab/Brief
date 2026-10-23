@@ -432,7 +432,70 @@ async def _people(db, viewer, pair, limit, now):
     return out
 
 
+async def _local_activities(db, viewer, pair, limit, now):
+    from app.modules.ledger.models import LocalActivity
+    from app.modules.ledger.privacy import public_coordinates
+    from app.modules.ledger.service import can_view_activity
+
+    q = (
+        select(LocalActivity, Vendor)
+        .join(Vendor, Vendor.id == LocalActivity.organizer_vendor_id)
+        .where(LocalActivity.lifecycle_status.not_in(["cancelled", "expired"]))
+        .order_by(LocalActivity.created_at.desc())
+        .limit(limit)
+    )
+    cond = _before_cursor(LocalActivity.created_at, LocalActivity.id, pair)
+    if cond is not None:
+        q = q.where(cond)
+    rows = (await db.execute(q)).all()
+
+    out = []
+    for act, org in rows:
+        if not await can_view_activity(db, act, viewer):
+            continue
+        pub_lat, pub_lng = public_coordinates(act.geo_lat, act.geo_lng, act.geo_precision, authorized_exact=False)
+        out.append(_item(
+            id=str(act.id),
+            kind=act.posting_type,
+            to=f"/activities/{act.id}",
+            title=act.title,
+            summary=act.body,
+            image=_first_image(act.media),
+            category=act.category,
+            tags=list(act.tags or []),
+            location=act.area_name,
+            geo_lat=pub_lat,
+            geo_lng=pub_lng,
+            created_at=act.created_at,
+            starts_at=act.starts_at,
+            expires_at=act.ends_at,
+            status=act.lifecycle_status,
+            visibility=act.visibility,
+            price_kes=act.price_kes,
+            is_commercial=bool(act.price_kes is not None and act.price_kes > 0),
+            owner={
+                "id": str(org.id),
+                "handle": org.vendor_handle,
+                "name": org.business_name,
+                "account_kind": getattr(org, "account_kind", None) or "business",
+            },
+            counts={"responses": act.response_count or 0, "booked": act.spots_confirmed or 0},
+            meta={
+                "posting_type": act.posting_type,
+                "inferred_template": act.inferred_template,
+                "lifecycle_status": act.lifecycle_status,
+                "schedule_label": act.schedule_label,
+                "location_scope": act.location_scope,
+                "is_youth_opportunity": bool((act.permission_rules or {}).get("is_youth_opportunity")),
+                "custody_mode": "non_custodial",
+                "owner_id": str(org.id),
+            },
+        ))
+    return out
+
+
 SOURCES = {
+    "local_activity": _local_activities,
     "post": _posts,
     "event": _events,
     "listing": _listings,
@@ -448,19 +511,22 @@ SOURCES = {
 # Which source keys a requested `kind` needs. `service` and `rental` share the
 # tools query and are separated after it.
 KIND_TO_SOURCE = {
+    "available": ["local_activity"],
+    "wanted": ["local_activity"],
+    "scheduled": ["local_activity"],
     "post": ["post"],
     "event": ["event"],
     "listing": ["listing"],
     "service": ["service"],
     "rental": ["rental"],
-    "opportunity": ["opportunity", "callup"],
+    "opportunity": ["local_activity", "opportunity", "callup"],
     "community": ["community"],
     "collection": ["collection"],
     "person": ["person"],
 }
 
-DEFAULT_KINDS = ("post", "event", "opportunity", "community", "listing",
-                 "service", "rental", "collection")
+DEFAULT_KINDS = ("available", "wanted", "scheduled", "post", "event",
+                 "opportunity", "community", "listing", "service", "rental", "collection")
 
 
 # ── assembly ──────────────────────────────────────────────────────────────────

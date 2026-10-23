@@ -137,7 +137,32 @@ async def publish(db: AsyncSession, vendor, payload: dict) -> dict:
     The caller has already authenticated; `vendor` is the author and nothing
     else can set it. Nothing here reads a price as a requirement.
     """
-    content_type = (payload.get("content_type") or "").strip().lower()
+    content_type = (payload.get("content_type") or payload.get("posting_type") or "").strip().lower()
+    if payload.get("posting_type") or content_type in ("available", "wanted", "scheduled") or (
+        content_type == "opportunity" and payload.get("use_ledger")
+    ):
+        from fastapi import HTTPException
+        from app.modules.ledger import service as ledger_service
+
+        ledger_payload = dict(payload)
+        ledger_payload["posting_type"] = (payload.get("posting_type") or content_type).strip().lower()
+        try:
+            created = await ledger_service.create_activity(db, vendor, ledger_payload)
+        except HTTPException as exc:
+            raise PublishError(str(exc.detail)) from exc
+        ptype = created["posting_type"]
+        return {
+            "content_type": ptype,
+            "posting_type": ptype,
+            "kind": ptype,
+            "id": created["id"],
+            "status": created["lifecycle_status"],
+            "to": created["to"],
+            "price_required": False,
+            "record": "local_activity",
+            "inferred_template": created["inferred_template"],
+        }
+
     _validate_shared(payload)
 
     missing = validate(content_type, payload)

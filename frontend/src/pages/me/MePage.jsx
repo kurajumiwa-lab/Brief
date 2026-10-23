@@ -1,13 +1,21 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import {
-  ArrowUpRight, BarChart3, Building2, ChevronRight, ClipboardList, FileCheck, Layers3,
-  List, Package, PlusCircle, Settings, ShoppingBag, ShoppingBasket, ShieldCheck,
-  Sparkles, Store, Terminal, Truck, Users,
+  ArrowUpRight, BarChart3, Bookmark, Building2, CheckCircle2, ChevronRight,
+  ClipboardList, Compass, FileCheck, Home, Layers3, List, Lock, Package,
+  PlusCircle, Repeat, Settings, ShieldCheck, ShoppingBag, ShoppingBasket,
+  Sparkles, Store, Terminal, Trash2, Truck, Users,
 } from "lucide-react";
 import Avatar from "@/components/ui/Avatar";
 import Badge from "@/components/ui/Badge";
+import Button from "@/components/ui/Button";
+import Input from "@/components/ui/Input";
+import Select from "@/components/ui/Select";
+import { toast } from "@/components/ui/Toast";
 import { VENDOR_ROLES } from "@/config/constants";
+import { apiError } from "@/lib/api";
+import { ledgerAPI } from "@/lib/ledgerApi";
+import { ACCOUNT_KINDS, TEMPLATE_LABELS } from "@/lib/inference";
 import { useAuthStore } from "@/stores/authStore";
 import { useStockStore } from "@/stores/stockStore";
 import { cn } from "@/lib/utils";
@@ -194,6 +202,7 @@ function WorkspaceLink({ item, vendor }) {
 }
 
 export default function MePage() {
+  const navigate = useNavigate();
   const vendor = useAuthStore((s) => s.vendor);
   const mine = useStockStore((s) => s.mine);
   const movements = useStockStore((s) => s.movements);
@@ -201,18 +210,56 @@ export default function MePage() {
   const fetchMovements = useStockStore((s) => s.fetchMovements);
   const [shelfReady, setShelfReady] = useState(false);
 
+  // Local Activity Ledger state
+  const [metrics, setMetrics] = useState(null);
+  const [records, setRecords] = useState([]);
+  const [relationships, setRelationships] = useState([]);
+  const [alternatives, setAlternatives] = useState([]);
+  const [altContext, setAltContext] = useState("");
+  const [storefront, setStorefront] = useState({
+    enabled: false,
+    title: "",
+    visiting_hours: "",
+    audience: "saved_contacts",
+    share_directions_only_when_booked: true,
+  });
+  const [savingStorefront, setSavingStorefront] = useState(false);
+
+  const loadLedger = useCallback(async () => {
+    try {
+      const [mRes, recRes, relRes, sfRes] = await Promise.all([
+        ledgerAPI.metricsSummary(),
+        ledgerAPI.records(),
+        ledgerAPI.listRelationships(),
+        ledgerAPI.getHomeStorefront(),
+      ]);
+      if (mRes?.data) setMetrics(mRes.data);
+      setRecords(recRes?.data?.items || []);
+      setRelationships(relRes?.data?.items || []);
+      if (sfRes?.data?.config) {
+        setStorefront((prev) => ({ ...prev, ...sfRes.data.config }));
+      }
+    } catch {
+      /* graceful no-op in isolated unit tests */
+    }
+  }, []);
+
   useEffect(() => {
     let live = true;
     fetchMine?.()
       ?.then(() => live && setShelfReady(true))
       ?.catch(() => live && setShelfReady(true));
     fetchMovements?.()?.catch(() => {});
+    loadLedger();
     return () => {
       live = false;
     };
-  }, [fetchMine, fetchMovements]);
+  }, [fetchMine, fetchMovements, loadLedger]);
 
   const role = VENDOR_ROLES.find((item) => item.value === vendor?.current_role) || VENDOR_ROLES[2];
+  const accountKindMeta =
+    ACCOUNT_KINDS.find((k) => k.value === (vendor?.account_kind || "business")) || ACCOUNT_KINDS[4];
+
   const sections = useMemo(
     () =>
       ["Stock & integrations", "Work & sourcing", "Network"].map((group) => ({
@@ -229,11 +276,59 @@ export default function MePage() {
   const scoreLabel = score > 0 ? score.toFixed(1) : "—";
   const fulfilment = vendor?.fulfillment_rate == null ? "—" : `${Math.round(Number(vendor.fulfillment_rate))}%`;
 
+  const onRepeatRecord = async (bookingId) => {
+    try {
+      const { data } = await ledgerAPI.repeatBooking(bookingId, { note: "Repeated from reusable record" });
+      toast.success("Repeat booking created");
+      if (data?.activity_id) navigate(`/activities/${data.activity_id}`);
+      else await loadLedger();
+    } catch (err) {
+      toast.error(apiError(err, "Could not repeat booking"));
+    }
+  };
+
+  const onCompareAlternatives = async ({ template, category, excludeVendorId, label }) => {
+    try {
+      const { data } = await ledgerAPI.alternatives({
+        template,
+        category,
+        exclude_vendor_id: excludeVendorId,
+      });
+      setAlternatives(data?.items || []);
+      setAltContext(label || "local alternatives");
+    } catch (err) {
+      toast.error(apiError(err, "Could not load alternatives"));
+    }
+  };
+
+  const onRemoveRelationship = async (relId) => {
+    try {
+      await ledgerAPI.deleteRelationship(relId);
+      setRelationships((prev) => prev.filter((r) => r.id !== relId));
+      toast.success("Removed saved contact");
+    } catch (err) {
+      toast.error(apiError(err, "Could not remove contact"));
+    }
+  };
+
+  const onSaveStorefront = async (e) => {
+    e.preventDefault();
+    setSavingStorefront(true);
+    try {
+      await ledgerAPI.updateHomeStorefront(storefront);
+      toast.success("Home Storefront controls updated");
+    } catch (err) {
+      toast.error(apiError(err, "Could not update Home Storefront"));
+    } finally {
+      setSavingStorefront(false);
+    }
+  };
+
   if (!vendor) return null;
 
   return (
     <div className="space-y-8 sm:space-y-10">
-      {/* ── Business Control Centre Hero ─────────────────────────────────── */}
+      {/* ── Profile, Ledger & Business Control Centre Hero ───────────────── */}
       <section
         aria-label="Business control centre"
         className="relative isolate overflow-hidden rounded-[1.75rem] sm:rounded-[2rem] bg-[#17251E] text-white px-5 py-6 sm:px-8 sm:py-8 space-y-5"
@@ -247,25 +342,30 @@ export default function MePage() {
           aria-hidden="true"
         />
 
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-4">
           <Avatar
-            name={vendor.business_name}
+            name={vendor.display_name || vendor.business_name}
             src={vendor.logo_url || vendor.avatar_url || undefined}
             size="lg"
             className="ring-2 ring-white/20 rounded-2xl shrink-0"
           />
           <div className="min-w-0 flex-1">
             <p className="text-micro font-bold uppercase tracking-[0.14em] text-brand-100 dark:text-brand-300">
-              Your business workspace
+              {accountKindMeta.label} · Your business workspace
             </p>
             <h1 className="mt-1 text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
-              {vendor.business_name}
+              {vendor.display_name || vendor.business_name}
             </h1>
             <p className="mt-0.5 text-sm text-[#C4D1C8]">
               @{vendor.vendor_handle} · {role.hint}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            {vendor.hide_exact_location && (
+              <Badge variant="green" size="md" className="!bg-emerald-500/20 !text-emerald-100 !border !border-emerald-300/30">
+                <Lock size={11} className="mr-1 inline" /> Approximate public location
+              </Badge>
+            )}
             <Badge variant="purple" size="md" className="!bg-white/10 !text-white !border !border-white/20">
               {role.emoji} Currently {role.label.toLowerCase()}
             </Badge>
@@ -301,24 +401,291 @@ export default function MePage() {
           </div>
         </div>
 
-        {/* Prominent Add stock CTA */}
-        <Link
-          to="/stock?new=1"
-          className="group block rounded-2xl bg-[#DDF5E7] hover:bg-[#CBEED9] text-[#175C43] p-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+        {/* Dual primary actions: Post local activity + Optional Add stock */}
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Link
+            to="/create?type=available"
+            className="group block rounded-2xl bg-white/10 hover:bg-white/15 border border-white/20 text-white p-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+          >
+            <div className="flex items-center gap-2.5">
+              <Home size={20} className="text-brand-200 shrink-0" aria-hidden="true" />
+              <span className="text-base font-extrabold">Post a local activity</span>
+              <ArrowUpRight size={18} className="ml-auto text-white/80" aria-hidden="true" />
+            </div>
+            <p className="mt-1 text-xs text-[#D5E4D9]">
+              Available, Wanted, Scheduled round, or Opportunity — no shop needed.
+            </p>
+          </Link>
+
+          <Link
+            to="/stock?new=1"
+            className="group block rounded-2xl bg-[#DDF5E7] hover:bg-[#CBEED9] text-[#175C43] p-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+          >
+            <div className="flex items-center gap-2.5">
+              <PlusCircle size={20} className="text-[#175C43] shrink-0" aria-hidden="true" />
+              <span className="text-base font-extrabold text-[#175C43]">Add stock</span>
+              <ArrowUpRight
+                size={18}
+                className="ml-auto text-[#175C43] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform"
+                aria-hidden="true"
+              />
+            </div>
+            <p className="mt-1 text-xs text-[#175C43]/90">
+              List a product or service for buyers to discover.
+            </p>
+          </Link>
+        </div>
+      </section>
+
+      {/* ── Local Utility Outcomes (Outcomes, never engagement time) ────── */}
+      {metrics && (
+        <section
+          aria-labelledby="utility-outcomes-heading"
+          data-testid="utility-metrics-panel"
+          className="rounded-card-lg border border-edge-1 bg-surface-1 p-5 shadow-xs space-y-3"
         >
-          <div className="flex items-center gap-2.5">
-            <PlusCircle size={20} className="text-[#175C43] shrink-0" aria-hidden="true" />
-            <span className="text-base font-extrabold text-[#175C43]">Add stock</span>
-            <ArrowUpRight
-              size={18}
-              className="ml-auto text-[#175C43] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform"
-              aria-hidden="true"
-            />
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="text-micro font-bold uppercase tracking-[0.14em] text-brand-700 dark:text-brand-300">
+                Meaningful local utility
+              </p>
+              <h2 id="utility-outcomes-heading" className="mt-0.5 text-lg font-bold text-ink-1">
+                Completed outcomes — never screen time
+              </h2>
+            </div>
+            <Badge variant="brand" size="sm">Direct & non-custodial</Badge>
           </div>
-          <p className="mt-1 text-xs text-[#175C43]/90">
-            List a product or service for buyers to discover.
-          </p>
-        </Link>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+            <OutcomeStat label="Requests fulfilled" value={metrics.personal?.requests_fulfilled ?? 0} />
+            <OutcomeStat label="Matches completed" value={metrics.personal?.successful_matches ?? 0} />
+            <OutcomeStat label="Repeat bookings" value={metrics.personal?.repeat_bookings ?? 0} />
+            <OutcomeStat label="Notifications acted on" value={metrics.personal?.notifications_acted_upon ?? 0} />
+            <OutcomeStat label="Active local providers" value={metrics.network?.active_local_providers_30d ?? 0} />
+          </div>
+        </section>
+      )}
+
+      {/* ── Reusable Activity Records &Saved Relationships ──────────────── */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Private Reusable Records */}
+        <section
+          aria-labelledby="reusable-records-heading"
+          data-testid="reusable-records-panel"
+          className="rounded-card-lg border border-edge-1 bg-surface-1 p-5 shadow-xs space-y-3"
+        >
+          <div>
+            <h2 id="reusable-records-heading" className="text-lg font-bold text-ink-1 flex items-center gap-2">
+              <CheckCircle2 size={18} className="text-emerald-600" aria-hidden="true" />
+              Reusable Activity Records
+            </h2>
+            <p className="text-2xs text-ink-3">
+              Your private history of completed repairs, rounds, and shared sourcing — repeat in one tap or compare local alternatives.
+            </p>
+          </div>
+          {records.length === 0 ? (
+            <p className="text-xs text-ink-4">
+              Completed Local Activity Ledger bookings appear here automatically once both sides confirm completion.
+            </p>
+          ) : (
+            <ul className="space-y-2.5">
+              {records.map((rec) => {
+                const bk = rec.booking || {};
+                const act = rec.activity || {};
+                const other = bk.provider?.id === vendor.id ? bk.initiator : bk.provider;
+                return (
+                  <li key={bk.id} className="rounded-xl border border-edge-1 bg-surface-0 p-3.5 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <Link to={`/activities/${act.id}`} className="text-xs font-bold text-ink-1 hover:text-brand-700">
+                        {act.title || "Completed local activity"}
+                      </Link>
+                      <Badge variant="green" size="sm">Reusable record</Badge>
+                    </div>
+                    <p className="text-2xs text-ink-3">
+                      With {other?.name || "Neighbour"} {other?.handle ? `(@${other.handle})` : ""} ·
+                      Settlement: {bk.settlement_method?.replace(/_/g, " ")}
+                      {bk.agreed_price_kes != null ? ` · KSh ${bk.agreed_price_kes}` : ""}
+                    </p>
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      <Button
+                        size="xs"
+                        icon={Repeat}
+                        onClick={() => onRepeatRecord(bk.id)}
+                        data-testid={`me-repeat-${bk.id}`}
+                      >
+                        Repeat booking
+                      </Button>
+                      <Button
+                        size="xs"
+                        variant="secondary"
+                        icon={Compass}
+                        onClick={() =>
+                          onCompareAlternatives({
+                            template: act.inferred_template,
+                            category: act.category,
+                            excludeVendorId: other?.id,
+                            label: TEMPLATE_LABELS[act.inferred_template] || act.title,
+                          })
+                        }
+                        data-testid={`me-alternatives-${bk.id}`}
+                      >
+                        Compare local alternatives
+                      </Button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+
+        {/* Saved Local Relationships */}
+        <section
+          aria-labelledby="saved-relationships-heading"
+          data-testid="saved-relationships-panel"
+          className="rounded-card-lg border border-edge-1 bg-surface-1 p-5 shadow-xs space-y-3"
+        >
+          <div>
+            <h2 id="saved-relationships-heading" className="text-lg font-bold text-ink-1 flex items-center gap-2">
+              <Bookmark size={18} className="text-brand-600" aria-hidden="true" />
+              Saved Local Relationships
+            </h2>
+            <p className="text-2xs text-ink-3">
+              Trusted fundis, neighbours, and cooperatives you work with — always paired with open local alternatives.
+            </p>
+          </div>
+          {relationships.length === 0 ? (
+            <p className="text-xs text-ink-4">
+              Save artisans, neighbours, or cooperatives from any activity page to keep them handy without locking yourself in.
+            </p>
+          ) : (
+            <ul className="space-y-2.5">
+              {relationships.map((rel) => (
+                <li key={rel.id} className="rounded-xl border border-edge-1 bg-surface-0 p-3.5 flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <Link to={`/@${rel.target?.handle}`} className="text-xs font-bold text-ink-1 hover:text-brand-700">
+                      {rel.target?.name} (@{rel.target?.handle})
+                    </Link>
+                    <p className="text-2xs text-ink-4">
+                      {rel.label || rel.relationship_kind} · {rel.completed_together_count ?? 0} completed together
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Button
+                      size="xs"
+                      variant="secondary"
+                      icon={Compass}
+                      onClick={() =>
+                        onCompareAlternatives({
+                          excludeVendorId: rel.target?.id,
+                          label: rel.label || rel.relationship_kind,
+                        })
+                      }
+                    >
+                      Alternatives
+                    </Button>
+                    <button
+                      type="button"
+                      aria-label={`Remove ${rel.target?.name || "contact"}`}
+                      onClick={() => onRemoveRelationship(rel.id)}
+                      className="p-1.5 text-ink-4 hover:text-danger"
+                    >
+                      <Trash2 size={14} aria-hidden="true" />
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {altContext && (
+            <div data-testid="me-alternatives-drawer" className="rounded-xl border border-brand-500/30 bg-surface-0 p-3 space-y-2">
+              <p className="text-2xs font-bold text-ink-1">
+                Open local alternatives for {altContext}:
+              </p>
+              {alternatives.length === 0 ? (
+                <p className="text-2xs text-ink-4">No other open listings in this category right now.</p>
+              ) : (
+                <ul className="space-y-1.5">
+                  {alternatives.map((alt) => (
+                    <li key={alt.id} className="flex items-center justify-between text-2xs">
+                      <Link to={`/activities/${alt.id}`} className="font-semibold text-brand-700 hover:underline">
+                        {alt.title} ({alt.owner?.name})
+                      </Link>
+                      {alt.price_kes != null && <span>KSh {alt.price_kes}</span>}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+        </section>
+      </div>
+
+      {/* ── Phase 2: Home Storefront Controls ───────────────────────────── */}
+      <section
+        aria-labelledby="home-storefront-heading"
+        data-testid="home-storefront-panel"
+        className="rounded-card-lg border border-edge-1 bg-surface-1 p-5 shadow-xs space-y-4"
+      >
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div>
+            <p className="text-micro font-bold uppercase tracking-[0.14em] text-brand-700 dark:text-brand-300">
+              Household & occasional shelf
+            </p>
+            <h2 id="home-storefront-heading" className="mt-0.5 text-lg font-bold text-ink-1">
+              Home Storefront Controls
+            </h2>
+            <p className="mt-0.5 text-2xs text-ink-3">
+              Share kienyeji eggs, seedlings, baked goods, or home crafts on your own terms — choose who sees your shelf and keep gate directions locked until booked.
+            </p>
+          </div>
+          <Badge variant={storefront.enabled ? "green" : "gray"} size="sm">
+            {storefront.enabled ? "Home shelf active" : "Off by default"}
+          </Badge>
+        </div>
+
+        <form onSubmit={onSaveStorefront} className="grid gap-3 sm:grid-cols-3">
+          <Input
+            label="Shelf title"
+            value={storefront.title || ""}
+            onChange={(e) => setStorefront((s) => ({ ...s, title: e.target.value }))}
+            placeholder="e.g. Kiamunyi Orchard Shelf"
+            data-testid="home-storefront-title"
+          />
+          <Input
+            label="Visiting / pickup hours"
+            value={storefront.visiting_hours || ""}
+            onChange={(e) => setStorefront((s) => ({ ...s, visiting_hours: e.target.value }))}
+            placeholder="e.g. Sat 4pm–6pm"
+            data-testid="home-storefront-hours"
+          />
+          <Select
+            label="Who can view home shelf items"
+            options={[
+              { value: "saved_contacts", label: "Saved local contacts only" },
+              { value: "neighbourhood", label: "My neighbourhood" },
+              { value: "everyone", label: "Everyone" },
+            ]}
+            value={storefront.audience || "saved_contacts"}
+            onChange={(e) => setStorefront((s) => ({ ...s, audience: e.target.value }))}
+            data-testid="home-storefront-audience"
+          />
+          <label className="sm:col-span-2 flex items-center gap-2.5 text-xs text-ink-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={Boolean(storefront.enabled)}
+              onChange={(e) => setStorefront((s) => ({ ...s, enabled: e.target.checked }))}
+              data-testid="home-storefront-enabled"
+              className="h-4 w-4 rounded border-edge-2 text-brand-600 focus:ring-brand-500"
+            />
+            <span>Enable my occasional Home Storefront</span>
+          </label>
+          <div className="flex justify-end">
+            <Button size="sm" type="submit" loading={savingStorefront} data-testid="save-home-storefront-btn">
+              Save Home Storefront
+            </Button>
+          </div>
+        </form>
       </section>
 
       {/* ── Quick actions ─────────────────────────────────────────────────── */}
@@ -373,6 +740,15 @@ export default function MePage() {
         <Sparkles size={15} className="mt-0.5 shrink-0 text-orchid-600 dark:text-orchid-300" aria-hidden="true" />
         Scores and fulfilment are calculated from recorded trades. Ogallo does not let businesses enter their own trust metrics.
       </p>
+    </div>
+  );
+}
+
+function OutcomeStat({ label, value }) {
+  return (
+    <div className="rounded-xl border border-edge-1 bg-surface-0 px-3.5 py-3">
+      <p className="text-micro font-semibold text-ink-4">{label}</p>
+      <p className="mt-1 text-xl font-extrabold tabular-nums text-ink-1">{value}</p>
     </div>
   );
 }

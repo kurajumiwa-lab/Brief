@@ -85,6 +85,7 @@ class Notification(Base):
 
     is_read = Column(Boolean, default=False, nullable=False)
     read_at = Column(DateTime, nullable=True)
+    acted_upon_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
 
     recipient = relationship("Vendor", foreign_keys=[recipient_id])

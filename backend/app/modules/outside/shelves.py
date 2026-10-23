@@ -59,16 +59,40 @@ DEFAULT_SHELVES: list = [
     _shelf(
         key="happening_around_you",
         title="Happening around you",
-        subtitle="Posts, events and requests from your immediate neighbourhood",
-        kinds=["post", "event", "opportunity"],
+        subtitle="Available goods, wanted repairs, scheduled rounds and opportunities nearby",
+        kinds=["available", "wanted", "scheduled", "post", "event", "opportunity"],
         scope="near", card="notice",
         see_all={"to": "/explore?scope=near", "label": "See everything nearby"},
         empty_state={
             "title": "Nothing is happening within 3 km yet",
             "body": "You can widen the radius, or be the first to post something.",
-            "action": {"label": "Create a post", "to": "/create"},
+            "action": {"label": "Post an activity", "to": "/create"},
         },
         min_items=0,   # an intentional empty state: it teaches the door
+    ),
+    _shelf(
+        key="available_nearby",
+        title="Available from neighbours & homesteads",
+        subtitle="Surplus produce, fodder, tools to borrow and local collection points",
+        kinds=["available", "listing", "rental"],
+        scope="town", card="product",
+        see_all={"to": "/explore?kind=available", "label": "All available"},
+    ),
+    _shelf(
+        key="wanted_and_repairs",
+        title="Wanted & local repairs",
+        subtitle="Households and neighbours looking for artisans, fodder, goods or help",
+        kinds=["wanted", "opportunity"],
+        scope="town", card="opportunity",
+        see_all={"to": "/explore?kind=wanted", "label": "All wanted"},
+    ),
+    _shelf(
+        key="scheduled_rounds_and_sessions",
+        title="Scheduled rounds & learning",
+        subtitle="Travelling artisan rounds, community learning sessions and weekend visits",
+        kinds=["scheduled", "event"],
+        scope="town", card="event",
+        see_all={"to": "/explore?kind=scheduled", "label": "All scheduled"},
     ),
     _shelf(
         key="this_weekend",
@@ -170,6 +194,7 @@ def manifest(shelf_keys: Optional[list] = None) -> dict:
             "wide": {"label": "Further out", "radius_km": None,
                      "description": "Trips, specialised goods and communities worth travelling for."},
         },
+        "posting_types": ["available", "wanted", "scheduled", "opportunity"],
         "content_types": ["post", "event", "listing", "community", "collection", "opportunity"],
         "create_path": "/create",
     }

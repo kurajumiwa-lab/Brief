@@ -56,7 +56,7 @@ class Settings(BaseSettings):
 
     APP_NAME: str = "Brief_ Vendor Network"
     VERSION: str = "2.2.0"
-    DESCRIPTION: str = "No consumers. Only vendors."
+    DESCRIPTION: str = "Local activity and trade for people, households, artisans, institutions and businesses."
     DEBUG: bool = False
     ENVIRONMENT: str = "development"
 

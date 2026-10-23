@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.database import get_db
 from app.models.governance import VendorActivityDay
-from app.models.vendor import Vendor, VendorProfile, VendorRole
+from app.models.vendor import ACCOUNT_KINDS, Vendor, VendorProfile, VendorRole
 from app.platform.security import (
     _decode,
     create_access_token,
@@ -60,7 +60,10 @@ def normalize_handle(raw: str) -> str:
 
 
 class VendorRegister(BaseModel):
-    business_name: str = Field(min_length=1, max_length=200)
+    business_name: Optional[str] = Field(default=None, max_length=200)
+    display_name: Optional[str] = Field(default=None, max_length=200)
+    account_kind: Optional[str] = None
+    hide_exact_location: Optional[bool] = None
     vendor_handle: str
     email: EmailStr
     phone: Optional[str] = None
@@ -80,6 +83,7 @@ class Token(BaseModel):
     token_type: str
     vendor_id: str
     vendor_handle: str
+    account_kind: str = "business"
     refresh_token: Optional[str] = None
     expires_in: int = settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60  # seconds
 
@@ -94,7 +98,7 @@ async def get_current_vendor(
 ) -> Vendor:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Not authenticated. All users must be vendors.",
+        detail="Not authenticated. Sign in to continue.",
         headers={"WWW-Authenticate": "Bearer"},
     )
     vendor_id = vendor_id_from_token(token)
@@ -135,12 +139,31 @@ def _token_for(vendor: Vendor) -> Token:
         token_type="bearer",
         vendor_id=str(vendor.id),
         vendor_handle=vendor.vendor_handle,
+        account_kind=getattr(vendor, "account_kind", None) or "business",
     )
 
 
 @router.post("/register", response_model=Token, status_code=201)
 async def register_vendor(data: VendorRegister, db: AsyncSession = Depends(get_db)):
-    """Register as a vendor. There is no consumer registration. You ARE a vendor."""
+    """Register as a person, household, artisan, institution, or business.
+    No compulsory business profile is required to join or participate."""
+    name = (data.display_name or data.business_name or "").strip()
+    if not name:
+        raise HTTPException(422, "Provide your name, household name, or business name")
+
+    if data.account_kind is not None:
+        resolved_kind = data.account_kind.strip().lower()
+        if resolved_kind not in ACCOUNT_KINDS:
+            raise HTTPException(400, f"account_kind must be one of: {', '.join(ACCOUNT_KINDS)}")
+    else:
+        resolved_kind = "person" if (data.display_name and not data.business_name) else "business"
+
+    hide_exact = (
+        bool(data.hide_exact_location)
+        if data.hide_exact_location is not None
+        else (resolved_kind != "business")
+    )
+
     handle = normalize_handle(data.vendor_handle)
     email = data.email.lower()
     validate_password(data.password)
@@ -152,7 +175,9 @@ async def register_vendor(data: VendorRegister, db: AsyncSession = Depends(get_d
         raise HTTPException(400, "Email or handle already registered in vendor network")
 
     vendor = Vendor(
-        business_name=data.business_name.strip(),
+        business_name=name,
+        account_kind=resolved_kind,
+        hide_exact_location=hide_exact,
         vendor_handle=handle,
         email=email,
         phone=data.phone,
