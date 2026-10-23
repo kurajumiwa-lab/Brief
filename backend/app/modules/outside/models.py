@@ -45,12 +45,15 @@ from app.database import Base
 # kind is a data decision (a source adapter in `feed.py` + a card renderer),
 # never a new table.
 CONTENT_KINDS = (
+    "available",    # local_activities (Available)
+    "wanted",       # local_activities (Wanted)
+    "scheduled",    # local_activities (Scheduled)
     "post",         # outside_posts
     "event",        # events
     "listing",      # stock_items
     "service",      # tool_listings (transport / courier / hotel / packaging)
     "rental",       # tool_listings (warehouse / cold storage / popup / equipment)
-    "opportunity",  # business_requests + hustle call-ups
+    "opportunity",  # local_activities (Opportunity) + business_requests + hustle call-ups
     "community",    # vendor_groups
     "collection",   # vendor_lists
     "person",       # vendors

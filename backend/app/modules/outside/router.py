@@ -25,7 +25,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -134,15 +134,14 @@ async def resolve_location(db: AsyncSession, vendor: Vendor,
 # ── schemas ───────────────────────────────────────────────────────────────────
 
 class ContentIn(BaseModel):
-    """ONE body for every content type.
-
-    Progressive disclosure is a client concern; on the server every field is
-    simply optional and `publish.REQUIRED_FIELDS` decides what a given type
-    actually needs. `price_kes` is optional for all six types.
+    """ONE body for every content type (both the 4 primary posting types and
+    the 6 legacy Outside content types).
     """
+    model_config = ConfigDict(extra="allow")
 
-    content_type: str = Field(..., max_length=24)
-    title: Optional[str] = Field(None, max_length=200)
+    content_type: Optional[str] = Field(None, max_length=24)
+    posting_type: Optional[str] = Field(None, max_length=24)
+    title: Optional[str] = Field(None, max_length=220)
     body: Optional[str] = Field(None, max_length=8000)
     description: Optional[str] = Field(None, max_length=8000)
     media: Optional[list] = None
@@ -152,17 +151,17 @@ class ContentIn(BaseModel):
     location: Optional[str] = Field(None, max_length=300)
     geo_lat: Optional[float] = None
     geo_lng: Optional[float] = None
-    geo_precision: Optional[str] = Field(None, max_length=16)
+    geo_precision: Optional[str] = Field(None, max_length=24)
     location_layer: Optional[str] = Field(None, max_length=20)
 
     starts_at: Optional[datetime] = None
     ends_at: Optional[datetime] = None
     expires_at: Optional[datetime] = None
 
-    visibility: str = Field("public", max_length=16)
-    audience: str = Field("everyone", max_length=16)
-    response_kind: str = Field("reply", max_length=20)
-    status: Optional[str] = Field(None, max_length=20)
+    visibility: str = Field("public", max_length=24)
+    audience: str = Field("everyone", max_length=24)
+    response_kind: str = Field("reply", max_length=24)
+    status: Optional[str] = Field(None, max_length=24)
 
     price_kes: Optional[int] = None
     wholesale_price_kes: Optional[int] = None
@@ -172,7 +171,7 @@ class ContentIn(BaseModel):
     capacity: Optional[int] = None
     is_virtual: Optional[bool] = None
     virtual_link: Optional[str] = Field(None, max_length=500)
-    quantity: Optional[int] = None
+    quantity: Optional[float] = None
     unit: Optional[str] = Field(None, max_length=50)
     min_order_quantity: Optional[int] = None
     group_type: Optional[str] = Field(None, max_length=24)
@@ -749,6 +748,7 @@ async def activity(
                 "id": str(n.id), "type": ntype, "group": group,
                 "title": n.title, "body": n.body, "data": n.data or {},
                 "is_read": bool(n.is_read),
+                "acted_upon_at": n.acted_upon_at.isoformat() if getattr(n, "acted_upon_at", None) else None,
                 "created_at": n.created_at.isoformat() if n.created_at else None,
             })
 
@@ -827,9 +827,24 @@ async def _authorised_row(db, vendor, kind, content_id):
             return None, False
         return row, str(row.vendor_id) == str(vendor.id)
 
+    if kind in ("available", "wanted", "scheduled"):
+        from app.modules.ledger.models import LocalActivity
+        from app.modules.ledger.service import can_view_activity
+
+        row = await db.get(LocalActivity, content_id)
+        if row is None or not await can_view_activity(db, row, vendor):
+            return None, False
+        return row, str(row.organizer_vendor_id) == str(vendor.id)
+
     if kind == "opportunity":
         row = await db.get(BusinessRequest, content_id)
         if row is None:
+            from app.modules.ledger.models import LocalActivity
+            from app.modules.ledger.service import can_view_activity
+
+            act = await db.get(LocalActivity, content_id)
+            if act is not None and await can_view_activity(db, act, vendor):
+                return act, str(act.organizer_vendor_id) == str(vendor.id)
             return None, False
         if row.status != "open" and str(row.requester_vendor_id) != str(vendor.id):
             return None, False
@@ -850,9 +865,20 @@ async def _author_of(db, kind, content_id):
     if kind == "listing":
         return (await db.execute(select(StockItem.vendor_id)
                                  .where(StockItem.id == content_id))).scalar_one_or_none()
+    if kind in ("available", "wanted", "scheduled"):
+        from app.modules.ledger.models import LocalActivity
+
+        return (await db.execute(select(LocalActivity.organizer_vendor_id)
+                                 .where(LocalActivity.id == content_id))).scalar_one_or_none()
     if kind == "opportunity":
-        return (await db.execute(select(BusinessRequest.requester_vendor_id)
-                                 .where(BusinessRequest.id == content_id))).scalar_one_or_none()
+        req_author = (await db.execute(select(BusinessRequest.requester_vendor_id)
+                                       .where(BusinessRequest.id == content_id))).scalar_one_or_none()
+        if req_author:
+            return req_author
+        from app.modules.ledger.models import LocalActivity
+
+        return (await db.execute(select(LocalActivity.organizer_vendor_id)
+                                 .where(LocalActivity.id == content_id))).scalar_one_or_none()
     return None
 
 
@@ -877,6 +903,38 @@ async def _load_specific(db, vendor, kind, content_id) -> list:
     matched = [i for i in items if i["id"] == target]
     if matched:
         return matched
+
+    # Local Activity Ledger records share this detail route for backward
+    # compatibility (`available` / `wanted` / `scheduled`, plus ledger-backed
+    # `opportunity`). Build the feed shape directly from the authorized row so
+    # a record outside the adapter's latest-50 window still resolves.
+    if kind in ("available", "wanted", "scheduled") or (
+        kind == "opportunity" and hasattr(row, "organizer_vendor_id")
+    ):
+        from app.modules.ledger.privacy import public_coordinates
+        from app.modules.outside.feed import _item as _ledger_item, _owner as _ledger_owner
+
+        org = await db.get(Vendor, row.organizer_vendor_id)
+        pub_lat, pub_lng = public_coordinates(
+            row.geo_lat, row.geo_lng, row.geo_precision, authorized_exact=False
+        )
+        return [_ledger_item(
+            id=str(row.id), kind=row.posting_type, to=f"/activities/{row.id}",
+            title=row.title, summary=row.body, category=row.category,
+            tags=list(row.tags or []), location=row.area_name,
+            geo_lat=pub_lat, geo_lng=pub_lng,
+            created_at=row.created_at, starts_at=row.starts_at, expires_at=row.ends_at,
+            status=row.lifecycle_status, visibility=row.visibility,
+            price_kes=row.price_kes,
+            is_commercial=bool(row.price_kes is not None and row.price_kes > 0),
+            owner=_ledger_owner(org),
+            counts={"responses": row.response_count or 0, "booked": row.spots_confirmed or 0},
+            meta={"posting_type": row.posting_type, "inferred_template": row.inferred_template,
+                  "lifecycle_status": row.lifecycle_status, "schedule_label": row.schedule_label,
+                  "location_scope": row.location_scope, "custody_mode": "non_custodial",
+                  "owner_id": str(row.organizer_vendor_id)},
+        )]
+
     # Own listing/opportunity lists exclude the owner, and the events adapter
     # only carries upcoming/active events — so a cancelled event, or your own
     # hidden listing, would otherwise 404 on its own detail screen. Fall back

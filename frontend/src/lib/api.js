@@ -583,6 +583,35 @@ export const outsideAPI = {
   activity: (params) => api.get("/outside/activity", { params: noEmpty(params) }),
 };
 
+// ── Local Activity Ledger (`/api/ledger`) ──────────────────────────────────
+export const ledgerAPI = {
+  templates: () => api.get("/ledger/templates"),
+  infer: (body) => api.post("/ledger/infer", body),
+  listActivities: (params) => api.get("/ledger/activities", { params: noEmpty(params) }),
+  createActivity: (body) => api.post("/ledger/activities", body),
+  getActivity: (id) => api.get(`/ledger/activities/${id}`),
+  respond: (activityId, body) => api.post(`/ledger/activities/${activityId}/responses`, body),
+  confirmGuardianConsent: (responseId, body) => api.post(`/ledger/responses/${responseId}/guardian-consent`, body),
+  createBooking: (activityId, body) => api.post(`/ledger/activities/${activityId}/bookings`, body),
+  myBookings: () => api.get("/ledger/bookings/mine"),
+  proposeChange: (bookingId, body) => api.post(`/ledger/bookings/${bookingId}/changes`, body),
+  confirmCompletion: (bookingId, body = {}) => api.post(`/ledger/bookings/${bookingId}/confirm-completion`, body),
+  leaveFeedback: (bookingId, body) => api.post(`/ledger/bookings/${bookingId}/feedback`, body),
+  repeatBooking: (bookingId, body = {}) => api.post(`/ledger/bookings/${bookingId}/repeat`, body),
+  records: () => api.get("/ledger/records"),
+  listWatches: () => api.get("/ledger/watches"),
+  createWatch: (body) => api.post("/ledger/watches", body),
+  deleteWatch: (watchId) => api.delete(`/ledger/watches/${watchId}`),
+  markNotificationActed: (notificationId) => api.post(`/ledger/notifications/${notificationId}/acted`),
+  listRelationships: () => api.get("/ledger/relationships"),
+  saveRelationship: (body) => api.post("/ledger/relationships", body),
+  deleteRelationship: (relationshipId) => api.delete(`/ledger/relationships/${relationshipId}`),
+  alternatives: (params) => api.get("/ledger/alternatives", { params: noEmpty(params) }),
+  getHomeStorefront: () => api.get("/ledger/home-storefront"),
+  updateHomeStorefront: (body) => api.put("/ledger/home-storefront", body),
+  metricsSummary: () => api.get("/ledger/metrics/summary"),
+};
+
 // ── Ops / monitoring (v2.2) ────────────────────────────────────────────────
 export const opsAPI = {
   status: () => api.get("/ops/status"),

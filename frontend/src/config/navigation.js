@@ -45,6 +45,14 @@ export const EXPLORE_NAV = [
   { to: "/news", label: "News", icon: Newspaper },
 ];
 
+/** Four primary local activity posting types (Local Activity Ledger). */
+export const PRIMARY_POSTING_TYPES = [
+  { value: "available", label: "Available", icon: Package, hint: "Skills, produce, tools to lend, or home shelf items" },
+  { value: "wanted", label: "Wanted", icon: Wrench, hint: "Ask for a fundi, repair, group buy, or local help" },
+  { value: "scheduled", label: "Scheduled", icon: CalendarDays, hint: "Travelling artisan rounds, learning, or collection windows" },
+  { value: "opportunity", label: "Opportunity", icon: ClipboardList, hint: "Work, apprenticeships, or supervised youth tasks" },
+];
+
 /** Content types the single Create page can publish. Order = display order. */
 export const CREATE_TYPES = [
   { value: "post", label: "Post", icon: Newspaper, hint: "An update, a question or a recommendation" },
@@ -120,7 +128,7 @@ const EXPLORE_ROOTS = [
     notifications, chat, orders, tasks, rentals and bookings. Deep links stay;
     the aggregation lives at /activity. */
 const ACTIVITY_ROOTS = [
-  "/activity", "/work", "/orders", "/chat", "/tasks", "/locks", "/tools",
+  "/activity", "/activities", "/work", "/orders", "/chat", "/tasks", "/locks", "/tools",
 ];
 
 const ME_ROOTS = [

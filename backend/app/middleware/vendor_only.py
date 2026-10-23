@@ -12,7 +12,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 # `/api/metrics` is the Prometheus scrape target (gate it with METRICS_TOKEN in
-# production — see app/routes/ops.py). Everything else under /api needs a vendor.
+# production — see app/routes/ops.py). Everything else under /api needs a member.
 # The PSP webhook is signed (HMAC-SHA256) instead of bearer-authenticated.
 OPEN_PREFIXES = ("/api/auth/", "/api/health", "/api/metrics", "/api/payments/webhook",
                  "/api/catalog", "/docs", "/redoc", "/openapi.json")
@@ -28,9 +28,9 @@ class VendorOnlyMiddleware(BaseHTTPMiddleware):
             if not is_ws and not auth.lower().startswith("bearer "):
                 return JSONResponse(
                     status_code=401,
-                    content={"detail": "Not authenticated. All users must be vendors."},
-                    headers={"WWW-Authenticate": "Bearer", "X-Brief-Network": "vendors-only"},
+                    content={"detail": "Not authenticated. Sign in to continue."},
+                    headers={"WWW-Authenticate": "Bearer", "X-Brief-Network": "members"},
                 )
         response = await call_next(request)
-        response.headers["X-Brief-Network"] = "vendors-only"
+        response.headers["X-Brief-Network"] = "members"
         return response

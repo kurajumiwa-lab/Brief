@@ -26,9 +26,12 @@ import { cn } from "@/lib/utils";
 
 const KIND_FILTERS = [
   { value: "", label: "Everything" },
+  { value: "available", label: "Available" },
+  { value: "wanted", label: "Wanted" },
+  { value: "scheduled", label: "Scheduled" },
+  { value: "opportunity", label: "Opportunities" },
   { value: "post", label: "Posts" },
   { value: "event", label: "Events" },
-  { value: "opportunity", label: "Opportunities" },
   { value: "community", label: "Communities" },
   { value: "collection", label: "Collections" },
   { value: "listing", label: "Goods" },

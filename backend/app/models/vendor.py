@@ -3,7 +3,8 @@ from datetime import datetime
 from enum import Enum as PyEnum
 
 from sqlalchemy import (
-    Boolean, Column, DateTime, Enum, Float, ForeignKey, Integer, String, Table, Text
+    Boolean, CheckConstraint, Column, DateTime, Enum, Float, ForeignKey, Integer, String, Table, Text,
+    text as sa_text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import relationship
@@ -31,16 +32,29 @@ vendor_connections = Table(
 )
 
 
+ACCOUNT_KINDS = ("person", "household", "artisan", "institution", "business")
+
+
 class Vendor(Base):
     """
-    NO CONSUMER MODEL EXISTS. Everyone is a Vendor.
-    You source today, you sell tomorrow. Fluid roles.
+    Principal account row across people, households, artisans, institutions,
+    and businesses. Kept on `vendors` so all existing foreign keys and tokens
+    continue working without breaking changes.
     """
     __tablename__ = "vendors"
+    __table_args__ = (
+        CheckConstraint(
+            "account_kind IN ('person','household','artisan','institution','business')",
+            name="ck_vendors_account_kind",
+        ),
+    )
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     # Identity
     business_name = Column(String(200), nullable=False)
+    account_kind = Column(String(24), nullable=False, default="business", server_default="business", index=True)
+    hide_exact_location = Column(Boolean, nullable=False, default=True, server_default="true")
+    home_storefront_config = Column(JSONB, nullable=False, default=dict, server_default=sa_text("'{}'::jsonb"))
     vendor_handle = Column(String(100), unique=True, nullable=False, index=True)  # @handle
     email = Column(String(255), unique=True, nullable=False, index=True)
     phone = Column(String(20))

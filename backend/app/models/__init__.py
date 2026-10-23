@@ -48,6 +48,10 @@ from app.models.hustle import HustleJobCall, HustleContract, HustleGoldLedger, H
 from app.modules.outside.models import (
     OutsidePost, OutsideReaction, OutsideDiscoveryPref, OutsideContentReport,
 )
+from app.modules.ledger.models import (
+    LocalActivity, ActivityResponse, ActivityBooking, ActivityFeedback,
+    ActivityLedgerEvent, ActivityWatch, SavedRelationship,
+)
 
 __all__ = [
     "Vendor", "VendorProfile", "VendorRole", "vendor_connections",
@@ -82,4 +86,6 @@ __all__ = [
     "PublicPlace",
     "HustleJobCall", "HustleContract", "HustleGoldLedger", "HustleSquad", "HustleSquadMember",
     "OutsidePost", "OutsideReaction", "OutsideDiscoveryPref", "OutsideContentReport",
+    "LocalActivity", "ActivityResponse", "ActivityBooking", "ActivityFeedback",
+    "ActivityLedgerEvent", "ActivityWatch", "SavedRelationship",
 ]

@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import Badge from "@/components/ui/Badge";
 import { cn } from "@/lib/utils";
+import { TEMPLATE_LABELS } from "@/lib/inference";
 import { relativeTime, shortDateTime } from "@/lib/formatters";
 
 /**
@@ -29,6 +30,9 @@ import { relativeTime, shortDateTime } from "@/lib/formatters";
  */
 
 const KIND_META = {
+  available: { label: "Available", variant: "brand" },
+  wanted: { label: "Wanted", variant: "amber" },
+  scheduled: { label: "Scheduled", variant: "purple" },
   post: { label: "Post", variant: "brand" },
   event: { label: "Event", variant: "amber" },
   listing: { label: "Listing", variant: "blue" },
@@ -44,6 +48,9 @@ const KIND_META = {
 
 /** The one response each kind invites. Deliberately not a full action bar. */
 const RESPONSES = {
+  available: { reaction: "interest", icon: HeartHandshake, label: "Book / Enquire" },
+  wanted: { reaction: "interest", icon: HeartHandshake, label: "Offer help" },
+  scheduled: { reaction: "attending", icon: CalendarDays, label: "Request stop" },
   post: { reaction: "save", icon: Bookmark, label: "Save" },
   event: { reaction: "attending", icon: CalendarDays, label: "I'm going" },
   listing: { reaction: "interest", icon: HeartHandshake, label: "I'm interested" },
@@ -98,6 +105,9 @@ export default function ContentCard({ item, onReact, compact = false, className 
         {!item.image && (
           <div className="flex flex-wrap items-center gap-1.5">
             <Badge variant={meta?.variant || "gray"} size="sm">{kind.label}</Badge>
+            {item.meta?.inferred_template && TEMPLATE_LABELS[item.meta.inferred_template] && (
+              <Badge variant="gray" size="sm">{TEMPLATE_LABELS[item.meta.inferred_template]}</Badge>
+            )}
             {item.status === "cancelled" && <Badge variant="red" size="sm">Cancelled</Badge>}
             {item.meta?.full && <Badge variant="red" size="sm">Full</Badge>}
           </div>

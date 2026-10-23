@@ -25,6 +25,7 @@ const BrowsePage = lazy(() => import("@/pages/browse/BrowsePage"));
 // Suspense fallback in Shell already handles it.
 const ExplorePage = lazy(() => import("@/pages/explore/ExplorePage"));
 const ActivityPage = lazy(() => import("@/pages/activity/ActivityPage"));
+const ActivityDetailPage = lazy(() => import("@/pages/activities/ActivityDetailPage"));
 const ListingPage = lazy(() => import("@/pages/listing/ListingPage"));
 const OrdersPage = lazy(() => import("@/pages/orders/OrdersPage"));
 const RepeatOrderPage = lazy(() => import("@/pages/orders/RepeatOrderPage"));
@@ -125,6 +126,7 @@ export default function App() {
           <Route path="/explore" element={<ExplorePage />} />
           <Route path="/create" element={<CreatePage />} />
           <Route path="/activity" element={<ActivityPage />} />
+          <Route path="/activities/:id" element={<ActivityDetailPage />} />
           <Route path="/browse" element={<BrowsePage />} />
           <Route path="/listing/:id" element={<ListingPage />} />
           <Route path="/orders" element={<OrdersPage />} />
