@@ -1,13 +1,17 @@
 import asyncio
 import logging
 import os
+import re
+import socket
 from contextlib import asynccontextmanager
 
+import asyncpg
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
+from sqlalchemy.exc import InterfaceError, OperationalError, ProgrammingError
 
 from app.config import settings
 from app.database import async_session, engine, init_db
@@ -84,10 +88,36 @@ logging.basicConfig(level=logging.DEBUG if settings.DEBUG else logging.INFO,
 log = logging.getLogger("brief")
 
 
+def _safe_error(exc: BaseException) -> str:
+    """Exception text that is safe to hand to a browser.
+
+    A failed DATABASE_URL check is the most useful diagnostic a deploy can show,
+    but the driver's message can quote the DSN — and the DSN holds the password.
+    Redact anything of the shape `scheme://user:secret@` before returning it.
+    """
+    text = f"{type(exc).__name__}: {exc}"
+    text = re.sub(r"(?i)(://[^:/@\s]+:)[^@\s]+@", r"\1***@", text)
+    return text[:300]
+
+
+# Boot failures that must not take the API down. Failing the ASGI lifespan used
+# to kill the whole serverless function, so a bad DATABASE_URL looked like
+# "sign in and register are broken" with no explanation anywhere but the logs.
+_boot: dict[str, str] = {}
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     if settings.AUTO_CREATE_TABLES:
-        await init_db()
+        try:
+            await init_db()
+            _boot.pop("database", None)
+        except Exception as exc:
+            # Serve anyway: /api/health then explains what is wrong, instead of
+            # the platform returning an opaque 500 for every request.
+            _boot["database"] = _safe_error(exc)
+            log.exception("boot: database initialisation failed — the API will start, "
+                          "but queries fail until DATABASE_URL or the schema is fixed")
     await configure_backend()
     await chat.manager.configure()
     # The East-African market catalog is static reference data, so it is
@@ -248,18 +278,103 @@ async def api_root():
 
 @app.get("/api/health", tags=["Ops"])
 async def health():
-    """Liveness plus a real database round-trip. Says `degraded`, not `ok`, when the DB is unreachable."""
+    """Liveness plus a real database round-trip and schema probe.
+
+    `degraded` (503) means the database is unreachable *or* the schema has not
+    been created yet — the two things that make sign-in and registration fail.
+    `error` carries a redacted driver message so a deploy can be diagnosed
+    without digging through logs.
+    """
+    db_ok = False
+    schema_ok = None
+    error = _boot.get("database")
     try:
         async with engine.connect() as conn:
             await conn.execute(text("SELECT 1"))
-        db_ok = True
+            db_ok = True
+            try:
+                schema_ok = bool(await conn.scalar(text("SELECT to_regclass('public.vendors') IS NOT NULL")))
+            except Exception:  # pragma: no cover - dialect without to_regclass
+                schema_ok = None
+            if db_ok and schema_ok is not False:
+                _boot.pop("database", None)
+                error = None
     except Exception as exc:  # pragma: no cover - depends on the environment
         log.warning("health: database unreachable: %s", exc)
-        db_ok = False
+        error = _safe_error(exc)
+
+    ok = db_ok and schema_ok is not False
+    payload = {
+        "status": "ok" if ok else "degraded",
+        "database": db_ok,
+        "schema": schema_ok,
+        "version": settings.VERSION,
+    }
+    if error:
+        payload["error"] = error
+    if not ok:
+        payload["hint"] = (
+            "The schema has not been created yet — redeploy with AUTO_CREATE_TABLES=true "
+            "or run `alembic upgrade head` once against this database."
+            if schema_ok is False
+            else "Check DATABASE_URL in the deployment's environment variables "
+                 "(percent-encode special characters in the password), then redeploy."
+        )
+    return JSONResponse(status_code=200 if ok else 503, content=payload)
+
+
+# --- a dead database is a 503 with a reason, not an opaque 500 --------------------
+# Connection-level failures (unreachable host, wrong password, pool exhausted)
+# reach every route through the session dependency. Turning them into a JSON 503
+# means the login form shows "database unavailable" instead of a blank error, and
+# the reason is in the response rather than only in the platform logs.
+async def database_unavailable(request, exc):  # pragma: no cover - depends on the environment
+    log.error("database unavailable on %s %s: %s", request.method, request.url.path, exc)
     return JSONResponse(
-        status_code=200 if db_ok else 503,
-        content={"status": "ok" if db_ok else "degraded", "database": db_ok, "version": settings.VERSION},
+        status_code=503,
+        content={
+            "detail": "The database is unavailable. Sign-in and registration cannot complete.",
+            "error": _safe_error(exc),
+            "hint": "Check DATABASE_URL on the deployment (percent-encode special characters in the password).",
+        },
     )
+
+
+async def schema_missing(request, exc):  # pragma: no cover - depends on the environment
+    log.error("schema missing on %s %s: %s", request.method, request.url.path, exc)
+    return JSONResponse(
+        status_code=503,
+        content={
+            "detail": "The database is reachable but its tables do not exist yet.",
+            "error": _safe_error(exc),
+            "hint": "Deploy once with AUTO_CREATE_TABLES=true, or run `alembic upgrade head` "
+                    "against this database, then retry.",
+        },
+    )
+
+
+# Register the handler for every way a failed connection surfaces. SQLAlchemy
+# raises some of these itself; asyncpg's own connect-time errors (bad password,
+# wrong database, server starting up) arrive unwrapped.
+for _exc in (
+    OperationalError,
+    InterfaceError,
+    ConnectionError,
+    socket.gaierror,
+    asyncpg.InvalidAuthorizationSpecificationError,
+    asyncpg.InvalidCatalogNameError,
+    asyncpg.CannotConnectNowError,
+    asyncpg.TooManyConnectionsError,
+    asyncpg.ConnectionDoesNotExistError,
+    asyncpg.AdminShutdownError,
+    asyncpg.CrashShutdownError,
+):
+    app.add_exception_handler(_exc, database_unavailable)
+
+# "relation \"vendors\" does not exist" is the other classic first-deploy
+# failure: the database answered, but nothing ever created the schema.
+for _exc in (ProgrammingError, asyncpg.UndefinedTableError):
+    app.add_exception_handler(_exc, schema_missing)
 
 
 # --- unknown /api paths are JSON 404s, never the SPA shell ------------------------
