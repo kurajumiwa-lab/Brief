@@ -17,6 +17,7 @@ another device opens it from a chat message.
 import logging
 import mimetypes
 import re
+import tempfile
 import uuid
 from pathlib import Path
 from typing import Optional
@@ -71,6 +72,30 @@ def max_bytes() -> int:
     return int(settings.MAX_UPLOAD_MB) * 1024 * 1024
 
 
+def _ensure_writable_dir(path: Path, kind: str) -> Path:
+    """Create `path`, falling back to a private temp dir when the disk is read-only.
+
+    Serverless hosts (Vercel Functions among them) mount the deployment image
+    read-only and hand each instance an ephemeral /tmp. The module-level
+    `local_root()` call in main.py used to mkdir() straight into that read-only
+    tree and raise OSError at import time — the whole API died before serving a
+    single request, so sign-in and registration both failed with a 500 and
+    nothing reached the database. Falling back keeps the app bootable; files
+    written to the fallback live only as long as that instance, which is why
+    production uploads still want S3_BUCKET.
+    """
+    try:
+        path.mkdir(parents=True, exist_ok=True)
+        return path
+    except OSError as exc:
+        fallback = Path(tempfile.gettempdir()) / f"brief-{kind}"
+        if fallback == path:
+            raise
+        log.warning("storage: %s is not writable (%s); using %s for this instance", path, exc, fallback)
+        fallback.mkdir(parents=True, exist_ok=True)
+        return fallback
+
+
 class StorageService:
     """Abstract file storage — S3 in production, local in dev."""
 
@@ -78,15 +103,30 @@ class StorageService:
         self.use_s3 = bool(settings.S3_BUCKET)
         self.bucket = settings.S3_BUCKET
         self._s3 = None
-        self.local_root = Path(settings.UPLOAD_DIR).resolve()
+        self._local_root = Path(settings.UPLOAD_DIR).resolve()
+        self._voice_root = Path(settings.VOICE_UPLOAD_DIR).resolve()
+        self._local_ready = False
+        self._voice_ready = False
 
     @property
     def name(self) -> str:
         return "s3" if self.use_s3 else "local"
 
     @property
+    def local_root(self) -> Path:
+        """Public upload root, created on first use (with a /tmp fallback)."""
+        if not self._local_ready:
+            self._local_root = _ensure_writable_dir(self._local_root, "static")
+            self._local_ready = True
+        return self._local_root
+
+    @property
     def voice_root(self) -> Path:
-        return Path(settings.VOICE_UPLOAD_DIR).resolve()
+        """Private voice-note root, created on first use (with a /tmp fallback)."""
+        if not self._voice_ready:
+            self._voice_root = _ensure_writable_dir(self._voice_root, "voice")
+            self._voice_ready = True
+        return self._voice_root
 
     def _ensure_voice_root_private(self) -> None:
         # Prevent a configuration typo from placing supposedly private voice
@@ -220,7 +260,6 @@ def local_root() -> Optional[str]:
     """Directory main.py mounts at /static (local backend only)."""
     if storage.use_s3:
         return None
-    storage.local_root.mkdir(parents=True, exist_ok=True)
     return str(storage.local_root)
 
 
