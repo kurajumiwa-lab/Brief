@@ -2,6 +2,7 @@ import { useEffect, lazy, Fragment } from "react";
 import { Routes, Route, Navigate, useLocation, useSearchParams } from "react-router-dom";
 import Shell from "@/components/layout/Shell";
 import { PageSpinner } from "@/components/ui/Spinner";
+import Button from "@/components/ui/Button";
 import AuthPage from "@/pages/auth/AuthPage";
 import HomeHub from "@/pages/home/HomeHub";
 import NearbyPage from "@/pages/nearby/NearbyPage";
@@ -57,13 +58,35 @@ const Ops = lazy(() => import("@/pages/ops/Ops"));
 const VendorProfile = lazy(() => import("@/pages/vendor/VendorProfile"));
 const CreativePortfolioPage = lazy(() => import("@/pages/portfolio/CreativePortfolioPage"));
 
+/** Signed in, but the profile call failed. Saying so — with the server's own
+    words — beats the old silent bounce to /auth, which was indistinguishable
+    from a wrong password and sent people round the login loop. */
+function SessionProblem() {
+  const authError = useAuthStore((s) => s.authError);
+  const fetchVendor = useAuthStore((s) => s.fetchVendor);
+  const logout = useAuthStore((s) => s.logout);
+  return (
+    <div className="min-h-screen grid place-items-center p-6 bg-surface-0">
+      <div className="w-full max-w-md rounded-3xl border border-edge-1 bg-surface-0 shadow-sm p-6 space-y-4 animate-fade-in">
+        <h1 className="text-lg font-extrabold tracking-tight text-ink-1">Almost in</h1>
+        <p className="text-sm text-ink-3 leading-relaxed">{authError}</p>
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={() => fetchVendor()}>Try again</Button>
+          <Button variant="ghost" onClick={logout}>Sign out</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /** Gate: no token → /auth (remembering where to return); token but vendor not
-    loaded yet → spinner. */
+    loaded yet → spinner; token but the profile call failed → the reason. */
 function RequireVendor({ children }) {
-  const { token, vendor, ready } = useAuthStore();
+  const { token, vendor, ready, authError } = useAuthStore();
   const location = useLocation();
   if (!token) return <Navigate to="/auth" replace state={{ from: location.pathname + location.search }} />;
-  if (!ready || !vendor) return ready && !vendor ? <Navigate to="/auth" replace /> : <PageSpinner label="Entering the network…" />;
+  if (!ready) return <PageSpinner label="Entering the network…" />;
+  if (!vendor) return authError ? <SessionProblem /> : <Navigate to="/auth" replace />;
   return children;
 }
 
