@@ -3,6 +3,10 @@
 For whoever is on call for this deployment. Every procedure below is written so
 that someone who did not build the system can execute it at 2 a.m.
 
+**First deploy?** Start with [`go-live-guide.md`](go-live-guide.md) — the ordered,
+human-side sequence (accounts, secrets, migration, deploy, verification). This
+document is for what happens afterwards.
+
 Status of the procedures in this document, as of 2026-10-25:
 
 | Procedure | Written | Executed here |

@@ -9,7 +9,7 @@ A blocked check is never counted as a pass. Where something is blocked, what it
 would take to close it is written down.
 
 Baseline before this work (audit, 2026-10-25): 280 backend tests, 214 frontend
-tests, two reproduced security failures. Current: **322 backend**, **237
+tests, two reproduced security failures. Current: **325 backend**, **237
 frontend**, both suites green.
 
 ---
@@ -84,7 +84,10 @@ frontend**, both suites green.
   an unmeasurable cost on top of a system that already answers the question.
 - **Subscription revenue.** Track 2's state machine is built and tested; live
   recurring billing is not claimed, `billing.live` is false on the mock provider,
-  and the storefront trial stays `not_yet_live`.
+  and the storefront trial stays `not_yet_live`. The lifecycle sweep now runs in
+  the payment scheduler (`expire_subscriptions`), so a trial lapses without a
+  manual cron — but only if the scheduler is actually running in your deploy
+  (`RUN_SCHEDULER=true` on a single container, or a separate `python -m app.worker`).
 
 ## Known defects carried forward, not hidden
 

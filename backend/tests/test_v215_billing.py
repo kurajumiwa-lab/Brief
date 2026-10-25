@@ -281,3 +281,31 @@ async def test_a_settled_invoice_leaves_revenue_evidence(client):
     # Evidence names the provider and the reference it can be reconciled against.
     assert "mock" in event.evidence_note.lower()
     assert body["invoice"]["psp_reference"] in event.evidence_note
+
+
+async def test_the_scheduler_itself_expires_a_lapsed_subscription(client):
+    """No manual cron: the payment scheduler loop owns the subscription lifecycle."""
+    from datetime import datetime, timedelta
+
+    from app.database import async_session
+    from app.services import payment_worker
+
+    _, headers, vendor_id = await _vendor(client, "sched")
+    body = (await client.post("/api/billing/subscribe", json={"plan_tier": "readiness"},
+                              headers=headers)).json()
+    assert body["subscription"]["status"] == "trialing"
+
+    sub = await _sub_row(vendor_id)
+    async with async_session() as db:
+        row = await db.get(Subscription, sub.id)
+        row.trial_ends_at = datetime.utcnow() - timedelta(minutes=1)
+        await db.commit()
+
+    # This is the exact job the scheduler runs every minute.
+    changed = await payment_worker.expire_subscriptions(async_session)
+    assert changed >= 1
+
+    after = (await client.get("/api/billing/me", headers=headers)).json()
+    assert after["subscription"]["status"] == "expired"
+    assert after["plan"]["tier"] == "starter"
+

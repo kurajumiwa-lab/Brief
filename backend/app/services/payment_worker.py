@@ -88,13 +88,40 @@ async def run_daily_reconciliation(session_factory) -> int:
         return n
 
 
+async def expire_subscriptions(session_factory) -> int:
+    """Advance the subscription lifecycle: trials end, grace lapses, periods close.
+
+    Without this pass a trialing subscription stays trialing forever and a lapsed
+    one keeps its features, because the state machine only moves when something
+    asks it to. Safe to run every minute: each branch is guarded by the status it
+    just changed.
+    """
+    from app.modules.billing import service as billing
+
+    async with session_factory() as db:
+        result = await billing.run_lifecycle_sweep(db)
+        changed = (
+            result["expired_trials"]
+            + result["expired_past_due"]
+            + result["cancelled_at_period_end"]
+        )
+        if changed:
+            log.info(
+                "billing sweep: %d trial(s), %d past-due, %d cancelled",
+                result["expired_trials"], result["expired_past_due"],
+                result["cancelled_at_period_end"],
+            )
+        return changed
+
+
 async def scheduler_loop(session_factory, interval_seconds: int = 60) -> None:
     log.info("💳 payments scheduler: every %ss", interval_seconds)
     while True:
         for name, job in (("expire intents", expire_stale_intents),
                           ("chama defaults", flag_chama_defaults),
                           ("murabaha defaults", flag_murabaha_defaults),
-                          ("daily reconciliation", run_daily_reconciliation)):
+                          ("daily reconciliation", run_daily_reconciliation),
+                          ("subscription lifecycle", expire_subscriptions)):
             try:
                 await job(session_factory)
             except asyncio.CancelledError:
