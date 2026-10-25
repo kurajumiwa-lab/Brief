@@ -258,6 +258,10 @@ export default function SafetyPage() {
             <strong>A moderator console.</strong> Reports are filed and stored; no one is shown them in this build.
           </li>
           <li>
+            <strong>Real media capture.</strong> Photos come from a fixed set of illustrations and the voice note
+            is a 24-second sample. The composer never opens your camera or microphone.
+          </li>
+          <li>
             <strong>Money.</strong> Tips and subscriptions through M-Pesa, MoMo or Airtel Money are out of scope
             until the core experience is validated — and any future payment would require a person to confirm it.
           </li>

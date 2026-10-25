@@ -159,9 +159,13 @@ export default function ComposePage() {
               onClick={() => setVoice(voice ? null : { seconds: 24, kb: 108 })}
             >
               <Mic size={13} aria-hidden="true" />
-              {voice ? "Voice note attached" : "Voice note"}
+              {voice ? "24 s sample attached" : "Voice note (sample)"}
             </button>
           </div>
+          <p className="hint" style={{ marginTop: 8 }}>
+            Photos and the voice note are samples from a fixed set. This prototype does not open your camera or
+            microphone — say so plainly rather than promising what it cannot do.
+          </p>
           {image && (
             <div className="post__media" style={{ margin: "8px 0 0", position: "relative" }}>
               <img src={image} alt="Attached" />

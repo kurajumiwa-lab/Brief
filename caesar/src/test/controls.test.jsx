@@ -178,6 +178,7 @@ describe("the prototype says what it does not do", () => {
     expect(screen.getByText(/^Privacy controls\.$/)).toBeInTheDocument();
     expect(screen.getByText(/^A moderator console\.$/)).toBeInTheDocument();
     expect(screen.getByText(/^Money\.$/)).toBeInTheDocument();
+    expect(screen.getByText(/^Real media capture\.$/)).toBeInTheDocument();
   });
 });
 
@@ -195,6 +196,14 @@ describe("the verdict panel behaves like a dialog", () => {
     fireEvent.keyDown(document, { key: "Escape" });
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(document.activeElement).toBe(opener);
+  });
+});
+
+describe("the composer is honest about its samples", () => {
+  it("labels the voice note a sample and says the mic is never opened", () => {
+    open("/compose");
+    expect(screen.getByRole("button", { name: /voice note \(sample\)/i })).toBeInTheDocument();
+    expect(screen.getByText(/does not open your camera or\s+microphone/i)).toBeInTheDocument();
   });
 });
 

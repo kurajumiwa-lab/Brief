@@ -9,7 +9,7 @@ compose, data saving, offline) or named as not built yet.
 cd caesar
 npm install
 npm run dev      # http://localhost:5180
-npm test         # 76 specs
+npm test         # 77 specs
 npm run build
 ```
 
@@ -157,7 +157,7 @@ src/pages/               Feed, Circles, Circle, Compose, Profile, Safety
 
 ## Tests
 
-76 specs across five files (`npm test`):
+77 specs across five files (`npm test`):
 
 - `ranking.test.js` (20) — small samples cannot decide, contested posts are never
   dropped and hold the floor, bursts are damped and nobody is banned, published
@@ -167,9 +167,10 @@ src/pages/               Feed, Circles, Circle, Compose, Profile, Safety
 - `feed.test.jsx` (12) — ordering by the published score, both reactions as
   peers, withdrawing and swapping, the panel printing the same score the feed
   used, and the brand line on the feed.
-- `controls.test.jsx` (24) — report ≠ hide, block/mute/unblock, offline queueing,
+- `controls.test.jsx` (25) — report ≠ hide, block/mute/unblock, offline queueing,
   data saver, language, theme, composer validation, circle join/leave, profile,
-  the dialog's focus handling, and the honesty list of what is not built.
+  the dialog's focus handling, the honesty list of what is not built, and the
+  composer labelling its media as samples.
 - `storage.test.js` (11) — old payloads, unparseable payloads, a browser that
   refuses to store, write-through, reset.
 
