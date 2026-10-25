@@ -130,7 +130,12 @@ narrower one.
 - Tokens for Deep Green `#0B3D2E`, Gold `#F2C14E`, Terracotta `#E07A5F`, Ivory
   `#FFF8E7`, plus a full dark theme (`ivory on green`, gold and terracotta kept
   to signals rather than surfaces).
-- Sora for the brand, Inter for the interface — as specified.
+- Sora for the brand, Inter for the interface — as specified, self-hosted from
+  `@fontsource-variable` and subset by `unicode-range` (≈82 KB of woff2 for the
+  Latin interface). No `fonts.googleapis.com` request, so the typography also
+  works in the offline state the app advertises.
+- The same geometry is the favicon: the badge, both thumbs and the continent,
+  inlined as one data URI in `index.html`.
 - The **Balanced Verdict mark** is drawn as vector (`src/components/Logo.jsx`):
   a green badge, a gold thumbs-up and a terracotta thumbs-down of identical size
   and mirrored position, with Africa at the centre. Symmetry is the argument:

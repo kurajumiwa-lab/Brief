@@ -48,8 +48,8 @@
   --shadow-md: 0 8px 24px -12px rgba(20, 35, 29, 0.22), 0 2px 6px rgba(20, 35, 29, 0.05);
   --shadow-lg: 0 24px 60px -24px rgba(11, 61, 46, 0.4);
 
-  --font-brand: "Sora", "Space Grotesk", "Trebuchet MS", system-ui, sans-serif;
-  --font-ui: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-brand: "Sora Variable", "Sora", "Space Grotesk", "Trebuchet MS", system-ui, sans-serif;
+  --font-ui: "Inter Variable", "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
 
   --page: var(--ivory);
   --surface: var(--paper);
