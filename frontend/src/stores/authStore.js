@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { clearCache as clearOfflineCache } from "@/lib/offline";
 import { persist } from "zustand/middleware";
 import { apiError, authAPI, vendorAPI } from "@/lib/api";
 import { ws } from "@/lib/ws";
@@ -92,6 +93,9 @@ export const useAuthStore = create(
       logout: () => {
         ws.disconnectAll();
         clearAllPendingReceipts();
+        // This device may be shared. Anything cached for offline reading is the
+        // departing account's business, so it leaves with them.
+        clearOfflineCache(get().vendor?.id);
         set({ token: null, refreshToken: null, vendor: null, ready: true, authError: null });
       },
     }),

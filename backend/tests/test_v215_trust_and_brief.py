@@ -400,3 +400,31 @@ async def test_billing_and_measurement_never_cross_tenants(client, monkeypatch):
     # Measurement is operator-only and aggregate; a plain vendor gets nothing.
     monkeypatch.setattr(live_settings, "OPERATOR_HANDLES", "somebody_else")
     assert (await client.get("/api/ops/measurement", headers=bob)).status_code == 403
+
+
+# --- benchmark gate: ship one only when the data and privacy allow it -----------
+
+async def test_the_benchmark_gate_refuses_on_an_empty_network(client, monkeypatch):
+    handle, headers, _ = await _vendor(client, "bench_gate")
+    monkeypatch.setattr(live_settings, "OPERATOR_HANDLES", handle)
+
+    body = (await client.get("/api/ops/measurement?days=30", headers=headers)).json()
+    gate = body["benchmark_gate"]
+
+    # A tiny network cannot publish a comparison, and the endpoint says why
+    # rather than returning an empty-looking "no data" screen.
+    assert gate["eligible"] is False
+    assert gate["reasons"]
+    assert gate["thresholds"]["min_vendors_per_cell"] == 5
+    assert "k_anonymity_rule" in gate
+    # Nothing is suppressed silently: the list exists even when it is empty.
+    assert isinstance(gate["suppressed_categories"], list)
+
+
+async def test_the_benchmark_gate_refuses_a_window_shorter_than_a_month(client, monkeypatch):
+    handle, headers, _ = await _vendor(client, "bench_window")
+    monkeypatch.setattr(live_settings, "OPERATOR_HANDLES", handle)
+
+    gate = (await client.get("/api/ops/measurement?days=7", headers=headers)).json()["benchmark_gate"]
+    assert gate["eligible"] is False
+    assert any("30" in reason for reason in gate["reasons"])

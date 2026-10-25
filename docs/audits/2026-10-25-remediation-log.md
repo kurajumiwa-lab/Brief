@@ -130,6 +130,10 @@ someone who never placed an order on the platform.
   completion rate, stock items, requests, offers, movements.
 - **Every number ships with the definition that produced it** — the response includes
   a `definitions` block, so a metric cannot drift from its meaning unnoticed.
+- `benchmark_gate` answers "may we publish a comparison?" in code: ≥25 vendors
+  with settled trade, ≥3 publishable categories, ≥5 vendors per published cell
+  (k-anonymity) and a ≥30-day window. It returns the reasons it is refusing and
+  the categories it suppressed — named, never silently rounded away.
 - `not_measured` names what the platform *cannot* honestly measure and why:
   `cost_per_vendor` (needs invoices this service cannot read), `brief_opens` (no
   client event store — adding one is a consent decision), `revenue` (payment intents
@@ -157,13 +161,14 @@ Executed 2026-10-25 in this environment:
 
 | Gate | Result |
 |---|---|
-| Backend suite | **322 passed** (audit baseline 280) |
-| Frontend suite | **227 passed**, 24 files (baseline 214) |
+| Backend suite | **324 passed** (audit baseline 280) |
+| Frontend suite | **237 passed**, 25 files (baseline 214) |
 | Production build | clean (`vite build`, ~6 s) |
 | ESLint (changed files) | clean |
 | Migration | `alembic upgrade head` + `downgrade -1` on empty DB: **PASS**; table/column parity **114/114** |
 | `alembic check` | **FAIL (pre-existing index-name drift)** — see §2 |
 | Live end-to-end on real Postgres | register `201` → brief cites the stock id → export `200` → ops `403`/`200` → measurement `200` → billing trial → mock payment `paid` → plan `readiness` → sweep `200` → metrics `200`/`404` → close `200`, then `401` |
+| Offline states (`/brief`, `/payments`) | **PASS** — cached copy paints while the radio is off, the refresh control is disabled rather than lying, the cache is per account and is purged on logout and account closure; 19 new tests across page and cache |
 | Tenant isolation (new surfaces) | **PASS** — another vendor's brief cites none of my owned record ids, my export contains none of their stock, their payment intent is a `404`, their subscription and invoices are invisible |
 | Flake note | one frontend failure was observed once in a full run and did not reproduce in two subsequent full runs (227/227 each). Recorded rather than hidden; worth watching. |
 | Deployed verification | **BLOCKED** — no Vercel egress |

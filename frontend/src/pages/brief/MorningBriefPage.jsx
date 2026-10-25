@@ -1,13 +1,15 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  AlertTriangle, ChevronRight, Clock, FileWarning, PackageX, RefreshCw, Sunrise,
+  AlertTriangle, ChevronRight, Clock, FileWarning, PackageX, RefreshCw, Sunrise, WifiOff,
 } from "lucide-react";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { PageSpinner } from "@/components/ui/Spinner";
 import EmptyState from "@/components/ui/EmptyState";
 import { briefAPI, apiError } from "@/lib/api";
+import { useCachedResource } from "@/lib/offline";
+import { useAuthStore } from "@/stores/authStore";
 
 /**
  * MORNING BRIEF — what needs your attention today (v2.15).
@@ -17,13 +19,14 @@ import { briefAPI, apiError } from "@/lib/api";
  * generated text, no model, and nothing on this screen can move money, stock or
  * a permission.
  *
- * States the screen must handle, in order of likelihood on a Kenyan network:
- * loading, offline/failed (retryable), empty (a real answer, not an error),
- * and populated.
+ * States this screen must handle, in order of likelihood on a Kenyan network:
+ * loading, offline-with-cache, empty (a real answer, not an error), populated,
+ * failed-with-cache (stale), and failed-with-nothing (retryable).
  */
 
 const KIND_META = {
   low_stock: { icon: PackageX, tone: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-500/10" },
+  receivables: { icon: Sunrise, tone: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-500/10" },
   pending_movements: { icon: Clock, tone: "text-sky-600 dark:text-sky-400", bg: "bg-sky-50 dark:bg-sky-500/10" },
   expiring_claims: { icon: FileWarning, tone: "text-rose-600 dark:text-rose-400", bg: "bg-rose-50 dark:bg-rose-500/10" },
   open_requests: { icon: Sunrise, tone: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-500/10" },
@@ -31,10 +34,7 @@ const KIND_META = {
 
 const SEVERITY_LABEL = { critical: "Needs you now", warning: "Worth doing", info: "When you have time" };
 
-/** How old a retained brief may be before we stop calling it "current".
- *  The endpoint recomputes on every call, so anything we are showing after a
- *  failed refresh is by definition a snapshot — say so rather than implying
- *  the numbers are live. */
+/** A retained copy is only "current" for a short while; after that, say so. */
 const STALE_AFTER_MS = 15 * 60 * 1000;
 
 const isStale = (iso) => {
@@ -56,29 +56,24 @@ function timeAgo(iso) {
 
 export default function MorningBriefPage() {
   const navigate = useNavigate();
-  const [brief, setBrief] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const accountId = useAuthStore((state) => state.vendor?.id);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const { data } = await briefAPI.morning();
-      setBrief(data);
-      setError(null);
-    } catch (err) {
-      // Keep the previous brief on screen. Losing a list of overdue movements
-      // because the network blipped is worse than showing it with a timestamp.
-      setError(apiError(err, "Could not load your brief"));
-    } finally {
-      setLoading(false);
-    }
+  const fetcher = useCallback(async () => {
+    const { data } = await briefAPI.morning();
+    return data;
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  const { data: brief, savedAt, fromCache, online, error, loading, reload } = useCachedResource({
+    name: "brief",
+    accountId,
+    fetcher,
+    errorFallback: (err) => apiError(err, "Could not load your brief"),
+  });
 
   if (loading && !brief) return <PageSpinner label="Reading your records…" />;
+
+  const offline = !online;
+  const staleCopy = Boolean(brief && (fromCache || error));
 
   return (
     <div className="space-y-4">
@@ -92,12 +87,42 @@ export default function MorningBriefPage() {
               : "Here is what needs your attention — each line links to its record."}
           </p>
         </div>
-        <Button variant="ghost" size="sm" onClick={load} disabled={loading} aria-label="Refresh brief">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={reload}
+          disabled={loading || offline}
+          aria-label="Refresh brief"
+          title={offline ? "Reconnect to refresh" : undefined}
+        >
           <RefreshCw size={15} className={loading ? "animate-spin" : undefined} />
           Refresh
         </Button>
       </div>
 
+      {/* Offline is a state, not an error: the records are not wrong, the radio is. */}
+      {offline && (
+        <Card className="border-amber-300/70 dark:border-amber-500/40" >
+          <div className="flex items-start gap-2.5">
+            <WifiOff size={18} className="text-amber-700 dark:text-amber-400 shrink-0 mt-0.5" />
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-ink-1">You are offline</p>
+              <p className="text-2xs text-ink-3 mt-0.5 leading-relaxed">
+                {brief
+                  ? `Showing the copy saved on this device${savedAt ? ` at ${new Date(savedAt).toLocaleString()}` : ""}. Counts may have moved since — they will be checked when you reconnect.`
+                  : "Nothing saved on this device yet. Reconnect to read your brief for the first time."}
+              </p>
+              {!brief && (
+                <Button size="sm" variant="secondary" className="mt-2" onClick={reload}>
+                  Try again
+                </Button>
+              )}
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Failed with nothing cached: the only honest thing is a retry. */}
       {error && !brief && (
         <Card className="border-rose-200 dark:border-rose-500/30">
           <div className="flex items-start gap-2.5">
@@ -105,14 +130,14 @@ export default function MorningBriefPage() {
             <div className="min-w-0">
               <p className="text-sm font-semibold text-ink-1">The brief could not be loaded</p>
               <p className="text-2xs text-ink-3 mt-0.5">{error}</p>
-              <Button size="sm" variant="secondary" className="mt-2" onClick={load}>Try again</Button>
+              <Button size="sm" variant="secondary" className="mt-2" onClick={reload}>Try again</Button>
             </div>
           </div>
         </Card>
       )}
 
       {/* A retained brief after a failed refresh is a snapshot, not a live view. */}
-      {error && brief && (
+      {error && brief && !offline && (
         <Card className="border-amber-200 dark:border-amber-500/30">
           <div className="flex items-start gap-2.5">
             <AlertTriangle size={18} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
@@ -124,7 +149,7 @@ export default function MorningBriefPage() {
                 Generated {brief.generated_at ? new Date(brief.generated_at).toLocaleString() : "earlier"}
                 {" · "}counts may have moved since. {error}
               </p>
-              <Button size="sm" variant="secondary" className="mt-2" onClick={load} disabled={loading}>
+              <Button size="sm" variant="secondary" className="mt-2" onClick={reload} disabled={loading}>
                 Retry
               </Button>
             </div>
@@ -132,7 +157,7 @@ export default function MorningBriefPage() {
         </Card>
       )}
 
-      {brief && !error && isStale(brief.generated_at) && (
+      {brief && !staleCopy && isStale(brief.generated_at) && (
         <p className="text-micro text-amber-700 dark:text-amber-400 px-1">
           This brief was generated {brief.generated_at ? new Date(brief.generated_at).toLocaleString() : "earlier"}.
           Refresh before acting on it.

@@ -882,6 +882,35 @@ export default function Ops() {
             ))}
           </div>
 
+          {measurement.benchmark_gate && (
+            <div className={`rounded-xl border p-3 ${
+              measurement.benchmark_gate.eligible
+                ? "border-emerald-300/60 bg-emerald-50 dark:bg-emerald-500/10"
+                : "border-edge-1 bg-surface-2"
+            }`}>
+              <div className="text-xs font-semibold text-ink-2">
+                Benchmark: {measurement.benchmark_gate.eligible ? "eligible" : "not yet eligible"}
+              </div>
+              {measurement.benchmark_gate.reasons?.length ? (
+                <ul className="mt-1.5 space-y-1">
+                  {measurement.benchmark_gate.reasons.map((reason) => (
+                    <li key={reason} className="text-2xs text-ink-3 leading-relaxed">· {reason}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-2xs text-ink-3 mt-1 leading-relaxed">
+                  {measurement.benchmark_gate.k_anonymity_rule}
+                </p>
+              )}
+              <p className="text-micro text-ink-4 mt-1.5">
+                {measurement.benchmark_gate.observed.vendors_with_settled_trade} vendors with settled trade ·{" "}
+                {measurement.benchmark_gate.observed.categories_publishable} publishable categor
+                {measurement.benchmark_gate.observed.categories_publishable === 1 ? "y" : "ies"} · cell minimum{" "}
+                {measurement.benchmark_gate.thresholds.min_vendors_per_cell} vendors
+              </p>
+            </div>
+          )}
+
           <details className="rounded-xl border border-edge-1 bg-surface-2 p-3">
             <summary className="cursor-pointer text-xs font-semibold text-ink-2">
               How each of these is calculated

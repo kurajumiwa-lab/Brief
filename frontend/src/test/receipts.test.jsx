@@ -35,7 +35,10 @@ const renderPage = () =>
   );
 
 describe("Receipts", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    window.localStorage.clear(); // the page caches the last good list per account
+  });
 
   it("shows the provider's receipt only when the payment is settled", async () => {
     receiptsAPI.list.mockResolvedValue({ data: ROWS });
@@ -84,5 +87,24 @@ describe("Receipts", () => {
     receiptsAPI.list.mockResolvedValueOnce({ data: ROWS });
     fireEvent.click(screen.getByRole("button", { name: /Try again/ }));
     await waitFor(() => expect(screen.getByText("Receipt SJK4ABCD12")).toBeInTheDocument());
+  });
+
+  it("shows the saved list offline and warns that a payment may still settle", async () => {
+    receiptsAPI.list.mockResolvedValueOnce({ data: ROWS });
+    const first = renderPage();
+    await screen.findByText("Receipt SJK4ABCD12");
+    first.unmount();
+
+    receiptsAPI.list.mockClear();
+    const onlineSpy = vi.spyOn(window.navigator, "onLine", "get").mockReturnValue(false);
+    renderPage();
+
+    expect(await screen.findByText("You are offline")).toBeInTheDocument();
+    expect(screen.getByText("Receipt SJK4ABCD12")).toBeInTheDocument();
+    expect(screen.getByText(/A payment can still settle while you are offline/)).toBeInTheDocument();
+    expect(receiptsAPI.list).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: /Refresh receipts/ })).toBeDisabled();
+
+    onlineSpy.mockRestore();
   });
 });

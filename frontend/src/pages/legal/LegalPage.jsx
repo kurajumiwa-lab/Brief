@@ -6,6 +6,7 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { toast } from "@/components/ui/Toast";
 import { accountAPI, apiError } from "@/lib/api";
+import { clearCache } from "@/lib/offline";
 import { useAuthStore } from "@/stores/authStore";
 
 /**
@@ -90,6 +91,8 @@ export default function LegalPage() {
     setBusy(true);
     try {
       await accountAPI.close(confirm.trim(), reason.trim() || undefined);
+      // Closed means gone from this device too, not just from the server.
+      clearCache(vendor?.id);
       toast.success("Your account is closed");
       logout();
     } catch (err) {

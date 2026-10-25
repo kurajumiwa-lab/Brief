@@ -1,12 +1,14 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { AlertTriangle, CheckCircle2, Clock, Receipt, RefreshCw, XCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Clock, Receipt, RefreshCw, WifiOff, XCircle } from "lucide-react";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import { PageSpinner } from "@/components/ui/Spinner";
 import EmptyState from "@/components/ui/EmptyState";
 import { receiptsAPI, apiError } from "@/lib/api";
+import { useCachedResource } from "@/lib/offline";
+import { useAuthStore } from "@/stores/authStore";
 
 /**
  * RECEIPTS (v2.15, Track 1).
@@ -47,41 +49,42 @@ const KIND_LABEL = {
 };
 
 export default function ReceiptsPage() {
-  const [rows, setRows] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [filter, setFilter] = useState("all");
+  const accountId = useAuthStore((state) => state.vendor?.id);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const { data } = await receiptsAPI.list();
-      setRows(data || []);
-      setError(null);
-    } catch (err) {
-      setError(apiError(err, "Could not load your receipts"));
-    } finally {
-      setLoading(false);
-    }
+  const fetcher = useCallback(async () => {
+    const { data } = await receiptsAPI.list();
+    return data || [];
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  const {
+    data: rows, savedAt, fromCache, online, error, loading, reload: load,
+  } = useCachedResource({
+    name: "receipts",
+    accountId,
+    fetcher,
+    errorFallback: (err) => apiError(err, "Could not load your receipts"),
+  });
+
+  // Stable identity: the hook returns a new array reference only when data changes.
+  const receipts = useMemo(() => rows || [], [rows]);
+  const offline = !online;
 
   const visible = useMemo(
-    () => (filter === "all" ? rows : rows.filter((r) => r.status === filter)),
-    [rows, filter]
+    () => (filter === "all" ? receipts : receipts.filter((r) => r.status === filter)),
+    [receipts, filter]
   );
 
   const totals = useMemo(() => {
-    const paid = rows.filter((r) => r.status === "completed");
+    const paid = receipts.filter((r) => r.status === "completed");
     return {
       paidCount: paid.length,
       paidAmount: paid.reduce((sum, r) => sum + Number(r.amount_ksh || 0), 0),
-      unsettled: rows.filter((r) => r.status === "pending" || r.status === "failed").length,
+      unsettled: receipts.filter((r) => r.status === "pending" || r.status === "failed").length,
     };
-  }, [rows]);
+  }, [receipts]);
 
-  if (loading && rows.length === 0) return <PageSpinner label="Reading your payment records…" />;
+  if (loading && receipts.length === 0) return <PageSpinner label="Reading your payment records…" />;
 
   return (
     <div className="max-w-3xl space-y-4">
@@ -93,13 +96,36 @@ export default function ReceiptsPage() {
             Every payment attempt you made, and what the provider said about it.
           </p>
         </div>
-        <Button variant="ghost" size="sm" onClick={load} disabled={loading} aria-label="Refresh receipts">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={load}
+          disabled={loading || offline}
+          aria-label="Refresh receipts"
+          title={offline ? "Reconnect to refresh" : undefined}
+        >
           <RefreshCw size={15} className={loading ? "animate-spin" : undefined} />
           Refresh
         </Button>
       </div>
 
-      {error && (
+      {offline && (
+        <Card className="border-amber-300/70 dark:border-amber-500/40">
+          <div className="flex items-start gap-2.5">
+            <WifiOff size={18} className="text-amber-700 dark:text-amber-400 mt-0.5 shrink-0" />
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-ink-1">You are offline</p>
+              <p className="text-2xs text-ink-3 mt-0.5 leading-relaxed">
+                {receipts.length
+                  ? `Showing receipts saved on this device${savedAt ? ` at ${new Date(savedAt).toLocaleString()}` : ""}. A payment can still settle while you are offline — check again when you reconnect.`
+                  : "Nothing saved on this device yet. Reconnect to read your receipts."}
+              </p>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {error && !offline && (
         <Card className="border-rose-200 dark:border-rose-500/30">
           <div className="flex items-start gap-2.5">
             <AlertTriangle size={18} className="text-rose-600 dark:text-rose-400 mt-0.5 shrink-0" />
@@ -112,7 +138,7 @@ export default function ReceiptsPage() {
         </Card>
       )}
 
-      {!error && (
+      {receipts.length > 0 && (
         <div className="grid grid-cols-3 gap-2">
           <Card className="py-3">
             <p className="text-micro uppercase tracking-wide text-ink-4">Paid</p>
@@ -126,7 +152,7 @@ export default function ReceiptsPage() {
           </Card>
           <Card className="py-3">
             <p className="text-micro uppercase tracking-wide text-ink-4">Attempts</p>
-            <p className="text-base font-bold text-ink-1 mt-0.5">{rows.length}</p>
+            <p className="text-base font-bold text-ink-1 mt-0.5">{receipts.length}</p>
             <p className="text-micro text-ink-4">last 100</p>
           </Card>
         </div>
@@ -154,9 +180,9 @@ export default function ReceiptsPage() {
         <Card>
           <EmptyState
             icon={Receipt}
-            title={rows.length ? "Nothing in this state" : "No payments yet"}
+            title={receipts.length ? "Nothing in this state" : "No payments yet"}
             description={
-              rows.length
+              receipts.length
                 ? "Switch the filter to see your other payment attempts."
                 : "When you pay for an order or a market run, the attempt appears here with its receipt."
             }
@@ -226,6 +252,7 @@ export default function ReceiptsPage() {
       <p className="text-micro text-ink-4 px-1 leading-relaxed">
         A payment becomes “Paid” only when the provider confirms it. This page reads records; it
         cannot move money.
+        {fromCache && !offline ? " Showing a copy saved on this device while the network recovers." : ""}
       </p>
     </div>
   );

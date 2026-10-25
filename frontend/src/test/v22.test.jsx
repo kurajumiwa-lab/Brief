@@ -54,6 +54,14 @@ const MEASUREMENT = {
   funnel: { registered: 12, activated: 7, activation_rate: 0.5833, repeated: 4, repeat_rate: 0.5714, active_last_7_days: 3 },
   commerce: { payment_intents: { completed: 5, failed: 1 }, completion_rate: 0.8333, stock_items_created: 9 },
   not_measured: [{ metric: "cost_per_vendor", reason: "Needs invoices this service cannot read." }],
+  benchmark_gate: {
+    eligible: false,
+    reasons: ["3 vendor(s) with settled trade; at least 25 are needed before a comparison means anything."],
+    thresholds: { min_vendors: 25, min_categories: 3, min_vendors_per_cell: 5, min_window_days: 30 },
+    observed: { vendors_with_settled_trade: 3, categories_considered: 1, categories_publishable: 0 },
+    suppressed_categories: [{ category: "produce", vendors: 3 }],
+    k_anonymity_rule: "No published cell describes fewer than 5 vendors.",
+  },
 };
 
 const LIST = { id: "l1", name: "Nairobi Fresh Produce Vendors", patron_business: "Mama Mboga Fresh", patron_handle: "mama_mboga", avg_rating: 4.5, review_count: 2, member_count: 12, max_vendors: 100, is_open: true, requires_approval: true, i_run_it: false, my_status: "approved" };
@@ -407,6 +415,9 @@ describe("Ops console", () => {
     expect(await screen.findByText("Activation & usage")).toBeInTheDocument();
     expect(screen.getByText(/7 · 58%/)).toBeInTheDocument();
     expect(screen.getByText("Not measured — and not estimated")).toBeInTheDocument();
+    // A benchmark is refused on evidence, not on mood.
+    expect(screen.getByText("Benchmark: not yet eligible")).toBeInTheDocument();
+    expect(screen.getByText(/at least 25 are needed/)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /raw scrape/i }));
     await waitFor(() => expect(api.opsAPI.metrics).toHaveBeenCalled());

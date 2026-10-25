@@ -25,6 +25,14 @@ from app.modules.trade.models import BusinessRequest, RequestOffer
 # A vendor whose handle starts with this was closed through /api/vendors/me/close.
 CLOSED_PREFIX = "closed_"
 
+# A benchmark is only worth publishing if no row in it can be traced to one
+# business, and if there is enough trade to say anything at all. These are the
+# thresholds the brief asked for; they are checked here rather than remembered.
+BENCHMARK_MIN_VENDORS = 25          # distinct vendors with settled trade in the window
+BENCHMARK_MIN_CATEGORIES = 3        # categories that can be published at all
+BENCHMARK_MIN_VENDORS_PER_CELL = 5  # k-anonymity: no cell describes fewer than 5 vendors
+BENCHMARK_MIN_WINDOW_DAYS = 30
+
 DEFINITIONS = {
     "registered": "Vendor rows that have not been closed through the data-rights workflow.",
     "activated": (
@@ -120,6 +128,77 @@ async def _ever_activated_ids(db: AsyncSession) -> set[str]:
     return ids
 
 
+async def benchmark_gate(db: AsyncSession, since: datetime, days: int) -> dict:
+    """Whether a price/volume benchmark would be credible *and* safe to publish.
+
+    Two different failures, reported separately because they need different
+    answers: not enough trade yet (wait), or cells that would identify a single
+    business (suppress, never publish).
+    """
+    rows = (await db.execute(
+        select(
+            StockItem.category,
+            func.count(distinct(StockMovement.from_vendor_id)).label("vendors"),
+            func.count(StockMovement.id).label("movements"),
+        )
+        .join(StockItem, StockItem.id == StockMovement.stock_item_id)
+        .where(
+            StockMovement.created_at >= since,
+            StockMovement.status == "received",
+            StockItem.category.isnot(None),
+        )
+        .group_by(StockItem.category)
+    )).all()
+
+    total_vendors = (await db.execute(
+        select(func.count(distinct(StockMovement.from_vendor_id)))
+        .where(StockMovement.created_at >= since, StockMovement.status == "received")
+    )).scalar_one()
+
+    publishable = [r for r in rows if r.vendors >= BENCHMARK_MIN_VENDORS_PER_CELL]
+    suppressed = [
+        {"category": r.category, "vendors": r.vendors}
+        for r in rows if r.vendors < BENCHMARK_MIN_VENDORS_PER_CELL
+    ]
+
+    reasons = []
+    if days < BENCHMARK_MIN_WINDOW_DAYS:
+        reasons.append(f"The window is {days} days; a benchmark needs at least {BENCHMARK_MIN_WINDOW_DAYS}.")
+    if total_vendors < BENCHMARK_MIN_VENDORS:
+        reasons.append(
+            f"{total_vendors} vendor(s) with settled trade; at least {BENCHMARK_MIN_VENDORS} are needed "
+            "before a comparison means anything."
+        )
+    if len(publishable) < BENCHMARK_MIN_CATEGORIES:
+        reasons.append(
+            f"{len(publishable)} categor{'y' if len(publishable) == 1 else 'ies'} can be published at "
+            f"{BENCHMARK_MIN_VENDORS_PER_CELL} vendors or more; {BENCHMARK_MIN_CATEGORIES} are needed."
+        )
+
+    return {
+        "eligible": not reasons,
+        "reasons": reasons,
+        "thresholds": {
+            "min_vendors": BENCHMARK_MIN_VENDORS,
+            "min_categories": BENCHMARK_MIN_CATEGORIES,
+            "min_vendors_per_cell": BENCHMARK_MIN_VENDORS_PER_CELL,
+            "min_window_days": BENCHMARK_MIN_WINDOW_DAYS,
+        },
+        "observed": {
+            "vendors_with_settled_trade": total_vendors,
+            "categories_considered": len(rows),
+            "categories_publishable": len(publishable),
+        },
+        # Named, not silently dropped: a supplier whose category is suppressed
+        # should be able to see why their numbers are not in the comparison.
+        "suppressed_categories": suppressed,
+        "k_anonymity_rule": (
+            "No published cell describes fewer than "
+            f"{BENCHMARK_MIN_VENDORS_PER_CELL} vendors. Cells below that are suppressed, never rounded."
+        ),
+    }
+
+
 async def build(db: AsyncSession, days: int = 30) -> dict:
     now = datetime.utcnow()
     days = max(1, min(int(days), 180))
@@ -194,6 +273,7 @@ async def build(db: AsyncSession, days: int = 30) -> dict:
             "requests_created": requests_created,
             "offers_made": offers_made,
         },
+        "benchmark_gate": await benchmark_gate(db, since, days),
         "not_measured": [
             {
                 "metric": "cost_per_vendor",
