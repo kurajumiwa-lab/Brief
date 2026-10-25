@@ -34,6 +34,20 @@ from app.models.vendor import Vendor
 from app.modules.standing import sweep as standing_sweep
 from app.platform import event_outbox
 from app.routes.auth import get_current_vendor
+
+
+async def require_operator(vendor: Vendor = Depends(get_current_vendor)) -> Vendor:
+    """Platform operations access (v2.15).
+
+    Every /api/ops/* route exposes internal state (pool health, slow routes,
+    error rates) or drives jobs. Before this dependency existed, any signed-in
+    vendor could read it and start a job (audit 2026-10-25, G-05). The role is
+    an explicit allowlist in config, so it fails closed when OPERATOR_HANDLES
+    is unset.
+    """
+    if not settings.is_operator(vendor.vendor_handle):
+        raise HTTPException(403, "This operations surface is restricted to platform operators")
+    return vendor
 from app.services import (
     governance,
     hustle,
@@ -314,13 +328,31 @@ async def _execute_workflow(
     return record
 
 
+def _payment_reason() -> str:
+    provider = (settings.PSP_PROVIDER or "mock").strip().lower()
+    if provider == "mock":
+        return ("PSP_PROVIDER=mock: simulated payments are refused in production, "
+                "so no real money can be collected until a licensed PSP is configured")
+    if provider == "intasend":
+        return "IntaSend is selected but PSP_API_KEY / PSP_API_SECRET are not both set"
+    return f"Unknown PSP_PROVIDER {provider!r} (use intasend)"
+
+
 @router.get("/metrics", include_in_schema=True, response_class=PlainTextResponse)
 async def prometheus_metrics(
     request: Request,
     token: str = Query(None),
 ):
-    """Prometheus scrape target. Add `?token=` when METRICS_TOKEN is set."""
-    if settings.METRICS_TOKEN:
+    """Prometheus scrape target. Add `?token=` when METRICS_TOKEN is set.
+
+    Production requires the token: without it the scrape target exposes traffic
+    volume, latency and error rates to anyone who finds the URL (audit G-10), so
+    an unconfigured production deployment serves 404 here instead of data.
+    """
+    if not settings.METRICS_TOKEN:
+        if settings.is_production:
+            raise HTTPException(404, "Not Found")
+    else:
         bearer = request.headers.get("authorization", "")
         supplied = token or (bearer[7:] if bearer.lower().startswith("bearer ") else "")
         if supplied != settings.METRICS_TOKEN:
@@ -330,7 +362,7 @@ async def prometheus_metrics(
 
 @router.get("/ops/status")
 async def ops_status(
-    vendor: Vendor = Depends(get_current_vendor),
+    vendor: Vendor = Depends(require_operator),
 ):
     """Latency, error rates, pool health and config facts — one screen."""
     resolved_tiles = tile_providers.tile_config(
@@ -356,6 +388,12 @@ async def ops_status(
             "rate_limiter_backend": type(current_backend()).__name__,
             "storage": storage_mode(),
             "redis_configured": bool(settings.REDIS_URL),
+            "operator_gate": True,
+        },
+        "payments": {
+            "provider": (settings.PSP_PROVIDER or "mock").strip().lower(),
+            "available": settings.payments_available,
+            "reason": None if settings.payments_available else _payment_reason(),
         },
         "database": {"reachable": db_ok, "error": db_error, "pool": _pool_stats()},
         "http": summary,
@@ -388,7 +426,7 @@ async def ops_status(
 
 @router.get("/ops/slow")
 async def slow_requests(
-    vendor: Vendor = Depends(get_current_vendor),
+    vendor: Vendor = Depends(require_operator),
 ):
     """The routes currently breaching SLOW_REQUEST_MS, worst p95 first."""
     summary = registry.summary()
@@ -398,7 +436,7 @@ async def slow_requests(
 @router.get("/ops/jobs")
 async def list_ops_jobs(
     status: Optional[str] = Query(None),
-    vendor: Vendor = Depends(get_current_vendor),
+    vendor: Vendor = Depends(require_operator),
     db: AsyncSession = Depends(get_db),
 ):
     """Return live job counts, worker diagnostics, supported workflows, and recent jobs."""
@@ -538,7 +576,7 @@ async def list_ops_jobs(
 @router.post("/ops/jobs", status_code=201)
 async def create_or_run_ops_job(
     body: OpsJobCreateRequest,
-    vendor: Vendor = Depends(get_current_vendor),
+    vendor: Vendor = Depends(require_operator),
     db: AsyncSession = Depends(get_db),
 ):
     """Validate, preview (dry_run=True), or execute a job from the Operations Center."""
@@ -575,7 +613,7 @@ async def create_or_run_ops_job(
 async def act_on_ops_job(
     job_id: str,
     body: OpsJobActionRequest,
-    vendor: Vendor = Depends(get_current_vendor),
+    vendor: Vendor = Depends(require_operator),
     db: AsyncSession = Depends(get_db),
 ):
     """Retry a previous job run or cancel an open Squad Job-Call / queued job."""

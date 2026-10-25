@@ -108,6 +108,11 @@ async def get_current_vendor(
     vendor = (await db.execute(select(Vendor).where(Vendor.id == vendor_id))).scalar_one_or_none()
     if vendor is None:
         raise credentials_exception
+    # A closed account keeps its row (the ledger needs one) but must not keep a
+    # live session: closing replaces the handle with the `closed_` prefix and
+    # destroys the password, so both the token and the old credentials die here.
+    if (vendor.vendor_handle or "").startswith("closed_"):
+        raise credentials_exception
 
     # Governance activity eligibility is distinct-day based, not request-volume
     # based. Postgres uniqueness makes repeated reads/votes in one local day count once.

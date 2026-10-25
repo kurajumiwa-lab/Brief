@@ -623,4 +623,17 @@ export const opsAPI = {
   actOnJob: (id, body) => api.post(`/ops/jobs/${id}/action`, body),
 };
 
+// ── Morning Brief and account rights (v2.15) ───────────────────────────────
+export const briefAPI = {
+  /** Read-only, vendor-scoped, every line cited. No parameters: the token decides. */
+  morning: () => api.get("/brief/morning"),
+};
+
+export const accountAPI = {
+  /** Everything this account put into the network, as one JSON document. */
+  export: () => api.get("/vendors/me/export"),
+  /** Irreversible: anonymises the identity, keeps the trade record. */
+  close: (confirmation, reason) => api.post("/vendors/me/close", { confirmation, reason }),
+};
+
 export default api;

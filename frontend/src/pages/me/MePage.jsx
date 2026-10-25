@@ -57,6 +57,18 @@ const QUICK_ACTIONS = [
     to: () => "/passport",
     icon: FileCheck,
   },
+  {
+    title: "Morning brief",
+    description: "What needs your attention today",
+    to: () => "/brief",
+    icon: Sparkles,
+  },
+  {
+    title: "Trust & data",
+    description: "Export your records or close the account",
+    to: () => "/legal",
+    icon: ShieldCheck,
+  },
 ];
 
 const DESTINATIONS = [

@@ -1,3 +1,5 @@
+import uuid
+from datetime import datetime
 from typing import List, Optional
 from uuid import UUID
 
@@ -490,4 +492,176 @@ async def my_patron_status(
         "total_events_organized": patron.total_events_organized,
         "reputation_score": patron.reputation_score,
         **patron_service.limits_for(patron),
+    }
+
+
+# ── Data-subject rights (v2.15) ────────────────────────────────────────────
+# Kenya's Data Protection Act 2019 gives a person the right to a copy of their
+# own data and to have it erased. Both are scoped to the authenticated vendor:
+# there is no id parameter, so a token can only ever act on itself.
+
+@router.get("/me/export")
+async def export_my_records(
+    vendor: Vendor = Depends(get_current_vendor),
+    db: AsyncSession = Depends(get_db),
+):
+    """Everything this account put into the network, as one JSON document.
+
+    Financial and audit records are included because they are the member's own
+    trade history; records that belong to the *other* side of a transaction are
+    summarised, not copied (their notes and evidence are theirs).
+    """
+    from app.models.stock import StockItem, StockMovement
+    from app.models.chat import ChatMessage, chat_room_participants
+    from app.modules.standing.models import BusinessClaim
+    from app.modules.trade.models import BusinessRequest, RequestOffer
+
+    def _row(obj, fields):
+        return {f: getattr(obj, f, None) for f in fields}
+
+    stock = (await db.execute(select(StockItem).where(StockItem.vendor_id == vendor.id))).scalars().all()
+    movements = (await db.execute(
+        select(StockMovement).where(
+            or_(StockMovement.from_vendor_id == vendor.id, StockMovement.to_vendor_id == vendor.id)
+        )
+    )).scalars().all()
+    requests = (await db.execute(
+        select(BusinessRequest).where(BusinessRequest.requester_vendor_id == vendor.id)
+    )).scalars().all()
+    offers = (await db.execute(
+        select(RequestOffer).where(RequestOffer.responder_vendor_id == vendor.id)
+    )).scalars().all()
+    claims = (await db.execute(
+        select(BusinessClaim).where(BusinessClaim.vendor_id == vendor.id)
+    )).scalars().all()
+    messages = (await db.execute(
+        select(ChatMessage).where(ChatMessage.sender_id == vendor.id).limit(5000)
+    )).scalars().all()
+    rooms = (await db.execute(
+        select(chat_room_participants.c.room_id).where(chat_room_participants.c.vendor_id == vendor.id)
+    )).scalars().all()
+
+    iso = lambda value: value.isoformat() if hasattr(value, "isoformat") else value
+    return {
+        "exported_at": datetime.utcnow().isoformat() + "Z",
+        "format_version": 1,
+        "account": {
+            "id": str(vendor.id),
+            "vendor_handle": vendor.vendor_handle,
+            "business_name": vendor.business_name,
+            "account_kind": vendor.account_kind,
+            "email": vendor.email,
+            "phone": vendor.phone,
+            "physical_location": vendor.physical_location,
+            "business_description": vendor.business_description,
+            "business_categories": vendor.business_categories,
+            "joined_at": iso(vendor.joined_at),
+            "plan_tier": vendor.plan_tier,
+            "current_role": getattr(vendor.current_role, "value", vendor.current_role),
+        },
+        "stock_items": [
+            {k: iso(v) for k, v in _row(s, ("id", "name", "sku", "category", "quantity_in_stock",
+                                          "quantity_available", "unit_of_measure", "unit_price",
+                                          "cost_price", "status", "updated_at")).items()}
+            for s in stock
+        ],
+        "stock_movements": [
+            {k: iso(v) for k, v in _row(m, ("id", "stock_item_id", "from_vendor_id", "to_vendor_id",
+                                            "quantity", "unit_price", "total_value", "movement_type",
+                                            "status", "created_at")).items()}
+            for m in movements
+        ],
+        "requests": [
+            {k: iso(v) for k, v in _row(r, ("id", "request_type", "description", "location",
+                                            "budget_kes", "status", "created_at", "closed_at")).items()}
+            for r in requests
+        ],
+        "offers_made": [
+            {k: iso(v) for k, v in _row(o, ("id", "request_id", "price_kes", "note", "lead_time",
+                                            "status", "created_at")).items()}
+            for o in offers
+        ],
+        "claims": [
+            {k: iso(v) for k, v in _row(c, ("id", "claim_key", "status", "method", "reference",
+                                            "issued_on", "expires_on", "created_at")).items()}
+            for c in claims
+        ],
+        "chat": {
+            "rooms_joined": len(rooms),
+            "messages_sent": [{k: iso(v) for k, v in _row(m, ("id", "room_id", "created_at")).items()}
+                              for m in messages],
+        },
+        "notes": [
+            "Amounts are in Kenya Shillings (integer) unless stated otherwise.",
+            "Counterparty identities, evidence files and notes written by other "
+            "members are not included: they are that member's data, not yours.",
+            "Account closure keeps financial and audit records; see POST /api/vendors/me/close.",
+        ],
+    }
+
+
+class CloseAccountRequest(BaseModel):
+    confirmation: str          # must be the vendor handle, typed by the owner
+    reason: Optional[str] = None
+
+
+@router.post("/me/close")
+async def close_my_account(
+    data: CloseAccountRequest,
+    vendor: Vendor = Depends(get_current_vendor),
+    db: AsyncSession = Depends(get_db),
+):
+    """Close this account and erase its identifying fields.
+
+    Erasure is not the same as deleting everything: an append-only ledger and a
+    counterparty's records of a real trade have to survive (the audit trail is
+    the product's promise). So this anonymises the *identity* — handle, name,
+    email, phone, location, description — while stock, movements and claims are
+    withdrawn rather than rewritten. Trading history stays attributable to an
+    opaque id, which is what an accountant or a dispute needs.
+
+    A closed account cannot sign in: the password hash is replaced with a value
+    that can never match.
+    """
+    expected = (vendor.vendor_handle or "").strip().lower()
+    if (data.confirmation or "").strip().lower().lstrip("@") != expected:
+        raise HTTPException(
+            400,
+            "Type your handle to confirm: closing an account cannot be undone",
+        )
+
+    from app.models.stock import StockItem
+    from app.modules.standing.models import BusinessClaim, ClaimStatus
+
+    retired = f"closed_{uuid.uuid4().hex[:12]}"
+    vendor.vendor_handle = retired
+    vendor.business_name = "Closed account"
+    vendor.email = f"{retired}@closed.invalid"
+    vendor.phone = None
+    vendor.physical_location = None
+    vendor.business_description = None
+    vendor.business_categories = []
+    vendor.home_storefront_config = {}
+    vendor.allow_direct_calls = False
+    vendor.hide_exact_location = True
+    # `!` is not a valid bcrypt hash prefix, so verify() can never return True.
+    vendor.password_hash = "!closed"
+
+    # Withdraw what would otherwise advertise a business that no longer exists.
+    for item in (await db.execute(select(StockItem).where(StockItem.vendor_id == vendor.id))).scalars():
+        item.quantity_available = 0
+    for claim in (await db.execute(
+        select(BusinessClaim).where(BusinessClaim.vendor_id == vendor.id)
+    )).scalars():
+        claim.status = ClaimStatus.WITHDRAWN
+
+    await db.commit()
+    return {
+        "closed": True,
+        "closed_at": datetime.utcnow().isoformat() + "Z",
+        "erased": ["handle", "name", "email", "phone", "location", "description",
+                   "categories", "password", "storefront", "claims"],
+        "retained": ["trade and custody records", "audit history", "counterparty records"],
+        "note": "Your records are kept so the other side of every trade keeps a "
+                "valid history. Contact support to request full erasure review.",
     }

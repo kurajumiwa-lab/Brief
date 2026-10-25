@@ -11,6 +11,8 @@ import MarketDetail from "@/pages/markets/MarketDetail";
 import TaskTrack from "@/pages/tasks/TaskTrack";
 import StorefrontPage from "@/pages/storefront/StorefrontPage";
 import CreatePage from "@/pages/create/CreatePage";
+import MorningBriefPage from "@/pages/brief/MorningBriefPage";
+import LegalPage from "@/pages/legal/LegalPage";
 import { useAuthStore } from "@/stores/authStore";
 
 // Every page is lazy. The home screen downloads only what it renders —
@@ -142,6 +144,9 @@ export default function App() {
               (/orders, /tasks, /locks, /tools) under Work; business routes
               under /me. Nothing was deleted — only duplicated navigation. */}
           <Route path="/" element={<HomeHub />} />
+          {/* v2.15 — the read-only brief, and the trust/data-rights surface */}
+          <Route path="/brief" element={<MorningBriefPage />} />
+          <Route path="/legal" element={<LegalPage />} />
           {/* ── Outside destinations (v4) ──────────────────────────────────
               Explore absorbs Browse's discovery surfaces; Activity absorbs
               Work and Inbox. Every older URL below still resolves and still
