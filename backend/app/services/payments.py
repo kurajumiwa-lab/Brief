@@ -226,6 +226,15 @@ async def process_inbound_event(event: dict) -> bool:
                 handled = await _on_refund_completed(db, event)
             elif event_type == "refund.failed":
                 handled = await _on_refund_failed(db, event)
+            elif event_type.startswith("subscription."):
+                # Track 2 arrives through the same signed door as Track 1, so a
+                # forged plan upgrade is as impossible as a forged payment.
+                from app.modules.billing.service import handle_provider_event
+
+                handled = await handle_provider_event(db, event)
+                if handled:
+                    await db.commit()
+                return handled
             else:
                 log.info("webhook type %s not handled", event_type)
                 return False

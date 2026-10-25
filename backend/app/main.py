@@ -13,11 +13,13 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from sqlalchemy.exc import InterfaceError, OperationalError, ProgrammingError
 
-from app.config import settings
+from app.config import settings, validate_production_settings
 from app.database import async_session, engine, init_db
 from app.middleware.metrics import MetricsMiddleware
 from app.middleware.rate_limiter import RateLimitMiddleware, configure_backend
 from app.middleware.vendor_only import VendorOnlyMiddleware
+from app.modules.billing import router as billing_routes
+from app.modules.brief import router as brief_routes
 from app.modules.standing import router as passport_routes
 from app.modules.standing import sweep as standing_sweep
 from app.modules.catalog import router as catalog_routes
@@ -81,6 +83,7 @@ from app.routes import (
     surface as surface_routes,
 )
 from app.services import geo_data, payment_worker, pos_sync
+from app.services.psp_client import PSPError
 from app.services.storage import local_root
 
 logging.basicConfig(level=logging.DEBUG if settings.DEBUG else logging.INFO,
@@ -108,7 +111,10 @@ _boot: dict[str, str] = {}
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    if settings.AUTO_CREATE_TABLES:
+    # Validated on construction too; re-stated here so a misconfigured deploy
+    # fails at startup with the same message rather than at first request.
+    validate_production_settings(settings)
+    if settings.auto_create_tables:
         try:
             await init_db()
             _boot.pop("database", None)
@@ -234,6 +240,9 @@ app.include_router(reviews.router, prefix="/api/vendor-lists", tags=["Vendor Lis
 app.include_router(bookings.router, prefix="/api/tools", tags=["Tool Bookings & Calendars"])
 app.include_router(route_planner.router, prefix="/api/tools", tags=["Courier Routing"])
 app.include_router(ops_routes.router, prefix="/api", tags=["Ops"])
+# v2.15 — Morning Brief: deterministic, read-only, vendor-scoped
+app.include_router(brief_routes.router, prefix="/api/brief", tags=["Morning Brief"])
+app.include_router(billing_routes.router, prefix="/api/billing", tags=["Subscription Billing"])
 
 # Local file storage (spec sheets, images). Public by unguessable key; S3 deploys skip this.
 _static_root = local_root()
@@ -375,6 +384,23 @@ for _exc in (
 # failure: the database answered, but nothing ever created the schema.
 for _exc in (ProgrammingError, asyncpg.UndefinedTableError):
     app.add_exception_handler(_exc, schema_missing)
+
+
+# --- payments that cannot be taken say so, instead of raising a 500 ---------------
+# A production deploy with PSP_PROVIDER=mock (or a half-configured IntaSend) is a
+# deliberate state, not a crash: the client gets 503 + the reason so the checkout
+# screen can explain itself (audit G-03).
+@app.exception_handler(PSPError)
+async def payments_unavailable(request, exc):  # pragma: no cover - config dependent
+    log.warning("payments unavailable on %s %s: %s", request.method, request.url.path, exc)
+    return JSONResponse(
+        status_code=503,
+        content={
+            "detail": "Payments are not available on this deployment yet.",
+            "error": _safe_error(exc),
+            "provider": (settings.PSP_PROVIDER or "mock").strip().lower(),
+        },
+    )
 
 
 # --- unknown /api paths are JSON 404s, never the SPA shell ------------------------

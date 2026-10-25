@@ -505,22 +505,35 @@ async def test_metrics_and_ops_endpoints(client):
     assert "brief_up 1" in body
     assert "brief_requests_total" in body and "brief_request_duration_ms_bucket" in body
 
-    _, vendor = await _register(client, "operator", ["retail"], "both")
-    r = await client.get("/api/vendors/me", headers=vendor)
-    assert r.headers.get("x-request-id")  # every response is traceable
+    token, vendor = await _register(client, "operator", ["retail"], "both")
+    handle = token["vendor_handle"]
+    # v2.15: /api/ops/* is an operator surface, not merely a signed-in one.
+    from app.config import settings as live_settings
+    original = live_settings.OPERATOR_HANDLES
+    live_settings.OPERATOR_HANDLES = handle
+    try:
+        r = await client.get("/api/vendors/me", headers=vendor)
+        assert r.headers.get("x-request-id")  # every response is traceable
 
-    r = await client.get("/api/ops/status", headers=vendor)
-    assert r.status_code == 200, r.text
-    status = r.json()
-    assert status["version"] == "2.2.0"
-    assert status["database"]["reachable"] is True
-    assert status["http"]["requests_total"] >= 1
-    assert status["http"]["p95_ms"] >= 0 and "routes" in status["http"]
-    assert status["limits"]["rate_limit_api_per_min"] == 600
-    assert status["environment"]["storage"] in ("local", "s3")
+        # a plain member is refused, even with a valid token
+        _, plain = await _register(client, "plain_member", ["retail"], "both")
+        assert (await client.get("/api/ops/status", headers=plain)).status_code == 403
 
-    r = await client.get("/api/ops/slow", headers=vendor)
-    assert r.status_code == 200 and r.json()["threshold_ms"] >= 100
+        r = await client.get("/api/ops/status", headers=vendor)
+        assert r.status_code == 200, r.text
+        status = r.json()
+        assert status["version"] == "2.2.0"
+        assert status["database"]["reachable"] is True
+        assert status["http"]["requests_total"] >= 1
+        assert status["http"]["p95_ms"] >= 0 and "routes" in status["http"]
+        assert status["limits"]["rate_limit_api_per_min"] == 600
+        assert status["environment"]["storage"] in ("local", "s3")
+        assert status["payments"]["provider"] in ("mock", "intasend")
 
-    # ops is behind the vendor gate; metrics is not
+        r = await client.get("/api/ops/slow", headers=vendor)
+        assert r.status_code == 200 and r.json()["threshold_ms"] >= 100
+    finally:
+        live_settings.OPERATOR_HANDLES = original
+
+    # ops sits behind authentication; metrics is open in development
     assert (await client.get("/api/ops/status")).status_code == 401

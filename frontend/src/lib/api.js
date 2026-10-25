@@ -621,6 +621,41 @@ export const opsAPI = {
   jobs: (params) => api.get("/ops/jobs", { params: noEmpty(params) }),
   createJob: (body) => api.post("/ops/jobs", body),
   actOnJob: (id, body) => api.post(`/ops/jobs/${id}/action`, body),
+  /** Activation/repeat/completion counts, each with the definition that produced it. */
+  measurement: (days) => api.get("/ops/measurement", { params: noEmpty({ days }) }),
+};
+
+// ── Morning Brief and account rights (v2.15) ───────────────────────────────
+export const briefAPI = {
+  /** Read-only, vendor-scoped, every line cited. No parameters: the token decides. */
+  morning: () => api.get("/brief/morning"),
+};
+
+// ── Receipts: a vendor's own payment attempts (v2.15, Track 1) ─────────────
+// Read-only. Money state comes from the PSP's verified callback, never from this
+// call; a receipt number exists only once the provider confirmed it.
+export const receiptsAPI = {
+  list: (status) => api.get("/payments/intents", { params: noEmpty({ status }) }),
+  one: (id) => api.get(`/payments/intents/${id}`),
+};
+
+// ── Subscription billing (v2.15, Track 2) ──────────────────────────────────
+// Separate from transaction payments on purpose: this charges for access to the
+// platform, not for goods. Every response carries `billing.live`.
+export const billingAPI = {
+  me: () => api.get("/billing/me"),
+  subscribe: (plan_tier, billing_period = "monthly") =>
+    api.post("/billing/subscribe", { plan_tier, billing_period }),
+  cancel: (immediate = false) => api.post("/billing/cancel", { immediate }),
+  /** Mock provider only; refuses to run once a real provider is configured. */
+  simulatePayment: (invoiceId) => api.post(`/billing/invoices/${invoiceId}/simulate`),
+};
+
+export const accountAPI = {
+  /** Everything this account put into the network, as one JSON document. */
+  export: () => api.get("/vendors/me/export"),
+  /** Irreversible: anonymises the identity, keeps the trade record. */
+  close: (confirmation, reason) => api.post("/vendors/me/close", { confirmation, reason }),
 };
 
 export default api;

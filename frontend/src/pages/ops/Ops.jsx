@@ -208,6 +208,7 @@ export default function Ops() {
   const [slow, setSlow] = useState(null);
   const [metrics, setMetrics] = useState("");
   const [showMetrics, setShowMetrics] = useState(false);
+  const [measurement, setMeasurement] = useState(null);
   const [loading, setLoading] = useState(true);
 
   // Operations Center job management state
@@ -243,10 +244,12 @@ export default function Ops() {
         opsAPI.status(),
         opsAPI.slow(),
         typeof opsAPI.jobs === "function" ? opsAPI.jobs().catch(() => null) : Promise.resolve(null),
+        typeof opsAPI.measurement === "function" ? opsAPI.measurement().catch(() => null) : Promise.resolve(null),
       ];
-      const [s, sl, jb] = await Promise.all(promises);
+      const [s, sl, jb, ms] = await Promise.all(promises);
       setStatus(s.data);
       setSlow(sl.data);
+      setMeasurement(ms?.data || null);
       if (jb?.data) {
         setJobsPayload({
           summary: jb.data.summary || { running: 0, queued: 0, succeeded: 0, failed: 0 },
@@ -834,6 +837,110 @@ export default function Ops() {
           </div>
         </div>
       </section>
+
+      {/* ── MEASUREMENT (v2.15) — numbers with their definitions attached ─── */}
+      {measurement && (
+        <section className="rounded-3xl border border-edge-1 bg-surface-1 p-5 md:p-6 space-y-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-bold text-ink-1">Activation &amp; usage</h2>
+              <p className="text-xs text-ink-3 mt-0.5">
+                Window: last {measurement.window_days} days · generated{" "}
+                {new Date(measurement.generated_at).toLocaleString()}
+              </p>
+            </div>
+            <span className="text-2xs uppercase tracking-wide text-ink-4">
+              Read-only · definitions below
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {[
+              ["Registered", measurement.funnel.registered],
+              ["Activated", `${measurement.funnel.activated} · ${Math.round(measurement.funnel.activation_rate * 100)}%`],
+              ["Repeated use", `${measurement.funnel.repeated} · ${Math.round(measurement.funnel.repeat_rate * 100)}%`],
+              ["Active 7d", measurement.funnel.active_last_7_days],
+            ].map(([label, value]) => (
+              <div key={label} className="rounded-xl border border-edge-1 bg-surface-2 p-3">
+                <div className="text-2xs uppercase tracking-wide text-ink-4">{label}</div>
+                <div className="text-lg font-bold text-ink-1 mt-0.5">{value}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {[
+              ["Payment completion", `${Math.round(measurement.commerce.completion_rate * 100)}%`],
+              ["Intents settled", measurement.commerce.payment_intents.completed || 0],
+              ["Intents failed", (measurement.commerce.payment_intents.failed || 0) + (measurement.commerce.payment_intents.expired || 0)],
+              ["Stock items added", measurement.commerce.stock_items_created],
+            ].map(([label, value]) => (
+              <div key={label} className="rounded-xl border border-edge-1 bg-surface-2 p-3">
+                <div className="text-2xs uppercase tracking-wide text-ink-4">{label}</div>
+                <div className="text-lg font-bold text-ink-1 mt-0.5">{value}</div>
+              </div>
+            ))}
+          </div>
+
+          {measurement.benchmark_gate && (
+            <div className={`rounded-xl border p-3 ${
+              measurement.benchmark_gate.eligible
+                ? "border-emerald-300/60 bg-emerald-50 dark:bg-emerald-500/10"
+                : "border-edge-1 bg-surface-2"
+            }`}>
+              <div className="text-xs font-semibold text-ink-2">
+                Benchmark: {measurement.benchmark_gate.eligible ? "eligible" : "not yet eligible"}
+              </div>
+              {measurement.benchmark_gate.reasons?.length ? (
+                <ul className="mt-1.5 space-y-1">
+                  {measurement.benchmark_gate.reasons.map((reason) => (
+                    <li key={reason} className="text-2xs text-ink-3 leading-relaxed">· {reason}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-2xs text-ink-3 mt-1 leading-relaxed">
+                  {measurement.benchmark_gate.k_anonymity_rule}
+                </p>
+              )}
+              <p className="text-micro text-ink-4 mt-1.5">
+                {measurement.benchmark_gate.observed.vendors_with_settled_trade} vendors with settled trade ·{" "}
+                {measurement.benchmark_gate.observed.categories_publishable} publishable categor
+                {measurement.benchmark_gate.observed.categories_publishable === 1 ? "y" : "ies"} · cell minimum{" "}
+                {measurement.benchmark_gate.thresholds.min_vendors_per_cell} vendors
+              </p>
+            </div>
+          )}
+
+          <details className="rounded-xl border border-edge-1 bg-surface-2 p-3">
+            <summary className="cursor-pointer text-xs font-semibold text-ink-2">
+              How each of these is calculated
+            </summary>
+            <dl className="mt-2 space-y-1.5">
+              {Object.entries(measurement.definitions).map(([key, text]) => (
+                <div key={key}>
+                  <dt className="text-2xs font-mono text-ink-3">{key}</dt>
+                  <dd className="text-2xs text-ink-3 leading-relaxed">{text}</dd>
+                </div>
+              ))}
+            </dl>
+          </details>
+
+          {measurement.not_measured?.length ? (
+            <div className="rounded-xl border border-amber-300/50 bg-amber-50 dark:bg-amber-500/10 p-3">
+              <div className="text-xs font-semibold text-amber-800 dark:text-amber-300">
+                Not measured — and not estimated
+              </div>
+              <ul className="mt-1.5 space-y-1">
+                {measurement.not_measured.map((item) => (
+                  <li key={item.metric} className="text-2xs text-amber-900 dark:text-amber-200 leading-relaxed">
+                    <span className="font-mono">{item.metric}</span> — {item.reason}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </section>
+      )}
 
       {/* ── CREATE / RUN JOB MODAL ────────────────────────────────────────── */}
       {createOpen && (

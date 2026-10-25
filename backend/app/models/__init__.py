@@ -48,12 +48,14 @@ from app.models.hustle import HustleJobCall, HustleContract, HustleGoldLedger, H
 from app.modules.outside.models import (
     OutsidePost, OutsideReaction, OutsideDiscoveryPref, OutsideContentReport,
 )
+from app.modules.billing.models import Subscription, SubscriptionInvoice
 from app.modules.ledger.models import (
     LocalActivity, ActivityResponse, ActivityBooking, ActivityFeedback,
     ActivityLedgerEvent, ActivityWatch, SavedRelationship,
 )
 
 __all__ = [
+    "Subscription", "SubscriptionInvoice",
     "Vendor", "VendorProfile", "VendorRole", "vendor_connections",
     "StockItem", "StockMovement", "StockSource", "MovementStatus", "QualityStatus", "QualityVerificationStatus",
     "PriceNegotiation", "StockReservation",

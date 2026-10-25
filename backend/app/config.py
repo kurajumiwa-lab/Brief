@@ -4,6 +4,12 @@ from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+# The values that ship in this repository. They are public the moment anyone
+# reads the source, so they must never sign or verify anything real.
+DEFAULT_SECRET_KEY = "vendor-network-secret-change-in-production"
+DEFAULT_PSP_WEBHOOK_SECRET = "psp-webhook-secret-dev"
+
+
 def _rename_query_option(url: str, old: str, new: str) -> str:
     """Rename one `?key=value` option, leaving every other byte of the URL alone.
 
@@ -51,6 +57,38 @@ def _to_sync_url(url: str) -> str:
     return _rename_query_option(url, "ssl", "sslmode")
 
 
+def validate_production_settings(settings: "Settings") -> None:
+    """Refuse a production configuration whose secrets are published here.
+
+    Both defaults live in this repository: a token signed with SECRET_KEY
+    authenticates as any vendor, and a body signed with PSP_WEBHOOK_SECRET
+    settles a payment. Raising is deliberate — a deploy that refuses to start
+    is a two minute fix; a silent account takeover is not.
+
+    Called on construction *and* at application startup, so the tests can
+    exercise both paths without relying on import-time module caching.
+    """
+    if not settings.is_production:
+        return
+    problems = []
+    if settings.SECRET_KEY.strip() in ("", DEFAULT_SECRET_KEY) or len(settings.SECRET_KEY) < 32:
+        problems.append(
+            "SECRET_KEY must be a private value of at least 32 characters "
+            "(`openssl rand -hex 32`); it signs every login token"
+        )
+    if (settings.PSP_PROVIDER or "").strip().lower() != "mock":
+        if settings.PSP_WEBHOOK_SECRET.strip() in ("", DEFAULT_PSP_WEBHOOK_SECRET) or len(settings.PSP_WEBHOOK_SECRET) < 32:
+            problems.append(
+                "PSP_WEBHOOK_SECRET must be a private value of at least 32 characters "
+                "when PSP_PROVIDER is not mock; it authenticates payment callbacks"
+            )
+    if problems:
+        raise RuntimeError(
+            "Refusing to start with ENVIRONMENT="
+            f"{settings.ENVIRONMENT!r}: " + "; ".join(problems)
+        )
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
@@ -76,8 +114,11 @@ class Settings(BaseSettings):
     # normalised in the validators below.
     DATABASE_URL: str = "postgresql+asyncpg://brief:brief@db:5432/brief_vendors"
     DATABASE_URL_SYNC: Optional[str] = None
-    # Dev convenience: create tables at boot. Production runs `alembic upgrade head`.
+    # Dev convenience: create tables at boot. Production runs `alembic upgrade head`
+    # (see the `auto_create_tables` property for the production policy).
     AUTO_CREATE_TABLES: bool = True
+    # Escape hatch for a production first-boot that genuinely has no schema yet.
+    ALLOW_SCHEMA_AUTOCREATE_IN_PRODUCTION: bool = False
     # entrypoint.sh keeps retrying this many seconds for Postgres to accept connections
     # before it gives up with "database never became reachable" (0 = one attempt).
     DB_WAIT_TIMEOUT: int = 60
@@ -86,7 +127,7 @@ class Settings(BaseSettings):
     REDIS_URL: str = "redis://redis:6379/0"
 
     # Auth
-    SECRET_KEY: str = "vendor-network-secret-change-in-production"
+    SECRET_KEY: str = DEFAULT_SECRET_KEY
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440  # 24 hours - vendors are busy
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
@@ -133,7 +174,7 @@ class Settings(BaseSettings):
     PSP_API_SECRET: str = ""
     PSP_BASE_URL: str = ""   # override; provider default otherwise
     # HMAC-SHA256 secret for the single inbound webhook (X-Webhook-Signature).
-    PSP_WEBHOOK_SECRET: str = "psp-webhook-secret-dev"
+    PSP_WEBHOOK_SECRET: str = DEFAULT_PSP_WEBHOOK_SECRET
     # Disbursements above this amount require two different approvers.
     DUAL_APPROVAL_THRESHOLD_KSH: int = 10_000
     # Platform facilitation fee on settled Lock clusters (supplier settlement).
@@ -179,6 +220,10 @@ class Settings(BaseSettings):
     # config, never in a grant a bug could hand out. Leave empty to disable
     # the desk — claims then stay `documented` until someone is appointed.
     VERIFIER_HANDLES: str = ""
+    # Platform operators (v2.15). /api/ops/* exposes pool health, slow routes and
+    # job control; before this list existed any signed-in vendor could read it.
+    # Empty means nobody — the endpoints stay closed rather than open by default.
+    OPERATOR_HANDLES: str = ""
     # How often the scheduler sweeps claim expiry and queues renewal reminders.
     STANDING_SWEEP_INTERVAL: int = 3600
     # Cooperative member votes are disabled unless a registered entity and its
@@ -288,9 +333,51 @@ class Settings(BaseSettings):
     def is_production(self) -> bool:
         return (self.ENVIRONMENT or "").strip().lower() in ("production", "prod")
 
+    def model_post_init(self, __context) -> None:
+        """Construction validates too, so a bad environment fails at import."""
+        validate_production_settings(self)
+
     @property
     def verifier_handles(self) -> List[str]:
         return [h.lower() for h in self._split(self.VERIFIER_HANDLES)]
+
+    @property
+    def operator_handles(self) -> List[str]:
+        return [h.lower() for h in self._split(self.OPERATOR_HANDLES)]
+
+    def is_operator(self, handle: str) -> bool:
+        """Is this account allowed to read platform ops and drive operations jobs?
+
+        Fails closed: an unset list grants the role to nobody. Configure
+        OPERATOR_HANDLES=handle_one,handle_two on the deployment.
+        """
+        return (handle or "").lower() in self.operator_handles
+
+    @property
+    def auto_create_tables(self) -> bool:
+        """Whether boot may run DDL.
+
+        Production defaults to **no**: once Alembic owns the schema, an
+        accidental `create_all` masks a failed migration. A first deploy that
+        genuinely needs it opts in with ALLOW_SCHEMA_AUTOCREATE_IN_PRODUCTION.
+        """
+        if not self.AUTO_CREATE_TABLES:
+            return False
+        return not self.is_production or self.ALLOW_SCHEMA_AUTOCREATE_IN_PRODUCTION
+
+    @property
+    def payments_available(self) -> bool:
+        """False when a real payment cannot be taken with this configuration.
+
+        The UI and the payment routes both read this so "payments are not set up"
+        is a stated fact (503 with a reason) rather than a stack trace.
+        """
+        provider = (self.PSP_PROVIDER or "mock").strip().lower()
+        if provider == "mock":
+            return not self.is_production
+        if provider == "intasend":
+            return bool(self.PSP_API_KEY and self.PSP_API_SECRET)
+        return False
 
     def is_verifier(self, handle: str) -> bool:
         """Is this account allowed to check other businesses' documents?"""

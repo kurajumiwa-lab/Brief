@@ -3,7 +3,23 @@ from sqlalchemy.orm import DeclarativeBase
 
 from app.config import settings
 
-engine = create_async_engine(settings.DATABASE_URL, echo=settings.DEBUG, pool_pre_ping=True)
+# Timeouts are deliberate, not decorative. A database that *refuses* a connection
+# fails fast, but one that accepts and then stops answering will hold a request
+# open forever unless the driver is told to give up (a drill on 2026-10-25 hung
+# until the client disconnected). Ten seconds to connect, thirty to answer, and
+# a bounded wait for a pool slot keep a dead database a 503 instead of a hang.
+_ENGINE_TIMEOUTS = (
+    {}
+    if settings.DATABASE_URL.startswith("sqlite")
+    else {
+        "connect_args": {"timeout": 10, "command_timeout": 30},
+        "pool_timeout": 10,
+    }
+)
+
+engine = create_async_engine(
+    settings.DATABASE_URL, echo=settings.DEBUG, pool_pre_ping=True, **_ENGINE_TIMEOUTS
+)
 async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 
