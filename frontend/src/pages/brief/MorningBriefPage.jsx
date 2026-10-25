@@ -31,6 +31,17 @@ const KIND_META = {
 
 const SEVERITY_LABEL = { critical: "Needs you now", warning: "Worth doing", info: "When you have time" };
 
+/** How old a retained brief may be before we stop calling it "current".
+ *  The endpoint recomputes on every call, so anything we are showing after a
+ *  failed refresh is by definition a snapshot — say so rather than implying
+ *  the numbers are live. */
+const STALE_AFTER_MS = 15 * 60 * 1000;
+
+const isStale = (iso) => {
+  const then = iso ? new Date(iso).getTime() : NaN;
+  return Number.isNaN(then) || Date.now() - then > STALE_AFTER_MS;
+};
+
 function timeAgo(iso) {
   if (!iso) return "no timestamp on the record";
   const then = new Date(iso).getTime();
@@ -55,7 +66,10 @@ export default function MorningBriefPage() {
     try {
       const { data } = await briefAPI.morning();
       setBrief(data);
+      setError(null);
     } catch (err) {
+      // Keep the previous brief on screen. Losing a list of overdue movements
+      // because the network blipped is worse than showing it with a timestamp.
       setError(apiError(err, "Could not load your brief"));
     } finally {
       setLoading(false);
@@ -84,7 +98,7 @@ export default function MorningBriefPage() {
         </Button>
       </div>
 
-      {error && (
+      {error && !brief && (
         <Card className="border-rose-200 dark:border-rose-500/30">
           <div className="flex items-start gap-2.5">
             <AlertTriangle size={18} className="text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
@@ -97,7 +111,35 @@ export default function MorningBriefPage() {
         </Card>
       )}
 
-      {!error && brief?.empty && (
+      {/* A retained brief after a failed refresh is a snapshot, not a live view. */}
+      {error && brief && (
+        <Card className="border-amber-200 dark:border-amber-500/30">
+          <div className="flex items-start gap-2.5">
+            <AlertTriangle size={18} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-ink-1">
+                Could not refresh — showing your last brief
+              </p>
+              <p className="text-2xs text-ink-3 mt-0.5">
+                Generated {brief.generated_at ? new Date(brief.generated_at).toLocaleString() : "earlier"}
+                {" · "}counts may have moved since. {error}
+              </p>
+              <Button size="sm" variant="secondary" className="mt-2" onClick={load} disabled={loading}>
+                Retry
+              </Button>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {brief && !error && isStale(brief.generated_at) && (
+        <p className="text-micro text-amber-700 dark:text-amber-400 px-1">
+          This brief was generated {brief.generated_at ? new Date(brief.generated_at).toLocaleString() : "earlier"}.
+          Refresh before acting on it.
+        </p>
+      )}
+
+      {brief?.empty && (
         <Card>
           <EmptyState
             title="Nothing needs you today"
@@ -106,7 +148,7 @@ export default function MorningBriefPage() {
         </Card>
       )}
 
-      {!error && brief?.signals?.map((signal) => {
+      {brief?.signals?.map((signal) => {
         const meta = KIND_META[signal.kind] || KIND_META.open_requests;
         const Icon = meta.icon;
         return (

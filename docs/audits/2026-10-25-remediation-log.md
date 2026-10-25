@@ -1,10 +1,16 @@
 # Remediation log — 2026-10-25
 
-What shipped in response to `2026-10-25-saas-readiness-audit.md`, in the order the
-audit demanded (security → configuration → revenue-readiness → trust → intelligence).
+What shipped in response to `2026-10-25-saas-readiness-audit.md` and the build
+notes, in the order they demanded: security → configuration → revenue → trust →
+intelligence → measurement.
 
-Status vocabulary: **PASS** (executed, evidence below) · **FAIL** · **BLOCKED**
-(could not execute here) · **NOT RUN**.
+Four statuses, used strictly:
+
+* **PASS** — executed here, with the evidence written down.
+* **FAIL** — executed and did not hold. Anything found this way is listed with its fix.
+* **BLOCKED** — could not execute in this environment (no credentials, no egress,
+  no production database). Never counted as a pass.
+* **NOT RUN** — deliberately not built or not attempted, with the reason.
 
 ---
 
@@ -12,51 +18,80 @@ Status vocabulary: **PASS** (executed, evidence below) · **FAIL** · **BLOCKED*
 
 | Gap | Change | Evidence |
 |---|---|---|
-| G-01 default JWT secret | `validate_production_settings()` rejects the shipped default or any key < 32 chars when `ENVIRONMENT=production`. Called on `Settings` construction **and** again at app startup. | `tests/test_security_defaults.py` — 9 tests. The forgery test reproduces the original attack: with the default key a forged token returns `200`; with a private key it returns `401`, while a genuine token still returns `200`. |
-| G-02 default webhook secret | Same guard for `PSP_WEBHOOK_SECRET` once `PSP_PROVIDER != mock`. | Forged HMAC with the public default → `401`; correctly signed body still reaches the handler. |
-| G-05 open ops endpoints | `require_operator` on all five `/api/ops/*` routes, backed by `OPERATOR_HANDLES` (comma-separated handles). Empty list grants nobody — it fails closed. | Plain vendor → `403`; listed operator → `200`; unauthenticated → `401`. |
-| G-10 public metrics | Production with no `METRICS_TOKEN` returns `404`; a token, when set, is required via `?token=` or bearer. | Dev `200`, prod-without-token `404`. |
-| G-15 DDL at boot | `settings.auto_create_tables` is **false** in production unless `ALLOW_SCHEMA_AUTOCREATE_IN_PRODUCTION=true`. | Property test pins both branches. |
+| G-01 default JWT secret | `validate_production_settings()` rejects the shipped default or any key < 32 chars when `ENVIRONMENT=production`. Runs on `Settings` construction **and** again at app startup. | `tests/test_security_defaults.py` — 9 tests. The forgery test replays the original attack: default key → `200` as another vendor; private key → `401`; genuine token still `200`. |
+| G-02 default webhook secret | Same guard for `PSP_WEBHOOK_SECRET` once `PSP_PROVIDER != mock`. | A body signed with the public default → `401`; a correctly signed body still reaches the handler. |
+| G-05 open ops endpoints | `require_operator` on every `/api/ops/*` route, backed by `OPERATOR_HANDLES`. Empty list grants nobody — it fails closed. | Plain vendor `403`, listed operator `200`, unauthenticated `401`. |
+| G-10 public metrics | Production with no `METRICS_TOKEN` returns `404`; with one, `?token=` or bearer is required. | Dev `200`, prod-without-token `404`. |
+| G-15 DDL at boot | `settings.auto_create_tables` is false in production unless `ALLOW_SCHEMA_AUTOCREATE_IN_PRODUCTION=true`. | Property test pins both branches. |
 
-Rotating `SECRET_KEY` invalidates existing sessions. With one real account that is free;
-do it deliberately on a quiet afternoon rather than during a deploy.
+Rotating `SECRET_KEY` invalidates existing sessions. With one real account that is
+free; do it deliberately, not during a deploy.
 
-## 2. Production determinism — partial PASS
+## 2. Production determinism — partial
 
-- **PASS** — startup fails loudly on a bad secret; `/api/health` still reports
-  `database` and `schema` and now names the fault (from the previous fix).
+- **PASS** — startup fails loudly on a bad secret and on unreachable dependencies;
+  `/api/health` names the fault.
 - **PASS** — `/api/ops/status` publishes the payment mode (`provider`, `available`,
-  `reason`) so "mock in production" can never be silent again.
+  `reason`), so "mock in production" can never again be silent.
+- **PASS** — schema is Alembic's job. `alembic upgrade head` on an empty database and
+  a table/column parity check (`backend/scripts/schema_parity.py`, added this phase):
+  **114 model tables, 0 missing tables, 0 missing columns**, and `downgrade -1`
+  reverses cleanly.
+- **FAIL (pre-existing, not fixed)** — `alembic check` is *not* clean. It reports
+  index **name** drift on ~40 indexes across request/hustle/market tables: the models
+  use `index=True` (auto-named `ix_<table>_<column>`) while older migrations used
+  hand-written names. Nothing is missing and no query is affected — the same indexes
+  exist under different names — but the gate cannot be used as-is. Fixing it means
+  renaming either the migrations or ~40 model indexes; that is a deliberate, boring
+  migration in its own change, not something to smuggle into a security release.
 - **BLOCKED** — Vercel environment audit, Supabase backup/PITR entitlement check and a
-  restore drill all need dashboard access this environment does not have.
+  restore drill need dashboard access this environment does not have.
 
-## 3. Payments — partial
+## 3. Payments
 
-- **PASS** — `PSPError` now maps to `503` with a stated reason and the provider name,
-  instead of a 500. `settings.payments_available` is a single source of truth for
-  "can this deployment take money".
-- **PASS** — mock payments remain refused in production (pre-existing, now surfaced).
-- **BLOCKED** — a real IntaSend collection and disbursement. No PSP credentials here.
-- **NOT RUN** — subscription billing (Track 2). Deliberately not built: a state machine
-  that cannot be exercised against a provider event stream is not evidence, it is
-  guesswork with a deploy attached. The catalogue already states the tier is not live.
+**Track 1 — transaction payments**
+
+- **PASS** — `PSPError` maps to `503` with a stated reason and the provider name;
+  `settings.payments_available` is the single source of truth.
+- **PASS** — duplicate webhooks do not duplicate financial effects (existing suite).
+- **BLOCKED** — a real IntaSend collection and disbursement, and settlement against
+  the internal ledger. No PSP credentials, no egress to the provider.
+
+**Track 2 — subscription billing (built this phase)**
+
+- **PASS** — `subscriptions` + `subscription_invoices` (migration `0023`), with a
+  partial unique index allowing one live subscription per vendor and a unique
+  `psp_reference` as the idempotency key.
+- **PASS** — plans activate only from a *verified* `subscription.paid` event arriving
+  through the same HMAC-verified webhook as money; a mismatch between the provider's
+  amount and the invoice amount refuses to settle (`502`, so the PSP retries).
+- **PASS** — failure → `past_due` + 7-day grace (entitlements retained); lapse →
+  `expired` + back to Starter, records and verification untouched; `cancel_at_period_end`
+  keeps the paid period.
+- **PASS** — one trial per vendor, ever: cancel-and-resubscribe is not a free plan.
+- **PASS** — `billing.live` is false on the mock provider and every billing response
+  carries it; the mock payment simulator refuses to run once a real provider is set.
+- **BLOCKED** — an actual recurring charge. The state machine is proven; the revenue
+  is not. `TRIAL_TERMS.status` in the storefront catalogue therefore stays
+  `not_yet_live`, because a live card trial has still never been verified for this
+  merchant account.
 
 ## 4. Trust and data rights — PASS
 
 | Gap | Change | Evidence |
 |---|---|---|
-| G-06 no export | `GET /api/vendors/me/export` returns the member's own account, stock, movements, requests, offers, claims and sent-message metadata. Counterparty notes and evidence are excluded by design. | Export contains mine, not another vendor's stock; `401` without a token. |
-| G-06 no deletion | `POST /api/vendors/me/close` — handle-typed confirmation, anonymises identity, withdraws claims, zeroes sellable stock, destroys the password, and **kills live sessions** (a closed handle is rejected in `get_current_vendor`). | Old password → `401`; old access token → `401`; handle reusable; trade rows retained. |
-| G-08 no trust surface | `/legal` page: privacy, terms, payments/refunds/disputes, data rights, support — plus the two buttons that exercise them. | Frontend test suite green; page reachable from Profile → Trust & data. |
+| G-06 no export | `GET /api/vendors/me/export` — own account, stock, movements, requests, offers, claims, sent-message metadata. Counterparty notes and evidence excluded by design. | Contains mine, not another vendor's; `401` without a token. |
+| G-06 no deletion | `POST /api/vendors/me/close` — typed handle, identity anonymised, claims withdrawn, sellable stock zeroed, password destroyed, **live sessions killed** (`closed_` prefix rejected in `get_current_vendor`). | Old password `401`, old token `401`, handle reusable, trade rows retained. |
+| G-08 no trust surface | `/legal`: privacy, terms, payments/refunds/disputes, data rights, support — plus the two buttons that exercise them. | `subscription.test.jsx`, `morningBrief.test.jsx`, full suite green. |
 
-Legal caveat carried forward unchanged: erasure is not the same as deleting financial and
-audit records, and DPA 2019, VAT/eTIMS, KYC and PSP onboarding all still need Kenyan
+Legal caveat, unchanged: erasure is not the same as deleting financial and audit
+records; DPA 2019, VAT/eTIMS, KYC and PSP onboarding all still need Kenyan
 professional review. The page says so rather than implying compliance.
 
-## 5. Morning Brief — PASS (deterministic; no LLM)
+## 5. Morning Brief — PASS (deterministic, no LLM)
 
 `GET /api/brief/morning` — read-only, vendor-scoped from the token (no id parameter),
-and every line cites the records it came from plus the route that opens them.
+every line citing the records it came from and the route that opens them.
 
 | Signal | Rule | Route |
 |---|---|---|
@@ -65,45 +100,75 @@ and every line cites the records it came from plus the route that opens them.
 | `expiring_claims` | printed expiry within 30 days or past | `/me` |
 | `open_requests` | open, not mine, no offer from me, last 14 days | `/` |
 
-Every signal carries `record_ids`, `severity`, `occurred_at`. One failing signal degrades
-to a labelled "could not be checked" line instead of blanking the screen.
-
-**No AI is used.** The audit's guidance was to start deterministic and add a model only
-when it measurably helps; the endpoint's contract (cited, read-only, no writes) is the
-part that matters, and it holds whether or not a summariser is ever added later.
+Each signal carries `record_ids` (first 10), `severity`, `occurred_at`. One failing
+signal degrades to a labelled line instead of blanking the screen. On the client:
+loading, empty, populated, error+retry, and a **retained-stale** state — a failed
+refresh keeps the last brief on screen with its generation time rather than losing a
+list of overdue work to a dropped connection.
 
 **Receivables signal: NOT RUN.** There is no receivable/payable model in this schema
-(orders settle at delivery), so inventing one for a dashboard card would have meant a
-migration plus a policy decision about credit terms. Left out rather than faked.
+(orders settle at delivery), so inventing one for a dashboard card would mean a
+migration plus a credit-terms policy decision. Left out rather than faked.
 
-## 6. Verification summary
+## 6. Measurement — PASS
+
+`GET /api/ops/measurement` (operator only), plus a panel in the Ops console.
+
+- Registered → activated → repeated-use funnel, active-last-7-days, payment
+  completion rate, stock items, requests, offers, movements.
+- **Every number ships with the definition that produced it** — the response includes
+  a `definitions` block, so a metric cannot drift from its meaning unnoticed.
+- `not_measured` names what the platform *cannot* honestly measure and why:
+  `cost_per_vendor` (needs invoices this service cannot read), `brief_opens` (no
+  client event store — adding one is a consent decision), `revenue` (payment intents
+  are not platform revenue; only the PSP and bank statements are).
+
+## 7. Operations — documented, drilled where possible
+
+`docs/ops/runbook.md`: secret generation and rotation, restore drill against an
+isolated database, migration policy, dependency-outage drills, interrupted-transaction
+drill, incident response, quarterly access review, low-bandwidth device check.
+
+| Drill | Result |
+|---|---|
+| Ledger rejects `UPDATE` and `DELETE` | **PASS** — `custody_ledger is append-only: UPDATE/DELETE` raised by the trigger |
+| API with Postgres refusing connections | **PASS** — `/api/health` `503`, `database=false`, `ConnectionRefusedError`, process alive |
+| API with Postgres accepting, then stalling | **FAIL → fixed** — the request hung until the client gave up. `app/database.py` now sets `connect_args.timeout=10`, `command_timeout=30`, `pool_timeout=10`, so a dead database becomes a `503` instead of a hang. Found by running the drill, not by reading the code. |
+| Backup restore | **BLOCKED** — no Supabase access from here |
+| Access review | **NOT RUN** — needs the production dashboards |
+
+## 8. Verification summary
 
 Executed 2026-10-25 in this environment:
 
 | Gate | Result |
 |---|---|
-| Backend suite | **303 passed** (was 280; +9 security defaults, +14 v2.15 trust/brief) |
-| Frontend suite | **217 passed**, 22 files (was 214) |
-| Production build | clean, `vite build` 8.35s |
+| Backend suite | **316 passed** (audit baseline 280) |
+| Frontend suite | **222 passed**, 23 files (baseline 214) |
+| Production build | clean (`vite build`, ~6 s) |
 | ESLint (changed files) | clean |
-| Live end-to-end (real Postgres) | register 201 → brief cites the stock id → export 200 → ops 403/200 → metrics 200/404 → close 200, then 401 |
+| Migration | `alembic upgrade head` + `downgrade -1` on empty DB: **PASS**; table/column parity **114/114** |
+| `alembic check` | **FAIL (pre-existing index-name drift)** — see §2 |
+| Live end-to-end on real Postgres | register `201` → brief cites the stock id → export `200` → ops `403`/`200` → measurement `200` → billing trial → mock payment `paid` → plan `readiness` → sweep `200` → metrics `200`/`404` → close `200`, then `401` |
 | Deployed verification | **BLOCKED** — no Vercel egress |
 | Real PSP transaction | **BLOCKED** — no credentials |
 | Physical Android / throttled network | **BLOCKED** |
-| Backup restore drill | **BLOCKED** |
+| Vendor pilot | **BLOCKED** — no consenting vendors in this environment |
 
-## 7. Deployment notes
+## 9. Deployment notes
 
 New or changed environment variables:
 
 ```
-ENVIRONMENT=production                 # turns on every guard below
-SECRET_KEY=<openssl rand -hex 32>      # required; startup refuses the default
+ENVIRONMENT=production                      # turns on every guard below
+SECRET_KEY=<openssl rand -hex 32>           # required; startup refuses the default
 PSP_WEBHOOK_SECRET=<openssl rand -hex 32>   # required once PSP_PROVIDER != mock
-OPERATOR_HANDLES=<your handle>         # who may read /api/ops/*; empty = nobody
-METRICS_TOKEN=<random>                 # or /api/metrics is 404 in production
-ALLOW_SCHEMA_AUTOCREATE_IN_PRODUCTION=false   # leave false unless first boot
+OPERATOR_HANDLES=<your handle>              # who may read /api/ops/*; empty = nobody
+METRICS_TOKEN=<random>                      # or /api/metrics is 404 in production
+ALLOW_SCHEMA_AUTOCREATE_IN_PRODUCTION=false # leave false; Alembic owns the schema
 ```
 
-Order of operations: set `SECRET_KEY` **before** enabling `ENVIRONMENT=production`, or the
-deploy will (correctly) refuse to start, and every existing session will need a fresh login.
+Order of operations: set `SECRET_KEY` **before** `ENVIRONMENT=production`, or the
+deploy will (correctly) refuse to start — and every existing session will need a
+fresh login. Run `alembic upgrade head` before starting the new code; migration
+`0023` is additive and safe to apply first.

@@ -18,6 +18,7 @@ from app.database import async_session, engine, init_db
 from app.middleware.metrics import MetricsMiddleware
 from app.middleware.rate_limiter import RateLimitMiddleware, configure_backend
 from app.middleware.vendor_only import VendorOnlyMiddleware
+from app.modules.billing import router as billing_routes
 from app.modules.brief import router as brief_routes
 from app.modules.standing import router as passport_routes
 from app.modules.standing import sweep as standing_sweep
@@ -241,6 +242,7 @@ app.include_router(route_planner.router, prefix="/api/tools", tags=["Courier Rou
 app.include_router(ops_routes.router, prefix="/api", tags=["Ops"])
 # v2.15 — Morning Brief: deterministic, read-only, vendor-scoped
 app.include_router(brief_routes.router, prefix="/api/brief", tags=["Morning Brief"])
+app.include_router(billing_routes.router, prefix="/api/billing", tags=["Subscription Billing"])
 
 # Local file storage (spec sheets, images). Public by unguessable key; S3 deploys skip this.
 _static_root = local_root()

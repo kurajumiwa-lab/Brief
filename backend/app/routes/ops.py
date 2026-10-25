@@ -424,6 +424,22 @@ async def ops_status(
     }
 
 
+@router.get("/ops/measurement")
+async def ops_measurement(
+    days: int = Query(30, ge=1, le=180, description="Window in days"),
+    vendor: Vendor = Depends(require_operator),
+    db: AsyncSession = Depends(get_db),
+):
+    """Activation, repeat use and payment completion — with every definition.
+
+    Read-only. Anything the platform cannot honestly measure is returned in
+    ``not_measured`` with its reason, so no one quotes a number we invented.
+    """
+    from app.modules.measurement.service import build as build_measurement
+
+    return await build_measurement(db, days)
+
+
 @router.get("/ops/slow")
 async def slow_requests(
     vendor: Vendor = Depends(require_operator),

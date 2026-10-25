@@ -64,6 +64,12 @@ const QUICK_ACTIONS = [
     icon: Sparkles,
   },
   {
+    title: "Subscription",
+    description: "Your plan, invoices and renewal",
+    to: () => "/billing",
+    icon: Repeat,
+  },
+  {
     title: "Trust & data",
     description: "Export your records or close the account",
     to: () => "/legal",

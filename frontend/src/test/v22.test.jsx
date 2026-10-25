@@ -41,6 +41,21 @@ const COUNTERPARTY = {
 };
 const WEIGHTS = { factors: { complementarity: 25, reciprocity: 20, trade_evidence: 20, proximity: 15, graph: 10, reputation: 10 } };
 
+const MEASUREMENT = {
+  generated_at: "2026-10-25T08:00:00Z",
+  window_days: 30,
+  window_start: "2026-09-25T08:00:00Z",
+  definitions: {
+    registered: "Vendor rows that have not been closed.",
+    activated: "Registered vendors with at least one owned record.",
+    repeated: "Active on at least two distinct calendar days.",
+    completion_rate: "completed / (completed + failed + expired).",
+  },
+  funnel: { registered: 12, activated: 7, activation_rate: 0.5833, repeated: 4, repeat_rate: 0.5714, active_last_7_days: 3 },
+  commerce: { payment_intents: { completed: 5, failed: 1 }, completion_rate: 0.8333, stock_items_created: 9 },
+  not_measured: [{ metric: "cost_per_vendor", reason: "Needs invoices this service cannot read." }],
+};
+
 const LIST = { id: "l1", name: "Nairobi Fresh Produce Vendors", patron_business: "Mama Mboga Fresh", patron_handle: "mama_mboga", avg_rating: 4.5, review_count: 2, member_count: 12, max_vendors: 100, is_open: true, requires_approval: true, i_run_it: false, my_status: "approved" };
 const REVIEWS = {
   list_id: "l1", list_name: "Nairobi Fresh Produce Vendors", avg_rating: 4.5, review_count: 2,
@@ -150,6 +165,7 @@ vi.mock("@/lib/api", () => {
       status: vi.fn(() => ok(OPS)),
       slow: vi.fn(() => ok({ threshold_ms: 1000, slow_routes: OPS.http.slow_routes })),
       metrics: vi.fn(() => ok("brief_up 1\nbrief_requests_total 240\n")),
+      measurement: vi.fn(() => ok(MEASUREMENT)),
       jobs: vi.fn(() =>
         ok({
           summary: { running: 1, queued: 2, succeeded: 4, failed: 1 },
@@ -386,6 +402,11 @@ describe("Ops console", () => {
     expect(screen.getByText("v2.2.0")).toBeInTheDocument();
     expect(screen.getByText("reachable")).toBeInTheDocument();
     expect(screen.getByText("/api/analytics/overview")).toBeInTheDocument();
+
+    // Measurement travels with its definitions; what cannot be measured is named.
+    expect(await screen.findByText("Activation & usage")).toBeInTheDocument();
+    expect(screen.getByText(/7 · 58%/)).toBeInTheDocument();
+    expect(screen.getByText("Not measured — and not estimated")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /raw scrape/i }));
     await waitFor(() => expect(api.opsAPI.metrics).toHaveBeenCalled());

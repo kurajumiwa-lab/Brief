@@ -65,6 +65,29 @@ describe("Morning Brief", () => {
     expect(screen.getByText(/Read-only summary of your own records/)).toBeInTheDocument();
   });
 
+  it("keeps the last brief on screen when a refresh fails, and labels it stale", async () => {
+    briefAPI.morning.mockResolvedValueOnce({
+      data: brief({
+        total: 1,
+        signals: [{
+          id: "pending_movements:/orders", kind: "pending_movements", severity: "warning",
+          title: "Movements waiting", detail: "1 movement has not been confirmed",
+          count: 1, record_ids: ["mv-1"], route: "/orders",
+          occurred_at: new Date(Date.now() - 7200_000).toISOString(),
+        }],
+      }),
+    });
+    renderPage();
+    expect(await screen.findByText("Movements waiting")).toBeInTheDocument();
+
+    // The network drops; the vendor must not lose a list of overdue work.
+    briefAPI.morning.mockRejectedValueOnce(new Error("offline"));
+    fireEvent.click(screen.getByRole("button", { name: /Refresh brief/ }));
+    expect(await screen.findByText("Could not refresh — showing your last brief")).toBeInTheDocument();
+    expect(screen.getByText("Movements waiting")).toBeInTheDocument();
+    expect(screen.queryByText("The brief could not be loaded")).not.toBeInTheDocument();
+  });
+
   it("offers a retry when the brief cannot be loaded", async () => {
     briefAPI.morning.mockRejectedValueOnce(new Error("offline"));
     renderPage();

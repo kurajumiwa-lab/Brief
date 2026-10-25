@@ -132,7 +132,7 @@ const ACTIVITY_ROOTS = [
 ];
 
 const ME_ROOTS = [
-  "/me", "/stock", "/analytics", "/pos", "/brief", "/passport", "/growth",
+  "/me", "/stock", "/analytics", "/pos", "/brief", "/passport", "/growth", "/billing",
   "/enterprise", "/governance", "/ops", "/portfolio", "/studio",
 ];
 

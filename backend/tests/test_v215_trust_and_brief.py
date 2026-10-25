@@ -217,3 +217,50 @@ async def test_brief_flags_expiring_paperwork(client):
 
 async def test_brief_needs_a_token(client):
     assert (await client.get("/api/brief/morning")).status_code == 401
+
+
+# --- measurement: definitions travel with the numbers ---------------------------------
+
+async def test_measurement_is_operator_only(client, monkeypatch):
+    monkeypatch.setattr(live_settings, "OPERATOR_HANDLES", "somebody_else")
+    _, headers, _ = await _vendor(client, "meas_plain")
+    r = await client.get("/api/ops/measurement", headers=headers)
+    assert r.status_code == 403
+    assert (await client.get("/api/ops/measurement")).status_code == 401
+
+
+async def test_measurement_states_its_definitions_and_refuses_to_guess(client, monkeypatch):
+    handle, headers, _ = await _vendor(client, "meas_op")
+    monkeypatch.setattr(live_settings, "OPERATOR_HANDLES", handle)
+
+    # Give this vendor a real activation signal, so the funnel is not all zeroes.
+    await client.post("/api/stock/add", json={
+        "name": "Managu", "category": "produce", "price": 20, "quantity": 4, "unit": "bunch",
+    }, headers=headers)
+
+    r = await client.get("/api/ops/measurement?days=30", headers=headers)
+    assert r.status_code == 200, r.text
+    body = r.json()
+
+    funnel = body["funnel"]
+    assert funnel["registered"] >= 1
+    assert funnel["activated"] >= 1
+    # A rate can never exceed 1; if it does, the denominator is wrong.
+    assert 0.0 <= funnel["activation_rate"] <= 1.0
+    assert 0.0 <= funnel["repeat_rate"] <= 1.0
+    assert 0.0 <= body["commerce"]["completion_rate"] <= 1.0
+
+    # Every headline number ships with the rule that produced it.
+    assert set(body["definitions"]) >= {"registered", "activated", "repeated", "completion_rate"}
+    # And what cannot be measured is named, not estimated.
+    unmeasured = {item["metric"] for item in body["not_measured"]}
+    assert {"cost_per_vendor", "brief_opens", "revenue"} <= unmeasured
+    for item in body["not_measured"]:
+        assert item["reason"].strip()
+
+
+async def test_measurement_window_is_bounded(client, monkeypatch):
+    handle, headers, _ = await _vendor(client, "meas_window")
+    monkeypatch.setattr(live_settings, "OPERATOR_HANDLES", handle)
+    assert (await client.get("/api/ops/measurement?days=0", headers=headers)).status_code == 422
+    assert (await client.get("/api/ops/measurement?days=3650", headers=headers)).status_code == 422
