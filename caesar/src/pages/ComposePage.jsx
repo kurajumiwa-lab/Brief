@@ -1,0 +1,235 @@
+import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Image as ImageIcon, Mic, Send, WifiOff, X } from "lucide-react";
+import { useApp } from "@/store/appStore.js";
+import { IMAGERY } from "@/data/imagery.js";
+import { dataSize } from "@/lib/format.js";
+import { LOCALES } from "@/lib/i18n.js";
+
+const LIMIT = 480;
+
+/** A small, real estimate: text bytes + the image/voice the author attached. */
+function estimateKb(text, image, voice) {
+  const textKb = (new Blob([text]).size || 0) / 1024;
+  return Math.round((textKb + (image ? 140 : 0) + (voice ? voice.kb : 0)) * 10) / 10;
+}
+
+const ATTACHABLE = [
+  { key: "market", label: "Market" },
+  { key: "farm", label: "Farm" },
+  { key: "coast", label: "Coast" },
+];
+
+/**
+ * COMPOSE — write, attach, and know what it costs before you send.
+ *
+ * The data estimate is not decoration: on a metered bundle, "how much will
+ * this cost me" is the question that decides whether someone posts at all. The
+ * number updates as they type and as they attach.
+ */
+export default function ComposePage() {
+  const navigate = useNavigate();
+  const state = useApp();
+  const addPost = useApp((store) => store.addPost);
+
+  const joined = state.circles.filter((circle) => state.memberships.includes(circle.id));
+  const [circleId, setCircleId] = useState(joined[0]?.id || state.circles[0]?.id || "");
+  const [body, setBody] = useState("");
+  const [image, setImage] = useState(null);
+  const [voice, setVoice] = useState(null);
+  const [lang, setLang] = useState(state.preferences.locale);
+  const [error, setError] = useState("");
+
+  const trimmed = body.trim();
+  const kb = useMemo(() => estimateKb(body, image, voice), [body, image, voice]);
+  const remaining = LIMIT - body.length;
+  const offline = state.preferences.offline;
+
+  const publish = () => {
+    if (!trimmed) {
+      setError("Write something first. A post is a claim someone can answer.");
+      return;
+    }
+    if (trimmed.length < 8) {
+      setError("Give people enough to answer — eight characters at least.");
+      return;
+    }
+    if (!circleId) {
+      setError("Choose a circle. Every post belongs to one.");
+      return;
+    }
+    addPost({ circleId, body: trimmed, image, voice, lang });
+    navigate(`/circles/${circleId}`);
+  };
+
+  return (
+    <>
+      <div className="section-head" style={{ marginTop: 18 }}>
+        <div>
+          <div className="eyebrow">New post</div>
+          <h1 className="title-lg">Write it plainly</h1>
+          <p className="muted" style={{ fontSize: 13, marginTop: 4, maxWidth: "54ch" }}>
+            State what you know, where you saw it, and what you want people to do. A post the community can check
+            is a post that travels.
+          </p>
+        </div>
+      </div>
+
+      {offline && (
+        <div className="notice notice--gold" style={{ marginBottom: 12 }}>
+          <WifiOff size={16} className="notice__icon" aria-hidden="true" />
+          <span>
+            <strong>Offline.</strong> This post is saved here and appears in your feed immediately; it is marked as
+            queued until you reconnect.
+          </span>
+        </div>
+      )}
+
+      <div className="card card--pad stack">
+        <div className="field">
+          <label className="label" htmlFor="circle">
+            Circle
+          </label>
+          <select id="circle" className="select" value={circleId} onChange={(event) => setCircleId(event.target.value)}>
+            {state.circles.map((circle) => (
+              <option key={circle.id} value={circle.id}>
+                {circle.name} — {circle.place}
+                {state.memberships.includes(circle.id) ? "" : " (not joined)"}
+              </option>
+            ))}
+          </select>
+          {circleId && !state.memberships.includes(circleId) && (
+            <p className="hint">
+              You are not a member of this circle yet. You can still post — joining adds it to your feed.
+            </p>
+          )}
+        </div>
+
+        <div className="field">
+          <label className="label" htmlFor="body">
+            Your post
+          </label>
+          <textarea
+            id="body"
+            className="textarea"
+            value={body}
+            maxLength={LIMIT}
+            placeholder="What should your community know?"
+            onChange={(event) => {
+              setBody(event.target.value);
+              setError("");
+            }}
+            aria-describedby="body-help"
+          />
+          <div className="row row--between" id="body-help">
+            <span className="hint">
+              {remaining < 40 ? `${remaining} characters left` : "Plain text, images, or a voice note."}
+            </span>
+            <span className="hint mono">
+              {body.length}/{LIMIT}
+            </span>
+          </div>
+        </div>
+
+        <div className="field">
+          <span className="label">Attach</span>
+          <div className="scroll-row">
+            {ATTACHABLE.map((option) => {
+              const src = IMAGERY[option.key];
+              const active = image === src;
+              return (
+                <button
+                  key={option.key}
+                  type="button"
+                  className={`chip ${active ? "chip--green" : ""}`}
+                  style={{ height: 30, padding: "0 11px", cursor: "pointer" }}
+                  aria-pressed={active}
+                  onClick={() => setImage(active ? null : src)}
+                >
+                  <ImageIcon size={13} aria-hidden="true" />
+                  {option.label}
+                </button>
+              );
+            })}
+            <button
+              type="button"
+              className={`chip ${voice ? "chip--green" : ""}`}
+              style={{ height: 30, padding: "0 11px", cursor: "pointer" }}
+              aria-pressed={Boolean(voice)}
+              onClick={() => setVoice(voice ? null : { seconds: 24, kb: 108 })}
+            >
+              <Mic size={13} aria-hidden="true" />
+              {voice ? "Voice note attached" : "Voice note"}
+            </button>
+          </div>
+          {image && (
+            <div className="post__media" style={{ margin: "8px 0 0", position: "relative" }}>
+              <img src={image} alt="Attached" />
+            </div>
+          )}
+          {(image || voice) && (
+            <button
+              type="button"
+              className="btn btn--quiet"
+              style={{ alignSelf: "start", marginLeft: -8 }}
+              onClick={() => {
+                setImage(null);
+                setVoice(null);
+              }}
+            >
+              <X size={13} aria-hidden="true" /> Remove attachments
+            </button>
+          )}
+        </div>
+
+        <div className="field">
+          <label className="label" htmlFor="lang">
+            Language
+          </label>
+          <select id="lang" className="select" value={lang} onChange={(event) => setLang(event.target.value)}>
+            {LOCALES.map((locale) => (
+              <option key={locale.code} value={locale.code}>
+                {locale.native}
+              </option>
+            ))}
+          </select>
+          <p className="hint">
+            Post in the language you think in. Readers see the tag; Caesar does not machine-translate you.
+          </p>
+        </div>
+
+        <div className="card card--flat" style={{ padding: 12 }}>
+          <div className="row row--between">
+            <span className="tiny muted">Estimated data for this post</span>
+            <span className="title-sm mono">{dataSize(kb)}</span>
+          </div>
+          <div className="meter" style={{ marginTop: 8 }}>
+            <div className="meter__track">
+              <div className="meter__fill meter__fill--gold" style={{ width: `${Math.min(100, (kb / 400) * 100)}%` }} />
+            </div>
+          </div>
+          <p className="micro muted" style={{ marginTop: 6 }}>
+            Text is a few KB; a photo is usually the expensive part. On a metered bundle that is the number worth
+            knowing before you send.
+          </p>
+        </div>
+
+        {error && (
+          <div className="notice notice--terra" role="alert">
+            <span>{error}</span>
+          </div>
+        )}
+
+        <div className="row" style={{ gap: 8 }}>
+          <button type="button" className="btn btn--gold" onClick={publish} disabled={!trimmed}>
+            <Send size={15} aria-hidden="true" />
+            {offline ? "Save and queue" : "Post to circle"}
+          </button>
+          <button type="button" className="btn btn--quiet" onClick={() => navigate(-1)}>
+            Cancel
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
