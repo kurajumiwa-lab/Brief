@@ -356,8 +356,11 @@ The container entrypoint waits `DB_WAIT_TIMEOUT` seconds (60) for Postgres befor
 it migrates and serves — see Troubleshooting if it gives up. `CORS_ORIGINS` and
 `ALLOWED_POS_SYSTEMS` are comma-separated. `REDIS_URL` empty → in-memory rate
 limiter, login guard and single-process WebSocket fan-out (fine for one
-worker). `S3_BUCKET` empty → uploads land in `UPLOAD_DIR` and are served at
-`/static`; set it (plus `S3_ENDPOINT` for R2 / MinIO / Spaces) to use a bucket.
+worker). Uploads are served at `/static/<key>`. `MEDIA_STORE=auto` (the default) uses
+`S3_BUCKET` when set, the `media_objects` table in production otherwise (a
+serverless `/tmp` and a container disk are both wiped, so a locally-stored photo
+would 404 on the next request), and `UPLOAD_DIR` in development; force it with
+`MEDIA_STORE=s3|db|local` and set `S3_ENDPOINT` for R2 / MinIO / Spaces.
 `RUN_SCHEDULER=false` on the API when you run `python -m app.worker`
 separately. Chat voice notes are capped by `VOICE_MAX_SECONDS` (15) and
 `VOICE_MAX_BYTES` (512 KiB); local files use `VOICE_UPLOAD_DIR`, separate from

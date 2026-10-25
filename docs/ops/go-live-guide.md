@@ -94,6 +94,7 @@ for **Production** (and Preview, if you use previews against a real database).
 | `ALLOW_SCHEMA_AUTOCREATE_IN_PRODUCTION` | `false` | Only `true` for one first boot on a completely empty database. |
 | `CORS_ORIGINS` | your app URL | Not needed when the frontend is served by the API or proxied by Vercel. |
 | `REDIS_URL` | your Redis URL | Without it the rate limiter is per-instance, so on Vercel the real limit is *instances × limit*. Worth doing before you have traffic. |
+| `MEDIA_STORE` | `auto` (or `s3`) | Where uploaded photos live. `auto` = S3 if `S3_BUCKET` is set, **Postgres otherwise in production** — because a Vercel function's `/tmp` and a container's disk are both wiped, so a locally-stored photo 404s on the next request. Fine up to a few thousand photos; set `S3_BUCKET` to scale. |
 
 **Order:** add `SECRET_KEY`, `DATABASE_URL`, `PSP_WEBHOOK_SECRET`,
 `OPERATOR_HANDLES`, `METRICS_TOKEN` first; add `ENVIRONMENT=production` last, in
@@ -102,6 +103,19 @@ the same window as the deploy in §6.
 If Supabase hands you a `postgres://` URL, the app rewrites it to the async
 driver automatically — but the **password must be percent-encoded** if it
 contains `@`, `:`, `/` or `#`.
+
+**Photos.** With `MEDIA_STORE=auto` and no `S3_BUCKET`, uploads go into the
+`media_objects` table (migration `0024`) and `GET /static/<key>` streams them
+back, so the URL in the database stays valid across instances and deploys.
+Check it after the first upload:
+
+```bash
+curl -sI "$APP_URL/static/uploads/<key>/photo.jpg" | head -3
+# HTTP/2 200 / content-type: image/jpeg / cache-control: public, max-age=31536000
+```
+
+A `404` here with `storage: "local"` in `/api/ops/status` means the deployment
+is still writing to an ephemeral disk — set `MEDIA_STORE=db` (or `s3`).
 
 ## 5. Migrate the production database
 

@@ -44,6 +44,7 @@ from app.models.payments import (
 from app.models.halal import MurabahaContract
 from app.models.chamas import Chama, ChamaMember, ChamaDeposit, ChamaLoan, ChamaLoanVote, ChamaDividend
 from app.models.public_place import PublicPlace
+from app.models.media import MediaObject
 from app.models.hustle import HustleJobCall, HustleContract, HustleGoldLedger, HustleSquad, HustleSquadMember
 from app.modules.outside.models import (
     OutsidePost, OutsideReaction, OutsideDiscoveryPref, OutsideContentReport,
@@ -55,6 +56,7 @@ from app.modules.ledger.models import (
 )
 
 __all__ = [
+    "MediaObject",
     "Subscription", "SubscriptionInvoice",
     "Vendor", "VendorProfile", "VendorRole", "vendor_connections",
     "StockItem", "StockMovement", "StockSource", "MovementStatus", "QualityStatus", "QualityVerificationStatus",

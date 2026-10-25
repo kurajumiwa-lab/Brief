@@ -29,7 +29,11 @@ export default function MarketCard({ item }) {
         <CardTitle>{item.title}</CardTitle>
         <CardMeta>{[item.city, item.country].filter(Boolean).join(" · ") || "Location not stated"}</CardMeta>
         <CardMeta>{num(item.members)} registered vendor{item.members === 1 ? "" : "s"}</CardMeta>
-        <CardMeta>{num(item.places)} mapped place{item.places === 1 ? "" : "s"}</CardMeta>
+        {/* Only when the payload carries a count. The directory list does not,
+            and "0 mapped places" would be a number we were never given. */}
+        {item.places != null && (
+          <CardMeta>{num(item.places)} mapped place{item.places === 1 ? "" : "s"}</CardMeta>
+        )}
       </CardBody>
     </CardShell>
   );

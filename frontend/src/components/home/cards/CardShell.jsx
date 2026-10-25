@@ -1,4 +1,6 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import Media from "@/components/ui/Media";
 import { cn } from "@/lib/utils";
 
 /**
@@ -52,23 +54,40 @@ export default function CardShell({ to, label, children, className, footer }) {
   );
 }
 
-/** Media slot: real image when the record has one, a keyed illustration when it does not. */
+/**
+ * Media slot: the record's photo when it has one, the designed illustration
+ * when it does not — **or when the photo no longer loads**.
+ *
+ * The second half of that sentence is the fix. An `<img>` with a dead `src`
+ * paints the browser's broken-image glyph inside a card that was designed to
+ * carry a picture. `<Media>` reports the failure, and the slot falls back to
+ * exactly what a photo-less record shows, so a dead URL is indistinguishable
+ * from a listing that never had a photo — which is the honest reading.
+ */
 export function CardMedia({ src, ratio = CARD_MEDIA_RATIO, tint = "bg-surface-2", fallback, bare = false, children, className }) {
+  const [failed, setFailed] = useState(false);
+  useEffect(() => setFailed(false), [src]);
+
+  // The tint belongs to the SLOT, not to the fallback: a poster card (no photo
+  // at all) and a card whose photo died must wear the same colours, and a card
+  // whose photo loaded must not.
+  const showing = Boolean(src) && !failed;
+
   return (
-    <div className={cn("relative shrink-0 overflow-hidden", !bare && "border-b border-edge-1", ratio, src ? "bg-surface-2" : tint, className)}>
-      {src ? (
-        <img
-          src={src}
-          alt=""
-          loading="lazy"
-          decoding="async"
-          className="absolute inset-0 h-full w-full object-cover"
-        />
-      ) : (
-        <div className="absolute inset-0 grid place-items-center" aria-hidden="true">
-          {fallback}
-        </div>
-      )}
+    <div className={cn("relative shrink-0 overflow-hidden", !bare && "border-b border-edge-1", ratio, showing ? "bg-surface-2" : tint, className)}>
+      <Media
+        src={src}
+        alt=""
+        className="absolute inset-0 h-full w-full object-cover"
+        onFail={() => setFailed(true)}
+        fallback={
+          fallback ? (
+            <div className="absolute inset-0 grid place-items-center" aria-hidden="true">
+              {fallback}
+            </div>
+          ) : null
+        }
+      />
       {children}
     </div>
   );

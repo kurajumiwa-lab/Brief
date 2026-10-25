@@ -5,6 +5,7 @@ import HorizontalCarousel, { CarouselItem } from "./HorizontalCarousel";
 import ShelfSkeleton from "./ShelfSkeleton";
 import ShelfEmptyState from "./ShelfEmptyState";
 import { renderCard } from "./cards";
+import ErrorBoundary from "@/components/system/ErrorBoundary";
 import { useHomeFeedStore } from "@/stores/homeFeedStore";
 
 /**
@@ -18,6 +19,13 @@ import { useHomeFeedStore } from "@/stores/homeFeedStore";
  *   error          → a one-line apology *inside this shelf* plus retry
  *   ready, empty   → nothing at all (the shelf hides; nothing is padded in)
  *   ready, items   → the carousel
+ *
+ * A failed *fetch* is only one way a shelf breaks. A card can also throw while
+ * drawing — one record with a shape nobody anticipated — and React unmounts the
+ * whole tree when that happens, so the "the rest of the feed is unaffected"
+ * promise below would be false. The carousel is therefore wrapped in its own
+ * error boundary: a record that cannot be drawn costs that shelf and nothing
+ * else.
  *
  * Nothing here knows which module it is showing — that lives in
  * `config/homeShelves`, which keeps the feed one component wide.
@@ -65,14 +73,48 @@ export default function CuratedShelf({ shelf, state, onSource, className }) {
         // the rail bleeds to the phone's edge; the title and See all above it
         // keep the page gutter, so the cards read as content rather than a box
         // inside a box
-        <HorizontalCarousel label={shelf.title} className="-mx-4 px-4 sm:-mx-1 sm:px-1">
-          {items.map((item, index) => (
-            <CarouselItem key={`${shelf.key}-${item.id}`} index={index}>
-              {renderCard(shelf.card, { item, onSource })}
-            </CarouselItem>
-          ))}
-        </HorizontalCarousel>
+        <ErrorBoundary
+          fallback={(_error, reset) => (
+            <ShelfEmptyState
+              tone="danger"
+              icon={RefreshCw}
+              title={`${shelf.title} couldn't be drawn`}
+              description="One record in this shelf failed to render. The rest of the market below is unaffected."
+              action={
+                <Button
+                  size="xs"
+                  variant="secondary"
+                  icon={RefreshCw}
+                  onClick={() => {
+                    reset();
+                    retryShelf(shelf.key);
+                  }}
+                >
+                  Try again
+                </Button>
+              }
+            />
+          )}
+        >
+          {/* The rail is its own component on purpose: `items.map(renderCard)`
+              written inline would build the cards during THIS render, i.e.
+              before the boundary below could catch a record that throws. */}
+          <ShelfRail shelf={shelf} items={items} onSource={onSource} />
+        </ErrorBoundary>
       )}
     </section>
+  );
+}
+
+/** One carousel of cards. Rendered INSIDE the shelf's error boundary. */
+function ShelfRail({ shelf, items, onSource }) {
+  return (
+    <HorizontalCarousel label={shelf.title} className="-mx-4 px-4 sm:-mx-1 sm:px-1">
+      {items.map((item, index) => (
+        <CarouselItem key={`${shelf.key}-${item.id}`} index={index}>
+          {renderCard(shelf.card, { item, onSource })}
+        </CarouselItem>
+      ))}
+    </HorizontalCarousel>
   );
 }

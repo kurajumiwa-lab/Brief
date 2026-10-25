@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, ClipboardCheck, Compass, RefreshCw, Search, Store } from "lucide-react";
 import CuratedShelf from "./CuratedShelf";
@@ -45,14 +45,25 @@ export default function HomeFeed({ onSource, className }) {
   const shelves = useHomeFeedStore((s) => s.shelves);
   const loadFeed = useHomeFeedStore((s) => s.loadFeed);
   const refreshFeed = useHomeFeedStore((s) => s.refreshFeed);
+  const resetFeed = useHomeFeedStore((s) => s.reset);
   const vendor = useAuthStore((s) => s.vendor);
   const movements = useStockStore((s) => s.movements);
   const fetchMovements = useStockStore((s) => s.fetchMovements);
+  const vendorId = vendor?.id ?? null;
+  const loadedFor = useRef(vendorId);
 
   useEffect(() => {
+    // A shelf answers for a *vendor*, and this store outlives the session. If
+    // the person at this browser changes, the old shelves are another
+    // merchant's records — and `ready` shelves are not re-fetched for five
+    // minutes, so they would simply stay. Drop them and load again.
+    if (loadedFor.current !== vendorId) {
+      loadedFor.current = vendorId;
+      resetFeed();
+    }
     loadFeed();
     fetchMovements?.().catch(() => {});
-  }, [loadFeed, fetchMovements]);
+  }, [loadFeed, fetchMovements, resetFeed, vendorId]);
 
   const actionable = movements.filter(needsMyAction);
   const quiet = feedIsQuiet(shelves);
