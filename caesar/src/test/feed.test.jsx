@@ -31,6 +31,13 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+describe("the brand line", () => {
+  it("says Caesar is the crowd, not an emperor", () => {
+    open("/");
+    expect(screen.getByText(/No emperors here\. Caesar is the crowd\./)).toBeInTheDocument();
+  });
+});
+
 describe("the home feed", () => {
   it("orders posts by the published score, not by arrival", () => {
     open();

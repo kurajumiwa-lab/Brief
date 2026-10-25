@@ -57,6 +57,7 @@ export default function FeedPage() {
           Ordered by what people here found useful — not by who has the most followers, and not by who arrived
           first. {stats.contested > 0 && `${stats.contested} ${stats.contested === 1 ? "post is" : "posts are"} still being argued over, and stay in the feed.`}
         </p>
+        <p className="hero__note">No emperors here. Caesar is the crowd.</p>
         <div className="hero__foot">
           <span className="chip" style={{ background: "rgba(255,248,231,0.12)", borderColor: "rgba(255,248,231,0.2)", color: "var(--ivory)" }}>
             {t("brand.tagline")}

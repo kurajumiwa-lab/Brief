@@ -1148,6 +1148,14 @@ p {
   max-width: 44ch;
 }
 
+.hero__note {
+  margin-top: 10px;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(255, 248, 231, 0.6);
+}
+
 .hero__foot {
   margin-top: 14px;
   display: flex;

@@ -9,7 +9,7 @@ compose, data saving, offline) or named as not built yet.
 cd caesar
 npm install
 npm run dev      # http://localhost:5180
-npm test         # 75 specs
+npm test         # 76 specs
 npm run build
 ```
 
@@ -20,6 +20,16 @@ prototype" in the Safety centre puts the starting network back.
 This folder is self-contained and is **not** wired into the Brief app: `vercel.json`
 builds `backend` and `frontend` only, so nothing here deploys or runs in CI for
 the Brief services.
+
+---
+
+## The name
+
+The brief is blunt about this: **no emperors here — Caesar is the crowd.** The
+mark carries no ruler and no laurel, only a verdict held in balance. The line is
+printed on the feed rather than buried in a brand book, because a name that
+glorifies empire and a product that says "the community decides" cannot both be
+true.
 
 ---
 
@@ -142,15 +152,16 @@ src/pages/               Feed, Circles, Circle, Compose, Profile, Safety
 
 ## Tests
 
-75 specs across five files (`npm test`):
+76 specs across five files (`npm test`):
 
 - `ranking.test.js` (20) — small samples cannot decide, contested posts are never
   dropped and hold the floor, bursts are damped and nobody is banned, published
   weights sum to 1 and are the ones applied, determinism.
 - `reputation.test.js` (9) — the contribution definition, disagreement never
   lands on the author, only upheld reports do.
-- `feed.test.jsx` (11) — ordering by the published score, both reactions as
-  peers, withdrawing and swapping, the panel printing the same score the feed used.
+- `feed.test.jsx` (12) — ordering by the published score, both reactions as
+  peers, withdrawing and swapping, the panel printing the same score the feed
+  used, and the brand line on the feed.
 - `controls.test.jsx` (24) — report ≠ hide, block/mute/unblock, offline queueing,
   data saver, language, theme, composer validation, circle join/leave, profile,
   the dialog's focus handling, and the honesty list of what is not built.
