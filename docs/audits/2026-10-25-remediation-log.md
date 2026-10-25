@@ -193,3 +193,81 @@ Order of operations: set `SECRET_KEY` **before** `ENVIRONMENT=production`, or th
 deploy will (correctly) refuse to start — and every existing session will need a
 fresh login. Run `alembic upgrade head` before starting the new code; migration
 `0023` is additive and safe to apply first.
+
+---
+
+# Follow-up, same day: "photos don't render and there is loading error on some shelves"
+
+A bug report straight from using the app, not a checklist item. Chased to four
+independent causes — three of them silent by design — plus one adjacent defect
+found on the way.
+
+## What was actually wrong
+
+1. **Uploaded photos were not durable.** `POST /api/files/upload` wrote to
+   `UPLOAD_DIR` and, on a read-only image, silently fell back to a per-instance
+   `/tmp`. A serverless host gives every invocation a fresh instance, and a
+   container is replaced on every deploy. The URL (`/static/uploads/<uuid>/…`)
+   stayed in the database; the bytes did not. Every re-render after the first
+   instance died was a 404.
+2. **`/static` was never proxied in development.** `vite.config.js` proxied
+   `/api` only, so `<img src="/static/uploads/…">` asked the Vite dev server for
+   a file it had never heard of. Photos 404'd locally while "working" in
+   production — the hardest shape of bug to see.
+3. **The equipment shelf could not have photos.** `ToolOut` (the response model
+   for `/api/tools/browse` and `/api/tools/mine`) had no `images` field, so
+   FastAPI dropped it from every response. `homeShelves` read
+   `tool.images[0]` and always got `undefined`; `ToolsPage` did the same.
+4. **Nothing handled a dead image.** `CardMedia` and `StockThumb` rendered
+   `<img src>` with no `onError`, so a missing file painted the browser's
+   broken-image glyph inside a designed card. There was also no shelf-level
+   error boundary: one record that threw while rendering blanked every shelf,
+   which contradicted the feed's own promise that "the rest of the market below
+   is unaffected".
+5. **Found on the way:** the markets shelf read `market.members` and
+   `market.places`, but `/api/markets` returns `member_count` and no place
+   count — every market card said "0 registered vendors · 0 mapped places". And
+   `useHomeFeedStore` outlived the session with no reset, so a second vendor
+   signing in on the same browser saw the first vendor's shelves for up to five
+   minutes.
+
+## What changed
+
+- `MEDIA_STORE` (`auto|s3|db|local`). `auto` = S3 when `S3_BUCKET` is set,
+  **Postgres otherwise in production** (`media_objects`, migration `0024`), and
+  the local disk in development. Uploads keep the same `/static/<key>` URL in
+  all three backends, so nothing in the database had to change.
+- `GET /static/<key>` is now a route (`app/routes/media.py`) instead of a
+  `StaticFiles` mount: disk first (so a switch does not orphan existing files),
+  then the database. The key must match the exact shape `upload()` mints —
+  traversal is a 404 before any filesystem or SQL is touched.
+- Vite proxies `/static` to the API in development.
+- `images` added to `ToolOut` (filtered to real strings).
+- `components/ui/Media.jsx` + `lib/media.js`: one `<img>` that normalises bare
+  keys and falls back to the designed poster/illustration on error.
+- Per-shelf error boundary; shelf fetch deadline (20 s) so a request that never
+  settles becomes a retryable error instead of a skeleton that spins forever.
+- Markets shelf reads the field the API returns and stays silent about a place
+  count it was not given.
+- The feed drops its cache when the signed-in vendor changes.
+
+## Verification
+
+| Gate | Result |
+|---|---|
+| Backend suite | **342 passed** (was 325; +17 in `tests/test_media_static.py`) |
+| Frontend suite | **260 passed**, 28 files (was 237/25; +23 across `media`, `shelfResilience`, `homeFeedAccount`) |
+| Production build | clean (`vite build`, ~8 s) |
+| ESLint (changed files) | 0 errors (one pre-existing warning in `ToolsPage.jsx`) |
+| Migration | `alembic upgrade head` on an empty database: **PASS** (`0024` applies; parity checks unchanged) |
+| Live probe, seeded Postgres | Every home-shelf endpoint `200` with 40 vendors / 120 stock / 20 tools / 12 requests / 10 job calls / 8 events / 8 groups / 8 lists — the "loading error" was never a dead route |
+| Live photo round-trip | upload → `GET /static/<key>` `200` `image/jpeg`, `cache-control: immutable`; in `db` mode the file is absent from disk and the row is present |
+| Production mode resolution | `ENVIRONMENT=production` + no bucket → `db`; with `S3_BUCKET` → `s3`; development → `local`; `MEDIA_STORE=local` overrides |
+| Deployed verification | **BLOCKED** — no Vercel egress; the guide now has the one `curl -sI` that closes it |
+
+## What it would take to see the last one green
+
+Deploy this branch, upload one photo, and read the headers of its `/static`
+URL. With `MEDIA_STORE=auto` and no bucket, the row lands in `media_objects`;
+if `alembic upgrade head` has not run, the upload fails loudly with
+"run `alembic upgrade head`" rather than silently disappearing.

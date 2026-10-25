@@ -4,8 +4,10 @@ import react from "@vitejs/plugin-react";
 import { fileURLToPath, URL } from "node:url";
 
 // The browser only ever talks to its own origin:
-//   dev   → Vite proxies /api (HTTP + WebSocket) to the FastAPI server
-//   prod  → FastAPI serves dist/ itself (backend/app/main.py), or nginx proxies /api
+//   dev   → Vite proxies /api (HTTP + WebSocket) and /static (uploaded photos,
+//           spec sheets) to the FastAPI server
+//   prod  → FastAPI serves dist/ itself (backend/app/main.py), or nginx proxies
+//           /api and /static
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   return {
@@ -22,6 +24,14 @@ export default defineConfig(({ mode }) => {
           target: env.VITE_API_URL || "http://localhost:8000",
           changeOrigin: true,
           ws: true, // /api/chat/{room}/ws rides the same proxy
+        },
+        // Uploaded photos are served by the backend at /static/<key>. Without
+        // this, `<img src="/static/uploads/…">` asked the Vite dev server for a
+        // file it has never heard of: every photo 404'd in development while
+        // working in production, which is the hardest kind of bug to see.
+        "/static": {
+          target: env.VITE_API_URL || "http://localhost:8000",
+          changeOrigin: true,
         },
       },
     },

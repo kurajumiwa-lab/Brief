@@ -238,6 +238,24 @@ class Settings(BaseSettings):
     # Setting S3_BUCKET switches uploads to any S3-compatible bucket (AWS,
     # MinIO, Cloudflare R2, DO Spaces — S3_ENDPOINT selects the host).
     # Otherwise files land under UPLOAD_DIR and are served at /static.
+    #
+    # MEDIA_STORE picks the backend explicitly, because "no S3" is not the same
+    # answer on every host:
+    #
+    #   auto    S3 when S3_BUCKET is set; **Postgres** in production otherwise;
+    #           UPLOAD_DIR on a normal dev machine.
+    #   s3      any S3-compatible bucket (S3_BUCKET required)
+    #   db      store bytes in the `media_objects` table, served by /static
+    #   local   UPLOAD_DIR on this machine's disk
+    #
+    # `auto` answers with Postgres in production because a serverless or
+    # container disk is not durable: Vercel mounts the image read-only and hands
+    # each instance an ephemeral /tmp, and a Railway/Render container loses its
+    # filesystem on every deploy. In both cases a photo uploaded on one
+    # invocation is gone by the next, so `/static/uploads/…` 404s and every
+    # product card shows a broken image. Postgres is already a dependency and
+    # already durable, so it is the honest default until a bucket is configured.
+    MEDIA_STORE: str = "auto"
     S3_BUCKET: str = ""
     AWS_ACCESS_KEY: str = ""
     AWS_SECRET_KEY: str = ""
@@ -332,6 +350,24 @@ class Settings(BaseSettings):
     @property
     def is_production(self) -> bool:
         return (self.ENVIRONMENT or "").strip().lower() in ("production", "prod")
+
+    @property
+    def media_store(self) -> str:
+        """The storage backend actually in use: `s3`, `db` or `local`.
+
+        `MEDIA_STORE=auto` is resolved here, once, so every caller (uploads,
+        `/static`, ops status) agrees on the same answer.
+        """
+        chosen = (self.MEDIA_STORE or "auto").strip().lower()
+        if chosen in ("s3", "db", "local"):
+            return chosen
+        if self.S3_BUCKET:
+            return "s3"
+        # A production disk — serverless /tmp, or a container that is replaced on
+        # every deploy — does not survive the next request. Postgres does.
+        if self.is_production:
+            return "db"
+        return "local"
 
     def model_post_init(self, __context) -> None:
         """Construction validates too, so a bad environment fails at import."""

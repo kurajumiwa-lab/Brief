@@ -65,6 +65,9 @@ from app.routes import (
     markets as markets_routes,
 )
 from app.routes import (
+    media as media_routes,
+)
+from app.routes import (
     nearby as nearby_routes,
 )
 from app.routes import (
@@ -84,7 +87,6 @@ from app.routes import (
 )
 from app.services import geo_data, payment_worker, pos_sync
 from app.services.psp_client import PSPError
-from app.services.storage import local_root
 
 logging.basicConfig(level=logging.DEBUG if settings.DEBUG else logging.INFO,
                     format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -244,10 +246,10 @@ app.include_router(ops_routes.router, prefix="/api", tags=["Ops"])
 app.include_router(brief_routes.router, prefix="/api/brief", tags=["Morning Brief"])
 app.include_router(billing_routes.router, prefix="/api/billing", tags=["Subscription Billing"])
 
-# Local file storage (spec sheets, images). Public by unguessable key; S3 deploys skip this.
-_static_root = local_root()
-if _static_root:
-    app.mount("/static", StaticFiles(directory=_static_root), name="static")
+# Uploaded files (spec sheets, product photos, CSVs), public by unguessable key.
+# One route serves disk AND database bytes — see app/routes/media.py for why a
+# StaticFiles mount was not enough on an ephemeral, read-only host.
+app.include_router(media_routes.router, tags=["Media"])
 
 
 @app.get("/api", include_in_schema=False)

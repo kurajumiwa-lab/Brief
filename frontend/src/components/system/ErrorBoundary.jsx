@@ -21,8 +21,15 @@ export default class ErrorBoundary extends Component {
     console.error("[brief] screen crashed", error, info?.componentStack);
   }
 
+  reset = () => this.setState({ error: null });
+
   render() {
     if (!this.state.error) return this.props.children;
+    // A caller can decide what a crash looks like in its own frame — a shelf
+    // shows a one-line apology with a retry, not a whole-page "screen stopped".
+    if (typeof this.props.fallback === "function") {
+      return this.props.fallback(this.state.error, this.reset);
+    }
     return (
       <div className="py-20 flex flex-col items-center text-center">
         <div className="w-12 h-12 rounded-2xl bg-red-50 dark:bg-red-500/15 text-red-600 dark:text-red-400 grid place-items-center mb-4">
@@ -37,7 +44,7 @@ export default class ErrorBoundary extends Component {
           <Button size="sm" icon={RotateCw} onClick={() => window.location.reload()}>
             Reload
           </Button>
-          <Button size="sm" variant="secondary" onClick={() => this.setState({ error: null })}>
+          <Button size="sm" variant="secondary" onClick={this.reset}>
             Try again
           </Button>
         </div>

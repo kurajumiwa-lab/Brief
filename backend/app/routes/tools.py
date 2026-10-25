@@ -58,6 +58,10 @@ class ToolOut(BaseModel):
     deposit_required: float = 0
     capacity: dict = {}
     features: list = []
+    # The listing's own photos. Without this field FastAPI's response_model
+    # silently drops `images`, so every equipment card and every Tools row
+    # rendered the no-photo illustration even when the vendor had uploaded one.
+    images: list[str] = []
     terms: Optional[str] = None
     is_available: bool
     times_booked: int
@@ -80,6 +84,7 @@ def _tool_out(t: ToolListing, v: Vendor, details: Optional[dict] = None) -> Tool
         category=t.category.value, title=t.title, description=t.description, location=t.location,
         price_per_unit=t.price_per_unit, price_unit=t.price_unit, min_booking=t.min_booking,
         deposit_required=t.deposit_required or 0, capacity=t.capacity or {}, features=t.features or [],
+        images=[u for u in (t.images or []) if isinstance(u, str) and u],
         terms=t.terms, is_available=t.is_available, times_booked=t.times_booked, avg_rating=t.avg_rating,
         details=details,
     )

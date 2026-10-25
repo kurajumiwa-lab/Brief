@@ -23,7 +23,26 @@ import { useAuthStore } from "@/stores/authStore";
 
 export const STALE_MS = 5 * 60 * 1000;
 
+/**
+ * How long a shelf may stay on the skeleton before it is a failure.
+ *
+ * A request that never settles is worse than one that fails: the shelf sits on
+ * its loading skeleton forever, the user has no retry button, and the feed
+ * looks half-loaded with no explanation. Axios gives up at 30s on its own; this
+ * deadline is shorter so the card lands in `error` — with its retry — while the
+ * user is still looking at it.
+ */
+export const SHELF_TIMEOUT_MS = 20 * 1000;
+
 const initial = () => ({ items: [], status: "idle", error: "", at: 0 });
+
+function withinDeadline(promise, ms) {
+  let timer;
+  const deadline = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error("shelf timed out")), ms);
+  });
+  return Promise.race([promise, deadline]).finally(() => clearTimeout(timer));
+}
 
 export const useHomeFeedStore = create((set, get) => ({
   shelves: {},
@@ -46,7 +65,7 @@ export const useHomeFeedStore = create((set, get) => ({
     }));
 
     try {
-      const rows = await shelf.load();
+      const rows = await withinDeadline(Promise.resolve().then(() => shelf.load()), SHELF_TIMEOUT_MS);
       const vendor = useAuthStore.getState?.().vendor ?? null;
       const items = publicShelfItems(rows, vendor, shelf.limit);
       set((state) => ({

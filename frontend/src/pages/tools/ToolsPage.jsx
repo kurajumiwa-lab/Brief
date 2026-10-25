@@ -13,6 +13,7 @@ import Input from "@/components/ui/Input";
 import SearchInput from "@/components/ui/SearchInput";
 import EmptyState from "@/components/ui/EmptyState";
 import Avatar from "@/components/ui/Avatar";
+import Media from "@/components/ui/Media";
 import { PageSpinner } from "@/components/ui/Spinner";
 import { toast } from "@/components/ui/Toast";
 import ToolForm, { CourierForm } from "@/components/forms/ToolForm";
@@ -338,18 +339,21 @@ function ToolCard({ tool: t, mine, onBook, onDetails, onToggle }) {
     >
       {/* ── Facility Visual Header ────────────────────────────────────── */}
       <div className="relative aspect-[16/9] bg-surface-2 border-b border-edge-1 overflow-hidden">
-        {imageSrc ? (
-          <img src={imageSrc} alt={t.title} className="w-full h-full object-cover" loading="lazy" />
-        ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center p-4 bg-brand-50 dark:bg-surface-2 text-brand-700 dark:text-brand-300">
-            <div className="w-12 h-12 rounded-2xl bg-surface-0 border border-edge-1 shadow-2xs flex items-center justify-center mb-1.5">
-              <Icon size={22} />
+        <Media
+          src={imageSrc}
+          alt={t.title}
+          className="w-full h-full object-cover"
+          fallback={
+            <div className="w-full h-full flex flex-col items-center justify-center p-4 bg-brand-50 dark:bg-surface-2 text-brand-700 dark:text-brand-300">
+              <div className="w-12 h-12 rounded-2xl bg-surface-0 border border-edge-1 shadow-2xs flex items-center justify-center mb-1.5">
+                <Icon size={22} />
+              </div>
+              <span className="text-micro font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-surface-0 border border-edge-1 text-ink-2">
+                {cat?.label || t.category}
+              </span>
             </div>
-            <span className="text-micro font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-surface-0 border border-edge-1 text-ink-2">
-              {cat?.label || t.category}
-            </span>
-          </div>
-        )}
+          }
+        />
         <div className="absolute top-2.5 left-2.5 flex flex-wrap gap-1">
           {t.is_available !== false ? (
             <Badge variant="brand" size="xs">

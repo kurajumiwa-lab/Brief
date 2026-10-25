@@ -68,6 +68,23 @@ const money = (value) => {
 
 const available = (item) => Number(item?.quantity_available ?? item?.quantity_in_stock ?? 0) || 0;
 
+/**
+ * The first usable photo in an `images` array.
+ *
+ * The API stores strings, but a record that came in through a bulk import, an
+ * older client or an S3-era migration can carry `{ url }` objects. Either shape
+ * is the same photo; anything else is not a photo and is skipped, so a card
+ * never points `<img>` at `[object Object]`.
+ */
+const firstImage = (images) => {
+  if (!Array.isArray(images)) return null;
+  for (const entry of images) {
+    if (typeof entry === "string" && entry.trim()) return entry.trim();
+    if (entry && typeof entry === "object" && typeof entry.url === "string" && entry.url.trim()) return entry.url.trim();
+  }
+  return null;
+};
+
 /** A shelf merge: requests and job calls take turns so neither drowns the other. */
 function interleave(a = [], b = []) {
   const out = [];
@@ -102,7 +119,7 @@ export const SHELVES = [
           owner: { id: row.vendor_id, handle: row.vendor_handle, name: row.vendor_business || row.vendor_business_name },
           title: text(row.name) || "Stock item",
           category: row.category,
-          image: Array.isArray(row.images) ? row.images[0] || null : null,
+          image: firstImage(row.images),
           price: money(row.unit_price) ?? money(row.wholesale_price),
           wholesalePrice: money(row.wholesale_price),
           unitPrice: money(row.unit_price),
@@ -205,7 +222,7 @@ export const SHELVES = [
           owner: { id: tool.vendor_id, handle: tool.vendor_handle, name: tool.vendor_business },
           title: text(tool.title) || "Facility",
           category: tool.category,
-          image: Array.isArray(tool.images) ? tool.images[0] || null : null,
+          image: firstImage(tool.images),
           price: money(tool.price_per_unit),
           priceUnit: tool.price_unit || null,
           location: tool.location || null,
@@ -391,9 +408,19 @@ export const SHELVES = [
         title: text(market.name) || "Market",
         city: market.city || null,
         country: market.country || null,
-        members: market.members ?? 0,
-        places: market.places ?? 0,
-        claimed: market.claimed ?? 0,
+        // GET /api/markets returns `member_count`; `members` was the old guess,
+        // which is why every market card read "0 registered vendors" while the
+        // market had members.
+        members: Number(market.member_count ?? market.members ?? 0) || 0,
+        // The directory list does not count mapped places (only the market's own
+        // screen does). `null` means "not stated here" and the card says
+        // nothing, rather than claiming zero.
+        places: market.public_places != null
+          ? Number(market.public_places) || 0
+          : market.places != null
+            ? Number(market.places) || 0
+            : null,
+        claimed: market.claimed ?? null,
         distanceKm: typeof market.distance_km === "number" ? market.distance_km : null,
       }));
     },

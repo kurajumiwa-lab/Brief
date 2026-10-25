@@ -9,8 +9,8 @@ A blocked check is never counted as a pass. Where something is blocked, what it
 would take to close it is written down.
 
 Baseline before this work (audit, 2026-10-25): 280 backend tests, 214 frontend
-tests, two reproduced security failures. Current: **325 backend**, **237
-frontend**, both suites green.
+tests, two reproduced security failures. Current: **342 backend**, **260
+frontend** (28 files), both suites green.
 
 ---
 
@@ -52,7 +52,7 @@ frontend**, both suites green.
 
 | Item | Status | Evidence |
 |---|---|---|
-| Backend and frontend suites pass after the changes | **PASS** | 322 backend, 237 frontend. |
+| Backend and frontend suites pass after the changes | **PASS** | 342 backend, 260 frontend. |
 | Production build completes cleanly | **PASS** | `vite build`, ~6 s. ESLint clean on changed files. |
 | Deployment checks verified rather than inferred | **BLOCKED** | No Vercel or Supabase access. Closing it needs: a deploy of this branch, `/api/health` and `/api/ops/status` read from the deployed URL, and one authenticated request against production. |
 | Every blocked external dependency is explicitly recorded | **PASS** | This document and `docs/audits/2026-10-25-remediation-log.md`. |
