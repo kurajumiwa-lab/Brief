@@ -54,6 +54,11 @@ free; do it deliberately, not during a deploy.
 - **PASS** — `PSPError` maps to `503` with a stated reason and the provider name;
   `settings.payments_available` is the single source of truth.
 - **PASS** — duplicate webhooks do not duplicate financial effects (existing suite).
+- **PASS** — a vendor now sees every payment attempt, its state and its receipt:
+  `/payments` reads `GET /api/payments/intents` and shows paid / awaiting provider /
+  failed separately, prints a receipt number **only** when the provider confirmed
+  it, carries the failure reason, and links to support and the refund policy. A
+  pending payment says "do not pay twice" rather than leaving a blank state.
 - **BLOCKED** — a real IntaSend collection and disbursement, and settlement against
   the internal ledger. No PSP credentials, no egress to the provider.
 
@@ -99,6 +104,7 @@ every line citing the records it came from and the route that opens them.
 | `pending_movements` | pending/confirmed/shipped, flagged when > 48 h old | `/orders` |
 | `expiring_claims` | printed expiry within 30 days or past | `/me` |
 | `open_requests` | open, not mine, no offer from me, last 14 days | `/` |
+| `receivables` | a movement I supplied that the buyer *received*, with no completed `stock_movement_payment`; flagged critical when unpaid for more than 7 days | `/orders` |
 
 Each signal carries `record_ids` (first 10), `severity`, `occurred_at`. One failing
 signal degrades to a labelled line instead of blanking the screen. On the client:
@@ -106,9 +112,15 @@ loading, empty, populated, error+retry, and a **retained-stale** state — a fai
 refresh keeps the last brief on screen with its generation time rather than losing a
 list of overdue work to a dropped connection.
 
-**Receivables signal: NOT RUN.** There is no receivable/payable model in this schema
-(orders settle at delivery), so inventing one for a dashboard card would mean a
-migration plus a credit-terms policy decision. Left out rather than faked.
+**Receivables — now PASS, without inventing a table.** The schema has no
+receivable model, and adding one would duplicate what the ledger already knows.
+The record that proves a debt exists is a movement the vendor supplied
+(`from_vendor_id`) that the buyer has *received*, with no completed
+`stock_movement_payment` against it: delivered, unpaid, citable by movement id.
+Payments merely in flight are counted separately from debts, because the vendor's
+next action differs. Verified paid → the signal clears (tested). Two things stay
+out of scope and are named as such: interest/credit terms, and money owed by
+someone who never placed an order on the platform.
 
 ## 6. Measurement — PASS
 
@@ -134,7 +146,9 @@ drill, incident response, quarterly access review, low-bandwidth device check.
 | Ledger rejects `UPDATE` and `DELETE` | **PASS** — `custody_ledger is append-only: UPDATE/DELETE` raised by the trigger |
 | API with Postgres refusing connections | **PASS** — `/api/health` `503`, `database=false`, `ConnectionRefusedError`, process alive |
 | API with Postgres accepting, then stalling | **FAIL → fixed** — the request hung until the client gave up. `app/database.py` now sets `connect_args.timeout=10`, `command_timeout=30`, `pool_timeout=10`, so a dead database becomes a `503` instead of a hang. Found by running the drill, not by reading the code. |
-| Backup restore | **BLOCKED** — no Supabase access from here |
+| `scripts/restore_check.py` on a healthy copy | **PASS** — schema 114/114, ledger UPDATE refused by `trg_custody_ledger_append_only`, 0 orphans, exit 0 |
+| Same check with the trigger dropped | **PASS as a negative test** — `[FAIL] ledger: trigger MISSING`, exit 1. The check is not vacuous. |
+| Backup restore from Supabase | **BLOCKED** — no Supabase access from here |
 | Access review | **NOT RUN** — needs the production dashboards |
 
 ## 8. Verification summary
@@ -143,13 +157,15 @@ Executed 2026-10-25 in this environment:
 
 | Gate | Result |
 |---|---|
-| Backend suite | **316 passed** (audit baseline 280) |
-| Frontend suite | **222 passed**, 23 files (baseline 214) |
+| Backend suite | **322 passed** (audit baseline 280) |
+| Frontend suite | **227 passed**, 24 files (baseline 214) |
 | Production build | clean (`vite build`, ~6 s) |
 | ESLint (changed files) | clean |
 | Migration | `alembic upgrade head` + `downgrade -1` on empty DB: **PASS**; table/column parity **114/114** |
 | `alembic check` | **FAIL (pre-existing index-name drift)** — see §2 |
 | Live end-to-end on real Postgres | register `201` → brief cites the stock id → export `200` → ops `403`/`200` → measurement `200` → billing trial → mock payment `paid` → plan `readiness` → sweep `200` → metrics `200`/`404` → close `200`, then `401` |
+| Tenant isolation (new surfaces) | **PASS** — another vendor's brief cites none of my owned record ids, my export contains none of their stock, their payment intent is a `404`, their subscription and invoices are invisible |
+| Flake note | one frontend failure was observed once in a full run and did not reproduce in two subsequent full runs (227/227 each). Recorded rather than hidden; worth watching. |
 | Deployed verification | **BLOCKED** — no Vercel egress |
 | Real PSP transaction | **BLOCKED** — no credentials |
 | Physical Android / throttled network | **BLOCKED** |

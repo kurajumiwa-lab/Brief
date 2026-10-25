@@ -14,6 +14,7 @@ from datetime import date, datetime, timedelta
 import pytest
 
 from app.config import settings as live_settings
+from app.database import async_session
 
 pytestmark = pytest.mark.asyncio
 
@@ -264,3 +265,138 @@ async def test_measurement_window_is_bounded(client, monkeypatch):
     monkeypatch.setattr(live_settings, "OPERATOR_HANDLES", handle)
     assert (await client.get("/api/ops/measurement?days=0", headers=headers)).status_code == 422
     assert (await client.get("/api/ops/measurement?days=3650", headers=headers)).status_code == 422
+
+
+# --- receivables: money owed on a delivered order --------------------------------
+
+async def _delivered_unpaid_order(client, supplier, buyer):
+    """A real movement, delivered and received, with no payment against it."""
+    import uuid as _uuid
+
+    stock = await client.post("/api/stock/add", headers=supplier, json={
+        "name": "Receivable tomatoes", "sku": f"REC-{_uuid.uuid4().hex[:6]}",
+        "category": "produce", "quantity_in_stock": 10, "unit_of_measure": "crate",
+        "unit_price": 1500,
+    })
+    assert stock.status_code == 201, stock.text
+    stock_id = stock.json()["stock_id"]
+    sourced = await client.post(f"/api/stock/{stock_id}/source", headers=buyer, json={"quantity": 2})
+    assert sourced.status_code == 201, sourced.text
+    movement_id = sourced.json()["movement_id"]
+
+    from tests.order_helpers import complete_self_pickup
+    await complete_self_pickup(client, movement_id, supplier, buyer)
+    return movement_id
+
+
+async def test_delivered_unpaid_order_appears_as_a_receivable(client):
+    _, supplier, _ = await _vendor(client, "recv_sup")
+    _, buyer, _ = await _vendor(client, "recv_buy")
+    movement_id = await _delivered_unpaid_order(client, supplier, buyer)
+
+    brief = (await client.get("/api/brief/morning", headers=supplier)).json()
+    signal = next((s for s in brief["signals"] if s["kind"] == "receivables"), None)
+    assert signal is not None, brief
+    assert signal["title"] == "Money to follow up"
+    # The citation is the movement the vendor actually supplied.
+    assert movement_id in signal["record_ids"]
+    assert signal["route"] == "/orders"
+
+    # The buyer is not owed anything by themselves.
+    buyer_brief = (await client.get("/api/brief/morning", headers=buyer)).json()
+    assert not any(s["kind"] == "receivables" and movement_id in s["record_ids"]
+                   for s in buyer_brief["signals"])
+
+
+async def test_a_settled_payment_clears_the_receivable(client):
+    from app.database import async_session
+    from app.models.payments import PaymentIntent
+    from sqlalchemy import select
+    import uuid as _uuid
+
+    _, supplier, _ = await _vendor(client, "recv_sup2")
+    _, buyer, buyer_id = await _vendor(client, "recv_buy2")
+    movement_id = await _delivered_unpaid_order(client, supplier, buyer)
+
+    before = (await client.get("/api/brief/morning", headers=supplier)).json()
+    assert any(s["kind"] == "receivables" for s in before["signals"])
+
+    async with async_session() as db:
+        db.add(PaymentIntent(
+            id=_uuid.uuid4(), vendor_id=_uuid.UUID(buyer_id),
+            entity_type="stock_movement_payment", entity_id=_uuid.UUID(movement_id),
+            amount_ksh=3000, provider="MPESA", phone="254700000001",
+            target_psp_sub="TRADE", psp_api_ref=f"REC-{_uuid.uuid4().hex[:8]}",
+            status="completed",
+        ))
+        await db.commit()
+
+    after = (await client.get("/api/brief/morning", headers=supplier)).json()
+    leftovers = [s for s in after["signals"] if s["kind"] == "receivables"]
+    assert not any(movement_id in s["record_ids"] for s in leftovers), after
+
+
+# --- tenant isolation on every v2.15 surface -----------------------------------
+# The release gate asks for "role checks plus tenant scoping" with positive *and*
+# negative access tests. These are the negative half for the new endpoints.
+
+async def test_one_vendor_cannot_read_another_vendors_records(client):
+    _, alice, alice_id = await _vendor(client, "iso_alice")
+    _, bob, _ = await _vendor(client, "iso_bob")
+
+    await client.post("/api/stock/add", json={
+        "name": "Alice's sukuma", "category": "produce", "price": 30, "quantity": 9, "unit": "bunch",
+    }, headers=alice)
+
+    # The brief is scoped by the token: Bob's brief cannot cite Alice's stock.
+    # `open_requests` is network-wide by design, so compare only the signals that
+    # are built from the vendor's own records.
+    OWNED = {"low_stock", "receivables", "pending_movements", "expiring_claims"}
+    alice_brief = (await client.get("/api/brief/morning", headers=alice)).json()
+    alice_ids = {rid for s in alice_brief["signals"] if s["kind"] in OWNED for rid in s["record_ids"]}
+    bob_brief = (await client.get("/api/brief/morning", headers=bob)).json()
+    bob_ids = {rid for s in bob_brief["signals"] if s["kind"] in OWNED for rid in s["record_ids"]}
+    assert alice_ids
+    assert not (alice_ids & bob_ids), "the brief leaked another vendor's record ids"
+
+    # The export is mine, not the network's.
+    alice_export = (await client.get("/api/vendors/me/export", headers=alice)).json()
+    bob_export = (await client.get("/api/vendors/me/export", headers=bob)).json()
+    alice_stock = {row["id"] for row in alice_export.get("stock_items", [])}
+    bob_stock = {row["id"] for row in bob_export.get("stock_items", [])}
+    assert alice_stock
+    assert not (alice_stock & bob_stock)
+
+    # A payment intent belonging to someone else is a 404, not a 403 with detail.
+    import uuid as _uuid
+    other_intent = _uuid.uuid4()
+    async with async_session() as db:
+        from app.models.payments import PaymentIntent
+        db.add(PaymentIntent(
+            id=other_intent, vendor_id=_uuid.UUID(str(alice_id)),
+            entity_type="chama_deposit", entity_id=_uuid.uuid4(), amount_ksh=500,
+            provider="MPESA", phone="254700000009", target_psp_sub="CHAMA_X",
+            psp_api_ref=f"ISO-{_uuid.uuid4().hex[:8]}", status="pending",
+        ))
+        await db.commit()
+
+    # Alice can read her own; Bob cannot read Alice's.
+    assert (await client.get(f"/api/payments/intents/{other_intent}", headers=alice)).status_code == 200
+    assert (await client.get(f"/api/payments/intents/{other_intent}", headers=bob)).status_code == 404
+
+
+async def test_billing_and_measurement_never_cross_tenants(client, monkeypatch):
+    handle, alice, _ = await _vendor(client, "iso_bill_alice")
+    _, bob, _ = await _vendor(client, "iso_bill_bob")
+
+    await client.post("/api/billing/subscribe", json={"plan_tier": "readiness"}, headers=alice)
+    alice_billing = (await client.get("/api/billing/me", headers=alice)).json()
+    bob_billing = (await client.get("/api/billing/me", headers=bob)).json()
+
+    assert alice_billing["subscription"]["id"] != (bob_billing["subscription"] or {}).get("id")
+    assert bob_billing["subscription"] is None
+    assert {i["id"] for i in alice_billing["invoices"]}.isdisjoint({i["id"] for i in bob_billing["invoices"]})
+
+    # Measurement is operator-only and aggregate; a plain vendor gets nothing.
+    monkeypatch.setattr(live_settings, "OPERATOR_HANDLES", "somebody_else")
+    assert (await client.get("/api/ops/measurement", headers=bob)).status_code == 403

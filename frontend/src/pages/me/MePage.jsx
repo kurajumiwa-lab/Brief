@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import {
   ArrowUpRight, BarChart3, Bookmark, Building2, CheckCircle2, ChevronRight,
   ClipboardList, Compass, FileCheck, Home, Layers3, List, Lock, Package,
-  PlusCircle, Repeat, Settings, ShieldCheck, ShoppingBag, ShoppingBasket,
+  PlusCircle, Receipt, Repeat, Settings, ShieldCheck, ShoppingBag, ShoppingBasket,
   Sparkles, Store, Terminal, Trash2, Truck, Users,
 } from "lucide-react";
 import Avatar from "@/components/ui/Avatar";
@@ -62,6 +62,12 @@ const QUICK_ACTIONS = [
     description: "What needs your attention today",
     to: () => "/brief",
     icon: Sparkles,
+  },
+  {
+    title: "Receipts",
+    description: "Payments you made and their state",
+    to: () => "/payments",
+    icon: Receipt,
   },
   {
     title: "Subscription",

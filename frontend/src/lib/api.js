@@ -631,6 +631,14 @@ export const briefAPI = {
   morning: () => api.get("/brief/morning"),
 };
 
+// ── Receipts: a vendor's own payment attempts (v2.15, Track 1) ─────────────
+// Read-only. Money state comes from the PSP's verified callback, never from this
+// call; a receipt number exists only once the provider confirmed it.
+export const receiptsAPI = {
+  list: (status) => api.get("/payments/intents", { params: noEmpty({ status }) }),
+  one: (id) => api.get(`/payments/intents/${id}`),
+};
+
 // ── Subscription billing (v2.15, Track 2) ──────────────────────────────────
 // Separate from transaction payments on purpose: this charges for access to the
 // platform, not for goods. Every response carries `billing.live`.

@@ -68,22 +68,20 @@ pg_restore --clean --no-owner --dbname "$DRILL_DATABASE_URL" "$DUMP_FILE"
 DATABASE_URL="$DRILL_DATABASE_URL" ALLOW_SCHEMA_AUTOCREATE_IN_PRODUCTION=false \
   uvicorn app.main:app --port 8099
 
-# 4. Check the records that matter, in this order:
-curl -s localhost:8099/api/health
-psql "$DRILL_DATABASE_URL" -c "select count(*) from vendors;"
-psql "$DRILL_DATABASE_URL" -c "select count(*), max(created_at) from custody_ledger;"
-psql "$DRILL_DATABASE_URL" -c "select count(*) from payment_intents where status='completed';"
+# 4. Check the records that matter — schema, ledger immutability, landmarks and
+#    orphans, in one read-only pass:
+cd backend && DATABASE_URL="$DRILL_DATABASE_URL" python scripts/restore_check.py
+#    expected last line:
+#    RESTORE CHECK PASSED — schema complete, ledger immutable, no orphans.
+#    It exits non-zero when the append-only trigger is missing or an orphan
+#    exists, so paste the output into the evidence row instead of describing it.
 
-# 5. Verify the ledger still refuses mutation (it is enforced by the database):
-psql "$DRILL_DATABASE_URL" -c "update custody_ledger set amount_ksh=1 where id=(select id from custody_ledger limit 1);"
-#    expected: ERROR: custody_ledger is append-only: UPDATE is not allowed
-
-# 6. Destroy the drill database.
+# 5. Destroy the drill database.
 ```
 
-Evidence to record: restore start/finish timestamps, backup timestamp used, the
-four counts above, and the mutation error text. A restore that "looked fine" is
-not evidence; the numbers are.
+Evidence to record: restore start/finish timestamps, the backup timestamp used, and
+the check's output verbatim. A restore that "looked fine" is not evidence; the
+numbers and the exit code are.
 
 ## 3. Schema and migrations
 
@@ -218,5 +216,7 @@ substitute):
 | 2026-10-25 | Ledger rejects UPDATE and DELETE | PASS | trigger raised `custody_ledger is append-only: UPDATE/DELETE` on a real Postgres |
 | 2026-10-25 | API with Postgres refusing connections | PASS | `/api/health` → `503`, `database=false`, `ConnectionRefusedError`, process stayed up |
 | 2026-10-25 | API with Postgres stopped mid-pool | **FAIL → fixed** | request hung until the client gave up. `engine` now sets `connect_args.timeout=10`, `command_timeout=30`, `pool_timeout=10`. Re-run the stopped-mid-pool case after the next deploy. |
-| — | Restore drill against isolated DB | **BLOCKED** | no Supabase egress from the build environment |
+| — | `scripts/restore_check.py` on a healthy copy | **PASS** | schema 114/114, ledger UPDATE refused by `trg_custody_ledger_append_only`, 0 orphans, exit 0 |
+| Same check with the trigger dropped | **PASS as a negative test** | `[FAIL] ledger: trigger MISSING`, exit 1 — the check is not vacuous |
+| Restore drill against isolated DB | **BLOCKED** | no Supabase egress from the build environment |
 | — | Production access review | **NOT RUN** | requires dashboard access |

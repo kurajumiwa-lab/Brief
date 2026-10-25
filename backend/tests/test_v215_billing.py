@@ -257,3 +257,27 @@ async def test_mock_provider_cannot_grant_a_plan_in_production(client, monkeypat
     assert "not configured" in r.json()["detail"]
     body = (await client.get("/api/billing/me", headers=headers)).json()
     assert body["subscription"] is None
+
+
+async def test_a_settled_invoice_leaves_revenue_evidence(client):
+    """Billing history must be auditable: a paid invoice is also a revenue event."""
+    from sqlalchemy import select
+
+    from app.models.governance import RevenueEvent
+
+    _, headers, _ = await _vendor(client, "revenue")
+    body = (await client.post("/api/billing/subscribe", json={"plan_tier": "readiness"},
+                              headers=headers)).json()
+    await client.post(f"/api/billing/invoices/{body['invoice']['id']}/simulate", headers=headers)
+
+    async with async_session() as db:
+        events = (await db.execute(
+            select(RevenueEvent).where(RevenueEvent.source_type == "subscription",
+                                       RevenueEvent.source_reference == body["invoice"]["id"])
+        )).scalars().all()
+    assert len(events) == 1
+    event = events[0]
+    assert int(event.net_amount_ksh) == body["invoice"]["amount_kes"]
+    # Evidence names the provider and the reference it can be reconciled against.
+    assert "mock" in event.evidence_note.lower()
+    assert body["invoice"]["psp_reference"] in event.evidence_note

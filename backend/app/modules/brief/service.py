@@ -23,8 +23,10 @@ from typing import Optional
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.payments import PaymentIntent
 from app.models.stock import MovementStatus, StockItem, StockMovement
 from app.models.vendor import Vendor
+from app.modules.orders.models import OrderTransaction
 from app.modules.standing.models import BusinessClaim, ClaimStatus
 from app.modules.trade.models import BusinessRequest, RequestOffer, RequestStatus
 
@@ -36,6 +38,9 @@ CLAIM_WARNING_DAYS = 30
 MOVEMENT_STALE_HOURS = 48
 # Open requests are only interesting while they are still askable.
 REQUEST_WINDOW_DAYS = 14
+# Goods delivered longer ago than this without a settled payment is a real debt,
+# not a slow checkout.
+RECEIVABLE_GRACE_DAYS = 7
 
 SEVERITY_ORDER = {"critical": 0, "warning": 1, "info": 2}
 
@@ -183,7 +188,82 @@ async def open_requests(db: AsyncSession, vendor: Vendor) -> Optional[dict]:
     )
 
 
-SIGNALS = (low_stock, pending_movements, expiring_claims, open_requests)
+async def receivables(db: AsyncSession, vendor: Vendor) -> Optional[dict]:
+    """Money owed to this vendor for goods already delivered.
+
+    There is no "receivable" table, and inventing one would duplicate the ledger.
+    The record that actually proves a debt already exists: a movement the vendor
+    supplied (`from_vendor_id`), received by the buyer, with no *completed*
+    stock_movement_payment against it. That is a delivered, unpaid order — the
+    brief cites the movement id, and `/orders` opens the same record.
+
+    A pending payment is a receipt in flight; a failed or absent one is a debt.
+    The two are counted separately because the vendor's next action differs.
+    """
+    rows = (await db.execute(
+        select(StockMovement, OrderTransaction)
+        .outerjoin(OrderTransaction, OrderTransaction.movement_id == StockMovement.id)
+        .where(
+            StockMovement.from_vendor_id == vendor.id,
+            StockMovement.status == MovementStatus.RECEIVED.value,
+        )
+        .order_by(StockMovement.completed_at.asc().nullsfirst())
+        .limit(200)
+    )).all()
+    if not rows:
+        return None
+
+    movement_ids = [m.id for m, _ in rows]
+    settled = {
+        row.entity_id for row in (await db.execute(
+            select(PaymentIntent).where(
+                PaymentIntent.entity_type == "stock_movement_payment",
+                PaymentIntent.entity_id.in_(movement_ids),
+                PaymentIntent.status == "completed",
+            )
+        )).scalars().all()
+    }
+    in_flight = {
+        row.entity_id for row in (await db.execute(
+            select(PaymentIntent).where(
+                PaymentIntent.entity_type == "stock_movement_payment",
+                PaymentIntent.entity_id.in_(movement_ids),
+                PaymentIntent.status == "pending",
+            )
+        )).scalars().all()
+    }
+
+    unpaid = [(m, t) for m, t in rows if m.id not in settled]
+    if not unpaid:
+        return None
+
+    grace = datetime.utcnow() - timedelta(days=RECEIVABLE_GRACE_DAYS)
+    overdue = [
+        (m, t) for m, t in unpaid
+        if m.id not in in_flight and (m.completed_at or m.created_at) < grace
+    ]
+    outstanding = sum(int(t.product_amount_ksh) for m, t in unpaid if t is not None)
+
+    parts = [f"{len(unpaid)} delivered order{'s' if len(unpaid) != 1 else ''} without a settled payment"]
+    if outstanding:
+        parts.append(f"KES {outstanding:,} outstanding")
+    if overdue:
+        parts.append(f"{len(overdue)} unpaid for more than {RECEIVABLE_GRACE_DAYS} days")
+    pending = len(unpaid) - len([1 for m, _ in unpaid if m.id not in in_flight])
+
+    return _signal(
+        kind="receivables",
+        severity="critical" if overdue else "warning",
+        title="Money to follow up",
+        detail=" — ".join(parts) + (f" ({pending} awaiting the buyer's payment)" if pending and len(unpaid) > pending else ""),
+        count=len(unpaid),
+        record_ids=[m.id for m, _ in unpaid],
+        route="/orders",
+        occurred_at=min(((m.completed_at or m.created_at) for m, _ in unpaid), default=None),
+    )
+
+
+SIGNALS = (low_stock, receivables, pending_movements, expiring_claims, open_requests)
 
 
 async def build_brief(db: AsyncSession, vendor: Vendor) -> dict:
@@ -215,7 +295,10 @@ async def build_brief(db: AsyncSession, vendor: Vendor) -> dict:
         "total": sum(s["count"] for s in found),
         "signals": found,
         "empty": not found,
-        "sources": ["stock_items", "stock_movements", "business_claims", "business_requests"],
+        "sources": [
+            "stock_items", "stock_movements", "order_transactions", "payment_intents",
+            "business_claims", "business_requests",
+        ],
         "note": "Read-only summary of your own records. Nothing here is generated "
                 "text, and no line can change a payment, a ledger entry or a balance.",
     }

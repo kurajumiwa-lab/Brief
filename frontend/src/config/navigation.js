@@ -128,7 +128,7 @@ const EXPLORE_ROOTS = [
     notifications, chat, orders, tasks, rentals and bookings. Deep links stay;
     the aggregation lives at /activity. */
 const ACTIVITY_ROOTS = [
-  "/activity", "/activities", "/work", "/orders", "/chat", "/tasks", "/locks", "/tools",
+  "/activity", "/activities", "/work", "/orders", "/chat", "/tasks", "/locks", "/tools", "/payments",
 ];
 
 const ME_ROOTS = [
