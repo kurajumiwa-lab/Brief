@@ -10,6 +10,7 @@ import {
   ShieldAlert,
   ThumbsDown,
   ThumbsUp,
+  VolumeX,
 } from "lucide-react";
 import Avatar from "./Avatar.jsx";
 import { useApp } from "@/store/appStore.js";
@@ -44,6 +45,7 @@ export default function PostCard({ entry, onOpenVerdict, compact = false }) {
   const block = useApp((state) => state.block);
 
   const [showImage, setShowImage] = useState(false);
+  const [showVoice, setShowVoice] = useState(false);
   const [menu, setMenu] = useState(false);
   const menuRef = useRef(null);
   const t = makeT(preferences.locale);
@@ -65,6 +67,9 @@ export default function PostCard({ entry, onOpenVerdict, compact = false }) {
   }, [menu]);
 
   const imageHidden = post.image && preferences.dataSaver && !showImage;
+  // A voice note is the most expensive thing on a card — 190 KB for 42 seconds
+  // in the seed — so the data saver has to gate it too, not just photographs.
+  const voiceHidden = post.voice && preferences.dataSaver && !showVoice;
 
   return (
     <article className="card post" data-testid={`post-${post.id}`}>
@@ -175,7 +180,22 @@ export default function PostCard({ entry, onOpenVerdict, compact = false }) {
         </div>
       )}
 
-      {post.voice && (
+      {voiceHidden && (
+        <div className="post__media">
+          <div className="post__media-placeholder">
+            <VolumeX size={16} aria-hidden="true" />
+            <span className="grow">
+              Voice note not loaded — data saver is on. {dataSize(post.voice.kb)} for{" "}
+              {post.voice.seconds} seconds.
+            </span>
+            <button type="button" className="btn btn--quiet" onClick={() => setShowVoice(true)}>
+              Play it
+            </button>
+          </div>
+        </div>
+      )}
+
+      {post.voice && !voiceHidden && (
         <div className="post__voice">
           <span className="chip chip--green">
             <Mic size={12} aria-hidden="true" /> Voice

@@ -9,7 +9,7 @@ compose, data saving, offline) or named as not built yet.
 cd caesar
 npm install
 npm run dev      # http://localhost:5180
-npm test         # 77 specs
+npm test         # 104 specs
 npm run build
 ```
 
@@ -31,6 +31,12 @@ printed on the feed rather than buried in a brand book, because a name that
 glorifies empire and a product that says "the community decides" cannot both be
 true.
 
+The alternatives the brief names — **Baraza, Jenga, Sankofa, Kesho** — are not
+adopted here. Choosing between them is a naming study with real speakers of the
+languages they come from, which is research, not code. The prototype is built so
+the decision stays cheap: the name appears in `Logo.jsx`, the two `<title>`
+elements and the seed's circle copy, and nowhere else.
+
 ---
 
 ## What was built, against the brief's MVP list
@@ -38,7 +44,7 @@ true.
 | MVP item | State |
 |---|---|
 | 1. Account creation and profiles | Profile screen with reputation; no auth — the prototype has one viewer (`@amina`) |
-| 2. Text-first posts and a lightweight feed | **Built** — text, illustration, voice (simulated), ranked feed |
+| 2. Text-first posts and a lightweight feed | **Built** — text, illustration, voice (a labelled sample), ranked feed |
 | 3. Thumbs-up and thumbs-down reactions | **Built** — equal-weight buttons, withdrawable, queued offline |
 | 4. Basic Circles and community moderation | **Built** — six circles, rules before joining, report → case |
 | 5. Transparent content ranking | **Built** — the score and its four parts are printed in the app |
@@ -49,6 +55,31 @@ true.
 Explicitly **not** built, and not faked: monetisation (M-Pesa / MoMo / Airtel
 tips and subscriptions), SMS/USSD, notifications, image upload, a real
 moderator console, and the remaining languages.
+
+---
+
+## Measuring the six things the brief asks for
+
+The brief ends with a rule: judge the product on retention, data consumption,
+content quality, fairness, language participation and moderation outcomes — *not
+engagement alone*. That rule has a screen of its own at `/measure`, linked from
+the rail.
+
+Five of the six are computed from real state: the seed network plus whatever the
+person using the prototype has done. Retention refuses to answer, and says why:
+
+| Measure | On `/measure` | Where it comes from |
+|---|---|---|
+| Retention | **Not measurable here** | needs accounts and a second day; the prototype has neither |
+| Data consumption | Total KB for the whole feed; the split between text, photographs and voice; what data saver withholds; the heaviest single post | the same per-post byte estimates the cards print |
+| Content quality | Share of posts that reached *useful* (5+ reactions, 60% confidence) | `reputation.js`, the published definition |
+| Fairness | Contested posts visible / contested posts; posts hidden for disagreement (**always 0**); dissent as a share of all reactions | `ranking.js` verdicts |
+| Language participation | Posts per language tag, and the share not written in the interface language | each author's own tag |
+| Moderation outcomes | Reports by status, blocked and muted counts | the Safety centre's own records |
+
+The design rule behind that screen: every number is derived from the state the
+interface is showing, never stored separately. A metric that can disagree with
+the product is a metric that will.
 
 ---
 
@@ -116,8 +147,10 @@ narrower one.
 
 ## Data, offline and language
 
-- **Data saver** hides images until asked and prints what each post costs
-  (text KB + attached media), including in the composer before sending.
+- **Data saver** hides images *and voice notes* until asked, printing what each
+  would have cost — including in the composer before sending. Voice is gated
+  because the measurement screen showed it was 90% of this feed's bytes; one
+  42-second note outweighed every text post combined.
 - **Offline** is a visible state, not an optimistic lie: reactions and posts are
   marked *Queued*, listed in the Safety centre, stored, and cleared on reconnect
   with a count of what was sent.
@@ -134,8 +167,8 @@ narrower one.
   `@fontsource-variable` and subset by `unicode-range` (≈82 KB of woff2 for the
   Latin interface). No `fonts.googleapis.com` request, so the typography also
   works in the offline state the app advertises.
-- The same geometry is the favicon: the badge, both thumbs and the continent,
-  inlined as one data URI in `index.html`.
+- The same geometry is the **app icon**: the symbol only, no wordmark, inlined as
+  one data URI in `index.html` — which is what the brief asks an app icon to be.
 - The **Balanced Verdict mark** is drawn as vector (`src/components/Logo.jsx`):
   a green badge, a gold thumbs-up and a terracotta thumbs-down of identical size
   and mirrored position, with Africa at the centre. Symmetry is the argument:
@@ -152,12 +185,13 @@ src/lib/selectors.js     the only visibility rules (blocks, mutes, moderation st
 src/store/appStore.js    one store, write-through to localStorage, the offline queue
 src/data/seed.js         fourteen posts covering every state the feed must handle
 src/components/          PostCard, VerdictSheet, Logo, Nav, TopBar, Toasts, Avatar
-src/pages/               Feed, Circles, Circle, Compose, Profile, Safety
+src/lib/metrics.js       the six measures, derived from state, never stored
+src/pages/               Feed, Circles, Circle, Compose, Profile, Safety, Measure
 ```
 
 ## Tests
 
-77 specs across five files (`npm test`):
+104 specs across seven files (`npm test`):
 
 - `ranking.test.js` (20) — small samples cannot decide, contested posts are never
   dropped and hold the floor, bursts are damped and nobody is banned, published
@@ -167,12 +201,17 @@ src/pages/               Feed, Circles, Circle, Compose, Profile, Safety
 - `feed.test.jsx` (12) — ordering by the published score, both reactions as
   peers, withdrawing and swapping, the panel printing the same score the feed
   used, and the brand line on the feed.
-- `controls.test.jsx` (25) — report ≠ hide, block/mute/unblock, offline queueing,
+- `controls.test.jsx` (26) — report ≠ hide, block/mute/unblock, offline queueing,
   data saver, language, theme, composer validation, circle join/leave, profile,
   the dialog's focus handling, the honesty list of what is not built, and the
   composer labelling its media as samples.
 - `storage.test.js` (11) — old payloads, unparseable payloads, a browser that
   refuses to store, write-through, reset.
+- `metrics.test.js` (12) — each of the six measures agrees with the state it
+  summarises, retention stays unmeasured, and a moderator removal is counted.
+- `shell.test.jsx` (14) — the skip link is first in tab order, the document
+  title names the screen, focus follows a navigation but is never stolen on
+  first paint, and `/measure` prints all six.
 
 ## Sensible next steps
 

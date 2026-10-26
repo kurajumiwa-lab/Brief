@@ -39,6 +39,9 @@ export function Rail() {
         <p style={{ marginTop: 6 }}>
           No server. Everything you do here is stored in this browser and nothing leaves it.
         </p>
+        <NavLink to="/measure" className="rail__foot-link">
+          What this would measure →
+        </NavLink>
       </div>
     </aside>
   );

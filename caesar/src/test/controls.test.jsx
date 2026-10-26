@@ -164,6 +164,22 @@ describe("data saver", () => {
     expect(card("p-kale").querySelector("img")).not.toBeNull();
   });
 
+  it("gates the voice note as well, because it is the expensive item", () => {
+    open();
+    expect(card("p-voice").querySelector(".post__voice")).not.toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: /data saver/i }));
+
+    const gated = card("p-voice");
+    expect(within(gated).getByText(/voice note not loaded — data saver is on/i)).toBeInTheDocument();
+    // The player is gone; the price of bringing it back is stated in its place.
+    expect(gated.querySelector(".post__voice")).toBeNull();
+    expect(within(gated).getByText(/190 KB for 42 seconds/i)).toBeInTheDocument();
+
+    fireEvent.click(within(gated).getByRole("button", { name: /play it/i }));
+    expect(card("p-voice").querySelector(".post__voice")).not.toBeNull();
+  });
+
   it("states each post's data cost", () => {
     open();
     fireEvent.click(screen.getByRole("button", { name: /data saver/i }));

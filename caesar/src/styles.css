@@ -80,6 +80,27 @@
   --shadow-md: 0 8px 24px -12px rgba(0, 0, 0, 0.5);
 }
 
+/* Keyboard users should not have to tab through the rail on every screen. */
+.skip-link {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 100;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--green-800);
+  color: var(--ivory);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transform: translateY(-160%);
+  transition: transform 0.12s ease;
+}
+
+.skip-link:focus-visible {
+  transform: translateY(0);
+}
+
 *,
 *::before,
 *::after {
@@ -152,6 +173,13 @@ p {
 .shell__main {
   min-width: 0;
   padding-bottom: 84px; /* room for the tab bar */
+}
+
+/* The main region is a landing point for a route change, not a control. */
+.shell__main:focus,
+.shell__main:focus-visible {
+  outline: none;
+}
 }
 
 .container {
@@ -338,6 +366,23 @@ p {
   color: var(--text-3);
   font-size: 11.5px;
   line-height: 1.5;
+}
+
+.rail__foot-link {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--green-700);
+  text-decoration: none;
+}
+
+.rail__foot-link:hover {
+  text-decoration: underline;
+}
+
+:root[data-theme="dark"] .rail__foot-link {
+  color: var(--gold);
 }
 
 /* ── tab bar (mobile) ────────────────────────────────────────────────────── */
@@ -1200,6 +1245,45 @@ p {
 .notice--green {
   background: var(--green-50);
   border-color: color-mix(in srgb, var(--green) 22%, transparent);
+}
+
+/* ── measurement notes ───────────────────────────────────────────────────── */
+
+.metric__headline {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.metric__value {
+  font-family: var(--font-brand);
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.metric__rows {
+  margin: 12px 0 0;
+  padding: 12px 0 0;
+  border-top: 1px solid var(--hairline);
+  display: grid;
+  gap: 7px;
+}
+
+.metric__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.metric__row dd {
+  margin: 0;
+  text-align: right;
+  flex-shrink: 0;
 }
 
 /* ── sheet / modal ───────────────────────────────────────────────────────── */

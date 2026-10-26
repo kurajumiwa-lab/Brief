@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Route, Routes, useLocation } from "react-router-dom";
 import TopBar from "./components/TopBar.jsx";
 import { Rail, TabBar } from "./components/Nav.jsx";
@@ -9,6 +9,7 @@ import CirclePage from "./pages/CirclePage.jsx";
 import ComposePage from "./pages/ComposePage.jsx";
 import ProfilePage from "./pages/ProfilePage.jsx";
 import SafetyPage from "./pages/SafetyPage.jsx";
+import MeasurePage from "./pages/MeasurePage.jsx";
 import { useApp } from "./store/appStore.js";
 
 export default function App() {
@@ -31,12 +32,29 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: "auto" });
   }, [pathname]);
 
+  // Two things a single-page app routinely forgets, and both matter more on a
+  // phone in the sun than in a demo: the document title has to say where you
+  // are, and focus has to follow a navigation. Otherwise a screen reader
+  // announces nothing after a tap and the user is still, silently, on the link.
+  const firstRender = useRef(true);
+  useEffect(() => {
+    document.title = titleFor(pathname);
+    if (firstRender.current) {
+      firstRender.current = false;
+      return;
+    }
+    document.getElementById("main")?.focus();
+  }, [pathname]);
+
   return (
     <div className="shell">
+      <a className="skip-link" href="#main">
+        Skip to content
+      </a>
       <Rail />
       <div>
         <TopBar />
-        <main className="shell__main">
+        <main className="shell__main" id="main" tabIndex={-1}>
           <div className="container">
             <Routes>
               <Route path="/" element={<FeedPage />} />
@@ -45,6 +63,7 @@ export default function App() {
               <Route path="/compose" element={<ComposePage />} />
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/safety" element={<SafetyPage />} />
+              <Route path="/measure" element={<MeasurePage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </div>
@@ -54,6 +73,20 @@ export default function App() {
       <Toasts />
     </div>
   );
+}
+
+/** Every route says where it is. "Caesar" alone is not an answer. */
+export function titleFor(pathname = "/") {
+  if (pathname.startsWith("/circles/")) return "Circle · Caesar";
+  const titles = {
+    "/": "Feed · Caesar",
+    "/circles": "Circles · Caesar",
+    "/compose": "Write a post · Caesar",
+    "/profile": "Profile · Caesar",
+    "/safety": "Safety centre · Caesar",
+    "/measure": "What this would measure · Caesar",
+  };
+  return titles[pathname] || "Caesar — The community decides.";
 }
 
 function NotFound() {
