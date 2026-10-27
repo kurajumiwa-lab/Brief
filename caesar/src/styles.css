@@ -166,8 +166,16 @@ p {
 
 .shell {
   display: grid;
-  grid-template-columns: 1fr;
+  /* minmax(0, …) rather than 1fr: the automatic minimum of a grid track is its
+     content, so one no-wrap row of chips was widening the entire page. */
+  grid-template-columns: minmax(0, 1fr);
   min-height: 100vh;
+}
+
+/* Grid items default to min-width:auto for the same reason. The column that
+   holds the app must be allowed to be narrower than its contents. */
+.shell > * {
+  min-width: 0;
 }
 
 .shell__main {
@@ -179,7 +187,6 @@ p {
 .shell__main:focus,
 .shell__main:focus-visible {
   outline: none;
-}
 }
 
 .container {
@@ -242,6 +249,41 @@ p {
   display: flex;
   align-items: center;
   gap: 6px;
+  min-width: 0;
+}
+
+/* Language: icon plus ISO code, 36px tall so it is a comfortable thumb target
+   rather than a 17px sliver. */
+.topbar__lang {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  width: auto;
+  height: 44px;
+  padding: 0 8px;
+  cursor: pointer;
+}
+
+.topbar__lang-select {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  padding: 0;
+  max-width: 42px;
+  /* Fill the label: the hit area is the control, not the 21px of text. */
+  height: 44px;
+  min-width: 28px;
+  appearance: none;
+}
+
+.topbar__lang-select:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 6px;
 }
 
 .brand {
@@ -392,7 +434,7 @@ p {
   inset: auto 0 0 0;
   z-index: 45;
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 2px;
   padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
   background: color-mix(in srgb, var(--surface) 94%, transparent);
@@ -404,6 +446,7 @@ p {
   display: flex;
   flex-direction: column;
   align-items: center;
+  min-width: 0;
   gap: 3px;
   padding: 6px 2px;
   border-radius: 12px;
@@ -848,8 +891,11 @@ p {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 34px;
-  padding: 0 12px 0 10px;
+  /* The product's primary action, so it gets a thumb-sized target rather than
+     the 34px that merely looked right. */
+  height: 44px;
+  min-width: 44px;
+  padding: 0 14px 0 12px;
   border-radius: var(--radius-pill);
   border: 1px solid var(--hairline);
   background: var(--surface);
@@ -1067,12 +1113,12 @@ p {
 .circle-grid {
   display: grid;
   gap: 12px;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
 }
 
 @media (min-width: 720px) {
   .circle-grid {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
