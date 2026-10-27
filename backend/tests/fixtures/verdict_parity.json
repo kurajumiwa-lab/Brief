@@ -1,0 +1,1230 @@
+{
+  "now_ms": 1792918800000,
+  "viewer_circle_ids": [
+    "c1"
+  ],
+  "users": [
+    {
+      "id": "u-vet",
+      "reactions_given": 50
+    },
+    {
+      "id": "u-new",
+      "reactions_given": 0
+    },
+    {
+      "id": "u-mid",
+      "reactions_given": 8
+    }
+  ],
+  "ranking": {
+    "weights": {
+      "confidence": 0.5,
+      "participation": 0.2,
+      "recency": 0.15,
+      "circle": 0.15
+    },
+    "participation_cap": 40,
+    "contested_min_reactions": 8,
+    "contested_dissent_share": 0.34,
+    "contested_floor": 0.25,
+    "half_life_hours": 12,
+    "burst_window_ms": 60000,
+    "burst_share": 0.3,
+    "burst_min_count": 5,
+    "burst_damping": 0.5,
+    "outsider_weight": 0.7,
+    "new_account_weight": 0.85
+  },
+  "order": [
+    "consensus",
+    "strong-sample",
+    "outside-circle",
+    "contested",
+    "burst",
+    "new-account-only",
+    "small-sample",
+    "empty",
+    "dogpiled-old"
+  ],
+  "cases": [
+    {
+      "id": "consensus",
+      "circleId": "c1",
+      "createdAt": "2026-10-25T07:00:00.000Z",
+      "reactions": [
+        {
+          "id": "r0",
+          "userId": "u-vet",
+          "value": "up",
+          "at": 1792911697297
+        },
+        {
+          "id": "r1",
+          "userId": "u-mid",
+          "value": "up",
+          "at": 1792911891892
+        },
+        {
+          "id": "r2",
+          "userId": "u-vet",
+          "value": "up",
+          "at": 1792912086486
+        },
+        {
+          "id": "r3",
+          "userId": "u-mid",
+          "value": "up",
+          "at": 1792912281081
+        },
+        {
+          "id": "r4",
+          "userId": "u-vet",
+          "value": "up",
+          "at": 1792912475676
+        },
+        {
+          "id": "r5",
+          "userId": "u-mid",
+          "value": "up",
+          "at": 1792912670270
+        },
+        {
+          "id": "r6",
+          "userId": "u-vet",
+          "value": "up",
+          "at": 1792912864865
+        },
+        {
+          "id": "r7",
+          "userId": "u-mid",
+          "value": "up",
+          "at": 1792913059459
+        },
+        {
+          "id": "r8",
+          "userId": "u-vet",
+          "value": "up",
+          "at": 1792913254054
+        },
+        {
+          "id": "r9",
+          "userId": "u-mid",
+          "value": "up",
+          "at": 1792913448649
+        },
+        {
+          "id": "r10",
+          "userId": "u-vet",
+          "value": "up",
+          "at": 1792913643243
+        },
+        {
+          "id": "r11",
+          "userId": "u-mid",
+          "value": "up",
+          "at": 1792913837838
+        },
+        {
+          "id": "r12",
+          "userId": "u-vet",
+          "value": "up",
+          "at": 1792914032432
+        },
+        {
+          "id": "r13",
+          "userId": "u-mid",
+          "value": "up",
+          "at": 1792914227027
+        },
+        {
+          "id": "r14",
+          "userId": "u-vet",
+          "value": "up",
+          "at": 1792914421622
+        },
+        {
+          "id": "r15",
+          "userId": "u-mid",
+          "value": "up",
+          "at": 1792914616216
+        },
+        {
+          "id": "r16",
+          "userId": "u-vet",
+          "value": "up",
+          "at": 1792914810811
+        },
+        {
+          "id": "r17",
+          "userId": "u-mid",
+          "value": "up",
+          "at": 1792915005405
+        },
+        {
+          "id": "r18",
+          "userId": "u-vet",
+          "value": "up",
+          "at": 1792915200000
+        },
+        {
+          "id": "r19",
+          "userId": "u-mid",
+          "value": "up",
+          "at": 1792915394595
+        },
+        {
+          "id": "r20",
+          "userId": "u-vet",
+          "value": "up",
+          "at": 1792915589189
+        },
+        {
+          "id": "r21",
+          "userId": "u-mid",
+          "value": "up",
+          "at": 1792915783784
+        },
+        {
+          "id": "r22",
+          "userId": "u-vet",
+          "value": "up",
+          "at": 1792915978378
+        },
+        {
+          "id": "r23",
+          "userId": "u-mid",
+          "value": "up",
+          "at": 1792916172973
+        },
+        {
+          "id": "r24",
+          "userId": "u-vet",
+          "value": "up",
+          "at": 1792916367568
+        },
+        {
+          "id": "r25",
+          "userId": "u-mid",
+          "value": "up",
+          "at": 1792916562162
+        },
+        {
+          "id": "r26",
+          "userId": "u-vet",
+          "value": "up",
+          "at": 1792916756757
+        },
+        {
+          "id": "r27",
+          "userId": "u-mid",
+          "value": "up",
+          "at": 1792916951351
+        },
+        {
+          "id": "r28",
+          "userId": "u-vet",
+          "value": "up",
+          "at": 1792917145946
+        },
+        {
+          "id": "r29",
+          "userId": "u-mid",
+          "value": "up",
+          "at": 1792917340541
+        },
+        {
+          "id": "r30",
+          "userId": "u-vet",
+          "value": "up",
+          "at": 1792917535135
+        },
+        {
+          "id": "r31",
+          "userId": "u-mid",
+          "value": "up",
+          "at": 1792917729730
+        },
+        {
+          "id": "r32",
+          "userId": "u-vet",
+          "value": "up",
+          "at": 1792917924324
+        },
+        {
+          "id": "r33",
+          "userId": "u-mid",
+          "value": "up",
+          "at": 1792918118919
+        },
+        {
+          "id": "r34",
+          "userId": "u-vet",
+          "value": "down",
+          "at": 1792918313514
+        },
+        {
+          "id": "r35",
+          "userId": "u-mid",
+          "value": "down",
+          "at": 1792918508108
+        },
+        {
+          "id": "r36",
+          "userId": "u-vet",
+          "value": "down",
+          "at": 1792918702703
+        }
+      ],
+      "expected": {
+        "score": 0.873,
+        "raised_by_floor": false,
+        "parts": {
+          "confidence": 0.787,
+          "participation": 0.98,
+          "recency": 0.891,
+          "circle": 1
+        },
+        "verdict": {
+          "up": 34,
+          "down": 3,
+          "participation": 37,
+          "weighted_up": 34,
+          "weighted_down": 3,
+          "weighted_participation": 37,
+          "agreement": 0.918918918918919,
+          "confidence": 0.7869900750149847,
+          "dissent_share": 0.08108108108108109,
+          "contested": false,
+          "needs_more_voices": false,
+          "coordination": {
+            "suspected": false,
+            "count": 1,
+            "total": 37,
+            "share": 0.02702702702702703,
+            "factor": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "contested",
+      "circleId": "c1",
+      "createdAt": "2026-10-25T07:00:00.000Z",
+      "reactions": [
+        {
+          "id": "r0",
+          "userId": "u-vet",
+          "value": "up",
+          "at": 1792912275000
+        },
+        {
+          "id": "r1",
+          "userId": "u-mid",
+          "value": "up",
+          "at": 1792913625000
+        },
+        {
+          "id": "r2",
+          "userId": "u-vet",
+          "value": "up",
+          "at": 1792914975000
+        },
+        {
+          "id": "r3",
+          "userId": "u-mid",
+          "value": "up",
+          "at": 1792916325000
+        },
+        {
+          "id": "r4",
+          "userId": "u-vet",
+          "value": "up",
+          "at": 1792917675000
+        },
+        {
+          "id": "r5",
+          "userId": "u-mid",
+          "value": "up",
+          "at": 1792919025000
+        },
+        {
+          "id": "r6",
+          "userId": "u-vet",
+          "value": "down",
+          "at": 1792920375000
+        },
+        {
+          "id": "r7",
+          "userId": "u-mid",
+          "value": "down",
+          "at": 1792921725000
+        },
+        {
+          "id": "r8",
+          "userId": "u-vet",
+          "value": "down",
+          "at": 1792923075000
+        },
+        {
+          "id": "r9",
+          "userId": "u-mid",
+          "value": "down",
+          "at": 1792924425000
+        },
+        {
+          "id": "r10",
+          "userId": "u-vet",
+          "value": "down",
+          "at": 1792925775000
+        },
+        {
+          "id": "r11",
+          "userId": "u-mid",
+          "value": "down",
+          "at": 1792927125000
+        },
+        {
+          "id": "r12",
+          "userId": "u-vet",
+          "value": "down",
+          "at": 1792928475000
+        },
+        {
+          "id": "r13",
+          "userId": "u-mid",
+          "value": "down",
+          "at": 1792929825000
+        },
+        {
+          "id": "r14",
+          "userId": "u-vet",
+          "value": "down",
+          "at": 1792931175000
+        },
+        {
+          "id": "r15",
+          "userId": "u-mid",
+          "value": "down",
+          "at": 1792932525000
+        }
+      ],
+      "expected": {
+        "score": 0.529,
+        "raised_by_floor": false,
+        "parts": {
+          "confidence": 0.185,
+          "participation": 0.763,
+          "recency": 0.891,
+          "circle": 1
+        },
+        "verdict": {
+          "up": 6,
+          "down": 10,
+          "participation": 16,
+          "weighted_up": 6,
+          "weighted_down": 10,
+          "weighted_participation": 16,
+          "agreement": 0.375,
+          "confidence": 0.18480982554752803,
+          "dissent_share": 0.625,
+          "contested": true,
+          "needs_more_voices": false,
+          "coordination": {
+            "suspected": false,
+            "count": 1,
+            "total": 16,
+            "share": 0.0625,
+            "factor": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "dogpiled-old",
+      "circleId": "c2",
+      "createdAt": "2026-09-25T09:00:00.000Z",
+      "reactions": [
+        {
+          "id": "r0",
+          "userId": "u-vet",
+          "value": "down",
+          "at": 1790327100000
+        },
+        {
+          "id": "r1",
+          "userId": "u-mid",
+          "value": "down",
+          "at": 1790327700000
+        },
+        {
+          "id": "r2",
+          "userId": "u-vet",
+          "value": "down",
+          "at": 1790328300000
+        },
+        {
+          "id": "r3",
+          "userId": "u-mid",
+          "value": "down",
+          "at": 1790328900000
+        },
+        {
+          "id": "r4",
+          "userId": "u-vet",
+          "value": "down",
+          "at": 1790329500000
+        },
+        {
+          "id": "r5",
+          "userId": "u-mid",
+          "value": "down",
+          "at": 1790330100000
+        },
+        {
+          "id": "r6",
+          "userId": "u-vet",
+          "value": "down",
+          "at": 1790330700000
+        },
+        {
+          "id": "r7",
+          "userId": "u-mid",
+          "value": "down",
+          "at": 1790331300000
+        },
+        {
+          "id": "r8",
+          "userId": "u-vet",
+          "value": "down",
+          "at": 1790331900000
+        },
+        {
+          "id": "r9",
+          "userId": "u-mid",
+          "value": "down",
+          "at": 1790332500000
+        },
+        {
+          "id": "r10",
+          "userId": "u-vet",
+          "value": "down",
+          "at": 1790333100000
+        },
+        {
+          "id": "r11",
+          "userId": "u-mid",
+          "value": "down",
+          "at": 1790333700000
+        }
+      ],
+      "expected": {
+        "score": 0.25,
+        "raised_by_floor": true,
+        "parts": {
+          "confidence": 0,
+          "participation": 0.691,
+          "recency": 0,
+          "circle": 0.35
+        },
+        "verdict": {
+          "up": 0,
+          "down": 12,
+          "participation": 12,
+          "weighted_up": 0,
+          "weighted_down": 12,
+          "weighted_participation": 12,
+          "agreement": 0,
+          "confidence": 0,
+          "dissent_share": 1,
+          "contested": true,
+          "needs_more_voices": false,
+          "coordination": {
+            "suspected": false,
+            "count": 1,
+            "total": 12,
+            "share": 0.08333333333333333,
+            "factor": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "burst",
+      "circleId": "c1",
+      "createdAt": "2026-10-25T03:00:00.000Z",
+      "reactions": [
+        {
+          "id": "o0",
+          "userId": "u-vet",
+          "value": "up",
+          "at": 1792897200000
+        },
+        {
+          "id": "o1",
+          "userId": "u-vet",
+          "value": "up",
+          "at": 1792900800000
+        },
+        {
+          "id": "o2",
+          "userId": "u-vet",
+          "value": "up",
+          "at": 1792904400000
+        },
+        {
+          "id": "o3",
+          "userId": "u-vet",
+          "value": "up",
+          "at": 1792908000000
+        },
+        {
+          "id": "o4",
+          "userId": "u-vet",
+          "value": "up",
+          "at": 1792911600000
+        },
+        {
+          "id": "b0",
+          "userId": "u-mid",
+          "value": "down",
+          "at": 1792915200000
+        },
+        {
+          "id": "b1",
+          "userId": "u-new",
+          "value": "down",
+          "at": 1792915202000
+        },
+        {
+          "id": "b2",
+          "userId": "u-mid",
+          "value": "down",
+          "at": 1792915204000
+        },
+        {
+          "id": "b3",
+          "userId": "u-new",
+          "value": "down",
+          "at": 1792915206000
+        },
+        {
+          "id": "b4",
+          "userId": "u-mid",
+          "value": "down",
+          "at": 1792915208000
+        },
+        {
+          "id": "b5",
+          "userId": "u-new",
+          "value": "down",
+          "at": 1792915210000
+        },
+        {
+          "id": "b6",
+          "userId": "u-mid",
+          "value": "down",
+          "at": 1792915212000
+        },
+        {
+          "id": "b7",
+          "userId": "u-new",
+          "value": "down",
+          "at": 1792915214000
+        },
+        {
+          "id": "b8",
+          "userId": "u-mid",
+          "value": "down",
+          "at": 1792915216000
+        },
+        {
+          "id": "b9",
+          "userId": "u-new",
+          "value": "down",
+          "at": 1792915218000
+        },
+        {
+          "id": "b10",
+          "userId": "u-mid",
+          "value": "down",
+          "at": 1792915220000
+        },
+        {
+          "id": "b11",
+          "userId": "u-new",
+          "value": "down",
+          "at": 1792915222000
+        },
+        {
+          "id": "b12",
+          "userId": "u-mid",
+          "value": "down",
+          "at": 1792915224000
+        },
+        {
+          "id": "b13",
+          "userId": "u-new",
+          "value": "down",
+          "at": 1792915226000
+        }
+      ],
+      "expected": {
+        "score": 0.451,
+        "raised_by_floor": false,
+        "parts": {
+          "confidence": 0.118,
+          "participation": 0.68,
+          "recency": 0.707,
+          "circle": 1
+        },
+        "verdict": {
+          "up": 5,
+          "down": 14,
+          "participation": 19,
+          "weighted_up": 5,
+          "weighted_down": 6.475,
+          "weighted_participation": 11.475,
+          "agreement": 0.2631578947368421,
+          "confidence": 0.11806238339540162,
+          "dissent_share": 0.7368421052631579,
+          "contested": true,
+          "needs_more_voices": false,
+          "coordination": {
+            "suspected": true,
+            "count": 14,
+            "total": 19,
+            "share": 0.7368421052631579,
+            "factor": 0.5
+          }
+        }
+      }
+    },
+    {
+      "id": "small-sample",
+      "circleId": "c2",
+      "createdAt": "2026-10-25T07:00:00.000Z",
+      "reactions": [
+        {
+          "id": "r0",
+          "userId": "u-vet",
+          "value": "up",
+          "at": 1792913400000
+        },
+        {
+          "id": "r1",
+          "userId": "u-mid",
+          "value": "up",
+          "at": 1792917000000
+        }
+      ],
+      "expected": {
+        "score": 0.416,
+        "raised_by_floor": false,
+        "parts": {
+          "confidence": 0.342,
+          "participation": 0.296,
+          "recency": 0.891,
+          "circle": 0.35
+        },
+        "verdict": {
+          "up": 2,
+          "down": 0,
+          "participation": 2,
+          "weighted_up": 2,
+          "weighted_down": 0,
+          "weighted_participation": 2,
+          "agreement": 1,
+          "confidence": 0.3423719528896193,
+          "dissent_share": 0,
+          "contested": false,
+          "needs_more_voices": true,
+          "coordination": {
+            "suspected": false,
+            "count": 1,
+            "total": 2,
+            "share": 0.5,
+            "factor": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "new-account-only",
+      "circleId": "c1",
+      "createdAt": "2026-10-25T07:00:00.000Z",
+      "reactions": [
+        {
+          "id": "n1",
+          "userId": "u-new",
+          "value": "up",
+          "at": 1792915200000
+        }
+      ],
+      "expected": {
+        "score": 0.42,
+        "raised_by_floor": false,
+        "parts": {
+          "confidence": 0.207,
+          "participation": 0.166,
+          "recency": 0.891,
+          "circle": 1
+        },
+        "verdict": {
+          "up": 1,
+          "down": 0,
+          "participation": 1,
+          "weighted_up": 0.85,
+          "weighted_down": 0,
+          "weighted_participation": 0.85,
+          "agreement": 1,
+          "confidence": 0.20654329147389294,
+          "dissent_share": 0,
+          "contested": false,
+          "needs_more_voices": true,
+          "coordination": {
+            "suspected": false,
+            "count": 1,
+            "total": 1,
+            "share": 1,
+            "factor": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "outside-circle",
+      "circleId": "c-other",
+      "createdAt": "2026-10-25T07:00:00.000Z",
+      "reactions": [
+        {
+          "id": "r0",
+          "userId": "u-vet",
+          "value": "up",
+          "at": 1792911900000
+        },
+        {
+          "id": "r1",
+          "userId": "u-mid",
+          "value": "up",
+          "at": 1792912500000
+        },
+        {
+          "id": "r2",
+          "userId": "u-vet",
+          "value": "up",
+          "at": 1792913100000
+        },
+        {
+          "id": "r3",
+          "userId": "u-mid",
+          "value": "up",
+          "at": 1792913700000
+        },
+        {
+          "id": "r4",
+          "userId": "u-vet",
+          "value": "up",
+          "at": 1792914300000
+        },
+        {
+          "id": "r5",
+          "userId": "u-mid",
+          "value": "up",
+          "at": 1792914900000
+        },
+        {
+          "id": "r6",
+          "userId": "u-vet",
+          "value": "up",
+          "at": 1792915500000
+        },
+        {
+          "id": "r7",
+          "userId": "u-mid",
+          "value": "up",
+          "at": 1792916100000
+        },
+        {
+          "id": "r8",
+          "userId": "u-vet",
+          "value": "up",
+          "at": 1792916700000
+        },
+        {
+          "id": "r9",
+          "userId": "u-mid",
+          "value": "up",
+          "at": 1792917300000
+        },
+        {
+          "id": "r10",
+          "userId": "u-vet",
+          "value": "down",
+          "at": 1792917900000
+        },
+        {
+          "id": "r11",
+          "userId": "u-mid",
+          "value": "down",
+          "at": 1792918500000
+        }
+      ],
+      "expected": {
+        "score": 0.6,
+        "raised_by_floor": false,
+        "parts": {
+          "confidence": 0.552,
+          "participation": 0.691,
+          "recency": 0.891,
+          "circle": 0.35
+        },
+        "verdict": {
+          "up": 10,
+          "down": 2,
+          "participation": 12,
+          "weighted_up": 10,
+          "weighted_down": 2,
+          "weighted_participation": 12,
+          "agreement": 0.8333333333333334,
+          "confidence": 0.5519636426153274,
+          "dissent_share": 0.16666666666666666,
+          "contested": false,
+          "needs_more_voices": false,
+          "coordination": {
+            "suspected": false,
+            "count": 1,
+            "total": 12,
+            "share": 0.08333333333333333,
+            "factor": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "empty",
+      "circleId": "c1",
+      "createdAt": "2026-10-25T07:00:00.000Z",
+      "reactions": [],
+      "expected": {
+        "score": 0.284,
+        "raised_by_floor": false,
+        "parts": {
+          "confidence": 0,
+          "participation": 0,
+          "recency": 0.891,
+          "circle": 1
+        },
+        "verdict": {
+          "up": 0,
+          "down": 0,
+          "participation": 0,
+          "weighted_up": 0,
+          "weighted_down": 0,
+          "weighted_participation": 0,
+          "agreement": 0,
+          "confidence": 0,
+          "dissent_share": 0,
+          "contested": false,
+          "needs_more_voices": true,
+          "coordination": {
+            "suspected": false,
+            "count": 0,
+            "total": 0,
+            "share": 0,
+            "factor": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "strong-sample",
+      "circleId": "c2",
+      "createdAt": "2026-10-24T23:00:00.000Z",
+      "reactions": [
+        {
+          "id": "r0",
+          "userId": "u-vet",
+          "value": "up",
+          "at": 1792912028571
+        },
+        {
+          "id": "r1",
+          "userId": "u-mid",
+          "value": "up",
+          "at": 1792912885714
+        },
+        {
+          "id": "r2",
+          "userId": "u-vet",
+          "value": "up",
+          "at": 1792913742857
+        },
+        {
+          "id": "r3",
+          "userId": "u-mid",
+          "value": "up",
+          "at": 1792914600000
+        },
+        {
+          "id": "r4",
+          "userId": "u-vet",
+          "value": "up",
+          "at": 1792915457143
+        },
+        {
+          "id": "r5",
+          "userId": "u-mid",
+          "value": "up",
+          "at": 1792916314286
+        },
+        {
+          "id": "r6",
+          "userId": "u-vet",
+          "value": "up",
+          "at": 1792917171429
+        },
+        {
+          "id": "r7",
+          "userId": "u-mid",
+          "value": "up",
+          "at": 1792918028571
+        },
+        {
+          "id": "r8",
+          "userId": "u-vet",
+          "value": "up",
+          "at": 1792918885714
+        },
+        {
+          "id": "r9",
+          "userId": "u-mid",
+          "value": "up",
+          "at": 1792919742857
+        },
+        {
+          "id": "r10",
+          "userId": "u-vet",
+          "value": "up",
+          "at": 1792920600000
+        },
+        {
+          "id": "r11",
+          "userId": "u-mid",
+          "value": "up",
+          "at": 1792921457143
+        },
+        {
+          "id": "r12",
+          "userId": "u-vet",
+          "value": "up",
+          "at": 1792922314286
+        },
+        {
+          "id": "r13",
+          "userId": "u-mid",
+          "value": "up",
+          "at": 1792923171429
+        },
+        {
+          "id": "r14",
+          "userId": "u-vet",
+          "value": "up",
+          "at": 1792924028571
+        },
+        {
+          "id": "r15",
+          "userId": "u-mid",
+          "value": "up",
+          "at": 1792924885714
+        },
+        {
+          "id": "r16",
+          "userId": "u-vet",
+          "value": "up",
+          "at": 1792925742857
+        },
+        {
+          "id": "r17",
+          "userId": "u-mid",
+          "value": "up",
+          "at": 1792926600000
+        },
+        {
+          "id": "r18",
+          "userId": "u-vet",
+          "value": "up",
+          "at": 1792927457143
+        },
+        {
+          "id": "r19",
+          "userId": "u-mid",
+          "value": "up",
+          "at": 1792928314286
+        },
+        {
+          "id": "r20",
+          "userId": "u-vet",
+          "value": "up",
+          "at": 1792929171429
+        },
+        {
+          "id": "r21",
+          "userId": "u-mid",
+          "value": "up",
+          "at": 1792930028571
+        },
+        {
+          "id": "r22",
+          "userId": "u-vet",
+          "value": "up",
+          "at": 1792930885714
+        },
+        {
+          "id": "r23",
+          "userId": "u-mid",
+          "value": "up",
+          "at": 1792931742857
+        },
+        {
+          "id": "r24",
+          "userId": "u-vet",
+          "value": "up",
+          "at": 1792932600000
+        },
+        {
+          "id": "r25",
+          "userId": "u-mid",
+          "value": "up",
+          "at": 1792933457143
+        },
+        {
+          "id": "r26",
+          "userId": "u-vet",
+          "value": "up",
+          "at": 1792934314286
+        },
+        {
+          "id": "r27",
+          "userId": "u-mid",
+          "value": "up",
+          "at": 1792935171429
+        },
+        {
+          "id": "r28",
+          "userId": "u-vet",
+          "value": "up",
+          "at": 1792936028571
+        },
+        {
+          "id": "r29",
+          "userId": "u-mid",
+          "value": "up",
+          "at": 1792936885714
+        },
+        {
+          "id": "r30",
+          "userId": "u-vet",
+          "value": "up",
+          "at": 1792937742857
+        },
+        {
+          "id": "r31",
+          "userId": "u-mid",
+          "value": "up",
+          "at": 1792938600000
+        },
+        {
+          "id": "r32",
+          "userId": "u-vet",
+          "value": "up",
+          "at": 1792939457143
+        },
+        {
+          "id": "r33",
+          "userId": "u-mid",
+          "value": "up",
+          "at": 1792940314286
+        },
+        {
+          "id": "r34",
+          "userId": "u-vet",
+          "value": "up",
+          "at": 1792941171429
+        },
+        {
+          "id": "r35",
+          "userId": "u-mid",
+          "value": "up",
+          "at": 1792942028571
+        },
+        {
+          "id": "r36",
+          "userId": "u-vet",
+          "value": "up",
+          "at": 1792942885714
+        },
+        {
+          "id": "r37",
+          "userId": "u-mid",
+          "value": "up",
+          "at": 1792943742857
+        },
+        {
+          "id": "r38",
+          "userId": "u-vet",
+          "value": "up",
+          "at": 1792944600000
+        },
+        {
+          "id": "r39",
+          "userId": "u-mid",
+          "value": "up",
+          "at": 1792945457143
+        },
+        {
+          "id": "r40",
+          "userId": "u-vet",
+          "value": "down",
+          "at": 1792946314286
+        },
+        {
+          "id": "r41",
+          "userId": "u-mid",
+          "value": "down",
+          "at": 1792947171429
+        }
+      ],
+      "expected": {
+        "score": 0.758,
+        "raised_by_floor": false,
+        "parts": {
+          "confidence": 0.842,
+          "participation": 1,
+          "recency": 0.561,
+          "circle": 0.35
+        },
+        "verdict": {
+          "up": 40,
+          "down": 2,
+          "participation": 42,
+          "weighted_up": 40,
+          "weighted_down": 2,
+          "weighted_participation": 42,
+          "agreement": 0.9523809523809523,
+          "confidence": 0.8420986468452026,
+          "dissent_share": 0.047619047619047616,
+          "contested": false,
+          "needs_more_voices": false,
+          "coordination": {
+            "suspected": false,
+            "count": 1,
+            "total": 42,
+            "share": 0.023809523809523808,
+            "factor": 1
+          }
+        }
+      }
+    }
+  ]
+}
