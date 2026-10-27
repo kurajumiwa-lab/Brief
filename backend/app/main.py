@@ -68,6 +68,9 @@ from app.routes import (
     media as media_routes,
 )
 from app.routes import (
+    social as social_routes,
+)
+from app.routes import (
     nearby as nearby_routes,
 )
 from app.routes import (
@@ -192,6 +195,7 @@ app.add_middleware(
 
 # All routes
 app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
+app.include_router(social_routes.router, prefix="/api/social", tags=["Social (Caesar)"])
 app.include_router(vendors.router, prefix="/api/vendors", tags=["Vendors"])
 app.include_router(stock.router, prefix="/api/stock", tags=["Stock (Not Listings)"])
 app.include_router(vendor_lists.router, prefix="/api/vendor-lists", tags=["Vendor Lists"])

@@ -15,7 +15,11 @@ from starlette.responses import JSONResponse
 # production — see app/routes/ops.py). Everything else under /api needs a member.
 # The PSP webhook is signed (HMAC-SHA256) instead of bearer-authenticated.
 OPEN_PREFIXES = ("/api/auth/", "/api/health", "/api/metrics", "/api/payments/webhook",
-                 "/api/catalog", "/docs", "/redoc", "/openapi.json")
+                 "/api/catalog", "/docs", "/redoc", "/openapi.json",
+                 # Caesar's front door: a participant joins the conversation
+                 # without being a vendor, so there is no token to present yet.
+                 # Every other /api/social/* route still requires one.
+                 "/api/social/accounts")
 
 
 class VendorOnlyMiddleware(BaseHTTPMiddleware):
