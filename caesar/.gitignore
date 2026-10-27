@@ -3,3 +3,7 @@ dist/
 coverage/
 .vite/
 *.log
+
+# mobile-pass output is regenerated, but the script and its README are not
+qa/*.png
+qa/report.json

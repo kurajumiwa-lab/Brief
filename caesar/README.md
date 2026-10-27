@@ -213,6 +213,27 @@ src/pages/               Feed, Circles, Circle, Compose, Profile, Safety, Measur
   title names the screen, focus follows a navigation but is never stolen on
   first paint, and `/measure` prints all six.
 
+## Mobile pass
+
+Driven in real Chromium at 390×844 (Pixel 7 metrics) against the dev server:
+every screen screenshotted, console checked, and the DOM measured for
+horizontal overflow, tap-target size and text below 12px. The screenshots and
+the raw measurements are in `qa/mobile/` at the repository root.
+
+Five defects were found this way and fixed in the same commit:
+
+| Defect | Cause | Fix |
+|---|---|---|
+| Page 423px wide on a 390px screen | a `1fr` grid track has an automatic minimum of its content | `minmax(0, 1fr)` on the shell and tab bar, `min-width: 0` on grid items |
+| Language control pushed the top bar 15px off-screen, 17px tall | a native `<select>` sizes to its longest option | ISO code in a 44px control, full name in the label |
+| Feed loaded 57px scrolled, hero title clipped by the sticky bar | `focus()` on the main region scrolls it into view | `focus({ preventScroll: true })` |
+| Every card flush to the screen edge | a stray `}` killed `.container`'s padding | brace removed, 16px gutter restored |
+| Reaction buttons 34px tall | designed to look right, not to be hit | 44px target |
+
+All screens now report **zero** horizontal overflow and no console errors. Every
+interactive control meets WCAG 2.5.8 (24×24); the reaction buttons and the
+primary controls meet 44×44.
+
 ## Sensible next steps
 
 1. A real backend with the same public shape — the ranking module is pure and
