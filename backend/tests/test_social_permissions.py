@@ -400,6 +400,36 @@ async def test_muting_is_a_separate_choice_from_blocking(client):
     assert post["id"] in {e["post"]["id"] for e in restored.json()}
 
 
+async def test_the_block_list_names_who_was_blocked_so_it_can_be_undone(client):
+    """A block hides someone's posts, not their name.
+
+    The safety screen has to offer "unblock Juma", and a row that carries only a
+    UUID cannot be recognised by the person who did the blocking. So the list
+    returns the target's handle and display name — and never their posts.
+    """
+    author = await _social_account(client, uuid.uuid4().hex[:6], display_name="Juma Odhiambo")
+    blocker = await _social_account(client, uuid.uuid4().hex[:6])
+    await _post(client, author, body="A post the blocker chose not to see again.")
+
+    await client.post(
+        "/api/social/blocks", json={"target_id": author["id"], "kind": "block"}, headers=blocker["headers"]
+    )
+
+    listed = await client.get("/api/social/blocks?kind=block", headers=blocker["headers"])
+    assert listed.status_code == 200
+    rows = listed.json()
+    assert len(rows) == 1
+    target = rows[0]["target"]
+    assert target["id"] == author["id"]
+    assert target["handle"] == author["handle"]
+    assert target["display_name"] == "Juma Odhiambo"
+
+    # Still nobody else's business: another account sees an empty list.
+    other = await _social_account(client, uuid.uuid4().hex[:6])
+    theirs = await client.get("/api/social/blocks?kind=block", headers=other["headers"])
+    assert theirs.json() == []
+
+
 async def test_you_cannot_block_yourself_or_a_stranger(client):
     account = await _social_account(client, uuid.uuid4().hex[:6])
     me = await client.post(
@@ -504,3 +534,31 @@ async def test_a_short_post_is_refused_by_the_shape_of_the_rule(client):
     account = await _social_account(client, uuid.uuid4().hex[:6])
     r = await client.post("/api/social/posts", json={"body": "hi"}, headers=account["headers"])
     assert r.status_code == 422
+
+
+async def test_the_feed_tells_each_reader_their_own_reaction(client):
+    """The card has to know which button is pressed for *this* reader, without
+    shipping every reaction in the network to every client."""
+    author = await _social_account(client, uuid.uuid4().hex[:6])
+    reader = await _social_account(client, uuid.uuid4().hex[:6])
+    other = await _social_account(client, uuid.uuid4().hex[:6])
+    post = await _post(client, author, body="A post two people will react to differently.")
+
+    await client.post(
+        f"/api/social/posts/{post['id']}/reactions", json={"value": "up"}, headers=reader["headers"]
+    )
+    await client.post(
+        f"/api/social/posts/{post['id']}/reactions", json={"value": "down"}, headers=other["headers"]
+    )
+
+    mine = {e["post"]["id"]: e for e in (await client.get("/api/social/feed", headers=reader["headers"])).json()}
+    theirs = {e["post"]["id"]: e for e in (await client.get("/api/social/feed", headers=other["headers"])).json()}
+    bystander = await _social_account(client, uuid.uuid4().hex[:6])
+    none = {e["post"]["id"]: e for e in (await client.get("/api/social/feed", headers=bystander["headers"])).json()}
+
+    assert mine[post["id"]]["my_reaction"] == "up"
+    assert theirs[post["id"]]["my_reaction"] == "down"
+    assert none[post["id"]]["my_reaction"] is None
+    # …and both readers see the same community verdict.
+    assert mine[post["id"]]["verdict"]["participation"] == 2
+    assert theirs[post["id"]]["verdict"]["participation"] == 2

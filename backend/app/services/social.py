@@ -215,11 +215,19 @@ async def ranked_feed(
         return []
 
     post_ids = [post.id for post in posts]
-    rows = (
-        await db.execute(
-            select(SocialReaction).where(SocialReaction.post_id.in_(post_ids)).order_by(SocialReaction.created_at)
-        )
-    ).scalars()
+    # Materialised, not streamed: this is iterated twice (once to group by post,
+    # once to find the viewer's own reaction) and a ScalarResult is exhausted by
+    # the first pass. As a stream it also silently dropped reaction authors from
+    # the standing map, so every reaction was weighted as a new account.
+    rows = list(
+        (
+            await db.execute(
+                select(SocialReaction)
+                .where(SocialReaction.post_id.in_(post_ids))
+                .order_by(SocialReaction.created_at)
+            )
+        ).scalars()
+    )
     reactions_by_post: dict[uuid.UUID, list[SocialReaction]] = {}
     for reaction in rows:
         reactions_by_post.setdefault(reaction.post_id, []).append(reaction)
@@ -251,6 +259,13 @@ async def ranked_feed(
             )
         ).scalars()
     )
+
+    # Whose reaction is whose — the card needs to know which button is pressed
+    # for *this* reader, and the verdict is computed from everybody's.
+    my_reaction = {}
+    for reaction in rows:
+        if reaction.account_id == viewer.id:
+            my_reaction[reaction.post_id] = reaction.value
 
     shaped = [
         {
@@ -297,6 +312,8 @@ async def ranked_feed(
             "raised_by_floor": entry["raised_by_floor"],
             "parts": entry["parts"],
             "verdict": entry["verdict"],
+            "my_reaction": my_reaction.get(entry["post"]["id"]),
+            "circle_following": entry["post"]["circle_id"] in viewer_circles,
         }
         for entry in ranked
     ]

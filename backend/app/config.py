@@ -141,7 +141,13 @@ class Settings(BaseSettings):
     # Browser clients on another origin. The Vite dev server proxies /api and the
     # production image serves the built frontend itself, so same-origin needs
     # none of these. Comma-separated so it can be set from any host's env UI.
-    CORS_ORIGINS: str = "http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000"
+    # Caesar's dev server runs on 5180 and talks to this API through Vite's
+    # proxy; the direct origin is allowed too so a page served from the Vite
+    # port can call the API without a proxy during development.
+    CORS_ORIGINS: str = (
+        "http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000,"
+        "http://localhost:5180,http://127.0.0.1:5180"
+    )
 
     # POS Bridge + housekeeping scheduler (hold expiry, event reminders).
     # Multi-worker deploys set RUN_SCHEDULER=false on the API and run

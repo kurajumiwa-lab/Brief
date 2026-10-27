@@ -344,6 +344,10 @@ class RankedPostOut(BaseModel):
     raised_by_floor: bool
     parts: dict
     verdict: VerdictOut
+    # What *this* reader did, so the card can render the pressed state without
+    # shipping every reaction to every client.
+    my_reaction: Optional[str] = None
+    circle_following: bool = False
 
 
 @router.post("/posts", response_model=PostOut, status_code=status.HTTP_201_CREATED)
@@ -583,6 +587,13 @@ class BlockIn(BaseModel):
     kind: str = Field("block", pattern="^(block|mute)$")
 
 
+class BlockTargetOut(BaseModel):
+    id: uuid.UUID
+    handle: Optional[str] = None
+    display_name: Optional[str] = None
+    city: Optional[str] = None
+
+
 class BlockOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -590,6 +601,10 @@ class BlockOut(BaseModel):
     target_id: uuid.UUID
     kind: str
     created_at: datetime
+    # Who the row is about, so the safety screen can name them and offer an undo.
+    # A block hides their posts, not their name; without this the client can only
+    # show a UUID, which is not something a person can recognise or unblock.
+    target: Optional[BlockTargetOut] = None
 
 
 @router.post("/blocks", response_model=BlockOut, status_code=status.HTTP_201_CREATED)
@@ -662,4 +677,36 @@ async def my_blocks(
     query = select(SocialBlock).where(SocialBlock.account_id == account.id)
     if kind:
         query = query.where(SocialBlock.kind == kind)
-    return list((await db.execute(query.order_by(SocialBlock.created_at.desc()))).scalars())
+    rows = list((await db.execute(query.order_by(SocialBlock.created_at.desc()))).scalars())
+    if not rows:
+        return []
+
+    targets = dict(
+        (
+            await db.execute(
+                select(SocialAccount.id, SocialAccount).where(
+                    SocialAccount.id.in_({row.target_id for row in rows})
+                )
+            )
+        ).all()
+    )
+    out = []
+    for row in rows:
+        target = targets.get(row.target_id)
+        out.append(
+            {
+                "id": row.id,
+                "target_id": row.target_id,
+                "kind": row.kind,
+                "created_at": row.created_at,
+                "target": None
+                if target is None
+                else {
+                    "id": target.id,
+                    "handle": target.handle,
+                    "display_name": target.display_name,
+                    "city": target.city,
+                },
+            }
+        )
+    return out
