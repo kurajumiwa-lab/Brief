@@ -2,7 +2,10 @@ import { useMemo } from "react";
 import { Award, CheckCircle2, ShieldCheck, Users } from "lucide-react";
 import Avatar from "@/components/Avatar.jsx";
 import PostCard from "@/components/PostCard.jsx";
+import ConnectCard from "@/components/ConnectCard.jsx";
 import { useApp } from "@/store/appStore.js";
+import { useSession } from "@/store/session.js";
+import { useLive } from "@/store/live.js";
 import { reputationFor } from "@/lib/reputation.js";
 import { feedEntries, userById } from "@/lib/selectors.js";
 import { count, percent } from "@/lib/format.js";
@@ -17,15 +20,35 @@ import { RANKING } from "@/lib/ranking.js";
  */
 export default function ProfilePage() {
   const state = useApp();
-  const viewer = userById(state, state.viewerId);
-  const reputation = useMemo(() => reputationFor(state.viewerId, { posts: state.posts }), [state]);
-  const mine = useMemo(
-    () => feedEntries(state).filter((entry) => entry.post.authorId === state.viewerId),
-    [state]
+  const mode = useSession((store) => store.mode);
+  const account = useSession((store) => store.account);
+  const liveEntries = useLive((store) => store.entries);
+  const live = mode === "live";
+
+  const viewer = live
+    ? account && {
+        id: account.id,
+        name: account.display_name,
+        handle: account.handle,
+        city: account.city || "Not stated",
+        joined: account.created_at,
+      }
+    : userById(state, state.viewerId);
+
+  const reputation = useMemo(
+    () => (live ? liveReputation(account, liveEntries) : reputationFor(state.viewerId, { posts: state.posts })),
+    [live, account, liveEntries, state]
   );
+  const mine = useMemo(
+    () => (live ? liveEntries.filter((entry) => entry.post.authorId === account?.id) : feedEntries(state).filter((entry) => entry.post.authorId === state.viewerId)),
+    [live, liveEntries, account, state]
+  );
+  const circleCount = live ? new Set(liveEntries.map((entry) => entry.post.circleId).filter(Boolean)).size : state.memberships.length;
 
   return (
     <>
+      <ConnectCard />
+
       <section className="card card--pad" style={{ marginTop: 18 }}>
         <div className="row" style={{ gap: 14, alignItems: "flex-start" }}>
           <Avatar name={viewer?.name} id={viewer?.id || ""} size="lg" gold />
@@ -41,7 +64,7 @@ export default function ProfilePage() {
               </span>
               <span className="chip chip--quiet">
                 <Users size={11} aria-hidden="true" />
-                {count(state.memberships.length, "circle", "circles")}
+                {count(circleCount, "circle", "circles")}
               </span>
             </div>
           </div>
@@ -111,6 +134,28 @@ export default function ProfilePage() {
       </p>
     </>
   );
+}
+
+/**
+ * The same four figures, from what the server actually returned.
+ *
+ * "Useful to a community" keeps the published definition — at least five
+ * reactions and a confidence of 0.6 — computed over the ranked entries the
+ * server sent, so the number on this page is checkable against the cards below.
+ */
+function liveReputation(account, entries) {
+  if (!account) return { posts: 0, useful: 0, usefulRate: 0, upheldReports: 0, standing: "new", label: "New here", note: "Join the network to build a record." };
+  const posts = entries.filter((entry) => entry.post.authorId === account.id);
+  const useful = posts.filter((entry) => entry.verdict.participation >= 5 && entry.verdict.confidence >= 0.6);
+  return {
+    posts: posts.length,
+    useful: useful.length,
+    usefulRate: posts.length ? useful.length / posts.length : 0,
+    upheldReports: 0,
+    standing: useful.length >= 3 ? "trusted" : posts.length ? "member" : "new",
+    label: useful.length >= 3 ? "Trusted here" : posts.length ? "Contributing" : "New here",
+    note: "Measured from the posts the network returned for you, not from a private score.",
+  };
 }
 
 function Stat({ value, label, tone }) {

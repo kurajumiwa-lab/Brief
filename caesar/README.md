@@ -9,13 +9,30 @@ compose, data saving, offline) or named as not built yet.
 cd caesar
 npm install
 npm run dev      # http://localhost:5180
-npm test         # 104 specs
+npm test         # 147 specs
 npm run build
 ```
 
-No server, no account, no network calls. State lives in `localStorage` under
-`caesar.prototype` so the prototype behaves the same after a reload. "Reset the
-prototype" in the Safety centre puts the starting network back.
+It runs in **two modes**, and says which one it is on the feed:
+
+- **Demo** (default) — no server, no account, no network calls. State lives in
+  `localStorage` under `caesar.prototype`, so the prototype behaves the same
+  after a reload. "Reset the prototype" in the Safety centre puts the starting
+  network back.
+- **Live** — the same screens against the Brief API (`/api/social/*`). Joining
+  needs a handle and nothing else: no shop, no business name, no vendor account.
+  A vendor's existing Brief login works too, and the server gives it a social
+  identity rather than a second one. The feed's order and every count on a card
+  then come from rows in Postgres, not from this device.
+
+```bash
+# live mode, locally
+python qa/serve-live.py &        # throwaway Postgres + the API on :8000
+npm run dev -- --port 5180      # /api is proxied to :8000
+```
+
+The token is kept under `caesar.session` (not inside the prototype snapshot), so
+resetting the demo data never signs anyone out of a real account.
 
 This folder is self-contained and is **not** wired into the Brief app: `vercel.json`
 builds `backend` and `frontend` only, so nothing here deploys or runs in CI for
@@ -182,7 +199,12 @@ narrower one.
 src/lib/ranking.js       the Balanced Verdict: weights, Wilson, burst damping, scoring
 src/lib/reputation.js    what "useful contribution" means, defined in one place
 src/lib/selectors.js     the only visibility rules (blocks, mutes, moderation status)
-src/store/appStore.js    one store, write-through to localStorage, the offline queue
+src/store/appStore.js    the demo network: one store, localStorage, the offline queue
+src/store/session.js     which account this interface is speaking as (demo or live)
+src/store/live.js        the server's answers, and the two ways a request can fail
+src/lib/api.js           the API client; fetch is injected, so it is testable offline
+src/lib/liveFeed.js      server rows → the entry shape every card already renders
+src/lib/useSocial.js     one set of actions, routed to whichever mode is active
 src/data/seed.js         fourteen posts covering every state the feed must handle
 src/components/          PostCard, VerdictSheet, Logo, Nav, TopBar, Toasts, Avatar
 src/lib/metrics.js       the six measures, derived from state, never stored
@@ -191,7 +213,7 @@ src/pages/               Feed, Circles, Circle, Compose, Profile, Safety, Measur
 
 ## Tests
 
-104 specs across seven files (`npm test`):
+147 specs across nine files (`npm test`):
 
 - `ranking.test.js` (20) — small samples cannot decide, contested posts are never
   dropped and hold the floor, bursts are damped and nobody is banned, published
@@ -212,12 +234,51 @@ src/pages/               Feed, Circles, Circle, Compose, Profile, Safety, Measur
 - `shell.test.jsx` (14) — the skip link is first in tab order, the document
   title names the screen, focus follows a navigation but is never stolen on
   first paint, and `/measure` prints all six.
+- `live.test.jsx` (16) — the client against a stubbed edge: the server's sentence
+  is shown rather than a generic failure, a dead token signs the person out, an
+  unanswered network is not reported as a refusal, the pressed button comes from
+  the server's `my_reaction` and survives a reload, an optimistic reaction is
+  rolled back when refused, a reaction you already gave withdraws instead of
+  doubling, the adapter invents no numbers, and demo mode never calls `fetch`.
+
+## Mobile pass
+
+Driven in real Chromium at 390×844 (Pixel 7 metrics) against the dev server:
+every screen screenshotted, console checked, and the DOM measured for
+horizontal overflow, tap-target size and text below 12px. The screenshots and
+the raw measurements are in `qa/mobile/` at the repository root.
+
+Five defects were found this way and fixed in the same commit:
+
+| Defect | Cause | Fix |
+|---|---|---|
+| Page 423px wide on a 390px screen | a `1fr` grid track has an automatic minimum of its content | `minmax(0, 1fr)` on the shell and tab bar, `min-width: 0` on grid items |
+| Language control pushed the top bar 15px off-screen, 17px tall | a native `<select>` sizes to its longest option | ISO code in a 44px control, full name in the label |
+| Feed loaded 57px scrolled, hero title clipped by the sticky bar | `focus()` on the main region scrolls it into view | `focus({ preventScroll: true })` |
+| Every card flush to the screen edge | a stray `}` killed `.container`'s padding | brace removed, 16px gutter restored |
+| Reaction buttons 34px tall | designed to look right, not to be hit | 44px target |
+
+All screens now report **zero** horizontal overflow and no console errors. Every
+interactive control meets WCAG 2.5.8 (24×24); the reaction buttons, the top-bar
+controls and the switches meet 44×44. Chips and inline links are 30px tall — the
+44px pass counts them and prints the numbers instead of hiding them.
+
+## Live pass
+
+`qa/live-pass.mjs` drives the same phone against the real API and checks every
+screen **twice** — in the DOM and against the API with the same token. It joins
+without a vendor account, compares each card's counts with the server's rows,
+reacts and reloads to prove `my_reaction` came back, files a report and checks
+the post is still `published`, blocks and unblocks, and writes a post that the
+API then returns. Latest run: 11 assertions, 0 failures, 0 overflow, 0 console
+errors. Evidence and the raw report are in [`qa/`](qa/).
 
 ## Sensible next steps
 
-1. A real backend with the same public shape — the ranking module is pure and
-   would move server-side unchanged; the client must never be the authority on
-   a score.
+1. ~~A real backend with the same public shape~~ — **done** (`/api/social/*`,
+   migration `0025`). The ranking now runs server-side against real rows; the
+   client kept the same entry shape, so the verdict panel explains a live post
+   with the same function it uses on the demo network.
 2. A moderator console and an appeal queue (the appeal *path* is stated, the
    tool is not built).
 3. Real media: camera and microphone capture with compression before storage,

@@ -33,17 +33,21 @@ export default function TopBar() {
         <div className="grow" />
 
         <div className="topbar__tools">
-          <label className="iconbtn" title="Language" aria-label="Language" style={{ width: "auto", padding: "0 8px", gap: 5, display: "inline-flex", cursor: "pointer" }}>
+          {/* A native select sizes itself to its longest option, which on a
+              390px phone pushed the whole top bar 15px past the edge. The code
+              is what fits; the full name is in the accessible label and in the
+              option text behind it. */}
+          <label className="iconbtn topbar__lang" title="Language">
             <Languages size={16} aria-hidden="true" />
             <select
               value={preferences.locale}
               onChange={(event) => setPreference("locale", event.target.value)}
-              aria-label="Interface language"
-              style={{ border: 0, background: "transparent", fontSize: 12, fontWeight: 600, cursor: "pointer", paddingRight: 2 }}
+              aria-label={`Interface language: ${LOCALES.find((l) => l.code === preferences.locale)?.native || preferences.locale}`}
+              className="topbar__lang-select"
             >
               {LOCALES.map((locale) => (
                 <option key={locale.code} value={locale.code}>
-                  {locale.native}
+                  {locale.code.toUpperCase()}
                 </option>
               ))}
             </select>

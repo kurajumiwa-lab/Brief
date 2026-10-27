@@ -4,6 +4,8 @@ import { ArrowLeft, Check, PenLine, ShieldCheck } from "lucide-react";
 import PostCard from "@/components/PostCard.jsx";
 import VerdictSheet from "@/components/VerdictSheet.jsx";
 import { useApp } from "@/store/appStore.js";
+import { useSession } from "@/store/session.js";
+import { useLive } from "@/store/live.js";
 import { circleById, circleEntries, circleSize } from "@/lib/selectors.js";
 import { count } from "@/lib/format.js";
 
@@ -17,10 +19,30 @@ export default function CirclePage() {
   const state = useApp();
   const toggleJoin = useApp((store) => store.toggleJoin);
   const [verdict, setVerdict] = useState(null);
+  const mode = useSession((store) => store.mode);
+  const liveCircles = useLive((store) => store.circles);
+  const liveEntries = useLive((store) => store.entries);
+  const live = mode === "live";
 
-  const circle = circleById(state, circleId);
-  const entries = useMemo(() => (circle ? circleEntries(state, circle.id) : []), [state, circle]);
-  const joined = state.memberships.includes(circleId);
+  const liveCircle = live ? liveCircles.find((item) => item.id === circleId) : null;
+  const circle = live
+    ? liveCircle && {
+        id: liveCircle.id,
+        name: liveCircle.name,
+        place: liveCircle.region || "Online",
+        about: liveCircle.description || "No description written yet.",
+        rules: (liveCircle.rules || []).join(" · ") || "Open to anyone. Post plainly and answer honestly.",
+        mark: liveCircle.name.slice(0, 2).toUpperCase(),
+        tone: liveCircle.following ? "gold" : undefined,
+        posts: liveCircle.post_count,
+      }
+    : circleById(state, circleId);
+
+  const entries = useMemo(
+    () => (circle ? (live ? liveEntries.filter((entry) => entry.post.circleId === circle.id) : circleEntries(state, circle.id)) : []),
+    [state, circle, live, liveEntries]
+  );
+  const joined = live ? Boolean(liveCircle?.following) : state.memberships.includes(circleId);
 
   if (!circle) {
     return (
@@ -49,10 +71,11 @@ export default function CirclePage() {
           <div className="grow">
             <h1 className="title-md">{circle.name}</h1>
             <div className="micro muted">
-              {circle.place} · {count(circleSize(state, circle), "member")} · {count(reactions, "reaction")}
+              {circle.place} · {live ? count(circle.posts, "post") : count(circleSize(state, circle), "member")} ·{" "}
+              {count(reactions, "reaction")}
             </div>
           </div>
-          <button type="button" className={`btn btn--sm ${joined ? "btn--ghost" : "btn--gold"}`} onClick={() => toggleJoin(circle.id)} aria-pressed={joined}>
+          <button type="button" className={`btn btn--sm ${joined ? "btn--ghost" : "btn--gold"}`} onClick={() => (live ? useLive.getState().toggleFollow(circle.id) : toggleJoin(circle.id))} aria-pressed={joined}>
             {joined ? <Check size={14} aria-hidden="true" /> : null}
             {joined ? "Joined" : "Join"}
           </button>

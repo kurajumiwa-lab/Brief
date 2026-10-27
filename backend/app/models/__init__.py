@@ -36,6 +36,10 @@ from app.models.governance import (
     AllocationPolicy, BenefitPeriod, NetworkBenefitEvent, VendorBenefitAllocation,
     VendorCreditLedger, VendorAppeal, VendorDataConsent,
 )
+from app.models.social import (
+    SocialAccount, SocialCircleFollow, SocialPost, SocialReaction, SocialBlock, SocialReport,
+    ACCOUNT_STATUSES, POST_STATUSES, REACTION_VALUES, BLOCK_KINDS, REPORT_STATUSES, REPORT_REASONS,
+)
 from app.models.payments import (
     PaymentIntent, PaymentRefund, CustodyLedgerEntry, Disbursement, ReconciliationRun, DisputeHold,
     ESCROW_PICK_HEDGING, DISPUTE_HOLD, PLATFORM_FEES,

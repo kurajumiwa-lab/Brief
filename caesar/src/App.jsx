@@ -43,7 +43,10 @@ export default function App() {
       firstRender.current = false;
       return;
     }
-    document.getElementById("main")?.focus();
+    // preventScroll matters: focusing an element scrolls it into view, and the
+    // main region sits under a sticky top bar — so a plain focus() on load left
+    // the page scrolled 57px down with the hero title half hidden behind it.
+    document.getElementById("main")?.focus({ preventScroll: true });
   }, [pathname]);
 
   return (
