@@ -1,6 +1,9 @@
+import { useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { Check, ChevronRight, Plus, Users } from "lucide-react";
 import { useApp } from "@/store/appStore.js";
+import { useSession } from "@/store/session.js";
+import { useLive } from "@/store/live.js";
 import { circleSize } from "@/lib/selectors.js";
 import { count } from "@/lib/format.js";
 import { makeT } from "@/lib/i18n.js";
@@ -12,11 +15,55 @@ import { makeT } from "@/lib/i18n.js";
  * only meet after being punished is not a rule, it is a trap. The prototype
  * has six; the real thing would open this list by neighbourhood first.
  */
+/**
+ * The server's circle row, in this card's vocabulary.
+ *
+ * A group on Brief is not a Caesar circle: it has a slug and a rule list rather
+ * than a hand-written mark. Renaming here rather than in six components keeps
+ * the difference in one place, and nothing is invented — a missing description
+ * says it is missing.
+ */
+function shapeLiveCircle(circle) {
+  return {
+    id: circle.id,
+    name: circle.name,
+    place: circle.region || "Online",
+    about: circle.description || "No description written yet.",
+    rules:
+      (circle.rules || []).length > 0
+        ? circle.rules.join(" · ")
+        : circle.is_public
+          ? "Open to anyone. Post plainly and answer honestly."
+          : "Approval only. A moderator adds people.",
+    mark: circle.name.slice(0, 2).toUpperCase(),
+    tone: circle.following ? "gold" : undefined,
+    posts: circle.post_count,
+    live: true,
+  };
+}
+
 export default function CirclesPage() {
   const state = useApp();
   const t = makeT(state.preferences.locale);
-  const joined = state.circles.filter((circle) => state.memberships.includes(circle.id));
-  const discover = state.circles.filter((circle) => !state.memberships.includes(circle.id));
+  const mode = useSession((store) => store.mode);
+  const liveCircles = useLive((store) => store.circles);
+  const live = mode === "live";
+
+  useEffect(() => {
+    if (live && !useLive.getState().circles.length) useLive.getState().loadCircles();
+  }, [live]);
+
+  const circles = useMemo(
+    () => (live ? liveCircles.map(shapeLiveCircle) : state.circles),
+    [live, liveCircles, state.circles]
+  );
+  const memberships = useMemo(
+    () => (live ? liveCircles.filter((circle) => circle.following).map((circle) => circle.id) : state.memberships),
+    [live, liveCircles, state.memberships]
+  );
+
+  const joined = circles.filter((circle) => memberships.includes(circle.id));
+  const discover = circles.filter((circle) => !memberships.includes(circle.id));
 
   return (
     <>
@@ -37,7 +84,7 @@ export default function CirclesPage() {
         </div>
         <div className="circle-grid">
           {joined.map((circle) => (
-            <CircleCard key={circle.id} circle={circle} joined size={circleSize(state, circle)} />
+            <CircleCard key={circle.id} circle={circle} joined size={live ? circle.posts : circleSize(state, circle)} unit={live ? "post" : "member"} />
           ))}
           {joined.length === 0 && (
             <div className="empty">
@@ -55,7 +102,7 @@ export default function CirclesPage() {
         </div>
         <div className="circle-grid">
           {discover.map((circle) => (
-            <CircleCard key={circle.id} circle={circle} size={circleSize(state, circle)} />
+            <CircleCard key={circle.id} circle={circle} size={live ? circle.posts : circleSize(state, circle)} unit={live ? "post" : "member"} />
           ))}
         </div>
       </section>
@@ -71,10 +118,12 @@ export default function CirclesPage() {
   );
 }
 
-export function CircleCard({ circle, joined = false, size }) {
+export function CircleCard({ circle, joined = false, size, unit = "member" }) {
   const toggleJoin = useApp((state) => state.toggleJoin);
   const locale = useApp((state) => state.preferences.locale);
+  const mode = useSession((state) => state.mode);
   const t = makeT(locale);
+  const join = () => (mode === "live" ? useLive.getState().toggleFollow(circle.id) : toggleJoin(circle.id));
 
   return (
     <article className="circle">
@@ -85,7 +134,7 @@ export function CircleCard({ circle, joined = false, size }) {
         <div className="grow">
           <h3 className="title-sm">{circle.name}</h3>
           <div className="micro muted">
-            {circle.place} · {count(size, "member")}
+            {circle.place} · {count(size, unit)}
           </div>
         </div>
       </div>
@@ -100,7 +149,7 @@ export function CircleCard({ circle, joined = false, size }) {
         <button
           type="button"
           className={`btn btn--sm ${joined ? "btn--ghost" : "btn--gold"}`}
-          onClick={() => toggleJoin(circle.id)}
+          onClick={join}
           aria-pressed={joined}
         >
           {joined ? <Check size={14} aria-hidden="true" /> : null}

@@ -15,6 +15,16 @@ export default defineConfig({
     port: 5180,
     host: "0.0.0.0",
     allowedHosts: true,
+    // In live mode the prototype calls `/api/social/*` on the same origin. In
+    // development that path is proxied to the FastAPI app, which means the
+    // browser never needs CORS and the deployed rewrite in vercel.json does the
+    // same job in production.
+    proxy: {
+      "/api": {
+        target: process.env.CAESAR_API_TARGET || "http://127.0.0.1:8000",
+        changeOrigin: true,
+      },
+    },
   },
   test: {
     environment: "jsdom",

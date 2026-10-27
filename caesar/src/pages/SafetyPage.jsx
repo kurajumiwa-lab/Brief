@@ -1,7 +1,9 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Ban, Check, Clock, EyeOff, Gauge, Languages, RotateCcw, ShieldCheck, WifiOff } from "lucide-react";
 import Avatar from "@/components/Avatar.jsx";
 import { useApp } from "@/store/appStore.js";
+import { useSession } from "@/store/session.js";
+import { useLive } from "@/store/live.js";
 import { safetySummary } from "@/lib/selectors.js";
 import { LOCALES, COMING_SOON, makeT } from "@/lib/i18n.js";
 import { count, relativeTime } from "@/lib/format.js";
@@ -32,8 +34,44 @@ export default function SafetyPage() {
   const resetPrototype = useApp((store) => store.resetPrototype);
   const toast = useApp((store) => store.toast);
   const t = makeT(state.preferences.locale);
-  const summary = useMemo(() => safetySummary(state), [state]);
   const [confirmReset, setConfirmReset] = useState(false);
+
+  const mode = useSession((store) => store.mode);
+  const live = mode === "live";
+  const liveReports = useLive((store) => store.reports);
+  const liveBlocks = useLive((store) => store.blocks);
+  const liveMutes = useLive((store) => store.mutes);
+  const people = useLive((store) => store.people);
+
+  useEffect(() => {
+    if (live) useLive.getState().loadSafety();
+  }, [live]);
+
+  // The same three lists in both modes; only their source changes. A live row
+  // knows the target's handle, never their posts — which is the point of a block.
+  const summary = useMemo(() => {
+    if (!live) return safetySummary(state);
+    const person = (id) => {
+      const known = people[id];
+      return {
+        id,
+        name: known?.display_name || (known?.handle ? `@${known.handle}` : "Account"),
+        handle: known?.handle || String(id).slice(0, 8),
+      };
+    };
+    return {
+      reports: liveReports.map((report) => ({
+        id: report.case_number || String(report.id),
+        caseNumber: report.case_number,
+        reason: report.reason,
+        at: report.created_at,
+        status: report.status,
+      })),
+      blocked: liveBlocks.map(person),
+      muted: liveMutes.map(person),
+      queue: [],
+    };
+  }, [live, state, liveReports, liveBlocks, liveMutes, people]);
 
   return (
     <>
@@ -73,10 +111,11 @@ export default function SafetyPage() {
               <div className="grow">
                 <div className="list__title">{REASON_LABEL[report.reason] || report.reason}</div>
                 <div className="list__sub">
-                  Case {report.id.replace("rep-", "#")} · sent {relativeTime(report.at)} · status: {report.status}
+                  Case {report.caseNumber || report.id.replace("rep-", "#")} · sent {relativeTime(report.at)} · status:{" "}
+                  {report.status}
                 </div>
               </div>
-              <span className="chip chip--quiet">Received</span>
+              <span className="chip chip--quiet">{report.status === "received" || report.status === "open" ? "Received" : report.status}</span>
             </div>
           ))}
         </div>
@@ -106,7 +145,11 @@ export default function SafetyPage() {
                 <div className="list__title">{user.name}</div>
                 <div className="list__sub">@{user.handle}</div>
               </div>
-              <button type="button" className="btn btn--sm btn--ghost" onClick={() => unblock(user.id)}>
+              <button
+                type="button"
+                className="btn btn--sm btn--ghost"
+                onClick={() => (live ? useLive.getState().unhide(user.id, "block") : unblock(user.id))}
+              >
                 Unblock
               </button>
             </div>
@@ -133,7 +176,11 @@ export default function SafetyPage() {
                 <div className="list__title">{user.name}</div>
                 <div className="list__sub">@{user.handle}</div>
               </div>
-              <button type="button" className="btn btn--sm btn--ghost" onClick={() => unmute(user.id)}>
+              <button
+                type="button"
+                className="btn btn--sm btn--ghost"
+                onClick={() => (live ? useLive.getState().unhide(user.id, "mute") : unmute(user.id))}
+              >
                 Unmute
               </button>
             </div>
@@ -142,6 +189,8 @@ export default function SafetyPage() {
       )}
 
       {/* ── the queue ────────────────────────────────────────────────────── */}
+      {!live && (
+        <>
       <div className="section-head">
         <div className="eyebrow">Waiting to send · {summary.queue.length}</div>
       </div>
@@ -165,6 +214,8 @@ export default function SafetyPage() {
           ))}
         </div>
       )}
+        </>
+      )}
 
       {/* ── preferences ──────────────────────────────────────────────────── */}
       <div className="section-head">
@@ -180,6 +231,7 @@ export default function SafetyPage() {
           <button
             type="button"
             className="switch"
+            aria-label={t("data.saver")}
             aria-pressed={state.preferences.dataSaver}
             onClick={() => setPreference("dataSaver", !state.preferences.dataSaver)}
           >
@@ -194,21 +246,26 @@ export default function SafetyPage() {
           <div className="grow">
             <div className="list__title">Connection</div>
             <div className="list__sub">
-              {state.preferences.offline
-                ? "Offline — reading works, actions are queued on this device."
-                : "Online — actions apply immediately."}
+              {live
+                ? "Live — every action goes to the server, and a failure is reported as a failure."
+                : state.preferences.offline
+                  ? "Offline — reading works, actions are queued on this device."
+                  : "Online — actions apply immediately."}
             </div>
           </div>
-          <button
-            type="button"
-            className="switch"
-            aria-pressed={state.preferences.offline}
-            onClick={() => setPreference("offline", !state.preferences.offline)}
-          >
-            <span className="switch__track">
-              <span className="switch__thumb" />
-            </span>
-          </button>
+          {!live && (
+            <button
+              type="button"
+              className="switch"
+              aria-label="Connection"
+              aria-pressed={state.preferences.offline}
+              onClick={() => setPreference("offline", !state.preferences.offline)}
+            >
+              <span className="switch__track">
+                <span className="switch__thumb" />
+              </span>
+            </button>
+          )}
         </div>
 
         <div className="list__row" style={{ alignItems: "flex-start" }}>
@@ -252,7 +309,7 @@ export default function SafetyPage() {
           </li>
           <li>
             <strong>Privacy controls.</strong> Who can see a profile, a post's audience, and account deletion are
-            not modelled. Nothing here leaves this browser, so there is nothing yet to make private.
+            not modelled.{live ? " Posts you write here are stored on the server, so they do leave this device." : " Nothing here leaves this browser, so there is nothing yet to make private."}
           </li>
           <li>
             <strong>A moderator console.</strong> Reports are filed and stored; no one is shown them in this build.
@@ -274,8 +331,9 @@ export default function SafetyPage() {
       </div>
       <div className="card card--pad">
         <p className="tiny muted" style={{ lineHeight: 1.55 }}>
-          Everything here is stored in this browser. Nothing is sent anywhere, no account exists, and no data
-          leaves the device. Resetting restores the starting network exactly as it was written.
+          {live
+            ? "You are signed in to the live network: what you post, react to, report or block is stored on the server against your account. The demo data on this device is separate, and resetting it does not touch the server."
+            : "Everything here is stored in this browser. Nothing is sent anywhere, no account exists, and no data leaves the device. Resetting restores the starting network exactly as it was written."}
         </p>
         <div className="row" style={{ gap: 8, marginTop: 12 }}>
           {confirmReset ? (
@@ -299,7 +357,7 @@ export default function SafetyPage() {
               <RotateCcw size={13} aria-hidden="true" /> Reset the prototype
             </button>
           )}
-          <button type="button" className="btn btn--sm btn--quiet" onClick={() => toast("Nothing leaves this browser.", "gold")}>
+          <button type="button" className="btn btn--sm btn--quiet" onClick={() => toast(live ? "Your account data sits on the server; the demo data stays here." : "Nothing leaves this browser.", "gold")}>
             What is stored?
           </button>
         </div>

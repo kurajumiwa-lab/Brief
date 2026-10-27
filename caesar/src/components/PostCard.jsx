@@ -14,8 +14,8 @@ import {
 } from "lucide-react";
 import Avatar from "./Avatar.jsx";
 import { useApp } from "@/store/appStore.js";
+import { useSocial } from "@/lib/useSocial.js";
 import { whyThisAppears } from "@/lib/ranking.js";
-import { circleById, isJoined } from "@/lib/selectors.js";
 import { dataSize, percent, relativeTime } from "@/lib/format.js";
 import { makeT } from "@/lib/i18n.js";
 
@@ -34,15 +34,11 @@ const LANG_LABEL = { en: "English", sw: "Kiswahili", fr: "Français" };
  */
 export default function PostCard({ entry, onOpenVerdict, compact = false }) {
   const { post, verdict } = entry;
-  const viewerId = useApp((state) => state.viewerId);
-  const users = useApp((state) => state.users);
-  const circles = useApp((state) => state.circles);
-  const memberships = useApp((state) => state.memberships);
   const preferences = useApp((state) => state.preferences);
   const queue = useApp((state) => state.queue);
-  const react = useApp((state) => state.react);
-  const mute = useApp((state) => state.mute);
-  const block = useApp((state) => state.block);
+  // One hook decides whether this press goes to the seeded network or to the
+  // server; the card does not need to know which.
+  const social = useSocial();
 
   const [showImage, setShowImage] = useState(false);
   const [showVoice, setShowVoice] = useState(false);
@@ -50,12 +46,13 @@ export default function PostCard({ entry, onOpenVerdict, compact = false }) {
   const menuRef = useRef(null);
   const t = makeT(preferences.locale);
 
-  const author = users.find((user) => user.id === post.authorId);
-  const circle = circleById({ circles }, post.circleId);
-  const mine = post.reactions.find((reaction) => reaction.userId === viewerId);
-  const joined = isJoined({ memberships }, post.circleId);
-  const queued = queue.some((item) => item.key === `reaction:${post.id}`);
-  const why = whyThisAppears(entry, new Set(memberships));
+  const author = social.authorOf(entry);
+  const circle = social.circleOf(post.circleId);
+  const mine = social.reactionOf(entry);
+  const joined = social.joined(post.circleId);
+  const viewerId = social.viewerId;
+  const queued = !social.live && queue.some((item) => item.key === `reaction:${post.id}`);
+  const why = whyThisAppears(entry, new Set(joined ? [post.circleId] : []));
 
   useEffect(() => {
     if (!menu) return undefined;
@@ -128,7 +125,7 @@ export default function PostCard({ entry, onOpenVerdict, compact = false }) {
                 style={{ borderRadius: 10, padding: "9px 10px" }}
                 onClick={() => {
                   setMenu(false);
-                  mute(post.authorId);
+                  social.mute(post.authorId);
                 }}
               >
                 <EyeOff size={15} aria-hidden="true" />
@@ -144,7 +141,7 @@ export default function PostCard({ entry, onOpenVerdict, compact = false }) {
                 style={{ borderRadius: 10, padding: "9px 10px", color: "var(--terra-700)" }}
                 onClick={() => {
                   setMenu(false);
-                  block(post.authorId);
+                  social.block(post.authorId);
                 }}
               >
                 <AlertTriangle size={15} aria-hidden="true" />
@@ -231,9 +228,9 @@ export default function PostCard({ entry, onOpenVerdict, compact = false }) {
           <button
             type="button"
             className="reaction reaction--up"
-            aria-pressed={mine?.value === "up"}
+            aria-pressed={mine === "up"}
             aria-label={`${t("reaction.support")} — ${verdict.up} so far`}
-            onClick={() => react(post.id, "up")}
+            onClick={() => social.react(post.id, "up")}
           >
             <ThumbsUp size={15} aria-hidden="true" />
             <span className="reaction__count">{verdict.up}</span>
@@ -241,9 +238,9 @@ export default function PostCard({ entry, onOpenVerdict, compact = false }) {
           <button
             type="button"
             className="reaction reaction--down"
-            aria-pressed={mine?.value === "down"}
+            aria-pressed={mine === "down"}
             aria-label={`${t("reaction.disagree")} — ${verdict.down} so far`}
-            onClick={() => react(post.id, "down")}
+            onClick={() => social.react(post.id, "down")}
           >
             <ThumbsDown size={15} aria-hidden="true" />
             <span className="reaction__count">{verdict.down}</span>

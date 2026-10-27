@@ -1,0 +1,100 @@
+{
+  "base": "http://localhost:5180",
+  "viewport": "390x844 (Pixel 7)",
+  "startedAt": "2026-10-27T18:52:45.911Z",
+  "steps": [
+    {
+      "name": "joined without a vendor account",
+      "detail": "@qa_r1m8ar"
+    },
+    {
+      "name": "feed matches the server row for row",
+      "detail": "7 posts, counts identical",
+      "counts": 7
+    },
+    {
+      "name": "reaction is stored against this account",
+      "detail": "my_reaction=up on fe96dcf0-72b3-4b07-8ae4-4bed43a13f45"
+    },
+    {
+      "name": "the pressed button survives a reload",
+      "detail": "my_reaction came back from the API"
+    },
+    {
+      "name": "report returned a case number",
+      "detail": "C-5073EF4C"
+    },
+    {
+      "name": "the reported post is still published"
+    },
+    {
+      "name": "the blocked author's posts leave this feed"
+    },
+    {
+      "name": "the block list names who was blocked",
+      "detail": "@asha_otieno"
+    },
+    {
+      "name": "safety centre shows the block by name and the case"
+    },
+    {
+      "name": "unblocking brings the post back"
+    },
+    {
+      "name": "a post written here is a row on the server"
+    }
+  ],
+  "pages": [
+    {
+      "name": "feed",
+      "path": "/",
+      "overflow": 0,
+      "wide": [
+        {
+          "tag": "span",
+          "cls": "hero__glow",
+          "right": 464
+        }
+      ],
+      "small": []
+    },
+    {
+      "name": "circles",
+      "path": "/circles",
+      "overflow": 0,
+      "wide": [],
+      "small": []
+    },
+    {
+      "name": "compose",
+      "path": "/compose",
+      "overflow": 0,
+      "wide": [],
+      "small": []
+    },
+    {
+      "name": "profile",
+      "path": "/profile",
+      "overflow": 0,
+      "wide": [],
+      "small": []
+    },
+    {
+      "name": "safety",
+      "path": "/safety",
+      "overflow": 0,
+      "wide": [],
+      "small": []
+    },
+    {
+      "name": "measure",
+      "path": "/measure",
+      "overflow": 0,
+      "wide": [],
+      "small": []
+    }
+  ],
+  "console": [],
+  "failed": [],
+  "finishedAt": "2026-10-27T18:53:06.473Z"
+}

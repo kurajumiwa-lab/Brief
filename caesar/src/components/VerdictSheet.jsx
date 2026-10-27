@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { AlertTriangle, Check, ShieldAlert, ThumbsDown, ThumbsUp, X } from "lucide-react";
 import Avatar from "./Avatar.jsx";
 import { useApp } from "@/store/appStore.js";
+import { useSocial } from "@/lib/useSocial.js";
 import { RANKING } from "@/lib/ranking.js";
 import { circleById, isJoined } from "@/lib/selectors.js";
 import { count, percent } from "@/lib/format.js";
@@ -28,22 +29,22 @@ const REASONS = [
  */
 export default function VerdictSheet({ entry, intent, onClose }) {
   const { post, verdict, parts, score, raisedByFloor } = entry;
-  const users = useApp((state) => state.users);
   const circles = useApp((state) => state.circles);
-  const memberships = useApp((state) => state.memberships);
-  const report = useApp((state) => state.report);
-  const mute = useApp((state) => state.mute);
-  const block = useApp((state) => state.block);
-  const viewerId = useApp((state) => state.viewerId);
+  // Reporting, muting and blocking go wherever the session points — the sheet
+  // is the same sheet in both modes.
+  const social = useSocial();
+  const viewerId = social.viewerId;
 
   const [reporting, setReporting] = useState(intent === "report");
   const [reason, setReason] = useState("");
   const [sent, setSent] = useState(false);
+  const [reportPending, setReportPending] = useState(false);
+  const [caseNumber, setCaseNumber] = useState(null);
   const closeRef = useRef(null);
 
-  const author = users.find((user) => user.id === post.authorId);
-  const circle = circleById({ circles }, post.circleId);
-  const joined = isJoined({ memberships }, post.circleId);
+  const author = social.authorOf(entry);
+  const circle = social.circleOf(post.circleId);
+  const joined = social.joined(post.circleId);
 
   useEffect(() => {
     const onKey = (event) => {
@@ -66,9 +67,19 @@ export default function VerdictSheet({ entry, intent, onClose }) {
 
   const submit = () => {
     if (!reason) return;
-    report(post.id, reason);
-    setSent(true);
-    setReporting(false);
+    const finish = (result) => {
+      setReportPending(false);
+      if (!result) return; // the server refused; its sentence is in a toast
+      setCaseNumber(result.case_number || null);
+      setSent(true);
+      setReporting(false);
+    };
+    setReportPending(true);
+    // Local mode files the case in this browser and answers synchronously;
+    // live mode goes to the server. Both paths end in the same confirmation.
+    const result = social.report(post.id, reason);
+    if (result && typeof result.then === "function") result.then(finish);
+    else finish(result);
   };
 
   return (
@@ -233,8 +244,9 @@ export default function VerdictSheet({ entry, intent, onClose }) {
             <div className="notice notice--green" data-testid="report-sent">
               <Check size={16} className="notice__icon" aria-hidden="true" />
               <span>
-                Report received. It is in the Safety centre with a case number. The post stays visible until a
-                moderator decides — a report is a question, not a verdict.
+                {caseNumber ? `Case ${caseNumber} opened.` : "Report received."} It is in the Safety centre with a
+                case number. The post stays visible until a moderator decides — a report is a question, not a
+                verdict.
               </span>
             </div>
           ) : reporting ? (
@@ -258,8 +270,8 @@ export default function VerdictSheet({ entry, intent, onClose }) {
                 ))}
               </div>
               <div className="row" style={{ gap: 8 }}>
-                <button type="button" className="btn btn--sm" disabled={!reason} onClick={submit}>
-                  Send report
+                <button type="button" className="btn btn--sm" disabled={!reason || reportPending} onClick={submit}>
+                  {reportPending ? "Sending…" : "Send report"}
                 </button>
                 <button type="button" className="btn btn--quiet" onClick={() => setReporting(false)}>
                   Cancel
@@ -273,11 +285,11 @@ export default function VerdictSheet({ entry, intent, onClose }) {
                 <button type="button" className="btn btn--sm btn--ghost" onClick={() => setReporting(true)}>
                   <ShieldAlert size={14} aria-hidden="true" /> Report
                 </button>
-                <button type="button" className="btn btn--sm btn--ghost" onClick={() => mute(post.authorId)}>
+                <button type="button" className="btn btn--sm btn--ghost" onClick={() => social.mute(post.authorId)}>
                   Mute {author?.name?.split(" ")[0]}
                 </button>
                 {post.authorId !== viewerId && (
-                  <button type="button" className="btn btn--sm btn--danger" onClick={() => block(post.authorId)}>
+                  <button type="button" className="btn btn--sm btn--danger" onClick={() => social.block(post.authorId)}>
                     Block
                   </button>
                 )}

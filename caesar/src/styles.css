@@ -252,9 +252,14 @@ p {
   min-width: 0;
 }
 
-/* Language: icon plus ISO code, 36px tall so it is a comfortable thumb target
-   rather than a 17px sliver. */
-.topbar__lang {
+/* Language: icon plus ISO code, 44px tall so it is a comfortable thumb target
+   rather than a 17px sliver.
+
+   `.iconbtn.topbar__lang` rather than `.topbar__lang`: both classes have the
+   same specificity, and `.iconbtn` is defined further down this file, so a
+   single-class override lost — leaving a 36px inline-grid with two rows, the
+   icon on the first and "EN" hanging under the bar on the second. */
+.iconbtn.topbar__lang {
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -1068,10 +1073,16 @@ p {
 .switch {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 9px;
   cursor: pointer;
   border: 0;
   background: transparent;
+  /* The track is 36×21 — a real switch size, and too small for a thumb. The
+     button around it is the target, so it keeps a 44px box while the track
+     stays exactly as drawn. */
+  min-width: 44px;
+  min-height: 44px;
   padding: 0;
   color: var(--text-2);
   font-size: 12.5px;
@@ -1388,6 +1399,25 @@ p {
   padding: 16px;
   display: grid;
   gap: 16px;
+}
+
+/* One spinner, for the half second the network takes to answer. Honours the
+   reduced-motion preference like everything else that moves. */
+.spin {
+  animation: spin 900ms linear infinite;
+  color: var(--text-3);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spin {
+    animation: none;
+  }
 }
 
 @keyframes fade {

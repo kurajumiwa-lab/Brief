@@ -2,6 +2,8 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Image as ImageIcon, Mic, Send, WifiOff, X } from "lucide-react";
 import { useApp } from "@/store/appStore.js";
+import { useSession } from "@/store/session.js";
+import { useLive } from "@/store/live.js";
 import { IMAGERY } from "@/data/imagery.js";
 import { dataSize } from "@/lib/format.js";
 import { LOCALES } from "@/lib/i18n.js";
@@ -31,9 +33,23 @@ export default function ComposePage() {
   const navigate = useNavigate();
   const state = useApp();
   const addPost = useApp((store) => store.addPost);
+  const mode = useSession((store) => store.mode);
+  const liveCircles = useLive((store) => store.circles);
+  const live = mode === "live";
 
-  const joined = state.circles.filter((circle) => state.memberships.includes(circle.id));
-  const [circleId, setCircleId] = useState(joined[0]?.id || state.circles[0]?.id || "");
+  // Live mode posts against the server's circles (Brief groups); demo mode
+  // against the seeded ones. Same composer, same estimate, different destination.
+  const circles = useMemo(
+    () => (live ? liveCircles.map((circle) => ({ id: circle.id, name: circle.name, place: circle.region || "" })) : state.circles),
+    [live, liveCircles, state.circles]
+  );
+  const memberships = useMemo(
+    () => (live ? liveCircles.filter((circle) => circle.following).map((circle) => circle.id) : state.memberships),
+    [live, liveCircles, state.memberships]
+  );
+
+  const joined = circles.filter((circle) => memberships.includes(circle.id));
+  const [circleId, setCircleId] = useState(joined[0]?.id || circles[0]?.id || "");
   const [body, setBody] = useState("");
   const [image, setImage] = useState(null);
   const [voice, setVoice] = useState(null);
@@ -45,7 +61,7 @@ export default function ComposePage() {
   const remaining = LIMIT - body.length;
   const offline = state.preferences.offline;
 
-  const publish = () => {
+  const publish = async () => {
     if (!trimmed) {
       setError("Write something first. A post is a claim someone can answer.");
       return;
@@ -54,10 +70,31 @@ export default function ComposePage() {
       setError("Give people enough to answer — eight characters at least.");
       return;
     }
-    if (!circleId) {
+    if (!circleId && !live) {
       setError("Choose a circle. Every post belongs to one.");
       return;
     }
+
+    if (live) {
+      // Attachments are prototype samples (inline SVG), not uploads; the live
+      // API takes text today and media arrives with the capture work. Saying so
+      // is better than silently dropping what someone attached.
+      const created = await useLive.getState().createPost({
+        body: trimmed,
+        circle_id: circleId || null,
+        lang,
+        data_kb: Math.max(1, Math.round(kb)),
+      });
+      if (!created) {
+        setError(useLive.getState().error === "offline"
+          ? "The network is unreachable. Nothing was posted — try again when you have signal."
+          : useLive.getState().error || "The post did not go through.");
+        return;
+      }
+      navigate("/");
+      return;
+    }
+
     addPost({ circleId, body: trimmed, image, voice, lang });
     navigate(`/circles/${circleId}`);
   };
@@ -91,14 +128,14 @@ export default function ComposePage() {
             Circle
           </label>
           <select id="circle" className="select" value={circleId} onChange={(event) => setCircleId(event.target.value)}>
-            {state.circles.map((circle) => (
+            {circles.map((circle) => (
               <option key={circle.id} value={circle.id}>
                 {circle.name} — {circle.place}
-                {state.memberships.includes(circle.id) ? "" : " (not joined)"}
+                {memberships.includes(circle.id) ? "" : " (not joined)"}
               </option>
             ))}
           </select>
-          {circleId && !state.memberships.includes(circleId) && (
+          {circleId && !memberships.includes(circleId) && (
             <p className="hint">
               You are not a member of this circle yet. You can still post — joining adds it to your feed.
             </p>
@@ -133,6 +170,12 @@ export default function ComposePage() {
 
         <div className="field">
           <span className="label">Attach</span>
+          {live ? (
+            <p className="hint" data-testid="attach-unavailable">
+              Photos and voice notes are sample illustrations in this prototype, not uploads, and the live API takes
+              text today. Nothing is attached without saying so — media capture arrives as its own piece of work.
+            </p>
+          ) : (
           <div className="scroll-row">
             {ATTACHABLE.map((option) => {
               const src = IMAGERY[option.key];
@@ -162,10 +205,13 @@ export default function ComposePage() {
               {voice ? "24 s sample attached" : "Voice note (sample)"}
             </button>
           </div>
+          )}
+          {!live && (
           <p className="hint" style={{ marginTop: 8 }}>
             Photos and the voice note are samples from a fixed set. This prototype does not open your camera or
             microphone — say so plainly rather than promising what it cannot do.
           </p>
+          )}
           {image && (
             <div className="post__media" style={{ margin: "8px 0 0", position: "relative" }}>
               <img src={image} alt="Attached" />
@@ -227,7 +273,7 @@ export default function ComposePage() {
         <div className="row" style={{ gap: 8 }}>
           <button type="button" className="btn btn--gold" onClick={publish} disabled={!trimmed}>
             <Send size={15} aria-hidden="true" />
-            {offline ? "Save and queue" : "Post to circle"}
+            {live ? "Post to the network" : offline ? "Save and queue" : "Post to circle"}
           </button>
           <button type="button" className="btn btn--quiet" onClick={() => navigate(-1)}>
             Cancel
