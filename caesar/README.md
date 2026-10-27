@@ -220,8 +220,9 @@ src/pages/               Feed, Circles, Circle, Compose, Profile, Safety, Measur
    a score.
 2. A moderator console and an appeal queue (the appeal *path* is stated, the
    tool is not built).
-3. Real media: compression and an upload path, since the data cost is the whole
-   product's constraint.
+3. Real media: camera and microphone capture with compression before storage,
+   since the data cost is the whole product's constraint. Planned in
+   [`docs/media-capture-plan.md`](docs/media-capture-plan.md).
 4. The next languages, done properly with translators rather than machine output.
 5. Only after retention and fairness are measured: tips and subscriptions via a
    PSP, with the same rule that no automated system moves money without a human
