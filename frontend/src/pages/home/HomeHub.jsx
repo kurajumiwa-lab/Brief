@@ -5,6 +5,7 @@ import SourceDialog from "@/components/stock/SourceDialog";
 import HomeHero from "@/components/home/HomeHero";
 import TradeOverviewShelf from "@/components/home/TradeOverviewShelf";
 import HomeFeed from "@/components/home/HomeFeed";
+import CommunityStrip from "@/components/home/CommunityStrip";
 import { useTradeOverviewStore } from "@/stores/tradeOverviewStore";
 
 /**
@@ -48,6 +49,10 @@ export default function HomeHub() {
   return (
     <div className="space-y-5 sm:space-y-6">
       <HomeHero />
+
+      {/* The way into the community: static by design, so it cannot be the
+          reason Home has a hole in it. */}
+      <CommunityStrip />
 
       {/* New vendors get four steps; established traders get nothing here. */}
       <SetupChecklist />

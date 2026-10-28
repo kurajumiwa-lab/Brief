@@ -685,4 +685,32 @@ export const accountAPI = {
   close: (confirmation, reason) => api.post("/vendors/me/close", { confirmation, reason }),
 };
 
+// ── Social layer (Caesar) ──────────────────────────────────────────────────
+/**
+ * The community surfaces, over the same session as everything else.
+ *
+ * A Brief login reaches every one of these: the backend provisions a social
+ * identity for a vendor on first use, and will equally issue a standalone
+ * social account for someone with no business at all. Nothing here requires a
+ * vendor row — that is the deliberate design, so a reader who only wants to
+ * talk is not asked to open a shop first.
+ */
+export const socialAPI = {
+  /** Who the session is inside the community, and whether a shop is attached. */
+  me: () => api.get("/social/me"),
+  feed: (params) => api.get("/social/feed", { params: noEmpty(params) }),
+  circles: () => api.get("/social/circles"),
+  followCircle: (id) => api.post(`/social/circles/${id}/follow`),
+  unfollowCircle: (id) => api.delete(`/social/circles/${id}/follow`),
+  post: (data) => api.post("/social/posts", data),
+  removePost: (id) => api.delete(`/social/posts/${id}`),
+  react: (id, value) => api.post(`/social/posts/${id}/reactions`, { value }),
+  withdrawReaction: (id) => api.delete(`/social/posts/${id}/reactions`),
+  report: (id, reason, detail) => api.post(`/social/posts/${id}/reports`, { reason, detail }),
+  reports: () => api.get("/social/reports"),
+  blocks: (params) => api.get("/social/blocks", { params: noEmpty(params) }),
+  block: (targetId, kind = "block") => api.post("/social/blocks", { target_id: targetId, kind }),
+  unblock: (targetId, kind = "block") => api.delete(`/social/blocks/${targetId}`, { params: { kind } }),
+};
+
 export default api;
