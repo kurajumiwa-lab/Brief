@@ -1,39 +1,33 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowRight, BookOpen, PackageCheck, RotateCcw } from "lucide-react";
 import Stat from "@/components/ui/Stat";
 import ErrorState from "@/components/ui/ErrorState";
 import { SkeletonRows } from "@/components/ui/Skeleton";
-import { apiError, ordersAPI } from "@/lib/api";
+import { useTradeOverviewStore } from "@/stores/tradeOverviewStore";
 import { currency, num, relativeTime } from "@/lib/formatters";
 
 /** Home is an agenda, not a marketplace promise. Counts are from all of this
     vendor's recorded movements, not the capped Orders list or example data. */
 export default function TradePulse() {
   const navigate = useNavigate();
-  const [data, setData] = useState(null);
-  const [error, setError] = useState("");
-  const [loadedAt, setLoadedAt] = useState(null);
+  // Same store as the compact trade shelf: one request, one failure, one retry.
+  const data = useTradeOverviewStore((state) => state.data);
+  const error = useTradeOverviewStore((state) => state.error);
+  const stale = useTradeOverviewStore((state) => state.stale);
+  const loadedAtRaw = useTradeOverviewStore((state) => state.at);
+  const load = useTradeOverviewStore((state) => state.load);
+  const loadedAt = loadedAtRaw ? new Date(loadedAtRaw) : null;
   const [online, setOnline] = useState(() => navigator.onLine);
   const [now, setNow] = useState(Date.now());
-  const load = useCallback(async () => {
-    try {
-      const { data: next } = await ordersAPI.records({ limit: 1 });
-      setData(next);
-      setLoadedAt(new Date());
-      setError("");
-    } catch (err) {
-      setError(apiError(err, "Could not read your trade overview"));
-    }
-  }, []);
 
   useEffect(() => {
-    load();
+    load().catch(() => {});
     const refresh = window.setInterval(() => {
       setNow(Date.now());
-      if (navigator.onLine && !document.hidden) load();
+      if (navigator.onLine && !document.hidden) load({ force: true }).catch(() => {});
     }, 60000);
-    const onOnline = () => { setOnline(true); load(); };
+    const onOnline = () => { setOnline(true); load({ force: true }).catch(() => {}); };
     const onOffline = () => setOnline(false);
     window.addEventListener("online", onOnline);
     window.addEventListener("offline", onOffline);
@@ -52,11 +46,19 @@ export default function TradePulse() {
         <div><p className="text-micro font-bold uppercase tracking-widest text-brand-700 dark:text-brand-300">My shop</p><h2 className="text-base font-bold text-ink-1">Trade overview</h2></div>
         <p role="status" className="flex items-center gap-1.5 text-micro text-ink-4">
           <span className={`h-2 w-2 rounded-full ${!online ? "bg-red-500" : error || loadedAt && now - loadedAt.getTime() > 60000 ? "bg-accent-500" : "bg-brand-500"}`} aria-hidden="true" />
-          {!online ? "Offline · last loaded view" : error ? "Connection interrupted · last loaded view" : !loadedAt ? "Connecting…" : now - loadedAt.getTime() > 60000 ? `Updated ${relativeTime(loadedAt)}` : "Live from your records"}
+          {!online
+            ? "Offline · last loaded view"
+            : error || stale
+              ? "Couldn't refresh · showing the last numbers read"
+              : !loadedAt
+                ? "Connecting…"
+                : now - loadedAt.getTime() > 60000
+                  ? `Updated ${relativeTime(loadedAt)}`
+                  : "Live from your records"}
         </p>
       </div>
-      {error && data && <p role="alert" className="text-2xs text-red-700 dark:text-red-400">{error} — last loaded view. <button type="button" className="underline" onClick={load}>Retry</button></p>}
-      {!data ? error ? <ErrorState title="Overview unavailable" description={error} onRetry={load} compact /> : <SkeletonRows count={2} /> : count?.recorded ? (
+      {error && data && <p role="alert" className="text-2xs text-red-700 dark:text-red-400">{error} — last loaded view. <button type="button" className="underline" onClick={() => useTradeOverviewStore.getState().retry()}>Retry</button></p>}
+      {!data ? error ? <ErrorState title="Overview unavailable" description={error} onRetry={() => useTradeOverviewStore.getState().retry()} compact /> : <SkeletonRows count={2} /> : count?.recorded ? (
         <>
           <div className="grid gap-2 sm:grid-cols-2">
             <Stat label="Needs your action" value={num(count.needs_action)} tone={count.needs_action ? "brand" : "default"} onClick={() => navigate("/orders?needs=me")} hint="Confirm, dispatch or check a handover" />

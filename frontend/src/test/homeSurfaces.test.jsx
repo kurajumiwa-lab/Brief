@@ -192,7 +192,7 @@ describe("Home trading feed", () => {
 
   it("contains a module's failure to its own shelf, with an honest retry", async () => {
     const { stockAPI } = await import("@/lib/api");
-    stockAPI.network.mockRejectedValueOnce(new Error("offline"));
+    stockAPI.network.mockRejectedValue(new Error("offline"));
     const { default: HomeHub } = await import("@/pages/home/HomeHub");
     renderAt("/", "/", <HomeHub />);
 

@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { SHELVES, publicShelfItems, shelfByKey } from "@/config/homeShelves";
 import { useAuthStore } from "@/stores/authStore";
+import { failureReason } from "@/lib/api";
 
 /**
  * THE HOME FEED STORE — one small state machine per shelf.
@@ -34,12 +35,42 @@ export const STALE_MS = 5 * 60 * 1000;
  */
 export const SHELF_TIMEOUT_MS = 20 * 1000;
 
-const initial = () => ({ items: [], status: "idle", error: "", at: 0 });
+/**
+ * Would trying again plausibly work?
+ *
+ * Used for the retry that happens when the connection comes back: a shelf that
+ * failed because the network was down should heal itself the moment it isn't.
+ * A 4xx is a decision, not a hiccup, and is not re-requested.
+ */
+function describeFailure(failure) {
+  try {
+    if (failure?.isTimeout) {
+      return `No answer within ${Math.round(SHELF_TIMEOUT_MS / 1000)} seconds. The server may be starting up.`;
+    }
+    return failureReason(failure, "The request failed.");
+  } catch {
+    return "The request failed.";
+  }
+}
+
+export function worthRetrying(error) {
+  const status = error?.response?.status;
+  if (!status) return true;
+  return status >= 500 || status === 408 || status === 429;
+}
+
+const initial = () => ({ items: [], status: "idle", error: "", reason: "", at: 0 });
 
 function withinDeadline(promise, ms) {
   let timer;
   const deadline = new Promise((_, reject) => {
-    timer = setTimeout(() => reject(new Error("shelf timed out")), ms);
+    timer = setTimeout(() => {
+      // Marked so the caller can tell "the server never answered" apart from
+      // "the server answered with an error" — they need different sentences.
+      const error = new Error("shelf timed out");
+      error.isTimeout = true;
+      reject(error);
+    }, ms);
   });
   return Promise.race([promise, deadline]).finally(() => clearTimeout(timer));
 }
@@ -61,7 +92,7 @@ export const useHomeFeedStore = create((set, get) => ({
     }
 
     set((state) => ({
-      shelves: { ...state.shelves, [key]: { ...current, status: "loading", error: "" } },
+      shelves: { ...state.shelves, [key]: { ...current, status: "loading", error: "", reason: "", retryable: false } },
     }));
 
     try {
@@ -69,11 +100,29 @@ export const useHomeFeedStore = create((set, get) => ({
       const vendor = useAuthStore.getState?.().vendor ?? null;
       const items = publicShelfItems(rows, vendor, shelf.limit);
       set((state) => ({
-        shelves: { ...state.shelves, [key]: { items, status: "ready", error: "", at: Date.now() } },
+        shelves: { ...state.shelves, [key]: { items, status: "ready", error: "", reason: "", retryable: false, at: Date.now() } },
       }));
-    } catch {
+    } catch (failure) {
+      // The card keeps its short title ("Fresh on the network didn't load") and
+      // gains the actual reason underneath, so a screenshot of the failure is
+      // enough to diagnose it instead of needing the server logs.
+      //
+      // Describing a failure must never become a second failure: if the reason
+      // helper is missing or itself throws, the shelf is still marked broken
+      // with a plain sentence. (This is how a broken error path hides the very
+      // error it was meant to explain.)
       set((state) => ({
-        shelves: { ...state.shelves, [key]: { items: [], status: "error", error: `${shelf.title} didn't load`, at: 0 } },
+        shelves: {
+          ...state.shelves,
+          [key]: {
+            items: [],
+            status: "error",
+            error: `${shelf.title} didn't load`,
+            reason: describeFailure(failure),
+            retryable: worthRetrying(failure),
+            at: 0,
+          },
+        },
       }));
     }
   },
@@ -90,6 +139,22 @@ export const useHomeFeedStore = create((set, get) => ({
 
   /** Refresh one shelf (the retry affordance in a failed carousel). */
   retryShelf: (key) => get().loadShelf(key, { force: true }),
+
+  /**
+   * The network just came back. Re-request exactly the shelves that failed for
+   * a reason a new request can fix — not the ones the server refused — so a
+   * driver that reconnects heals the feed without the reader having to hunt for
+   * the retry buttons. Deliberately event-driven: a timer-based retry delays
+   * the error message and makes the feed's timing impossible to reason about.
+   */
+  retryFailedShelves: () => {
+    const shelves = get().shelves;
+    return Promise.all(
+      Object.entries(shelves)
+        .filter(([, state]) => state.status === "error" && state.retryable !== false)
+        .map(([key]) => get().retryShelf(key))
+    );
+  },
 
   /** Refresh the whole feed — used by the pull-to-refresh affordance. */
   refreshFeed: () => {

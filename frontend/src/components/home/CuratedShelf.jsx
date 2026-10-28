@@ -32,7 +32,7 @@ import { useHomeFeedStore } from "@/stores/homeFeedStore";
  */
 export default function CuratedShelf({ shelf, state, onSource, className }) {
   const retryShelf = useHomeFeedStore((s) => s.retryShelf);
-  const { items = [], status = "idle", error } = state || {};
+  const { items = [], status = "idle", error, reason } = state || {};
   const headingId = `home-shelf-${shelf.key}`;
 
   // An empty shelf is not a shelf. Hiding it is the honest empty state: there
@@ -62,7 +62,11 @@ export default function CuratedShelf({ shelf, state, onSource, className }) {
           tone="danger"
           icon={RefreshCw}
           title={error || `${shelf.title} didn't load`}
-          description="The rest of the market below is unaffected."
+          description={
+            reason
+              ? `${reason} The rest of the market below is unaffected.`
+              : "The rest of the market below is unaffected."
+          }
           action={
             <Button size="xs" variant="secondary" icon={RefreshCw} onClick={() => retryShelf(shelf.key)}>
               Try again

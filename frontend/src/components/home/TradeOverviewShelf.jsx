@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowRight, BookOpen, PackageCheck, RotateCcw, ClipboardCheck } from "lucide-react";
 import ErrorState from "@/components/ui/ErrorState";
 import { SkeletonRows } from "@/components/ui/Skeleton";
-import { apiError, ordersAPI } from "@/lib/api";
+import { useTradeOverviewStore } from "@/stores/tradeOverviewStore";
 import { currency, num, relativeTime } from "@/lib/formatters";
 
 /**
@@ -21,30 +21,25 @@ import { currency, num, relativeTime } from "@/lib/formatters";
  */
 export default function TradeOverviewShelf() {
   const navigate = useNavigate();
-  const [data, setData] = useState(null);
-  const [error, setError] = useState("");
-  const [loadedAt, setLoadedAt] = useState(null);
+  // The overview is a shared fact: the business pulse reads the same store, so
+  // this page makes one request and shows one failure, not two cards apologising
+  // for the same broken endpoint.
+  const data = useTradeOverviewStore((state) => state.data);
+  const error = useTradeOverviewStore((state) => state.error);
+  const stale = useTradeOverviewStore((state) => state.stale);
+  const loadedAtRaw = useTradeOverviewStore((state) => state.at);
+  const load = useTradeOverviewStore((state) => state.load);
   const [online, setOnline] = useState(() => navigator.onLine);
   const [now, setNow] = useState(Date.now());
-
-  const load = useCallback(async () => {
-    try {
-      const { data: next } = await ordersAPI.records({ limit: 3 });
-      setData(next);
-      setLoadedAt(new Date());
-      setError("");
-    } catch (err) {
-      setError(apiError(err, "Could not read your trade overview"));
-    }
-  }, []);
+  const loadedAt = loadedAtRaw ? new Date(loadedAtRaw) : null;
 
   useEffect(() => {
-    load();
+    load().catch(() => {});
     const refresh = window.setInterval(() => {
       setNow(Date.now());
-      if (navigator.onLine && !document.hidden) load();
+      if (navigator.onLine && !document.hidden) load({ force: true }).catch(() => {});
     }, 60000);
-    const onOnline = () => { setOnline(true); load(); };
+    const onOnline = () => { setOnline(true); load({ force: true }).catch(() => {}); };
     const onOffline = () => setOnline(false);
     window.addEventListener("online", onOnline);
     window.addEventListener("offline", onOffline);
@@ -63,7 +58,12 @@ export default function TradeOverviewShelf() {
 
   if (!data) {
     return error ? (
-      <ErrorState title="Overview unavailable" description={error} onRetry={load} compact />
+      <ErrorState
+        title="Overview unavailable"
+        description={error}
+        onRetry={() => useTradeOverviewStore.getState().retry()}
+        compact
+      />
     ) : (
       <div className="rounded-2xl border border-edge-1 bg-surface-0 p-4">
         <SkeletonRows count={2} />
@@ -97,7 +97,15 @@ export default function TradeOverviewShelf() {
       {/* Status indicator */}
       <p role="status" className="flex items-center gap-1.5 text-micro text-ink-4">
         <span className={`h-2 w-2 rounded-full ${!online ? "bg-red-500" : error || (loadedAt && now - loadedAt.getTime() > 60000) ? "bg-accent-500" : "bg-brand-500"}`} aria-hidden="true" />
-        {!online ? "Offline · last loaded view" : error ? "Connection interrupted · last loaded view" : !loadedAt ? "Connecting…" : now - loadedAt.getTime() > 60000 ? `Updated ${relativeTime(loadedAt)}` : "Live from your records"}
+        {!online
+          ? "Offline · last loaded view"
+          : error || stale
+            ? "Couldn't refresh · showing the last numbers read"
+            : !loadedAt
+              ? "Connecting…"
+              : now - loadedAt.getTime() > 60000
+                ? `Updated ${relativeTime(loadedAt)}`
+                : "Live from your records"}
       </p>
 
       {/* Primary: Pending actions */}

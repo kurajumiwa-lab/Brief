@@ -1,7 +1,7 @@
 import {
   Home, Compass, ClipboardList, Store, Map, Newspaper, Package,
   Truck, MapPin, Users, Wrench, CalendarDays, Terminal, UserRound, Building2,
-  Plus, Bell,
+  Plus, Bell, MessagesSquare,
 } from "lucide-react";
 
 /**
@@ -36,6 +36,7 @@ export const PRIMARY_NAV = [
 export const EXPLORE_NAV = [
   { to: "/explore", label: "Everything", icon: Compass },
   { to: "/explore?kind=event", label: "Events", icon: CalendarDays },
+  { to: "/community", label: "Community", icon: MessagesSquare },
   { to: "/explore?kind=community", label: "Communities", icon: Users },
   { to: "/explore?kind=opportunity", label: "Opportunities", icon: ClipboardList },
   { to: "/explore?kind=listing", label: "Goods", icon: Package },

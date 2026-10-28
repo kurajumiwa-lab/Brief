@@ -17,7 +17,7 @@
  *   · the invite banner calls the app's real sharing flow and promises nothing
  *     it cannot keep.
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // The feed renders eight shelves of animated cards; the DOM work is real, so the
 // per-test budget is wider than the default 5s (nothing here waits on the network).
@@ -118,8 +118,13 @@ const writeText = vi.fn(() => Promise.resolve());
 
 vi.mock("@/lib/api", () => {
   const apiError = (e, f = "Something went wrong") => e?.message || f;
+  // The real module's failure sentence: a failure with no `response` is a
+  // connection problem, anything else keeps the server's own words.
+  const failureReason = (e, f = "Something went wrong") =>
+    e?.response ? apiError(e, f) : "The network couldn't be reached. Check your connection and try again.";
   return {
     apiError,
+    failureReason,
     stockAPI: {
       network: vi.fn(() => ok([OTHER_STOCK, MY_STOCK])),
       mine: vi.fn(() => ok(MY_SHELF)),
@@ -166,6 +171,12 @@ const mount = () =>
       </Routes>
     </MemoryRouter>
   );
+
+afterEach(() => {
+  // A spec that makes a shelf fail for good must not leave that failure in the
+  // mock for the next one: `clearAllMocks` drops calls, not implementations.
+  api.stockAPI.network.mockImplementation(() => ok([OTHER_STOCK, MY_STOCK]));
+});
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -317,19 +328,57 @@ describe("Home discovery shelves", () => {
 /* ── failure isolation + loading ───────────────────────────────────────────── */
 
 describe("Shelf states", () => {
-  it("keeps the feed standing when one module fails, and retries just that shelf", async () => {
-    api.stockAPI.network.mockRejectedValueOnce(new Error("offline"));
+  it("keeps the feed standing when one module keeps failing, and retries just that shelf", async () => {
+    // Persistent, not "once": a failure that survives the automatic retry is
+    // the only kind that should reach the user as an error card.
+    api.stockAPI.network.mockRejectedValue(new Error("offline"));
     mount();
 
     const failed = await screen.findByTestId("home-shelf-stock");
-    expect(failed).toHaveAttribute("data-shelf-status", "error");
+    // The card waits for the one automatic retry before it calls itself broken.
+    await waitFor(() => expect(failed).toHaveAttribute("data-shelf-status", "error"), { timeout: 6000 });
     expect(within(failed).getByText(/didn't load/i)).toBeInTheDocument();
+    // the reason is on the card, so the failure is diagnosable without the logs
+    expect(within(failed).getByText(/Check your connection and try again/i)).toBeInTheDocument();
     // the rest of the marketplace is untouched
     expect(screen.getByTestId("home-shelf-markets")).toHaveTextContent("Kibuye Market");
 
+    api.stockAPI.network.mockResolvedValue(ok([{ id: "s1", name: "Kitenge 6-yard", quantity_available: 4, visible_to_network: true, vendor_id: "v-other", unit_price: 800 }]));
     fireEvent.click(within(failed).getByRole("button", { name: /try again/i }));
     await waitFor(() => expect(within(screen.getByTestId("home-shelf-stock")).getByText("Kitenge 6-yard")).toBeInTheDocument());
-    expect(api.stockAPI.network).toHaveBeenCalledTimes(2);
+  });
+
+  it("heals itself when the connection comes back, without hunting for the retry", async () => {
+    // A phone that drops signal shows the failed shelf; when the radio comes
+    // back the shelf re-requests itself. Deliberately event-driven: a timer
+    // that fires on its own would delay the error and make the feed's timing
+    // impossible to reason about.
+    api.stockAPI.network.mockRejectedValueOnce(new Error("no signal"));
+    mount();
+
+    const shelf = await screen.findByTestId("home-shelf-stock");
+    await waitFor(() => expect(shelf).toHaveAttribute("data-shelf-status", "error"), { timeout: 6000 });
+    expect(within(shelf).getByRole("button", { name: /try again/i })).toBeInTheDocument();
+
+    fireEvent(window, new Event("online"));
+
+    await waitFor(() => expect(shelf).toHaveAttribute("data-shelf-status", "ready"), { timeout: 6000 });
+    expect(within(shelf).getByText("Kitenge 6-yard")).toBeInTheDocument();
+  });
+
+  it("does not re-ask a shelf the server refused, just because the network blinked", async () => {
+    // 403 is a decision. Retrying it on every reconnect is a loop, not a fix.
+    const refused = Object.assign(new Error("forbidden"), { response: { status: 403 } });
+    api.stockAPI.network.mockRejectedValue(refused);
+    mount();
+
+    const shelf = await screen.findByTestId("home-shelf-stock");
+    await waitFor(() => expect(shelf).toHaveAttribute("data-shelf-status", "error"), { timeout: 6000 });
+    const asked = api.stockAPI.network.mock.calls.length;
+
+    fireEvent(window, new Event("online"));
+    await new Promise((resolve) => setTimeout(resolve, 60));
+    expect(api.stockAPI.network.mock.calls.length).toBe(asked);
   });
 
   it("shows skeletons shaped like the cards while a shelf is still loading", async () => {

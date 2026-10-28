@@ -29,6 +29,7 @@ const BrowsePage = lazy(() => import("@/pages/browse/BrowsePage"));
 // needs those kilobytes back, making it lazy is a one-line change and the
 // Suspense fallback in Shell already handles it.
 const ExplorePage = lazy(() => import("@/pages/explore/ExplorePage"));
+const CommunityPage = lazy(() => import("@/pages/community/CommunityPage"));
 const ActivityPage = lazy(() => import("@/pages/activity/ActivityPage"));
 const ActivityDetailPage = lazy(() => import("@/pages/activities/ActivityDetailPage"));
 const ListingPage = lazy(() => import("@/pages/listing/ListingPage"));
@@ -156,6 +157,7 @@ export default function App() {
               Work and Inbox. Every older URL below still resolves and still
               highlights the right tab (see config/navigation.js areas). */}
           <Route path="/explore" element={<ExplorePage />} />
+          <Route path="/community" element={<CommunityPage />} />
           <Route path="/create" element={<CreatePage />} />
           <Route path="/activity" element={<ActivityPage />} />
           <Route path="/activities/:id" element={<ActivityDetailPage />} />
