@@ -1,6 +1,7 @@
 import csv
 import io
 import logging
+import math
 from datetime import datetime, timezone
 from typing import List, Optional
 from uuid import UUID
@@ -162,44 +163,138 @@ class MovementOut(BaseModel):
     direction: str  # incoming (I am buying) | outgoing (I am supplying)
 
 
+# ── reading a shelf line ──────────────────────────────────────────────────────
+#
+# A row can be older than the code that reads it. `tags` was JSONB before it
+# was a list, a POS connector writes what its vendor's till says, and a row
+# restored from a backup may carry a NULL in a column added later. None of that
+# is a reason to fail a request: a shape we did not expect is a fact to render
+# around, not an exception to raise.
+#
+# This matters more than it looks. `network-stock` lists *other people's* rows,
+# so one unreadable item took down the whole shelf for every reader — the
+# failure was permanent, because nothing in the app could ever clean it up.
+# The serialiser below cannot raise on a shape.
+
+
+def _enum_value(value, fallback: str) -> str:
+    """An Enum member, the stored label, a plain string or None — all of them
+    mean the same thing to a reader, so all of them are answered."""
+    if value is None:
+        return fallback
+    text_value = getattr(value, "value", value)
+    if text_value is None or text_value == "":
+        return fallback
+    return str(text_value)
+
+
+def _as_list(value) -> list:
+    """JSONB holds whatever was written. A list is the useful shape; anything
+    else is wrapped rather than dropped, so no data disappears silently."""
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return value
+    if isinstance(value, tuple):
+        return list(value)
+    if isinstance(value, (str, bytes)):
+        return [value] if value else []
+    return [value]
+
+
+def _iso(value):
+    """A datetime, a date, a string or None → an ISO string or None."""
+    if value is None:
+        return None
+    if isinstance(value, str):
+        return value
+    try:
+        return value.isoformat()
+    except AttributeError:
+        return str(value)
+
+
+def _count(value) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _text(value, fallback: str = "") -> str:
+    return value if isinstance(value, str) and value else fallback
+
+
+def _finite(value, fallback: float = 0.0) -> float:
+    """A NaN or infinite score cannot be encoded as JSON, and a score that
+    cannot be encoded takes the whole response with it. Answer with the neutral
+    value instead: the number is missing, not the shelf."""
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return fallback
+    return number if math.isfinite(number) else fallback
+
+
 def stock_out(i: StockItem, v: Vendor) -> StockItemOut:
     return StockItemOut(
         id=str(i.id),
         vendor_id=str(v.id),
-        vendor_handle=v.vendor_handle,
-        vendor_business=v.business_name,
-        name=i.name,
+        vendor_handle=_text(v.vendor_handle),
+        vendor_business=_text(v.business_name, "A vendor"),
+        name=_text(i.name, "Stock item"),
         sku=i.sku,
         category=i.category,
         subcategory=i.subcategory,
         description=i.description,
-        quantity_in_stock=i.quantity_in_stock,
-        quantity_reserved=i.quantity_reserved,
-        quantity_available=i.quantity_available,
-        unit_of_measure=i.unit_of_measure,
+        quantity_in_stock=_count(i.quantity_in_stock),
+        quantity_reserved=_count(i.quantity_reserved),
+        quantity_available=_count(i.quantity_available),
+        unit_of_measure=_text(i.unit_of_measure, "units"),
         cost_price=i.cost_price,
         wholesale_price=i.wholesale_price,
         unit_price=i.unit_price,
-        min_order_quantity=i.min_order_quantity,
-        bulk_discount_tiers=i.bulk_discount_tiers or [],
-        source=i.source.value,
-        visible_to_network=i.visible_to_network,
-        tags=i.tags or [],
-        images=i.images or [],
-        last_pos_sync=i.last_pos_sync.isoformat() if i.last_pos_sync else None,
-        updated_at=i.updated_at.isoformat() if i.updated_at else None,
-        quality_status=(i.quality_status.value if i.quality_status else "unverified"),
+        min_order_quantity=_count(i.min_order_quantity) or 1,
+        bulk_discount_tiers=_as_list(i.bulk_discount_tiers),
+        source=_enum_value(i.source, "manual_entry"),
+        visible_to_network=bool(i.visible_to_network),
+        tags=_as_list(i.tags),
+        images=_as_list(i.images),
+        last_pos_sync=_iso(i.last_pos_sync),
+        updated_at=_iso(i.updated_at),
+        quality_status=_enum_value(i.quality_status, "unverified"),
         spec_sheet_url=i.spec_sheet_url,
         batch_number=i.batch_number,
         origin_country=i.origin_country,
-        expiry_date=i.expiry_date.isoformat() if i.expiry_date else None,
+        expiry_date=_iso(i.expiry_date),
         verified_by_vendor_id=str(i.verified_by_vendor_id) if i.verified_by_vendor_id else None,
-        verified_at=i.verified_at.isoformat() if i.verified_at else None,
-        vendor_network_score=float(v.network_score or 0.0),
-        vendor_parasitism_index=float(v.parasitism_index or 0.0),
+        verified_at=_iso(i.verified_at),
+        vendor_network_score=_finite(v.network_score),
+        vendor_parasitism_index=_finite(v.parasitism_index),
         vendor_fulfillment_rate=stock_engine.fulfillment_rate(v),
         vendor_is_patron=bool(v.is_patron),
     )
+
+
+def stock_out_many(pairs) -> list[StockItemOut]:
+    """Describe every readable row; leave out one that still cannot be
+    described, and say which one in the log.
+
+    The alternative — and what this replaced — is a 500 for the whole list
+    because of one row. On a shelf of other people's stock, that meant a single
+    legacy item nobody could see or fix made the entire network look broken.
+    A missing card is a smaller lie than an empty market."""
+    out: list[StockItemOut] = []
+    for item, vendor in pairs:
+        try:
+            out.append(stock_out(item, vendor))
+        except Exception:  # a row is not a request; it must not become one
+            log.warning(
+                "stock item %s could not be described and was left out of the shelf",
+                getattr(item, "id", "?"),
+                exc_info=True,
+            )
+    return out
 
 
 def apply_quality_fields(item: StockItem, data: dict, is_new: bool) -> None:
@@ -307,7 +402,7 @@ async def get_my_stock(
     items = (await db.execute(
         select(StockItem).where(StockItem.vendor_id == vendor.id).order_by(StockItem.updated_at.desc())
     )).scalars().all()
-    return [stock_out(i, vendor) for i in items]
+    return stock_out_many((i, vendor) for i in items)
 
 
 @router.get("/network-stock", response_model=List[StockItemOut])
@@ -353,7 +448,7 @@ async def browse_network_stock(
 
     query = query.order_by(StockItem.quantity_available.desc(), StockItem.updated_at.desc()).offset(skip).limit(limit)
     rows = (await db.execute(query)).all()
-    return [stock_out(item, v) for item, v in rows]
+    return stock_out_many(rows)
 
 
 @router.get("/categories")
@@ -418,7 +513,7 @@ async def stock_alternatives(
     if not await db.get(StockItem, stock_id):
         raise HTTPException(404, "Stock item not found")
     rows = await stock_engine.find_alternatives(db, stock_id, for_vendor=vendor, limit=limit)
-    return [stock_out(item, v) for item, v in rows]
+    return stock_out_many(rows)
 
 
 async def _patron_can_verify(db: AsyncSession, patron_vendor: Vendor, item: StockItem) -> bool:
