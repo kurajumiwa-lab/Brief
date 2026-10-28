@@ -19,6 +19,7 @@ import { ACCOUNT_KINDS, TEMPLATE_LABELS } from "@/lib/inference";
 import { useAuthStore } from "@/stores/authStore";
 import { useStockStore } from "@/stores/stockStore";
 import { cn } from "@/lib/utils";
+import { BRAND } from "@/config/brand";
 
 const QUICK_ACTIONS = [
   {
@@ -762,7 +763,7 @@ export default function MePage() {
 
       <p className="flex items-start gap-2 rounded-xl bg-surface-2 px-4 py-3 text-2xs text-ink-3">
         <Sparkles size={15} className="mt-0.5 shrink-0 text-orchid-600 dark:text-orchid-300" aria-hidden="true" />
-        Scores and fulfilment are calculated from recorded trades. Ogallo does not let businesses enter their own trust metrics.
+        Scores and fulfilment are calculated from recorded trades. {BRAND.name} does not let businesses enter their own trust metrics.
       </p>
     </div>
   );

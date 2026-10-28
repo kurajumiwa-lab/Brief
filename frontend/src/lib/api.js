@@ -36,7 +36,11 @@ api.interceptors.response.use(
       } catch {
         refreshing = null;
       }
-      useAuthStore.getState().logout();
+      // Only now, with no way to renew it, is the session actually over — and
+      // the sign-in screen says so instead of just appearing.
+      useAuthStore.getState().logout(
+        "Your session expired. Sign in again — your account and records are untouched."
+      );
     }
     return Promise.reject(err);
   }
@@ -52,7 +56,7 @@ export function apiError(err, fallback = "Something went wrong") {
     return where ? `${where}: ${first.msg}` : first.msg || fallback;
   }
   if (err?.code === "ECONNABORTED") return "The server took too long to respond";
-  if (err?.message === "Network Error") return "Can't reach Ogallo right now";
+  if (err?.message === "Network Error") return "Can't reach the network right now";
   return fallback;
 }
 

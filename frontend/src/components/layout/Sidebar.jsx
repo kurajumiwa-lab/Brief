@@ -4,6 +4,7 @@ import { LogoMark } from "./Logo";
 import { SECTION_GROUPS } from "@/config/navigation";
 import { useUIStore } from "@/stores/uiStore";
 import { cn } from "@/lib/utils";
+import { BRAND } from "@/config/brand";
 
 // Kept as a small exported inventory for tests and other tooling.
 export const NAV = SECTION_GROUPS.flatMap((group) => group.items);
@@ -30,7 +31,7 @@ export function SidebarContent({ onNavigate }) {
         <div className="flex items-center gap-3">
           <LogoMark size={32} />
           <div>
-            <p className="text-sm font-bold text-ink-1">More from Ogallo</p>
+            <p className="text-sm font-bold text-ink-1">More from {BRAND.name}</p>
             <p className="text-2xs text-ink-4">Community and supporting tools</p>
           </div>
         </div>

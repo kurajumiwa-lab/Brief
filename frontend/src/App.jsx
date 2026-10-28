@@ -1,7 +1,8 @@
-import { useEffect, lazy, Fragment } from "react";
+import { useEffect, useState, lazy, Fragment } from "react";
 import { Routes, Route, Navigate, useLocation, useSearchParams } from "react-router-dom";
 import Shell from "@/components/layout/Shell";
 import { PageSpinner } from "@/components/ui/Spinner";
+import BootSplash from "@/components/system/BootSplash";
 import Button from "@/components/ui/Button";
 import AuthPage from "@/pages/auth/AuthPage";
 import HomeHub from "@/pages/home/HomeHub";
@@ -120,11 +121,23 @@ export default function App() {
   const token = useAuthStore((s) => s.token);
   const ready = useAuthStore((s) => s.ready);
   const fetchVendor = useAuthStore((s) => s.fetchVendor);
+  const [splashDone, setSplashDone] = useState(false);
 
   useEffect(() => {
     if (!ready) fetchVendor();
   }, [ready, token, fetchVendor]);
 
+  return (
+    <>
+      {/* The five-second cold-start screen. It runs alongside the session check
+          rather than before it, so the time is spent, not added. */}
+      {!splashDone && <BootSplash onDone={() => setSplashDone(true)} />}
+      <AppRoutes />
+    </>
+  );
+}
+
+function AppRoutes() {
   return (
     <Routes>
       <Route path="/auth" element={<AuthPage />} />

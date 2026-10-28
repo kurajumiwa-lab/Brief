@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { ArrowRight, CheckCircle2, ShieldCheck } from "lucide-react";
 import { LogoMark } from "./Logo";
+import { BRAND } from "@/config/brand";
 
 /** A quiet brand footer, not a second sitemap. */
 export default function Footer() {
@@ -10,7 +11,7 @@ export default function Footer() {
         <div className="flex items-center gap-3">
           <LogoMark size={30} />
           <div>
-            <p className="text-sm font-extrabold tracking-tight text-ink-1">ogallo</p>
+            <p className="text-sm font-extrabold tracking-tight text-ink-1">{BRAND.wordmark}</p>
             <p className="text-2xs text-ink-4">A trading network built on real records.</p>
           </div>
         </div>

@@ -9,6 +9,7 @@ import Textarea from "@/components/ui/Textarea";
 import Button from "@/components/ui/Button";
 import { toast } from "@/components/ui/Toast";
 import { LogoMark } from "@/components/layout/Logo";
+import { BRAND } from "@/config/brand";
 import { useAuthStore } from "@/stores/authStore";
 import { apiError } from "@/lib/api";
 import { ACCOUNT_KINDS } from "@/lib/inference";
@@ -56,9 +57,11 @@ export default function AuthPage() {
   const mode = params.get("mode") === "register" ? "register" : "login";
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, register, loading, token } = useAuthStore();
+  const { login, register, loading, token, endedReason, lastIdentifier } = useAuthStore();
   const [form, setForm] = useState({
-    identifier: "",
+    // Start from whoever signed in last on this device. People do not forget
+    // their password so much as which of their identities they used.
+    identifier: lastIdentifier || "",
     password: "",
     account_kind: "person",
     business_name: "",
@@ -150,7 +153,7 @@ export default function AuthPage() {
         />
         <div className="relative flex items-center gap-2.5">
           <LogoMark size={36} />
-          <span className="text-base font-extrabold tracking-tight text-ink-1">ogallo</span>
+          <span className="text-base font-extrabold tracking-tight text-ink-1">{BRAND.wordmark}</span>
           <span className="text-2xs text-ink-4 border-l border-edge-2 pl-2.5">neighbourhood activity & local trade</span>
         </div>
 
@@ -189,7 +192,7 @@ export default function AuthPage() {
         <div className="w-full max-w-md animate-fade-in">
           <div className="lg:hidden mb-8 flex items-center gap-2.5">
             <LogoMark size={34} />
-            <span className="text-base font-extrabold tracking-tight text-ink-1">ogallo</span>
+            <span className="text-base font-extrabold tracking-tight text-ink-1">{BRAND.wordmark}</span>
             <span className="text-micro text-ink-4 border-l border-edge-2 pl-2.5">neighbourhood activity & trade</span>
           </div>
 
@@ -212,6 +215,16 @@ export default function AuthPage() {
                 </button>
               ))}
             </div>
+
+            {endedReason && mode === "login" && (
+              <p
+                role="status"
+                data-testid="session-ended"
+                className="mb-4 rounded-xl border border-accent-200 bg-accent-50 px-3 py-2 text-2xs leading-snug text-ink-2 dark:border-accent-500/30 dark:bg-accent-500/10"
+              >
+                {endedReason}
+              </p>
+            )}
 
             <h2 className="text-xl font-bold text-ink-1 tracking-tight">
               {mode === "login"
