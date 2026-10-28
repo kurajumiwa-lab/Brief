@@ -56,6 +56,33 @@ export function apiError(err, fallback = "Something went wrong") {
   return fallback;
 }
 
+/**
+ * WHY IT FAILED, in a sentence a person can act on.
+ *
+ * `apiError` answers "what should I say", which is right for a form. A shelf
+ * that failed needs something slightly different: the reader is looking at a
+ * card that says "didn't load" and has no way to tell a dead server from a bad
+ * token from their own bundle dying. So the reason names the kind of failure and
+ * the status when there is one — the next bug report is then a fact, not a
+ * picture of a spinner.
+ *
+ * Deliberately no URLs or internal detail: this is rendered to the user.
+ */
+export function failureReason(err, fallback = "Something went wrong") {
+  const status = err?.response?.status;
+  if (err?.isTimeout || err?.code === "ECONNABORTED") {
+    return "No answer in time. The server may be starting up — try again in a moment.";
+  }
+  if (!status) return "The network couldn't be reached. Check your connection and try again.";
+  if (status === 401) return "Your session expired. Sign in again to see your numbers.";
+  if (status === 403) return "This account isn't allowed to read that.";
+  if (status === 404) return "That endpoint doesn't exist on this server — the app and the API are out of step.";
+  if (status === 422 || status === 400) return apiError(err, fallback);
+  if (status === 429) return "Too many requests just now. Give it a moment.";
+  if (status >= 500) return `The server answered ${status}. Nothing was changed — this is a server-side problem.`;
+  return `${apiError(err, fallback)} (${status})`;
+}
+
 const noEmpty = (o = {}) =>
   Object.fromEntries(Object.entries(o).filter(([, v]) => v !== "" && v !== null && v !== undefined));
 

@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import SetupChecklist from "@/components/onboarding/SetupChecklist";
 import SourceDialog from "@/components/stock/SourceDialog";
 import HomeHero from "@/components/home/HomeHero";
 import TradeOverviewShelf from "@/components/home/TradeOverviewShelf";
 import HomeFeed from "@/components/home/HomeFeed";
+import { useTradeOverviewStore } from "@/stores/tradeOverviewStore";
 
 /**
  * HOME — the trade network, shown rather than described (v3.3).
@@ -32,6 +33,17 @@ import HomeFeed from "@/components/home/HomeFeed";
 export default function HomeHub() {
   const navigate = useNavigate();
   const [sourcing, setSourcing] = useState(null);
+
+  // A connection that comes back should heal the overview without the reader
+  // hunting for the retry link.
+  useEffect(() => {
+    const onOnline = () => {
+      const state = useTradeOverviewStore.getState();
+      if (state.status === "error" && state.retryable) state.retry();
+    };
+    window.addEventListener("online", onOnline);
+    return () => window.removeEventListener("online", onOnline);
+  }, []);
 
   return (
     <div className="space-y-5 sm:space-y-6">

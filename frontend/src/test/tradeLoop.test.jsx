@@ -14,6 +14,7 @@ vi.mock("@/components/ui/ConfirmDialog", () => ({ useConfirm: () => async () => 
 import RepeatOrderPage from "@/pages/orders/RepeatOrderPage";
 import TradeRecordsPage from "@/pages/orders/TradeRecordsPage";
 import TradePulse from "@/components/home/TradePulse";
+import { useTradeOverviewStore } from "@/stores/tradeOverviewStore";
 import { tradeRecordsCsv } from "@/lib/tradeRecordsCsv";
 
 const candidate = {
@@ -48,6 +49,9 @@ function readBlob(blob) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // The overview is a shared cache (the trade shelf and the pulse read the same
+  // store), so a spec starts from an empty one rather than the last spec's numbers.
+  useTradeOverviewStore.getState().reset();
   api.repeatable.mockResolvedValue({ data: [candidate] });
   api.repeat.mockResolvedValue({ data: { movement_id: "new-order", status: "pending" } });
   api.records.mockResolvedValue({ data: list });

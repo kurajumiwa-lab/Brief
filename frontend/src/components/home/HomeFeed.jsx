@@ -63,6 +63,11 @@ export default function HomeFeed({ onSource, className }) {
     }
     loadFeed();
     fetchMovements?.().catch(() => {});
+
+    // A phone that drops signal and comes back should heal the feed by itself.
+    const onOnline = () => useHomeFeedStore.getState().retryFailedShelves?.();
+    window.addEventListener("online", onOnline);
+    return () => window.removeEventListener("online", onOnline);
   }, [loadFeed, fetchMovements, resetFeed, vendorId]);
 
   const actionable = movements.filter(needsMyAction);
