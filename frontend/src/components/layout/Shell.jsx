@@ -37,7 +37,18 @@ export default function Shell() {
 
       <AppHeader />
 
-      <main id="main" tabIndex={-1} className={fullBleed ? "flex-1 min-h-0 pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0" : "flex-1 pb-24 lg:pb-16"}>
+      <main
+        id="main"
+        tabIndex={-1}
+        // The tab bar is 64px plus whatever the device reserves for its own
+        // navigation gestures. The page padding has to know both, or the last
+        // row of content sits under the bar on a phone with a home indicator.
+        className={
+          fullBleed
+            ? "flex-1 min-h-0 pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0"
+            : "flex-1 pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-16"
+        }
+      >
         <div className={fullBleed ? "h-full" : "container-app py-6"}>
           <ErrorBoundary key={pathname}>
             <Suspense fallback={<PageSpinner />}>

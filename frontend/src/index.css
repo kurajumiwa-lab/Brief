@@ -249,6 +249,18 @@
   .pb-safe {
     padding-bottom: env(safe-area-inset-bottom);
   }
+  /* A horizontal row that scrolls without advertising it. The filters on the
+     Activity screen are one row of pills; a visible scrollbar under them costs
+     a line of height and, on Windows, a grey band that reads as a bug. */
+  .scroll-x-quiet {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+  .scroll-x-quiet::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════

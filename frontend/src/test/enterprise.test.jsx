@@ -80,13 +80,18 @@ describe("EnterprisePage", () => {
 
     expect(await screen.findByRole("heading", { name: /enterprise workspaces/i })).toBeInTheDocument();
     expect(await screen.findByText("Kisumu Retail Traders Association")).toBeInTheDocument();
-    expect(screen.getByText("Achieng Field Services")).toBeInTheDocument();
-    expect(screen.getByText("Field phone 1")).toBeInTheDocument();
+    // The workspace header and the three lists land from separate promises, so
+    // the name above can be on screen while members/devices/commands are still
+    // in flight. Asserting those synchronously made this spec fail about once
+    // in fifty full-suite runs; waiting for each one pins the same requirement
+    // without the race.
+    expect(await screen.findByText("Achieng Field Services")).toBeInTheDocument();
+    expect(await screen.findByText("Field phone 1")).toBeInTheDocument();
     // A work-profile phone never offers a whole-device wipe…
     expect(screen.queryByRole("button", { name: /wipe device/i })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /wipe work data/i })).toBeInTheDocument();
     // …and an undispatched command says so instead of claiming a wipe happened.
-    expect(screen.getByText("requested — not sent")).toBeInTheDocument();
+    expect(await screen.findByText("requested — not sent")).toBeInTheDocument();
     expect(screen.getByText(/No EMM bound — commands are audit-only/)).toBeInTheDocument();
     expect(screen.getByText(/@officer_achieng — 4/)).toBeInTheDocument();
     expect(screen.getByText("KSh 24,500/mo")).toBeInTheDocument();

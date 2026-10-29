@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  Bell, CalendarDays, CheckCircle2, ClipboardList, MessageSquare, Plus, RefreshCw,
+  Bell, CalendarDays, CheckCircle2, MessageSquare, Plus, RefreshCw,
   ShoppingBag, Sparkles, Store, Trash2, UserPlus,
 } from "lucide-react";
 import Badge from "@/components/ui/Badge";
@@ -20,9 +20,26 @@ import { NOTIFICATION_ROUTES } from "@/config/constants";
 import { useOutsideStore } from "@/stores/outsideStore";
 
 /**
- * ACTIVITY — Grouped notifications with acted-upon tracking (`acted_upon_at`),
- * active Local Activity Ledger bookings awaiting completion, and user-chosen
- * Neighbourhood Watch preferences (`activity_watches`).
+ * ACTIVITY — a dashboard, not a landing page.
+ *
+ * The order is deliberate and is the whole point of the screen: three numbers
+ * you can read at a glance, the one setting that decides what you get told
+ * about, then the filters, then the feed. Everything above the feed has to fit
+ * in a phone's first screen, because a person opening "what is waiting for me"
+ * should not have to scroll to find out.
+ *
+ * Two layout rules that are load-bearing rather than taste:
+ *
+ *   · the three statistics are a **grid of three equal columns**. Not a
+ *     carousel, not a horizontal scroller. A count you have to swipe to see is
+ *     a count that is not being shown.
+ *   · the **filters** are one horizontally scrolling row, because seven
+ *     categories cannot fit across 360px and wrapping them costs four lines of
+ *     vertical space above the content.
+ *
+ * The filter set is rendered from `GROUP_META`, not from whatever the server
+ * returned this minute. A filter that disappears when it happens to be empty
+ * reads as a filter that no longer exists.
  */
 
 const GROUP_META = {
@@ -117,108 +134,75 @@ export default function ActivityPage() {
 
   const groups = activity?.groups || [];
   const counts = activity?.counts || {};
+  const countsByKey = Object.fromEntries(groups.map((g) => [g.key, g]));
   const visible = group === "all" ? groups.filter((g) => g.items.length) : groups.filter((g) => g.key === group);
   const activeBookings = bookings.filter((b) => ["agreed", "in_progress"].includes(b.status));
 
   return (
-    <div className="space-y-s5">
-      <header className="space-y-1">
-        <p className="text-micro font-bold uppercase tracking-[0.14em] text-ink-4">Activity</p>
-        <h1 className="text-title-page font-bold text-ink-1">What's waiting for you</h1>
-        <p className="text-sm text-ink-3">
-          Invitations, replies, agreed bookings, and local watches you chose — measured by real follow-through, not screen time.
-        </p>
-      </header>
+    <div className="min-w-0" data-testid="activity-page">
+      {/* ── 1. the heading, and nothing under it ─────────────────────────── */}
+      <h1 className="mb-3 text-2xl font-bold leading-tight tracking-tight text-ink-1">Activity</h1>
 
-      {/* ── the counts that are real work, not just noise ───────────────── */}
-      <ul className="grid gap-3 sm:grid-cols-3">
-        <Summary
+      {/* ── 2. three numbers, always all three, always in one row ────────── */}
+      <ul
+        className="mb-3.5 grid grid-cols-3 gap-2 overflow-hidden"
+        data-testid="activity-stats"
+        aria-label="Activity at a glance"
+      >
+        <StatTile
           icon={MessageSquare}
           value={counts.rooms_active_today ?? 0}
-          label={counts.rooms ? `of ${counts.rooms} conversations active today` : "conversations active today"}
+          label="Conversations"
+          hint="active today"
           to="/chat"
           testId="activity-rooms"
         />
-        <Summary
+        <StatTile
           icon={CalendarDays}
           value={counts.attending ?? 0}
-          label="events you're going to"
+          label="Events"
+          hint="upcoming"
           to="/events?tab=mine"
           testId="activity-attending"
         />
-        <Summary
+        <StatTile
           icon={Bell}
           value={counts.unread_notifications ?? 0}
-          label="unread notifications"
+          label="Notifications"
+          hint="unread"
           testId="activity-unread"
         />
       </ul>
 
-      {/* ── Active Local Activity Ledger Bookings ───────────────────────── */}
-      {activeBookings.length > 0 && (
-        <section
-          data-testid="active-ledger-bookings"
-          className="rounded-card-lg border border-brand-500/30 bg-brand-50/50 p-4 dark:bg-brand-500/10 space-y-2.5"
-        >
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-bold text-ink-1">
-              Active neighbourhood bookings ({activeBookings.length})
-            </p>
-            <Badge variant="brand" size="sm">Direct non-custodial</Badge>
-          </div>
-          <ul className="space-y-2">
-            {activeBookings.map((bk) => (
-              <li key={bk.id} className="flex items-center justify-between gap-3 rounded-xl border border-edge-1 bg-surface-0 px-3.5 py-2.5">
-                <div className="min-w-0">
-                  <Link
-                    to={`/activities/${bk.activity_id}`}
-                    className="block truncate text-xs font-bold text-ink-1 hover:text-brand-700"
-                  >
-                    {bk.activity_title || "Agreed local booking"}
-                  </Link>
-                  <p className="text-micro text-ink-4">
-                    {bk.scheduled_label || "Active"} · Settlement: {bk.settlement_method?.replace(/_/g, " ")}
-                  </p>
-                </div>
-                <Link to={`/activities/${bk.activity_id}`}>
-                  <Button size="xs" variant="secondary">Open ledger</Button>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {/* ── Neighbourhood Watch Preferences (`activity_watches`) ─────────── */}
+      {/* ── 3. the one setting that decides what you are told about ──────── */}
       <section
         data-testid="activity-watches-panel"
-        className="rounded-card-lg border border-edge-1 bg-surface-1 p-4 shadow-xs space-y-3"
+        className="mb-3.5 rounded-2xl border border-edge-1 bg-surface-1 p-3 shadow-xs"
       >
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <span className="grid h-8 w-8 place-items-center rounded-xl bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300">
-              <Sparkles size={15} aria-hidden="true" />
-            </span>
-            <div>
-              <h2 className="text-sm font-bold text-ink-1">Neighbourhood watches</h2>
-              <p className="text-2xs text-ink-4">
-                Only notify me about specific local needs, artisan rounds, or produce in my chosen radius.
-              </p>
-            </div>
+        <div className="flex items-center gap-2.5">
+          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300">
+            <Sparkles size={15} aria-hidden="true" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <h2 className="text-sm font-bold leading-tight text-ink-1">Neighbourhood watches</h2>
+            <p className="mt-0.5 text-2xs leading-snug text-ink-3">
+              Alerts for local needs, artisans and produce.
+            </p>
           </div>
           <Button
             size="xs"
             variant="secondary"
-            icon={Plus}
+            icon={watchOpen ? undefined : Plus}
             onClick={() => setWatchOpen((v) => !v)}
             data-testid="toggle-add-watch-btn"
+            className="shrink-0"
           >
-            {watchOpen ? "Close" : "Add watch"}
+            {watchOpen ? "Close" : "Add"}
           </Button>
         </div>
 
         {watchOpen && (
-          <form onSubmit={onAddWatch} className="grid gap-2.5 rounded-xl border border-edge-1 bg-surface-0 p-3.5 sm:grid-cols-2">
+          <form onSubmit={onAddWatch} className="mt-3 grid gap-2.5 rounded-xl border border-edge-1 bg-surface-0 p-3 sm:grid-cols-2">
             <Select
               label="Posting type"
               options={WATCH_TYPE_OPTIONS}
@@ -263,13 +247,13 @@ export default function ActivityPage() {
         )}
 
         {watches.length > 0 && (
-          <ul className="flex flex-wrap gap-2">
+          <ul className="mt-2.5 flex flex-wrap gap-1.5">
             {watches.map((w) => (
               <li
                 key={w.id}
-                className="inline-flex items-center gap-2 rounded-full border border-edge-1 bg-surface-0 px-3 py-1 text-2xs text-ink-2"
+                className="inline-flex min-w-0 items-center gap-1.5 rounded-full border border-edge-1 bg-surface-0 px-2.5 py-1 text-2xs text-ink-2"
               >
-                <span>
+                <span className="truncate">
                   {[
                     w.posting_type || "any",
                     w.inferred_template ? TEMPLATE_LABELS[w.inferred_template] || w.inferred_template : null,
@@ -281,7 +265,7 @@ export default function ActivityPage() {
                   type="button"
                   aria-label="Remove watch"
                   onClick={() => onDeleteWatch(w.id)}
-                  className="text-ink-4 hover:text-danger"
+                  className="shrink-0 text-ink-4 hover:text-danger"
                 >
                   <Trash2 size={12} aria-hidden="true" />
                 </button>
@@ -291,21 +275,26 @@ export default function ActivityPage() {
         )}
       </section>
 
-      {/* ── group filter ────────────────────────────────────────────────── */}
-      <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filter activity">
+      {/* ── 4. every filter, one scrolling row, never wrapped ───────────── */}
+      <div
+        className="scroll-x-quiet -mx-1 mb-3 flex flex-nowrap gap-2 overflow-x-auto px-1 py-0.5"
+        role="group"
+        aria-label="Filter activity"
+        data-testid="activity-filters"
+      >
         <Chip active={group === "all"} onClick={() => setGroup("all")}>
           Everything
         </Chip>
-        {groups.map((g) => {
-          const meta = GROUP_META[g.key];
-          if (!meta) return null;
+        {Object.entries(GROUP_META).map(([key, meta]) => {
+          const live = countsByKey[key];
+          const unread = (live?.items || []).filter((i) => !i.is_read).length;
           return (
             <Chip
-              key={g.key}
-              active={group === g.key}
-              count={g.items.filter((i) => !i.is_read).length || undefined}
-              onClick={() => setGroup(g.key)}
-              data-testid={`activity-group-${g.key}`}
+              key={key}
+              active={group === key}
+              count={unread || undefined}
+              onClick={() => setGroup(key)}
+              data-testid={`activity-group-${key}`}
             >
               {meta.label}
             </Chip>
@@ -313,27 +302,143 @@ export default function ActivityPage() {
         })}
       </div>
 
-      {/* ── the list ────────────────────────────────────────────────────── */}
-      {status === "loading" && !activity ? (
-        <div className="space-y-2">
-          {[0, 1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-20 w-full rounded-card" />)}
-        </div>
-      ) : status === "error" ? (
-        <div data-testid="activity-error" className="rounded-card-lg border border-edge-1 bg-surface-1 p-6 text-center">
-          <p className="text-sm font-semibold text-ink-1">We couldn't load your activity.</p>
-          <Button className="mt-4" variant="secondary" icon={RefreshCw} onClick={loadActivity}>
-            Try again
-          </Button>
-        </div>
-      ) : visible.length === 0 ? (
-        <EmptyActivity />
-      ) : (
-        <div className="space-y-s5">
-          {visible.map((g) => (
+      {/* ── 5. what is waiting, in the normal flow ──────────────────────── */}
+      <div className="min-h-[38vh] space-y-4">
+        {activeBookings.length > 0 && (
+          <section
+            data-testid="active-ledger-bookings"
+            className="rounded-2xl border border-brand-500/30 bg-brand-50/50 p-3 dark:bg-brand-500/10"
+          >
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs font-bold text-ink-1">
+                Active bookings ({activeBookings.length})
+              </p>
+              <Badge variant="brand" size="sm">Direct non-custodial</Badge>
+            </div>
+            <ul className="mt-2 space-y-1.5">
+              {activeBookings.map((bk) => (
+                <li key={bk.id} className="flex items-center justify-between gap-3 rounded-xl border border-edge-1 bg-surface-0 px-3 py-2">
+                  <div className="min-w-0">
+                    <Link
+                      to={`/activities/${bk.activity_id}`}
+                      className="block truncate text-xs font-bold text-ink-1 hover:text-brand-700"
+                    >
+                      {bk.activity_title || "Agreed local booking"}
+                    </Link>
+                    <p className="text-micro text-ink-4">
+                      {bk.scheduled_label || "Active"} · Settlement: {bk.settlement_method?.replace(/_/g, " ")}
+                    </p>
+                  </div>
+                  <Link to={`/activities/${bk.activity_id}`} className="shrink-0">
+                    <Button size="xs" variant="secondary">Open</Button>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {status === "loading" && !activity ? (
+          <div className="space-y-2">
+            {[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-16 w-full rounded-2xl" />)}
+          </div>
+        ) : status === "error" ? (
+          <ActivityError onRetry={loadActivity} />
+        ) : visible.length === 0 ? (
+          <EmptyActivity />
+        ) : (
+          visible.map((g) => (
             <GroupSection key={g.key} group={g} onAct={onActOnNotification} />
-          ))}
-        </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * ONE NUMBER.
+ *
+ * Three of these sit in a `grid-cols-3`, so every dimension here is chosen to
+ * survive a 320px screen: `min-w-0` on the item, no fixed widths, and a value
+ * that steps down rather than pushing its neighbours sideways. The whole tile
+ * is the link, so the tap target is the thing you are looking at.
+ */
+function StatTile({ icon: Icon, value, label, hint, to, testId }) {
+  const inner = (
+    <>
+      <span className="grid h-7 w-7 place-items-center rounded-[10px] bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300">
+        <Icon size={14} aria-hidden="true" />
+      </span>
+      <span className="mt-1 block text-2xl font-bold leading-none tabular-nums text-ink-1 max-[360px]:text-xl">
+        {value}
+      </span>
+      {/* "Conversations" is the longest word that has to survive a 320px
+          screen. It steps down a size below 380px and hyphenates rather than
+          breaking wherever it happens to run out of room — a wrapped label is
+          fine, a word cut in half is not. */}
+      <span className="mt-1 block text-2xs font-semibold leading-tight text-ink-2 hyphens-auto break-words max-[380px]:text-micro">
+        {label}
+      </span>
+      <span className="block text-micro leading-tight text-ink-4 hyphens-auto break-words">
+        {hint}
+      </span>
+    </>
+  );
+
+  const className = cn(
+    "flex min-h-[104px] min-w-0 flex-col justify-center rounded-2xl border border-edge-1",
+    "bg-surface-1 p-2.5 shadow-xs",
+    to && "transition-colors hover:border-edge-2 hover:bg-surface-2",
+  );
+
+  return (
+    <li data-testid={testId} className="min-w-0">
+      {to ? (
+        <Link to={to} className={cn(className, "h-full")}>
+          {inner}
+        </Link>
+      ) : (
+        <div className={cn(className, "h-full")}>{inner}</div>
       )}
+    </li>
+  );
+}
+
+/** A failed load is one line in the flow: what broke, and the way back. */
+function ActivityError({ onRetry }) {
+  return (
+    <div
+      data-testid="activity-error"
+      role="alert"
+      className="flex items-center gap-2 rounded-xl bg-danger-soft px-3 py-2"
+    >
+      <RefreshCw size={14} className="shrink-0 text-danger" aria-hidden="true" />
+      <p className="min-w-0 flex-1 text-xs font-semibold text-ink-1">Couldn't load activity.</p>
+      <Button size="xs" variant="secondary" onClick={onRetry}>
+        Try again
+      </Button>
+    </div>
+  );
+}
+
+/** Nothing waiting is good news, and should look like it — not like an error. */
+function EmptyActivity() {
+  return (
+    <div data-testid="activity-empty" className="flex items-center gap-2.5 px-1 py-6">
+      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300">
+        <CheckCircle2 size={17} aria-hidden="true" />
+      </span>
+      <div className="min-w-0">
+        <p className="text-sm font-bold text-ink-1">You're all caught up.</p>
+        <p className="text-2xs leading-snug text-ink-3">
+          Nothing is waiting on you.{" "}
+          <Link to="/explore" className="font-semibold text-brand-700 underline-offset-2 hover:underline dark:text-brand-300">
+            Find something nearby
+          </Link>
+          .
+        </p>
+      </div>
     </div>
   );
 }
@@ -346,21 +451,21 @@ function GroupSection({ group, onAct }) {
     <section
       aria-labelledby={`activity-${group.key}`}
       data-testid={`activity-section-${group.key}`}
-      className="space-y-2"
+      className="space-y-1.5"
     >
       <div className="flex items-center gap-2">
-        <span className="grid h-8 w-8 place-items-center rounded-xl bg-surface-2 text-ink-3">
-          <Icon size={15} aria-hidden="true" />
+        <span className="grid h-7 w-7 place-items-center rounded-lg bg-surface-2 text-ink-3">
+          <Icon size={14} aria-hidden="true" />
         </span>
-        <div>
-          <h2 id={`activity-${group.key}`} className="text-title-section font-semibold text-ink-1">
+        <div className="min-w-0">
+          <h2 id={`activity-${group.key}`} className="text-xs font-bold text-ink-1">
             {meta.label}
           </h2>
-          <p className="text-2xs text-ink-4">{meta.blurb}</p>
+          <p className="text-micro text-ink-4">{meta.blurb}</p>
         </div>
       </div>
 
-      <ul className="divide-y divide-edge-1 overflow-hidden rounded-card border border-edge-1 bg-surface-1 shadow-xs">
+      <ul className="divide-y divide-edge-1 overflow-hidden rounded-2xl border border-edge-1 bg-surface-1 shadow-xs">
         {group.items.map((item) => {
           const to = item.data?.to || NOTIFICATION_ROUTES[item.type] || "/activity";
           return (
@@ -369,28 +474,28 @@ function GroupSection({ group, onAct }) {
                 to={to}
                 onClick={() => onAct?.(item.id)}
                 className={cn(
-                  "flex min-h-tap items-start gap-3 px-4 py-3 transition-colors hover:bg-surface-2",
+                  "flex min-h-tap items-start gap-3 px-3.5 py-2.5 transition-colors hover:bg-surface-2",
                   !item.is_read && "bg-brand-50/50 dark:bg-brand-500/5",
                 )}
               >
                 <span
                   className={cn(
-                    "mt-1.5 h-2 w-2 shrink-0 rounded-full",
+                    "mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full",
                     item.is_read ? "bg-transparent" : "bg-brand-500",
                   )}
                   aria-hidden="true"
                 />
                 <span className="min-w-0 flex-1">
-                  <span className="flex flex-wrap items-center gap-2">
-                    <span className="text-sm font-semibold text-ink-1">{item.title}</span>
+                  <span className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-xs font-semibold text-ink-1">{item.title}</span>
                     {item.acted_upon_at && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-micro font-semibold text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-200">
-                        <CheckCircle2 size={10} /> Acted on
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-1.5 py-0.5 text-micro font-semibold text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-200">
+                        <CheckCircle2 size={10} aria-hidden="true" /> Acted on
                       </span>
                     )}
                   </span>
-                  {item.body && <span className="mt-0.5 block text-xs leading-relaxed text-ink-3">{item.body}</span>}
-                  <span className="mt-1 block text-2xs text-ink-4">
+                  {item.body && <span className="mt-0.5 block text-2xs leading-snug text-ink-3">{item.body}</span>}
+                  <span className="mt-0.5 block text-micro text-ink-4">
                     {relativeTime(item.created_at)}
                     {item.sender_handle ? ` · @${item.sender_handle}` : ""}
                   </span>
@@ -401,67 +506,5 @@ function GroupSection({ group, onAct }) {
         })}
       </ul>
     </section>
-  );
-}
-
-function Summary({ icon: Icon, value, label, to, testId }) {
-  const inner = (
-    <>
-      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300">
-        <Icon size={16} aria-hidden="true" />
-      </span>
-      <span className="min-w-0">
-        <span className="block text-xl font-bold tabular-nums text-ink-1">{value}</span>
-        <span className="block truncate text-2xs text-ink-4">{label}</span>
-      </span>
-    </>
-  );
-
-  const className = "flex items-center gap-3 rounded-card border border-edge-1 bg-surface-1 p-3 shadow-xs";
-
-  return (
-    <li data-testid={testId}>
-      {to ? (
-        <Link to={to} className={cn(className, "transition-colors hover:border-edge-2 hover:bg-surface-2")}>
-          {inner}
-        </Link>
-      ) : (
-        <div className={className}>{inner}</div>
-      )}
-    </li>
-  );
-}
-
-function EmptyActivity() {
-  const doors = [
-    { to: "/explore", icon: ClipboardList, title: "Find something nearby", body: "Repairs, rounds, produce and events around you." },
-    { to: "/create", icon: ClipboardList, title: "Post an activity", body: "Available, Wanted, Scheduled or Opportunity." },
-    { to: "/chat", icon: MessageSquare, title: "Your conversations", body: "Pick up where you left off." },
-  ];
-
-  return (
-    <div data-testid="activity-empty" className="rounded-card-lg border border-edge-1 bg-surface-1 p-6 text-center shadow-xs sm:p-8">
-      <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-surface-2 text-ink-4">
-        <Bell size={22} aria-hidden="true" />
-      </span>
-      <h2 className="mt-3 text-title-section font-semibold text-ink-1">Nothing is waiting on you</h2>
-      <p className="mx-auto mt-1.5 max-w-sm text-xs leading-relaxed text-ink-3">
-        No invitations, no replies, nothing mid-flight. Add a neighbourhood watch above or post something local.
-      </p>
-      <ul className="mx-auto mt-4 grid max-w-lg gap-2 sm:grid-cols-3">
-        {doors.map(({ to, icon: Icon, title, body }) => (
-          <li key={to}>
-            <Link
-              to={to}
-              className="flex h-full flex-col items-start gap-1.5 rounded-card border border-edge-1 p-3 text-left transition-colors hover:border-brand-500/50 hover:bg-brand-50 dark:hover:bg-brand-500/10"
-            >
-              <Icon size={15} className="text-brand-700 dark:text-brand-300" aria-hidden="true" />
-              <span className="text-xs font-bold text-ink-1">{title}</span>
-              <span className="text-micro leading-snug text-ink-4">{body}</span>
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </div>
   );
 }

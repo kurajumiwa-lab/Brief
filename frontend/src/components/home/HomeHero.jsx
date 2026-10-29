@@ -4,6 +4,7 @@ import GlobalSearch from "@/components/layout/GlobalSearch";
 import { VENDOR_ROLES } from "@/config/constants";
 import { useAuthStore } from "@/stores/authStore";
 import { initials } from "@/lib/utils";
+import { BRAND } from "@/config/brand";
 
 /**
  * THE HOME HERO — identity, then the one thing you do here.
@@ -67,7 +68,7 @@ export default function HomeHero({ className }) {
 
   return (
     <section
-      aria-label="Ogallo trading network"
+      aria-label={`${BRAND.name} trading network`}
       data-testid="home-hero"
       className={`relative isolate overflow-hidden rounded-[1.5rem] shadow-lg sm:rounded-[1.75rem] ${className || ""}`}
     >

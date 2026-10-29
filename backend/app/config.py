@@ -133,10 +133,17 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
     # Password rule: PASSWORD_MIN_LENGTH+ chars, one uppercase, one digit (v2.1).
     PASSWORD_MIN_LENGTH: int = 8
-    # Login lockout: after MAX_LOGIN_ATTEMPTS failures for one account (or from
-    # one client) within LOGIN_LOCKOUT_MINUTES, further attempts get a 429.
+    # Login lockout: after MAX_LOGIN_ATTEMPTS failures for one account within
+    # LOGIN_LOCKOUT_MINUTES, further attempts get a 429.
     MAX_LOGIN_ATTEMPTS: int = 5
     LOGIN_LOCKOUT_MINUTES: int = 15
+    # The per-client budget is a different question with a different answer.
+    # One account gets five tries, because five wrong guesses at one password
+    # is a person; one *address* gets many, because on a mobile network an
+    # address is a carrier's NAT serving thousands of subscribers, and a
+    # stranger's typos must not sign out a market. This is the ceiling for
+    # spray-and-pray from a single host, not a budget for a household.
+    MAX_LOGIN_ATTEMPTS_PER_IP: int = 50
 
     # Browser clients on another origin. The Vite dev server proxies /api and the
     # production image serves the built frontend itself, so same-origin needs

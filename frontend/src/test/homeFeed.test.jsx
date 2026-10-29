@@ -501,7 +501,7 @@ describe("Invite friends banner", () => {
     mount();
     const banner = await screen.findByTestId("invite-friends-banner");
     expect(within(banner).getByRole("heading", { name: /invite friends\. grow together\./i })).toBeInTheDocument();
-    expect(banner).toHaveTextContent(/bring more businesses into ogallo/i);
+    expect(banner).toHaveTextContent(/bring more businesses into vendor world/i);
     // no invented rewards anywhere in the promise
     expect(banner.textContent).not.toMatch(/kes|ksh|reward|credit|commission|bonus/i);
 

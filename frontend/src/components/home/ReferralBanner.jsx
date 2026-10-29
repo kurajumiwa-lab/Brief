@@ -1,6 +1,7 @@
 import { ArrowRight, Share2, Users } from "lucide-react";
 import { toast } from "@/components/ui/Toast";
 import { appUrl, shareLink } from "@/lib/share";
+import { BRAND } from "@/config/brand";
 
 /**
  * INVITE FRIENDS — the one promotional moment on Home.
@@ -22,8 +23,8 @@ import { appUrl, shareLink } from "@/lib/share";
 export default function ReferralBanner({ className }) {
   const invite = async () => {
     const result = await shareLink({
-      title: "Ogallo — the trade network",
-      text: "Bring your business into Ogallo and trade with the network.",
+      title: `${BRAND.name} — the trade network`,
+      text: `Bring your business into ${BRAND.name} and trade with the network.`,
       url: appUrl("/storefront"),
     });
     if (result === "copied") toast.success("Invite link copied — send it to a business you trade with");
@@ -55,7 +56,7 @@ export default function ReferralBanner({ className }) {
             Invite friends. Grow together.
           </h2>
           <p className="mt-1.5 max-w-md text-2xs leading-relaxed text-white/85 sm:text-xs">
-            Bring more businesses into Ogallo and expand your trading network — the vendors you already buy from,
+            Bring more businesses into {BRAND.name} and expand your trading network — the vendors you already buy from,
             and the ones who buy from you.
           </p>
         </div>

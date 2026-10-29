@@ -701,7 +701,7 @@ export default function ActivityDetailPage() {
                       {bookingRespId === resp.id && (
                         <div className="mt-3 rounded-xl border border-brand-500/30 bg-surface-1 p-3.5 space-y-3">
                           <p className="text-2xs text-ink-3">
-                            <strong>Strictly non-custodial:</strong> Ogallo never holds or routes customer funds. Choose how you and your neighbour will settle directly:
+                            <strong>Strictly non-custodial:</strong> the network never holds or routes customer funds. Choose how you and your neighbour will settle directly:
                           </p>
                           <div className="grid gap-2.5 sm:grid-cols-2">
                             <Select

@@ -8,6 +8,7 @@ import LocationPrompt from "./LocationPrompt";
 import LocationBar from "@/components/outside/LocationBar";
 import CollapsedMyShop from "./CollapsedMyShop";
 import BusinessPulseSimplified from "./BusinessPulseSimplified";
+import BusinessBillboard from "./BusinessBillboard";
 import { SHELVES_AFTER_BANNER, SHELVES_BEFORE_BANNER } from "@/config/homeShelves";
 import { feedIsQuiet, useHomeFeedStore } from "@/stores/homeFeedStore";
 import { needsMyAction, useStockStore } from "@/stores/stockStore";
@@ -109,16 +110,13 @@ export default function HomeFeed({ onSource, className }) {
 
       {quiet && <QuietNetworkPanel onRefresh={refreshFeed} />}
 
-      {/* ── your business: simplified pulse and the shop it belongs to ──── */}
+      {/* ── your business: a billboard, then the shelf behind it ─────────── */}
       {vendor && (
-        <section
-          aria-labelledby="home-your-business"
-          data-testid="home-your-business"
-          className="space-y-3"
-        >
-          <BusinessPulseSimplified headingId="home-your-business" />
+        <div className="space-y-2.5">
+          <BusinessBillboard vendor={vendor} headingId="home-your-business" />
+          <BusinessPulseSimplified headingId="home-your-business-pulse" />
           <CollapsedMyShop />
-        </section>
+        </div>
       )}
 
       <ReferralBanner />

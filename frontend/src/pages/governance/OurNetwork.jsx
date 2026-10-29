@@ -14,6 +14,7 @@ import Textarea from "@/components/ui/Textarea";
 import { PageSpinner } from "@/components/ui/Spinner";
 import { toast } from "@/components/ui/Toast";
 import { apiError, governanceAPI, locksAPI } from "@/lib/api";
+import { BRAND } from "@/config/brand";
 
 const purposeCopy = {
   lender_profile_sharing: {
@@ -577,7 +578,7 @@ export default function OurNetwork() {
         {opsRole === "admin" && <Card className="mt-3" padding="p-4"><SectionHeading icon={FileCheck2} title="Benefit accounting · admin only" detail="Record realized revenue and traceable evidence, then calculate a closed-period estimate for review. No disbursement or credit issuance is available." /><BenefitOps refresh={() => load(false)} /></Card>}
       </section>}
 
-      <p className="border-t border-edge-1 pt-3 text-center text-2xs text-ink-4">Ogallo is a torch, not a gatekeeper. Vendors remain independent businesses, set their own prices and keep their customer relationships.</p>
+      <p className="border-t border-edge-1 pt-3 text-center text-2xs text-ink-4">{BRAND.name} is a torch, not a gatekeeper. Vendors remain independent businesses, set their own prices and keep their customer relationships.</p>
     </div>
   );
 }
