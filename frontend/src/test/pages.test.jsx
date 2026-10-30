@@ -97,6 +97,7 @@ import AccountMenu from "@/components/layout/AccountMenu";
 import MePage from "@/pages/me/MePage";
 import SetupChecklist from "@/components/onboarding/SetupChecklist";
 import BusinessPulse from "@/components/home/BusinessPulse";
+import { SidebarContent } from "@/components/layout/Sidebar";
 
 const mount = (ui, path = "/") =>
   render(
@@ -558,5 +559,88 @@ describe("Business Control Centre, Stock Visibility, Shop Front & Gallery Photos
   });
 });
 
+/* ── v4.1 · the profile as a compact business dashboard ───────────────────── */
 
+describe("Compact business dashboard", () => {
+  it("fits identity, three numbers and the actions into one short panel", async () => {
+    useStockStore.setState({ mine: STOCK, movements: MOVEMENTS });
+    mount(<MePage />, "/me");
 
+    const panel = await screen.findByTestId("business-identity");
+    // Identity is still the first thing, said once.
+    expect(within(panel).getByRole("heading", { name: "Mama Mboga Fresh" })).toBeInTheDocument();
+    expect(within(panel).getByText(/your business workspace/i)).toBeInTheDocument();
+    // The operating mode appears ONCE — the old panel said it twice, 40px apart.
+    expect(screen.getAllByText(/currently selling/i)).toHaveLength(1);
+    // Settings did not move out with the size.
+    expect(within(panel).getByRole("link", { name: /edit business profile/i }))
+      .toHaveAttribute("href", "/@mama_mboga?edit=1");
+  });
+
+  it("puts the three counts in a single row instead of three boxes", async () => {
+    useStockStore.setState({ mine: STOCK, movements: MOVEMENTS });
+    mount(<MePage />, "/me");
+
+    const panel = await screen.findByTestId("business-identity");
+    const lists = panel.querySelectorAll("dl");
+    expect(lists).toHaveLength(1);
+    const labels = [...lists[0].querySelectorAll("dt")].map((n) => n.textContent);
+    expect(labels).toEqual(["Stock items", "Listings", "Open trades"]);
+    expect(lists[0].querySelectorAll("dd")).toHaveLength(3);
+  });
+
+  it("makes Add stock the one primary action, with local activity as the second", async () => {
+    useStockStore.setState({ mine: STOCK, movements: MOVEMENTS });
+    mount(<MePage />, "/me");
+
+    const panel = await screen.findByTestId("business-identity");
+    const add = within(panel).getByRole("link", { name: /add stock/i });
+    const local = within(panel).getByRole("link", { name: /local activity/i });
+    expect(add).toHaveAttribute("href", "/stock?new=1");
+    expect(local).toHaveAttribute("href", "/create?type=available");
+
+    // Primary comes first in reading order, and the old equal-weight twin card
+    // ("Post a local activity" with the same visual weight) is gone.
+    expect(add.compareDocumentPosition(local) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(within(panel).queryByRole("link", { name: /post a local activity/i })).not.toBeInTheDocument();
+  });
+});
+
+describe("Drawer navigation", () => {
+  const mountDrawer = () =>
+    render(
+      <MemoryRouter initialEntries={["/"]}>
+        <SidebarContent />
+      </MemoryRouter>,
+    );
+
+  it("groups the long tail instead of listing it flat", async () => {
+    useAuthStore.setState({ token: "tok", vendor: ME, ready: true, loading: false });
+    mountDrawer();
+
+    for (const title of ["Community & network", "Workspace tools", "Administration"]) {
+      expect(screen.getByRole("heading", { name: title })).toBeInTheDocument();
+    }
+  });
+
+  it("does not repeat the five primary destinations", async () => {
+    useAuthStore.setState({ token: "tok", vendor: ME, ready: true, loading: false });
+    mountDrawer();
+
+    for (const label of ["Home", "Explore", "Create", "Activity", "Profile"]) {
+      expect(screen.queryByRole("link", { name: label })).not.toBeInTheDocument();
+    }
+  });
+
+  it("links the workspace tools to real destinations, including the vendor's own shop", async () => {
+    useAuthStore.setState({ token: "tok", vendor: ME, ready: true, loading: false });
+    mountDrawer();
+
+    expect(screen.getByRole("link", { name: /my shelf/i })).toHaveAttribute("href", "/stock");
+    // A shop front is a handle, so the drawer resolves it from the session
+    // rather than hard-coding a placeholder link.
+    expect(screen.getByRole("link", { name: /shop front/i })).toHaveAttribute("href", "/@mama_mboga");
+    expect(screen.getByRole("link", { name: /market locks/i })).toHaveAttribute("href", "/locks");
+    expect(screen.getByRole("link", { name: /ops console/i })).toHaveAttribute("href", "/ops");
+  });
+});

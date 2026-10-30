@@ -449,13 +449,24 @@ describe("Explore", () => {
     await waitFor(() => expect(screen.getByTestId("explore-kind-event")).toHaveAttribute("aria-pressed", "true"));
   });
 
-  it("offers a no-price filter, because unpriced content is normal", async () => {
+  it("keeps the no-price filter, one press away behind More filters", async () => {
+    // The filter was demoted, not deleted: time and price now live behind one
+    // disclosure so the first screen is categories and content, not controls.
     const ExplorePage = await Explore();
     renderAt("/explore", <ExplorePage />);
     await waitFor(() => expect(screen.getByTestId("content-card-post")).toBeInTheDocument());
+
+    const more = screen.getByTestId("explore-more-filters");
+    expect(more).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("button", { name: /no price/i })).not.toBeInTheDocument();
+
+    fireEvent.click(more);
+    expect(more).toHaveAttribute("aria-expanded", "true");
     const freeChip = screen.getByRole("button", { name: /no price/i });
     fireEvent.click(freeChip);
     expect(freeChip).toHaveAttribute("aria-pressed", "true");
+    // ...and the collapsed control counts what is on, so nothing hides silently.
+    expect(screen.getByTestId("explore-more-filters")).toHaveTextContent("1");
   });
 });
 

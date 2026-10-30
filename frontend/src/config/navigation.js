@@ -1,7 +1,8 @@
 import {
   Home, Compass, ClipboardList, Store, Map, Newspaper, Package,
   Truck, MapPin, Users, Wrench, CalendarDays, Terminal, UserRound, Building2,
-  Plus, Bell, MessagesSquare,
+  Plus, Bell, MessagesSquare, ShieldCheck, Layers3, BarChart3, FileCheck,
+  Sparkles, Receipt, ShoppingBag, ShoppingCart, List, ListChecks,
 } from "lucide-react";
 
 /**
@@ -158,16 +159,51 @@ export const isPrimaryActive = (item, pathname, vendorHandle) => {
   return pathname === item.to || pathname.startsWith(`${item.to}/`);
 };
 
-/** Long-tail tools that do not need a permanent primary tab. */
+/**
+ * The drawer, grouped by what a person is trying to do.
+ *
+ * The five primary destinations are NOT repeated here: on a phone they are
+ * already the tab bar under the drawer, and on desktop they are already in the
+ * header. A second copy of the same five links would be navigation duplicated,
+ * not navigation added.
+ *
+ * What lives here is everything else, in three groups — who you trade with,
+ * the tools of the trade, and administration. It is a list of destinations,
+ * not a dashboard: no counters, no cards, no calls to action.
+ */
 export const SECTION_GROUPS = [
   {
-    title: "Community",
+    title: "Community & network",
     items: [
       { to: "/groups", label: "Groups & collectives", icon: Users },
       { to: "/events", label: "Events", icon: CalendarDays },
+      { to: "/markets", label: "Markets", icon: MapPin },
+      { to: "/network", label: "Find suppliers", icon: Store },
+      { to: "/governance", label: "Our network", icon: ShieldCheck },
+      { to: "/feed", label: "Surfaces", icon: Layers3 },
     ],
   },
   {
+    title: "Workspace tools",
+    items: [
+      { to: "/stock", label: "My shelf", icon: Package },
+      // Filled in at render time: a shop front is a person's own handle.
+      { to: "/@", label: "Shop front", icon: Building2, dynamic: "shop" },
+      { to: "/orders", label: "Orders & trades", icon: ShoppingBag },
+      { to: "/analytics", label: "Analytics", icon: BarChart3 },
+      { to: "/passport", label: "Business passport", icon: FileCheck },
+      { to: "/growth", label: "Growth planner", icon: Sparkles },
+      { to: "/payments", label: "Receipts", icon: Receipt },
+      { to: "/tools", label: "Rentals & logistics", icon: Truck },
+      { to: "/tasks", label: "Tasks", icon: ListChecks },
+      { to: "/lists", label: "Vendor lists", icon: List },
+      { to: "/locks", label: "Market Locks", icon: ShoppingCart },
+      { to: "/pos", label: "POS Bridge", icon: Terminal },
+    ],
+  },
+  {
+    // /me is a primary tab, so it is deliberately NOT repeated here. Profile
+    // settings are reached from the identity panel on /me itself.
     title: "Administration",
     items: [{ to: "/ops", label: "Ops console", icon: Terminal, quiet: true }],
   },
