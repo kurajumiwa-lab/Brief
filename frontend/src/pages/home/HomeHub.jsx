@@ -8,6 +8,7 @@ import HomeFeed from "@/components/home/HomeFeed";
 import CommunityStrip from "@/components/home/CommunityStrip";
 import HomeTrustStrip from "@/components/home/HomeTrustStrip";
 import ShelfTiles from "@/components/home/ShelfTiles";
+import MarketsAround from "@/components/markets/MarketsAround";
 import { useTradeOverviewStore } from "@/stores/tradeOverviewStore";
 
 /**
@@ -63,6 +64,10 @@ export default function HomeHub() {
       <CommunityStrip />
 
       {/* New vendors get four steps; established traders get nothing here. */}
+      {/* Markets around you — loaded by itself, at a walking radius, busiest
+          first. This replaces "press Scan and pick a radius starting at 150 km". */}
+      <MarketsAround limit={3} />
+
       <SetupChecklist />
 
       {/* Compact trade overview - replaces oversized cards (v3.3) */}

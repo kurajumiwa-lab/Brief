@@ -1,17 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
-  Radar, Store, Users, Plus, Check, X, Navigation, Medal, Pencil, ChevronRight,
+  Radar, Store, Users, Plus, Check, X, Medal, Pencil, ChevronRight,
 } from "lucide-react";
 import Tabs from "@/components/ui/Tabs";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
-import Input from "@/components/ui/Input";
 import SearchInput from "@/components/ui/SearchInput";
 import Select from "@/components/ui/Select";
 import EmptyState from "@/components/ui/EmptyState";
 import { PageSpinner } from "@/components/ui/Spinner";
-import { marketsAPI, geoAPI, apiError } from "@/lib/api";
+import { marketsAPI, apiError } from "@/lib/api";
+import MarketActivityCard from "@/components/markets/MarketActivityCard";
 import { toast } from "@/components/ui/Toast";
 import { num, relativeTime } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
@@ -33,10 +33,12 @@ const TABS = [
   { value: "mine", label: "My markets", icon: Users },
 ];
 
+// A walk, a matatu ride, a day's travel. The old list started at 50 km and
+// defaulted to 150, which is a region, not "around you".
 const RADII = [
+  { value: 25, label: "25 km" },
   { value: 50, label: "50 km" },
   { value: 150, label: "150 km" },
-  { value: 300, label: "300 km" },
   { value: 500, label: "500 km" },
 ];
 
@@ -100,83 +102,95 @@ function MarketRow({ m, onJoin, joining, selectable, selected, onSelect, withDat
   );
 }
 
-// ── Near-me scan ─────────────────────────────────────────────────────────────
+// ── Near me ──────────────────────────────────────────────────────────────────
+//
+// This used to be a **Scan** button over a radius menu whose smallest option was
+// 50 km and whose default was 150. Two problems with that: the reader had to
+// press something before the screen would tell them anything, and a 150 km ring
+// around Kisumu contains most of western Kenya, ranked by nothing.
+//
+// It now loads itself at a walking radius (25 km), ranks by activity on the
+// server, and widens only when asked.
 function NearMe() {
-  const [radius, setRadius] = useState(150);
+  const [radius, setRadius] = useState(25);
   const [result, setResult] = useState(null);
-  const [scanning, setScanning] = useState(false);
-  const [place, setPlace] = useState("");
-  const [needLocation, setNeedLocation] = useState(false);
-  const [locating, setLocating] = useState(false);
-  const [customGeo, setCustomGeo] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const scan = useCallback(async (geo) => {
-    setScanning(true);
-    setNeedLocation(false);
+  const load = useCallback(async (r) => {
+    setLoading(true);
+    setError(null);
     try {
-      const params = { radius_km: radius, limit: 15 };
-      if (geo) { params.lat = geo.lat; params.lng = geo.lng; }
-      const r = await marketsAPI.scan(params);
-      setResult(r.data);
+      const res = await marketsAPI.around({ radius_km: r, limit: 20, include_empty: true });
+      setResult(res.data);
     } catch (e) {
-      if (String(e?.response?.status) === "400") {
-        setNeedLocation(true);
-        setResult(null);
-      } else {
-        toast.error(apiError(e, "The scan failed"));
-      }
+      setError(e);
+      setResult(null);
     } finally {
-      setScanning(false);
+      setLoading(false);
     }
-  }, [radius]);
+  }, []);
 
-  const locateAndScan = async () => {
-    if (!place.trim()) return;
-    setLocating(true);
-    try {
-      const { data: g } = await geoAPI.geocode(place.trim());
-      const geo = { lat: g.lat, lng: g.lng };
-      setCustomGeo(geo);
-      scan(geo);
-    } catch (e) {
-      toast.error(apiError(e, "No match for that place"));
-    } finally {
-      setLocating(false);
-    }
-  };
+  useEffect(() => {
+    load(radius);
+  }, [load, radius]);
+
+  if (loading && !result) return <PageSpinner label="Finding the markets around you…" />;
+  if (error) {
+    return (
+      <EmptyState
+        icon={Radar}
+        title="The markets didn't load"
+        description="Check your connection — nothing was changed."
+        action={<Button size="sm" variant="secondary" onClick={() => load(radius)}>Try again</Button>}
+      />
+    );
+  }
+
+  const markets = result?.markets || [];
+  const active = markets.filter((m) => !m.empty);
+  const inviting = markets.filter((m) => m.empty);
+  const widen = RADII.find((r) => r.value > radius);
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2">
-        <p className="text-xs text-ink-4 flex-1">Scan the nearest markets in your surrounding towns.</p>
-        <Select value={String(radius)} onChange={(e) => setRadius(Number(e.target.value))} options={RADII} />
-        <Button size="sm" icon={Radar} loading={scanning} onClick={() => scan(customGeo)}>
-          {scanning ? "Scanning…" : "Scan"}
-        </Button>
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="flex-1 text-xs text-ink-4">
+          {active.length > 0
+            ? `${active.length} market${active.length === 1 ? "" : "s"} trading within ${radius} km, busiest first.`
+            : `Nothing within ${radius} km has a shelf yet.`}
+        </p>
+        <Select
+          value={String(radius)}
+          onChange={(e) => setRadius(Number(e.target.value))}
+          options={RADII.map((r) => ({ value: String(r.value), label: r.label }))}
+          aria-label="Search radius"
+        />
       </div>
 
-      {needLocation && (
-        <div className="glass rounded-2xl p-3.5 space-y-2">
-          <p className="text-xs text-ink-3">Set a point to scan from — a town or market name.</p>
-          <div className="flex gap-2">
-            <Input value={place} onChange={(e) => setPlace(e.target.value)} placeholder="e.g. Nakuru" wrapperClassName="flex-1" />
-            <Button size="sm" loading={locating} onClick={locateAndScan}><Navigation size={13} /> Locate</Button>
-          </div>
-        </div>
+      {active.map((m) => (
+        <MarketActivityCard key={m.id} market={m} />
+      ))}
+
+      {inviting.length > 0 && (
+        <>
+          <p className="pt-1 text-micro font-bold uppercase tracking-[0.14em] text-ink-4">
+            {active.length > 0 ? "Waiting for a first trader" : "Nearest markets"}
+          </p>
+          {inviting.map((m) => (
+            <MarketActivityCard key={m.id} market={m} />
+          ))}
+        </>
       )}
 
-      {result && (
-        <div className="space-y-2">
-          <p className="text-2xs text-ink-4">{result.found} markets within {result.radius_km} km of {customGeo ? "your point" : "your shop"}</p>
-          {result.markets.length === 0 ? (
-            <EmptyState icon={Radar} title="No markets in that radius" description="Widen the radius, or set a point in a different town." />
-          ) : result.markets.map((m) => (
-            <MarketRow key={m.id} m={m} onJoin={async () => {
-              try { const r = await marketsAPI.join(m.id); toast.success(`Registered for ${m.name}${r.data.i_am_lead ? " — you're the lead patron" : r.data.i_am_patron ? " — you're a patron" : ""}`); }
-              catch (e) { toast.error(apiError(e)); }
-            }} />
-          ))}
-        </div>
+      {widen && (
+        <button
+          type="button"
+          onClick={() => setRadius(widen.value)}
+          className="inline-flex items-center gap-1 text-micro font-semibold text-ink-3 underline-offset-2 hover:text-ink-1 hover:underline"
+        >
+          Look further out ({widen.label}) <ChevronRight size={11} aria-hidden="true" />
+        </button>
       )}
     </div>
   );
@@ -384,7 +398,9 @@ export default function MarketsPage() {
     <div className="space-y-4">
       <div>
         <h2 className="text-xl font-semibold text-ink-1 tracking-tight">Markets</h2>
-        <p className="text-xs text-ink-4 mt-0.5">East Africa's high-density town markets — scan what's near, pick 1–N, get each one's real data.</p>
+        <p className="text-xs text-ink-4 mt-0.5">
+          Markets near you, ranked by who is trading today — not by who signed up.
+        </p>
       </div>
       <Tabs tabs={TABS} value={tab} onChange={setTab} />
       {tab === "near" && <NearMe />}

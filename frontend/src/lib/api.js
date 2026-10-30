@@ -481,6 +481,12 @@ export const marketsAPI = {
   join: (id) => api.post(`/markets/${id}/join`),
   leave: (id) => api.post(`/markets/${id}/leave`),
   welcome: (id, text) => api.put(`/markets/${id}/welcome`, { text }),
+  /** Markets around you, busiest first. No scan button — this is what Home calls. */
+  around: (params) => api.get("/markets/around", { params: noEmpty(params) }),
+  /** One market's activity: active vendors, listings, categories, four doors. */
+  activity: (id) => api.get(`/markets/${id}/activity`),
+  /** The market's live shelf — a join over its members' own published records. */
+  shelf: (id, params) => api.get(`/markets/${id}/shelf`, { params: noEmpty(params) }),
 };
 
 // ── Hustle League (Squad) — the real-work game ─────────────────────────────

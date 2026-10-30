@@ -29,6 +29,7 @@ from app.models.market_locks import MarketMember, MarketZone
 from app.models.public_place import PublicPlace
 from app.models.vendor import Vendor
 from app.routes.auth import get_current_vendor
+from app.services import market_activity
 from app.services.market_patrons import (
     compute_market_patrons, is_lead_patron, is_patron, set_market_welcome,
 )
@@ -244,9 +245,92 @@ async def leave_market(zone_id: UUID, vendor: Vendor = Depends(get_current_vendo
     )).scalars().first()
     if not member:
         raise HTTPException(404, "You are not registered for this market")
-    db.delete(member)
+    # `AsyncSession.delete` is a coroutine. Without the await this line built a
+    # coroutine, dropped it, and returned {"left": True} while the membership
+    # stayed in the table — the button said "Left" and the market still counted
+    # you. A row count in the tests keeps that from coming back.
+    await db.delete(member)
     await db.commit()
     return {"left": True}
+
+
+# ── activity: the market as a place where business happens ────────────────────
+#
+# Everything below is a *view* over existing rows — market_members, stock_items,
+# tool_listings. There is no market-listing table to drift, and no product is
+# ever uploaded twice: a vendor publishes once, and their market shows it
+# because they trade there.
+
+
+@router.get("/around")
+async def markets_around(
+    lat: Optional[float] = None,
+    lng: Optional[float] = None,
+    radius_km: float = Query(
+        market_activity.DEFAULT_RADIUS_KM, ge=0.5, le=market_activity.MAX_RADIUS_KM,
+        description="Starts at a walk (25 km); widen only if the caller asks",
+    ),
+    limit: int = Query(12, ge=1, le=50),
+    include_empty: bool = False,
+    vendor: Vendor = Depends(get_current_vendor),
+    db: AsyncSession = Depends(get_db),
+):
+    """Markets around you, **busiest first** — no scan button required.
+
+    Sorted by activity and only then by distance, so a market with a hundred
+    registrations and an empty shelf never outranks one where twenty traders are
+    selling today. Markets with nothing on their shelf carry an `invitation`
+    instead of a row of zeroes.
+    """
+    origin = await _member_point(vendor, lat, lng)
+    return await market_activity.nearby_markets(
+        db, origin=origin, radius_km=radius_km, viewer=vendor,
+        limit=limit, include_empty=include_empty,
+    )
+
+
+@router.get("/{zone_id}/activity")
+async def market_activity_detail(
+    zone_id: UUID,
+    vendor: Vendor = Depends(get_current_vendor),
+    db: AsyncSession = Depends(get_db),
+):
+    """One market: activity numbers, what it sells, and the four doors.
+
+    Each door reports `available` and `count`, so the screen can offer only the
+    ones with something behind them — an "Equipment" tile that opens an empty
+    list is the same lie as a market card that says "0 vendors".
+    """
+    zone = await db.get(MarketZone, zone_id)
+    if not zone or not zone.is_active:
+        raise HTTPException(404, "Market not found")
+    origin = (vendor.geo_lat, vendor.geo_lng)
+    payload = await market_activity.market_payload(db, zone, viewer=vendor, origin=origin)
+    payload["welcome"] = zone.patron_welcome
+    return payload
+
+
+@router.get("/{zone_id}/shelf")
+async def market_shelf(
+    zone_id: UUID,
+    kind: str = Query("goods", pattern="^(goods|people|services|equipment)$"),
+    q: Optional[str] = Query(None, max_length=80),
+    limit: int = Query(24, ge=1, le=60),
+    vendor: Vendor = Depends(get_current_vendor),
+    db: AsyncSession = Depends(get_db),
+):
+    """The market's live shelf, from its members' own published records.
+
+    Nothing is copied and nothing is cached: this is a join. A vendor who leaves
+    the market takes their products with them, because those products never
+    lived here.
+    """
+    zone = await db.get(MarketZone, zone_id)
+    if not zone or not zone.is_active:
+        raise HTTPException(404, "Market not found")
+    return await market_activity.market_shelf(
+        db, zone, kind=kind, q=q, limit=limit, viewer=vendor
+    )
 
 
 class WelcomeBody(BaseModel):

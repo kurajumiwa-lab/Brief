@@ -635,7 +635,10 @@ async def leave_squad(squad_id: UUID, vendor: Vendor = Depends(get_current_vendo
         nxt = [o for o in others if o.vendor_id != vendor.id][0]
         nxt.role = "captain"
         squad.captain_vendor_id = nxt.vendor_id
-    db.delete(m)
+    # Same trap as /api/markets/{id}/leave: an un-awaited delete is a no-op, and
+    # `remaining` below was counted before it would have run anyway.
+    await db.delete(m)
+    await db.flush()
     remaining = (await db.execute(select(func.count(HustleSquadMember.id)).where(HustleSquadMember.squad_id == squad_id))).scalar() or 0
     if remaining == 0:
         squad.status = "disbanded"
