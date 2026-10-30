@@ -43,7 +43,7 @@ is available to the market doors.
 | Goods | `#E8F2EC` | `#276A49` | `listing`, `available` |
 | People | `#EAEAF8` | `#5953A5` | `person` |
 | Services | `#E6F1F7` | `#36738E` | `service` |
-| Equipment | `#F5EEE2` | `#95703B` | — (no feed kind; used by markets/tools) |
+| Equipment | `#F5EEE2` | `#7E5D2C` | — (no feed kind; used by markets/tools) |
 | Events | `#F4EAF0` | `#99516F` | `event` |
 | Communities | `#E9EFF0` | `#526D70` | `community` |
 | Collections | `#EFEFE7` | `#63654B` | `collection` |
@@ -53,6 +53,8 @@ is available to the market doors.
 Rules the code enforces:
 
 - **A pastel wash with an ink of the same family.** Never a saturated block.
+- **Contrast checked, not eyeballed.** Every ink/wash pair is ≥ 4.5:1 (Equipment
+  was 3.9:1 and was darkened to 5.2:1); every dark-mode pair is ≥ 7.6:1.
 - **Colour is never the only signal.** Selected tiles carry `aria-pressed` plus
   an inset ring in the category's own ink.
 - **No carousel.** Seven tiles in a wrapping grid; a category hidden behind a

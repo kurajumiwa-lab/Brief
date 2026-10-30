@@ -46,8 +46,8 @@ export const CATEGORY_TINTS = {
   equipment: hue(
     "Equipment", Wrench,
     "bg-[#F5EEE2] dark:bg-[#33291B]",
-    "text-[#95703B] dark:text-[#E3C58E]",
-    "#95703B",
+    "text-[#7E5D2C] dark:text-[#E3C58E]",
+    "#7E5D2C",
   ),
   events: hue(
     "Events", CalendarDays,
