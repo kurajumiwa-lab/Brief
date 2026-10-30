@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
+from urllib.parse import quote
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -299,7 +300,9 @@ async def suggest(
                     f"{vendors} shelf carries it" if vendors == 1 else f"{vendors} shelves carry it"
                 )
                 + (f" · from KSh {from_price:,.0f}" if from_price is not None else ""),
-                "to": f"/browse?type=goods&q={name}",
+                # Quoted: a URL with a space or a bracket in it breaks the moment
+                # somebody copies it into a chat.
+                "to": f"/browse?type=goods&q={quote(name)}",
                 "score": 90 if _normalise(name).startswith(term) else 60,
             }
         )

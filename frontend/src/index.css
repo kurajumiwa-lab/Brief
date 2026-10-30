@@ -282,3 +282,12 @@
     display: none;
   }
 }
+
+/* The market search is `type="search"` so it is announced as a search box and
+   raises the search key on a phone keyboard. The browser then also draws its own
+   clear button, which would sit next to the one this component renders. */
+.market-search-input::-webkit-search-cancel-button,
+.market-search-input::-webkit-search-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+}

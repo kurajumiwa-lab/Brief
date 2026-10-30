@@ -41,6 +41,33 @@ export async function nextShelf(from) {
   }
 }
 
+/**
+ * Typeahead, narrowed to what the caller can act on.
+ *
+ * The server already refuses to suggest a name it cannot deliver; this trims
+ * the payload to the two kinds a search field can use and caps it, so a phone
+ * renders at most `limit` chips no matter what comes back.
+ *
+ * Returns `[]` for every failure mode — too short, no client, network down.
+ * A search field that shows an error above the keyboard is a search field
+ * people stop typing in.
+ */
+export async function suggest(term, { limit = 5 } = {}) {
+  const api = client();
+  const q = String(term || "").trim();
+  if (q.length < 2 || !api?.suggest) return [];
+  try {
+    const res = await api.suggest(q);
+    const rows = res?.data?.suggestions;
+    if (!Array.isArray(rows)) return [];
+    return rows
+      .filter((row) => row && (row.kind === "item" || row.kind === "shelf") && row.label && row.to)
+      .slice(0, limit);
+  } catch {
+    return [];
+  }
+}
+
 /** Fire-and-forget demand recording. Never awaited by a screen. */
 export function rememberSearch(query, shelf, resultCount = 0) {
   const api = client();
@@ -52,4 +79,4 @@ export function rememberSearch(query, shelf, resultCount = 0) {
   }
 }
 
-export default { nextShelf, rememberSearch };
+export default { nextShelf, suggest, rememberSearch };

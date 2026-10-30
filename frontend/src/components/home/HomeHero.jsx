@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, BadgeCheck, MapPin } from "lucide-react";
-import GlobalSearch from "@/components/layout/GlobalSearch";
+import { ArrowRight, BadgeCheck, ChevronDown, MapPin } from "lucide-react";
+import MarketSearch from "@/components/home/MarketSearch";
 import { VENDOR_ROLES } from "@/config/constants";
 import { useAuthStore } from "@/stores/authStore";
 import { initials } from "@/lib/utils";
@@ -49,8 +49,6 @@ const MODES = {
     line: "Set your categories and location to start matching with the network.",
   },
 };
-
-export const HERO_SUGGESTIONS = ["tomatoes", "sukuma wiki", "cooking oil", "kitenge", "rice"];
 
 export default function HomeHero({ className }) {
   const vendor = useAuthStore((s) => s.vendor);
@@ -120,10 +118,14 @@ export default function HomeHero({ className }) {
               )}
             </div>
             {where && (
-              <p className="mt-0.5 flex items-center gap-1 truncate text-micro text-white/65">
+              <Link
+                to="/me"
+                className="mt-1 inline-flex max-w-full items-center gap-1 rounded-full border border-white/20 bg-white/10 py-0.5 pl-1.5 pr-2 text-micro font-semibold text-white/85 backdrop-blur-sm transition-colors hover:bg-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+              >
                 <MapPin size={10} className="shrink-0" aria-hidden="true" />
                 <span className="truncate">{where}</span>
-              </p>
+                <ChevronDown size={10} className="shrink-0 opacity-70" aria-hidden="true" />
+              </Link>
             )}
           </div>
 
@@ -139,32 +141,25 @@ export default function HomeHero({ className }) {
         </h1>
         <p className="mt-1.5 max-w-[46ch] text-2xs leading-relaxed text-white/70 sm:text-xs">{mode.line}</p>
 
-        {/* ── search, and everything you might reach for, as one surface ───── */}
-        <div
-          data-testid="home-search-card"
-          className="mt-4 overflow-hidden rounded-2xl bg-surface-0/95 shadow-lg ring-1 ring-white/15 backdrop-blur-sm transition-shadow focus-within:ring-4 focus-within:ring-brand-500/30 sm:mt-5"
-        >
-          <GlobalSearch size="lg" className="home-search-field !rounded-none" />
+        {/* ── the search: one compact field, and nothing invented under it ──
+            The old version was a tall card holding a 52px field plus a permanent
+            row of chips ("tomatoes, sukuma wiki, …") that was the same five words
+            for every business on the network. The field is now 40px, sits on the
+            photograph itself, and the suggestions under it are real ones from the
+            guide — or the vendor's own categories, or nothing at all. */}
+        <div className="mt-4 sm:mt-5">
+          <MarketSearch />
+        </div>
 
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-2 border-t border-edge-1 px-3 py-2.5">
-            <span className="text-micro font-bold uppercase tracking-[0.12em] text-ink-4">Try</span>
-            {HERO_SUGGESTIONS.map((term) => (
-              <Link
-                key={term}
-                to={`/browse?type=goods&search=${encodeURIComponent(term)}`}
-                className="rounded-lg bg-surface-2 px-2.5 py-1 text-micro font-semibold text-ink-2 transition-colors hover:bg-brand-50 hover:text-brand-800 dark:hover:bg-brand-500/10 dark:hover:text-brand-300"
-              >
-                {term}
-              </Link>
-            ))}
-            <Link
-              to="/browse"
-              className="ml-auto inline-flex shrink-0 items-center gap-1 rounded-lg px-1 text-micro font-bold text-brand-700 hover:underline underline-offset-2 dark:text-brand-400"
-            >
-              Browse everything
-              <ArrowRight size={12} aria-hidden="true" />
-            </Link>
-          </div>
+        <div className="mt-2 flex items-center justify-between gap-2">
+          <p className="text-micro text-white/55">Stock, suppliers, people, markets and rentals.</p>
+          <Link
+            to="/browse"
+            className="inline-flex shrink-0 items-center gap-1 text-micro font-bold text-white/85 underline-offset-2 hover:text-white hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+          >
+            Browse everything
+            <ArrowRight size={11} aria-hidden="true" />
+          </Link>
         </div>
       </div>
     </section>
