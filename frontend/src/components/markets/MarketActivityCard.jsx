@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { ArrowRight, MapPin, Store, Package, Truck, Wrench, Users } from "lucide-react";
+import { CATEGORY_TINTS } from "@/config/categoryTints";
 import { cn } from "@/lib/utils";
 
 /**
@@ -128,15 +129,23 @@ export default function MarketActivityCard({ market, compact = false }) {
             .filter((door) => door.available)
             .map((door) => {
               const Icon = DOOR_ICONS[door.key] || Package;
+              // Same hues as the Explore categories: Goods green, People
+              // indigo, Services blue, Equipment sand — the vocabulary holds
+              // wherever a category is named.
+              const tint = CATEGORY_TINTS[door.key];
               return (
                 <Link
                   key={door.key}
                   to={`/markets/${market.id}?shelf=${door.key}`}
-                  className="inline-flex items-center gap-1 rounded-full border border-edge-1 px-2 py-0.5 text-micro font-semibold text-ink-2 transition-colors hover:border-brand-400/60 hover:bg-brand-500/5 hover:text-brand-700 dark:hover:text-brand-300"
+                  data-tint={door.key}
+                  className={cn(
+                    "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-micro font-semibold transition-colors",
+                    tint ? `${tint.wash} ${tint.ink}` : "bg-surface-2 text-ink-2",
+                  )}
                 >
                   <Icon size={10} aria-hidden="true" />
                   {door.label}
-                  <span className="text-ink-4">{door.count}</span>
+                  <span className="opacity-70">{door.count}</span>
                 </Link>
               );
             })}
