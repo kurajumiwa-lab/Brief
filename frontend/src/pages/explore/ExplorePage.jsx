@@ -9,7 +9,7 @@ import SearchInput from "@/components/ui/SearchInput";
 import Skeleton from "@/components/ui/Skeleton";
 import ContentCard from "@/components/outside/ContentCard";
 import LocationBar from "@/components/outside/LocationBar";
-import MarketsAround from "@/components/markets/MarketsAround";
+import MarketStrip from "@/components/explore/MarketStrip";
 import CategoryTiles from "@/components/explore/CategoryTiles";
 import { RADII, locationLabel, useOutsideStore } from "@/stores/outsideStore";
 import { cn } from "@/lib/utils";
@@ -314,10 +314,10 @@ export default function ExplorePage() {
       </div>
 
       {/* ── markets, before the feed: a place to walk into ──────────────────
-          One market, not three. It is a preview — proof that there is a
-          physical place behind the listings — and every extra card here is a
-          card of actual results pushed below the fold. */}
-      <MarketsAround limit={1} showWiden={false} className="-mt-0.5" />
+          A strip, not a card wall. Two lines per market is enough to say
+          "there is a physical place behind these listings, and here is how
+          busy it is"; anything taller pushes the results below the fold. */}
+      <MarketStrip limit={2} />
 
       {/* ── results ───────────────────────────────────────────────────────── */}
       <section aria-live="polite" aria-busy={status === "loading"} className="space-y-3">

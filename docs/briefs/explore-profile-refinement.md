@@ -10,25 +10,27 @@
 
 ## 1. What the screen was spending its first screen on
 
-Measured on a 390 × 844 phone, above the first result:
+Measured from the classes on a 390 × 844 phone, above the first result:
 
 | Explore, before | Height (approx.) | Explore, after | Height |
 |---|---|---|---|
 | Eyebrow + `What's around you` + description | ~90 px | `Explore` + place pill, one row | ~32 px |
-| Location card (label row + radius row) | ~120 px | radius, one line | ~24 px |
+| Location card (label row + radius row) | ~120 px | Radius, one line | ~24 px |
 | Search field | 40 px | Search field | 40 px |
-| 13 kind chips, wrapping | ~120 px | 5 type chips, one row | ~28 px |
+| 13 kind chips, wrapping over ~3 rows | ~120 px | 6 type chips (two rows on a phone) | ~50 px |
 | Time + price chips | ~72 px | Category tiles, 2 rows, colour-coded | ~134 px |
-| — | — | More filters (collapsed, counts what is on) | ~34 px |
-| — | — | One market preview | ~130 px |
-| **~442 px of chrome** | | **~292 px of controls + 130 px of content** | |
+| — | — | More filters, collapsed, counts what is on | ~34 px |
+| **~442 px of chrome** | | **~314 px of controls** | **−128 px** |
+| (nothing) | — | Market strip: 2 markets, name · town · km · trading · listings | ~88 px |
 
-The functionality is identical. What changed is that ~150 px of it stopped
-being visible by default, and the space it freed now shows a real market and a
-colour-coded category selector instead of a third row of identical pills.
+Controls fall by roughly a third. About 90 px of that is handed back as a live
+market strip, so the feed still starts ~40 px higher than it used to **and** the
+screen above it now carries something a person can use: two real markets and
+seven colour-coded categories, instead of three rows of identical pills.
 
-The old location card is not deleted: pressing the place pill opens the same
-`LocationBar` with GPS, typed area, layer and sharing intact.
+The functionality is identical. The old location card is not deleted: pressing
+the place pill opens the same `LocationBar` with GPS, typed area, layer and
+sharing intact.
 
 ## 2. Category colour as a language, not decoration
 
@@ -117,8 +119,9 @@ Full suites after the change: **frontend 353 passed**, **backend 466 passed**,
 
 - **No new filter system.** Both rows write the same `?kind=`; there is one
   dimension, presented in two groupings.
-- **No fabricated activity** on the market preview — it reuses the market
-  shelf's own invitation copy for empty markets.
+- **No fabricated activity** on the market preview — a market strip row either
+  shows its real `active_vendors` / `listings`, or says "Be the first", because
+  an empty market is an invitation and never a zero.
 - **No unrelated screens touched.** The pre-existing `eslint` errors in
   `noticeboard/` and two Home cards are untouched debt, not this change.
 - **Mobile-browser pass still blocked** in this sandbox (no browser binary), so

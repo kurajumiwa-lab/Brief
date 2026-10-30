@@ -215,10 +215,11 @@ describe("4 · content arrives earlier", () => {
   it("puts categories and markets above the feed, and the feed above nothing", async () => {
     await renderExplore();
     const categories = await screen.findByTestId("explore-categories");
-    const markets = await screen.findByTestId("markets-around");
+    const markets = await screen.findByTestId("market-strip");
     const card = await screen.findByTestId("content-card-listing");
 
     // Document order is reading order: categories → markets → results.
+    expect(within(markets).getAllByTestId("market-strip-row").length).toBeGreaterThan(0);
     expect(categories.compareDocumentPosition(markets) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(markets.compareDocumentPosition(card) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });

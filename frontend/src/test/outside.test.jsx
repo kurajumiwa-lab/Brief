@@ -117,6 +117,7 @@ vi.mock("@/lib/api", () => ({
     report: vi.fn(() => ok({ ok: true })),
     activity: vi.fn(() => ok(ACTIVITY)),
   },
+  marketsAPI: { around: vi.fn(() => ok({ markets: [], wider: [], active_count: 0, inviting_count: 0 })) },
   geoAPI: { geocode: mocks.geocode },
   fileAPI: { upload: mocks.upload },
   apiError: (_e, fallback) => fallback,
