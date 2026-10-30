@@ -9,6 +9,7 @@ import LocationBar from "@/components/outside/LocationBar";
 import CollapsedMyShop from "./CollapsedMyShop";
 import BusinessPulseSimplified from "./BusinessPulseSimplified";
 import BusinessBillboard from "./BusinessBillboard";
+import CaesarGuide from "@/components/guide/CaesarGuide";
 import { SHELVES_AFTER_BANNER, SHELVES_BEFORE_BANNER } from "@/config/homeShelves";
 import { feedIsQuiet, useHomeFeedStore } from "@/stores/homeFeedStore";
 import { needsMyAction, useStockStore } from "@/stores/stockStore";
@@ -118,6 +119,10 @@ export default function HomeFeed({ onSource, className }) {
           <CollapsedMyShop />
         </div>
       )}
+
+      {/* Caesar at the end of the aisle: three shelves, and where the idea
+          came from. It renders nothing at all when there is nothing to say. */}
+      <CaesarGuide from="stock" className="pt-1" />
 
       <ReferralBanner />
 

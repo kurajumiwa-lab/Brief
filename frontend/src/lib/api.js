@@ -717,4 +717,42 @@ export const socialAPI = {
   unblock: (targetId, kind = "block") => api.delete(`/social/blocks/${targetId}`, { params: { kind } }),
 };
 
+// ── Caesar the guide ───────────────────────────────────────────────────────
+/**
+ * Suggestions, the shelf map, and the demand signal.
+ *
+ * Every read here is deterministic server-side: a suggestion always traces to a
+ * live shelf row or to the declared shelf map, and `basis` says which. Nothing
+ * in this client decides what to suggest — it asks and renders.
+ */
+export const guideAPI = {
+  suggest: (q, params) => api.get("/guide/suggest", { params: noEmpty({ q, ...params }) }),
+  parse: (q) => api.get("/guide/parse", { params: { q } }),
+  next: (from) => api.get("/guide/next", { params: { from } }),
+  demand: (params) => api.get("/guide/demand", { params: noEmpty(params) }),
+  shelves: () => api.get("/guide/shelves"),
+  /** Fire-and-forget: a search happened. Never awaited by the UI. */
+  searched: (data) => api.post("/guide/searched", data),
+  /** Fire-and-forget: a shelf was opened. */
+  visited: (shelf) => api.post("/guide/visited", { shelf }),
+};
+
+// ── Caesar Park ────────────────────────────────────────────────────────────
+/**
+ * Bounded places with a gate. `bounded_by`, `entry_rule` and `rules` come back
+ * on the listing, so the screen can show the boundary before anybody knocks.
+ */
+export const parksAPI = {
+  list: (params) => api.get("/parks", { params: noEmpty(params) }),
+  get: (slug) => api.get(`/parks/${slug}`),
+  create: (data) => api.post("/parks", data),
+  join: (slug, leash = "off") => api.post(`/parks/${slug}/join`, null, { params: { leash } }),
+  leave: (slug) => api.post(`/parks/${slug}/leave`),
+  setLeash: (slug, leash) => api.patch(`/parks/${slug}/leash`, { leash }),
+  linkCircle: (slug, circleId, offLeash = false) =>
+    api.post(`/parks/${slug}/circles`, null, { params: { circle_id: circleId, off_leash: offLeash } }),
+  feed: (slug, params) => api.get(`/parks/${slug}/feed`, { params: noEmpty(params) }),
+  post: (slug, body, lang = "en") => api.post(`/parks/${slug}/posts`, { body, lang }),
+};
+
 export default api;
