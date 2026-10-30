@@ -3,7 +3,7 @@
 > **Status:** built on `arena/6596bb7d-brief`.
 > **Backend:** `app/modules/catalog/{catalog,service,router,models}.py` + migration `0028_business_desk`.
 > **Frontend:** `pages/storefront/{BusinessDeskPage,EnquiryInboxPage}.jsx`, `components/desk/*`.
-> **Tests:** backend **477 passed** (11 new), frontend **365 passed** (14 storefront specs rewritten).
+> **Tests:** backend **484 passed** (18 new), frontend **368 passed** (17 new or rewritten specs).
 >
 > As before, this file is two documents. **Part 1** is for the person who runs
 > the business. **Part 2** is for the person who maintains it.
@@ -32,7 +32,7 @@ One question, five answers:
 
 | Need | One line | What is behind it |
 |---|---|---|
-| Digital services | Websites, branding, design and automation | 4 services, from KSh 2,500 |
+| Digital services | Websites, branding, design and automation | 6 services, from KSh 2,500 |
 | Business software | Business records, memberships and workspaces | 4 offers, from KSh 1,500/mo |
 | Field operations | Field teams, mobile forms and reporting | 2 services, from KSh 3,000/mo |
 | Device management | Android deployment and device administration | 2 deployments, quotation only |
@@ -144,7 +144,7 @@ system.
 
 ### `GET /api/catalog` — public, additive
 
-The v2.14 payload is unchanged: still `lines` (3) and `offers` (12). Two
+The v2.14 payload is unchanged: still `lines` (3), now `offers` (14). Two
 additions:
 
 ```jsonc
@@ -305,6 +305,11 @@ cd frontend && npx vitest run                                # 365 passed
    no UI change, no release note needed.
 4. **Prices are still test ranges.** The moment there are three paid customers
    per desk, replace the ranges with real ones and say so on the card.
-5. **Not built, deliberately:** automated checkout. It waits for a verified
+5. **The creative portfolio was folded in.** Its four priced services are
+   desk offers now (two already were; packaging/print and motion/launch were
+   added), and its showcase capability moved to the shop front. See
+   `docs/briefs/selected-work.md` — the desk is the only price sheet left in the
+   product, which is the point.
+6. **Not built, deliberately:** automated checkout. It waits for a verified
    recurring-payment provider and a written refund policy, the same condition the
    trial has been waiting on since v2.14.

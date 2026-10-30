@@ -30,7 +30,7 @@ const QUICK_ACTIONS = [
   },
   {
     title: "View my shop · Shop front",
-    description: "Preview the public profile",
+    description: "Your public profile: shelf, selected work and photos",
     to: (vendor) => `/@${vendor.vendor_handle}`,
     icon: Store,
   },
@@ -116,14 +116,6 @@ const DESTINATIONS = [
     icon: Terminal,
     tone: "amber",
     group: "Stock & integrations",
-  },
-  {
-    title: "Creative portfolio",
-    description: "Showcase branding, web design, print & motion case studies and client services.",
-    to: () => "/portfolio",
-    icon: Sparkles,
-    tone: "green",
-    group: "Work & sourcing",
   },
   {
     title: "Tasks",

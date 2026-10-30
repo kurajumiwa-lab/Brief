@@ -30,7 +30,7 @@ ever highlights two tabs.
 | `/events`, `/groups`, `/lists` | **Explore** | Discovery surfaces first; the "mine" tabs live inside each |
 | `/work`, `/orders`, `/tasks`, `/locks`, `/tools` | **Activity** | Everything waiting on you or on someone else |
 | `/chat` | **Activity** | Was its own "Inbox" tab |
-| `/stock`, `/analytics`, `/pos`, `/passport`, `/growth`, `/enterprise`, `/governance`, `/ops`, `/portfolio` | **Profile** | The business workspace, unchanged |
+| `/stock`, `/analytics`, `/pos`, `/passport`, `/growth`, `/enterprise`, `/governance`, `/ops` | **Profile** | The business workspace, unchanged. (`/portfolio` and `/studio` retired in v2.16 → redirect to `/me`; the showcase moved to the shop front. See `docs/briefs/selected-work.md`.) |
 | `/brief`, `/profile`, `/movements`, `/stock/:id` | existing redirects | Untouched |
 
 ## New routes added

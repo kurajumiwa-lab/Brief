@@ -69,7 +69,7 @@ OFFERS: tuple[Offer, ...] = (
         name="Logo and brand starter package",
         price_min_kes=2500, price_max_kes=8000, price_unit="one_off",
         readiness="service",
-        readiness_note="Productised studio service (see the Creative Portfolio). Booked as an enquiry, delivered by people — not software.",
+        readiness_note="Productised studio service. Booked as an enquiry, delivered by people — not software.",
         turnaround="3–5 working days from a completed brief (test)",
         deliverables=("Primary logo + one lockup", "Colour and type choices", "Files for print, signage and social use"),
         exclusions=("Trademark registration or legal clearance", "Unlimited concepts or a full brand-guideline book"),
@@ -111,6 +111,36 @@ OFFERS: tuple[Offer, ...] = (
         exclusions=("Third-party subscription fees", "Custom software development unless separately quoted"),
         customer_must_provide=("Access to the tools involved", "One staff owner for the workflow"),
         revisions="One correction round for defects in the agreed setup.",
+    ),
+    # The two capabilities that used to live only on the creative portfolio's
+    # own price list. They are productised studio work like the four above, so
+    # they are sold as offers here — one desk, one price sheet, one enquiry
+    # route. Packaging/print and motion are real capabilities we can deliver;
+    # keeping them on a separate page meant a buyer had to find a portfolio
+    # before they could find a price.
+    Offer(
+        key="packaging_print_suite", line="digital_services",
+        name="Packaging and print suite",
+        price_min_kes=6000, price_max_kes=20000, price_unit="one_off",
+        readiness="service",
+        readiness_note="Productised studio service: dielines, artwork and press-ready files. Booked as an enquiry, delivered by people.",
+        turnaround="2–3 weeks once artwork is approved (test; print lead time decides)",
+        deliverables=("Label or packaging artwork for one product format", "Print-ready files with dielines", "Stock and finish recommendations"),
+        exclusions=("Printing, foil stamping and delivery charges", "Photography of the finished product"),
+        customer_must_provide=("Product dimensions and what is inside it", "A print vendor, or approval to quote one"),
+        revisions="Two artwork rounds included; press checks are quoted separately.",
+    ),
+    Offer(
+        key="motion_launch_pack", line="digital_services",
+        name="Motion and launch pack",
+        price_min_kes=8000, price_max_kes=30000, price_unit="one_off",
+        readiness="service",
+        readiness_note="Productised studio service: an animated identity and a launch video. Booked as an enquiry, delivered by people.",
+        turnaround="2–3 weeks from an approved storyboard (test)",
+        deliverables=("One 30–60 second launch video", "Animated logo ident and transitions", "Two social cut-downs"),
+        exclusions=("Paid media spend", "Voice talent and licensed music fees", "On-location filming"),
+        customer_must_provide=("The logo in vector form, or brand files", "The message and the launch date"),
+        revisions="One storyboard round and one cut round included.",
     ),
     # ── B. Business software ─────────────────────────────────────────────
     Offer(

@@ -133,9 +133,12 @@ const ACTIVITY_ROOTS = [
   "/activity", "/activities", "/work", "/orders", "/chat", "/tasks", "/locks", "/tools", "/payments",
 ];
 
+// `/portfolio` and `/studio` were retired in v2.16: the showcase now lives on
+// the shop front and the price list on the Business Desk, so both URLs redirect
+// to /me rather than holding a destination of their own.
 const ME_ROOTS = [
   "/me", "/stock", "/analytics", "/pos", "/brief", "/passport", "/growth", "/billing",
-  "/enterprise", "/governance", "/ops", "/portfolio", "/studio",
+  "/enterprise", "/governance", "/ops",
 ];
 
 const inArea = (pathname, roots) => roots.some((root) => pathname === root || pathname.startsWith(`${root}/`));

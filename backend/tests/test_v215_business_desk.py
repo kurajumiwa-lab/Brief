@@ -66,7 +66,7 @@ async def test_five_desks_each_answering_a_buying_need(client):
 
     by_key = {d["key"]: d for d in desks}
     # The three commercial lines keep their offers...
-    assert by_key["digital_services"]["offer_count"] == 4
+    assert by_key["digital_services"]["offer_count"] == 6
     assert by_key["business_software"]["offer_count"] == 4
     # ...and field operations splits, because devices are a different decision.
     assert by_key["field_operations"]["offer_count"] == 2
@@ -81,7 +81,7 @@ async def test_the_original_catalogue_contract_is_untouched(client):
     body = (await client.get("/api/catalog")).json()
     assert [line["key"] for line in body["lines"]] == [
         "digital_services", "business_software", "field_operations"]
-    assert len(body["offers"]) == 12
+    assert len(body["offers"]) == 14
     # Every new offer field exists on the old offer list too, so a client that
     # reads only `offers` still gets the desk and the permitted action.
     for offer in body["offers"]:
@@ -93,7 +93,7 @@ async def test_the_original_catalogue_contract_is_untouched(client):
 async def test_a_desk_never_has_more_offers_than_published(client):
     body = (await client.get("/api/catalog")).json()
     total = sum(d["offer_count"] for d in body["desks"])
-    assert total == len(body["offers"]) == 12
+    assert total == len(body["offers"]) == 14
 
 
 async def test_the_action_follows_readiness_not_the_screen(client):

@@ -68,7 +68,6 @@ const POSBridge = lazy(() => import("@/pages/pos/POSBridge"));
 const Analytics = lazy(() => import("@/pages/analytics/Analytics"));
 const Ops = lazy(() => import("@/pages/ops/Ops"));
 const VendorProfile = lazy(() => import("@/pages/vendor/VendorProfile"));
-const CreativePortfolioPage = lazy(() => import("@/pages/portfolio/CreativePortfolioPage"));
 // Operator-only: kept out of the bundle a customer downloads.
 const EnquiryInboxPage = lazy(() => import("@/pages/storefront/EnquiryInboxPage"));
 
@@ -236,8 +235,12 @@ function AppRoutes() {
               model. Lazy-imported above and named in ME_ROOTS, so the surface is
               reachable at the URL the README and the API both use. */}
           <Route path="/enterprise" element={<EnterprisePage />} />
-          <Route path="/portfolio" element={<CreativePortfolioPage />} />
-          <Route path="/studio" element={<CreativePortfolioPage />} />
+          {/* The creative-portfolio page was retired in v2.16. Its capability —
+              showing work — now lives on the shop front (selected work), its
+              price list lives on the Business Desk, and its inquiry pipeline is
+              the enquiry inbox. LinkedIn-old links still land somewhere useful. */}
+          <Route path="/portfolio" element={<Navigate to="/me" replace />} />
+          <Route path="/studio" element={<Navigate to="/me" replace />} />
           <Route path="/@:handle" element={<VendorProfile />} />
           <Route path="/:handle" element={<VendorHandleRoute />} />
 

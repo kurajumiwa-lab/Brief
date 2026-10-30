@@ -510,52 +510,115 @@ describe("Business Control Centre, Stock Visibility, Shop Front & Gallery Photos
     expect(screen.getByRole("navigation", { name: /shop navigation/i })).toBeInTheDocument();
   });
 
-  it("renders the Creative Portfolio & Freelance Services Platform with discipline filters, editorial case studies, services, and project inquiry flow", async () => {
-    const { default: CreativePortfolioPage } = await import("@/pages/portfolio/CreativePortfolioPage");
-    mount(<CreativePortfolioPage />, "/portfolio");
+  /* ── v2.16 · the portfolio became a capability, not a page ──────────────── */
 
-    // 1. Creative identity hero & CTAs
-    expect(
-      await screen.findByRole("heading", { name: /I design brands that people remember\./i })
-    ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Explore My Work/i })).toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: /Start a Project/i }).length).toBeGreaterThan(0);
+  it("shows a vendor's published work to a visitor on the shop front", async () => {
+    const { default: VendorProfile } = await import("@/pages/vendor/VendorProfile");
+    api.vendorAPI.byHandle.mockResolvedValueOnce(
+      ok({
+        ...OTHER,
+        work_items: [
+          {
+            title: "Kibo Botanicals — identity system",
+            summary: "Wordmark, label architecture and a guideline book for a skincare house.",
+            outcome: "Twelve label formats at launch",
+            discipline: "Branding",
+            year: "2026",
+            image_url: "/api/files/test/kibo.jpg",
+          },
+        ],
+      })
+    );
+    api.stockAPI.network.mockResolvedValueOnce(ok([]));
 
-    // 2. Discipline filter chips (All, Branding, Web Design, Print, Motion)
-    expect(screen.getByTestId("portfolio-filter-all")).toHaveAttribute("aria-pressed", "true");
-    fireEvent.click(screen.getByTestId("portfolio-filter-web-design"));
-    expect(screen.getByTestId("portfolio-filter-web-design")).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByText(/Solstice Roasters — Digital Flagship/i)).toBeInTheDocument();
-    expect(screen.queryByTestId("portfolio-project-card-proj-print-03")).not.toBeInTheDocument();
+    render(
+      <MemoryRouter initialEntries={["/@kibanda_kitchen"]}>
+        <Routes>
+          <Route path="/:rawHandle" element={<VendorProfile />} />
+        </Routes>
+      </MemoryRouter>
+    );
 
-    // Reset filter to All
-    fireEvent.click(screen.getByTestId("portfolio-filter-all"));
+    const section = await screen.findByTestId("selected-work");
+    expect(within(section).getByRole("heading", { name: "Selected work" })).toBeInTheDocument();
+    expect(within(section).getByText("Kibo Botanicals — identity system")).toBeInTheDocument();
+    expect(within(section).getByText("Twelve label formats at launch")).toBeInTheDocument();
+    expect(within(section).getByText("Branding")).toBeInTheDocument();
+    // A visitor never gets an "add work" control.
+    expect(within(section).queryByRole("button", { name: /add work/i })).not.toBeInTheDocument();
+  });
 
-    // 3. Editorial case study sections
-    const caseStudy = screen.getByTestId("editorial-case-study");
-    expect(within(caseStudy).getByText(/01 · The Challenge/i)).toBeInTheDocument();
-    expect(within(caseStudy).getByText(/02 · Creative Process/i)).toBeInTheDocument();
-    expect(within(caseStudy).getByText(/03 · Concepts/i)).toBeInTheDocument();
-    expect(within(caseStudy).getByText(/04 · Final Deliverables/i)).toBeInTheDocument();
-    expect(within(caseStudy).getByText(/05 · Results & Outcome/i)).toBeInTheDocument();
+  it("shows a visitor nothing at all when the vendor has published no work", async () => {
+    const { default: VendorProfile } = await import("@/pages/vendor/VendorProfile");
+    api.vendorAPI.byHandle.mockResolvedValueOnce(ok({ ...OTHER, work_items: [] }));
+    api.stockAPI.network.mockResolvedValueOnce(ok([]));
 
-    // 4. Submit a project inquiry and verify confirmation + Studio Dashboard
-    const inquiryForm = screen.getByRole("form", { name: /start a project inquiry form/i });
-    fireEvent.change(within(inquiryForm).getByLabelText(/Your name or studio/i), {
-      target: { value: "Zuri Collective" },
+    render(
+      <MemoryRouter initialEntries={["/@kibanda_kitchen"]}>
+        <Routes>
+          <Route path="/:rawHandle" element={<VendorProfile />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByRole("heading", { name: "Kibanda Kitchen" })).toBeInTheDocument();
+    // No empty box, no dashed placeholder, no heading with nothing under it.
+    expect(screen.queryByTestId("selected-work")).not.toBeInTheDocument();
+  });
+
+  it("lets the owner add a piece of work and take it down again", async () => {
+    const { default: VendorProfile } = await import("@/pages/vendor/VendorProfile");
+    api.vendorAPI.byHandle.mockResolvedValueOnce(ok({ ...ME, work_items: [] }));
+    api.stockAPI.network.mockResolvedValueOnce(ok([]));
+    api.vendorAPI.profile.mockResolvedValueOnce(ok({ work_items: [] }));
+    api.vendorAPI.updateProfile.mockResolvedValue(ok({}));
+
+    render(
+      <MemoryRouter initialEntries={["/@mama_mboga"]}>
+        <Routes>
+          <Route path="/:rawHandle" element={<VendorProfile />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    fireEvent.click(await screen.findByRole("button", { name: /add work/i }));
+
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.change(within(dialog).getByLabelText(/Title/i), {
+      target: { value: "Solstice Roasters — digital flagship" },
     });
-    fireEvent.change(within(inquiryForm).getByLabelText(/Project brief & goals/i), {
-      target: { value: "We need a full brand identity and web flagship for our Q4 launch." },
+    fireEvent.change(within(dialog).getByLabelText(/What came of it/i), {
+      target: { value: "Subscriptions doubled in the first quarter" },
     });
-    fireEvent.click(within(inquiryForm).getByRole("button", { name: /Send Project Brief/i }));
+    fireEvent.click(within(dialog).getByRole("button", { name: /add to shop front/i }));
 
-    const confirmation = await screen.findByTestId("inquiry-confirmation");
-    expect(confirmation).toHaveTextContent(/Zuri Collective/i);
+    await waitFor(() =>
+      expect(api.vendorAPI.updateProfile).toHaveBeenCalledWith({
+        work_items: [
+          expect.objectContaining({
+            title: "Solstice Roasters — digital flagship",
+            outcome: "Subscriptions doubled in the first quarter",
+          }),
+        ],
+      })
+    );
+    expect(await screen.findByText("Solstice Roasters — digital flagship")).toBeInTheDocument();
 
-    // Switch to Studio Operations Dashboard and verify the inquiry is listed
-    fireEvent.click(within(confirmation).getByRole("button", { name: /View in Studio Dashboard/i }));
-    const dashboard = await screen.findByTestId("studio-operations-dashboard");
-    expect(within(dashboard).getByText("Zuri Collective")).toBeInTheDocument();
+    // And down again — the capability is upkeep, not a one-off upload.
+    fireEvent.click(screen.getByRole("button", { name: /remove Solstice Roasters/i }));
+    await waitFor(() =>
+      expect(api.vendorAPI.updateProfile).toHaveBeenLastCalledWith({ work_items: [] })
+    );
+  });
+
+  it("no longer sends people to a separate creative portfolio shelf", async () => {
+    const { default: MePage } = await import("@/pages/me/MePage");
+    mount(<MePage />, "/me");
+
+    await screen.findByTestId("business-identity");
+    expect(screen.queryByRole("link", { name: /creative portfolio/i })).not.toBeInTheDocument();
+    // The capability is still discoverable — from the shelf it now lives on.
+    expect(screen.getByRole("link", { name: /shop front/i })).toHaveTextContent(/selected work/i);
   });
 });
 
