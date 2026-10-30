@@ -1,5 +1,6 @@
 import { NavLink } from "react-router-dom";
 import { BarChart3, ListChecks, Terminal } from "lucide-react";
+import { useAuthStore } from "@/stores/authStore";
 import { LogoMark } from "./Logo";
 import { SECTION_GROUPS } from "@/config/navigation";
 import { useUIStore } from "@/stores/uiStore";
@@ -23,8 +24,18 @@ const linkCls = ({ isActive }) =>
       : "text-ink-2 hover:text-ink-1 hover:bg-surface-2"
   );
 
-/** Secondary routes only: no Home, primary tabs, or operating-mode controls. */
+/**
+ * Secondary routes only: no Home, primary tabs, or operating-mode controls.
+ *
+ * The drawer is grouped, not expandable: three headings and a list of
+ * destinations. Collapsing groups would hide links behind a second tap on the
+ * screen people open specifically to find a link — the opposite of the point.
+ */
 export function SidebarContent({ onNavigate }) {
+  const vendor = useAuthStore((s) => s.vendor);
+  const resolve = (item) =>
+    item.dynamic === "shop" && vendor?.vendor_handle ? `/@${vendor.vendor_handle}` : item.to;
+
   return (
     <div className="flex flex-col h-full bg-surface-0">
       <div className="px-5 py-5 border-b border-edge-1 bg-surface-1">
@@ -47,10 +58,10 @@ export function SidebarContent({ onNavigate }) {
               {group.title}
             </h2>
             <div className="space-y-0.5">
-              {group.items.map(({ to, label, icon: Icon, quiet }) => (
+              {group.items.map(({ to, label, icon: Icon, quiet, dynamic }) => (
                 <NavLink
-                  key={to}
-                  to={to}
+                  key={label}
+                  to={resolve({ to, dynamic })}
                   onClick={onNavigate}
                   className={(state) => cn(linkCls(state), quiet && "text-ink-4")}
                 >

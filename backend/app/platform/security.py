@@ -21,6 +21,12 @@ from app.config import settings
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
+# Some surfaces (the guide, park listings) must work for a visitor who has not
+# signed in. Using ``oauth2_scheme`` there raises 401 before the handler runs, so
+# those routes depend on this one instead: it puts the token in the same
+# ``Authorization: Bearer`` header and lets the handler decide what absence means.
+oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
+
 
 def create_access_token(data: dict) -> str:
     to_encode = data.copy()

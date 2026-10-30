@@ -83,6 +83,12 @@ from app.routes import (
     ops as ops_routes,
 )
 from app.routes import (
+    guide as guide_routes,
+)
+from app.routes import (
+    parks as park_routes,
+)
+from app.routes import (
     squad as squad_routes,
 )
 from app.routes import (
@@ -196,6 +202,8 @@ app.add_middleware(
 # All routes
 app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(social_routes.router, prefix="/api/social", tags=["Social (Caesar)"])
+app.include_router(park_routes.router, prefix="/api/parks", tags=["Caesar Park"])
+app.include_router(guide_routes.router, prefix="/api/guide", tags=["Caesar Guide"])
 app.include_router(vendors.router, prefix="/api/vendors", tags=["Vendors"])
 app.include_router(stock.router, prefix="/api/stock", tags=["Stock (Not Listings)"])
 app.include_router(vendor_lists.router, prefix="/api/vendor-lists", tags=["Vendor Lists"])

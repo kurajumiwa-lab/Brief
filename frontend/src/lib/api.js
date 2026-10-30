@@ -481,6 +481,12 @@ export const marketsAPI = {
   join: (id) => api.post(`/markets/${id}/join`),
   leave: (id) => api.post(`/markets/${id}/leave`),
   welcome: (id, text) => api.put(`/markets/${id}/welcome`, { text }),
+  /** Markets around you, busiest first. No scan button — this is what Home calls. */
+  around: (params) => api.get("/markets/around", { params: noEmpty(params) }),
+  /** One market's activity: active vendors, listings, categories, four doors. */
+  activity: (id) => api.get(`/markets/${id}/activity`),
+  /** The market's live shelf — a join over its members' own published records. */
+  shelf: (id, params) => api.get(`/markets/${id}/shelf`, { params: noEmpty(params) }),
 };
 
 // ── Hustle League (Squad) — the real-work game ─────────────────────────────
@@ -715,6 +721,44 @@ export const socialAPI = {
   blocks: (params) => api.get("/social/blocks", { params: noEmpty(params) }),
   block: (targetId, kind = "block") => api.post("/social/blocks", { target_id: targetId, kind }),
   unblock: (targetId, kind = "block") => api.delete(`/social/blocks/${targetId}`, { params: { kind } }),
+};
+
+// ── Caesar the guide ───────────────────────────────────────────────────────
+/**
+ * Suggestions, the shelf map, and the demand signal.
+ *
+ * Every read here is deterministic server-side: a suggestion always traces to a
+ * live shelf row or to the declared shelf map, and `basis` says which. Nothing
+ * in this client decides what to suggest — it asks and renders.
+ */
+export const guideAPI = {
+  suggest: (q, params) => api.get("/guide/suggest", { params: noEmpty({ q, ...params }) }),
+  parse: (q) => api.get("/guide/parse", { params: { q } }),
+  next: (from) => api.get("/guide/next", { params: { from } }),
+  demand: (params) => api.get("/guide/demand", { params: noEmpty(params) }),
+  shelves: () => api.get("/guide/shelves"),
+  /** Fire-and-forget: a search happened. Never awaited by the UI. */
+  searched: (data) => api.post("/guide/searched", data),
+  /** Fire-and-forget: a shelf was opened. */
+  visited: (shelf) => api.post("/guide/visited", { shelf }),
+};
+
+// ── Caesar Park ────────────────────────────────────────────────────────────
+/**
+ * Bounded places with a gate. `bounded_by`, `entry_rule` and `rules` come back
+ * on the listing, so the screen can show the boundary before anybody knocks.
+ */
+export const parksAPI = {
+  list: (params) => api.get("/parks", { params: noEmpty(params) }),
+  get: (slug) => api.get(`/parks/${slug}`),
+  create: (data) => api.post("/parks", data),
+  join: (slug, leash = "off") => api.post(`/parks/${slug}/join`, null, { params: { leash } }),
+  leave: (slug) => api.post(`/parks/${slug}/leave`),
+  setLeash: (slug, leash) => api.patch(`/parks/${slug}/leash`, { leash }),
+  linkCircle: (slug, circleId, offLeash = false) =>
+    api.post(`/parks/${slug}/circles`, null, { params: { circle_id: circleId, off_leash: offLeash } }),
+  feed: (slug, params) => api.get(`/parks/${slug}/feed`, { params: noEmpty(params) }),
+  post: (slug, body, lang = "en") => api.post(`/parks/${slug}/posts`, { body, lang }),
 };
 
 export default api;

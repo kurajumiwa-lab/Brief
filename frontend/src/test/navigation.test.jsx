@@ -109,10 +109,21 @@ describe("Outside navigation map", () => {
   });
 
   it("keeps the long tail out of the primary tabs and out of Home", () => {
+    // v4.1 regrouped the drawer: the long tail is now organised (community &
+    // network, workspace tools, administration) instead of being a two-item
+    // list. The rule that still has to hold is the one that matters — nothing
+    // in the drawer is a primary destination, and nothing in it is Home.
     const secondary = SECTION_GROUPS.flatMap((group) => group.items);
-    expect(secondary.map(({ to }) => to)).toEqual(["/groups", "/events", "/ops"]);
+    const primaryTargets = PRIMARY_NAV.map((item) => item.to);
+
     expect(secondary.some((item) => item.to === "/" || item.label.toLowerCase() === "home")).toBe(false);
-    expect(secondary.some((item) => ["/orders", "/chat", "/stock", "/analytics", "/tasks",
-      "/lists", "/locks", "/tools", "/pos", "/feed", "/governance"].includes(item.to))).toBe(false);
+    expect(secondary.every((item) => !primaryTargets.includes(item.to))).toBe(true);
+
+    // The three groups exist, in the order a person looks for them.
+    expect(SECTION_GROUPS.map((group) => group.title)).toEqual([
+      "Community & network", "Workspace tools", "Administration",
+    ]);
+    // And the routes the drawer has always carried are still reachable.
+    expect(secondary.map(({ to }) => to)).toEqual(expect.arrayContaining(["/groups", "/events", "/ops"]));
   });
 });

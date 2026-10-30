@@ -55,6 +55,19 @@ const MARKET = {
   id: "z-1", kind: "markets", name: "Kibuye Market", city: "Kisumu", country: "Kenya",
   lat: -1.29, lng: 36.82, members: 0, places: 214, claimed: 3, distance_km: 1.1,
   last_ingest_at: new Date().toISOString(), last_ingest_count: 214, welcome: null,
+  // The activity layer the market screen now reads. Registered stays 0 while
+  // mapped places are 214: that is the unworked market, and the screen must
+  // still make it obvious that this is where somebody should start.
+  registered: 0, active_vendors: 0, selling_vendors: 0, listings: 0,
+  services: 0, equipment: 0, recent_vendors: 0, categories: [],
+  explore: [
+    { key: "goods", label: "Goods", blurb: "Products vendors sell", available: false, count: 0 },
+    { key: "people", label: "People", blurb: "Find local vendors", available: false, count: 0 },
+    { key: "services", label: "Services", blurb: "Find service providers", available: false, count: 0 },
+    { key: "equipment", label: "Equipment", blurb: "Find tools and equipment", available: false, count: 0 },
+  ],
+  empty: true, i_am_member: false,
+  invitation: "No trader has claimed Kibuye Market yet. If you trade here, be the first.",
 };
 
 const calls = { nearby: [], place: [], market: [], join: [], tools: [] };
@@ -79,6 +92,8 @@ vi.mock("@/lib/api", () => {
       list: vi.fn(() => ok({ markets: [MARKET, { ...MARKET, id: "z-2", name: "Nairobi Wholesale", city: "Nairobi" }], countries: ["Kenya"] })),
       mine: vi.fn(() => ok({ markets: [] })),
       join: vi.fn((id) => { calls.join.push(id); return ok({ message: "joined" }); }),
+      activity: vi.fn((id) => { calls.market.push(id); return ok({ ...MARKET, id }); }),
+      shelf: vi.fn(() => ok({ kind: "goods", items: [], count: 0 })),
       leave: vi.fn(() => ok({ message: "left" })),
       welcome: vi.fn(() => ok({})),
     },
@@ -304,21 +319,24 @@ describe("Place", () => {
 
 // ── a market's own screen ────────────────────────────────────────────────────
 describe("Market", () => {
-  it("names the unworked market as a number a vendor can act on", async () => {
+  it("names the unworked market as something a vendor can act on", async () => {
     const { default: MarketDetail } = await import("@/pages/markets/MarketDetail");
     renderAt("/markets/:id", "/markets/z-1", <MarketDetail />);
     await waitFor(() => expect(screen.getByRole("heading", { name: "Kibuye Market" })).toBeInTheDocument());
     expect(calls.market).toEqual(["z-1"]);
-    expect(screen.getByText("214")).toBeInTheDocument();      // mapped places
-    expect(screen.getByText("Unworked")).toBeInTheDocument(); // places > 0, members 0
-    expect(screen.getByText("mapped places")).toBeInTheDocument();
+    // An empty market says what claiming it would do, in one sentence, instead
+    // of a row of zeroes.
+    // It appears on the card and again on the empty shelf — both are the
+    // market's own invitation, not two different stories.
+    expect(screen.getAllByText(/be the first/i).length).toBeGreaterThan(0);
+    expect(screen.getByText("Inviting")).toBeInTheDocument();
   });
 
-  it("registers you from the market's screen", async () => {
+  it("joins you from the market's screen, and says what joining does", async () => {
     const { default: MarketDetail } = await import("@/pages/markets/MarketDetail");
     renderAt("/markets/:id", "/markets/z-1", <MarketDetail />);
-    await waitFor(() => expect(screen.getByText("Register here")).toBeInTheDocument());
-    fireEvent.click(screen.getByText("Register here"));
+    await waitFor(() => expect(screen.getByText("Claim this market")).toBeInTheDocument());
+    fireEvent.click(screen.getByText("Claim this market"));
     await waitFor(() => expect(calls.join).toEqual(["z-1"]));
   });
 });

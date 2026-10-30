@@ -4,6 +4,7 @@ import {
   Store, Ticket, Users,
 } from "lucide-react";
 import Badge from "@/components/ui/Badge";
+import { CategoryPill } from "@/components/explore/CategoryTiles";
 import { cn } from "@/lib/utils";
 import { TEMPLATE_LABELS } from "@/lib/inference";
 import { relativeTime, shortDateTime } from "@/lib/formatters";
@@ -68,7 +69,6 @@ export default function ContentCard({ item, onReact, compact = false, className 
   const kind = KIND_META[item.kind] || KIND_META.post;
   const response = RESPONSES[item.kind] || RESPONSES.post;
   const active = Boolean(item.reactions?.[response.reaction]);
-  const meta = KIND_META[item.kind];
 
   return (
     <article
@@ -90,7 +90,8 @@ export default function ContentCard({ item, onReact, compact = false, className 
             className="h-full w-full object-cover transition-transform duration-3 group-hover:scale-[1.02]"
           />
           <span className="absolute left-2 top-2">
-            <Badge variant={meta?.variant || "gray"} size="sm">{kind.label}</Badge>
+            {/* The same hue the category had in the Explore selector. */}
+            <CategoryPill kind={item.kind} label={kind.label} className="shadow-xs" />
           </span>
         </div>
       ) : (
@@ -104,7 +105,7 @@ export default function ContentCard({ item, onReact, compact = false, className 
       <div className="flex flex-1 flex-col gap-2 p-4">
         {!item.image && (
           <div className="flex flex-wrap items-center gap-1.5">
-            <Badge variant={meta?.variant || "gray"} size="sm">{kind.label}</Badge>
+            <CategoryPill kind={item.kind} label={kind.label} />
             {item.meta?.inferred_template && TEMPLATE_LABELS[item.meta.inferred_template] && (
               <Badge variant="gray" size="sm">{TEMPLATE_LABELS[item.meta.inferred_template]}</Badge>
             )}

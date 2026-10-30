@@ -97,3 +97,9 @@ __all__ = [
     "LocalActivity", "ActivityResponse", "ActivityBooking", "ActivityFeedback",
     "ActivityLedgerEvent", "ActivityWatch", "SavedRelationship",
 ]
+
+from app.models.guide import GuideSearch, GuideShelfVisit
+from app.models.park import (
+    CaesarPark, CaesarParkCircle, CaesarParkMembership, CaesarParkPost,
+    PARK_KINDS, ENTRY_RULES, MEMBERSHIP_STATUS, LEASH_STATES,
+)

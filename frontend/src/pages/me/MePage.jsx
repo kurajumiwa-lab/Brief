@@ -353,111 +353,117 @@ export default function MePage() {
 
   return (
     <div className="space-y-8 sm:space-y-10">
-      {/* ── Profile, Ledger & Business Control Centre Hero ───────────────── */}
+      {/* ── 00 / Business identity ──────────────────────────────────────────
+          One compact panel, not a hero image. The old block spent a third of
+          a phone screen on gradients, one avatar and four equal-weight
+          actions; the same information fits in half the height once the
+          metrics are a single row and only ONE action is primary. */}
       <section
         aria-label="Business control centre"
-        className="relative isolate overflow-hidden rounded-[1.75rem] sm:rounded-[2rem] bg-[#17251E] text-white px-5 py-6 sm:px-8 sm:py-8 space-y-5"
+        data-testid="business-identity"
+        className="relative isolate overflow-hidden rounded-[1.5rem] bg-[#102C24] px-4 py-4 text-white sm:px-6 sm:py-5"
       >
         <div
           className="absolute inset-0 -z-10"
           style={{
             backgroundImage:
-              "radial-gradient(circle at 88% 12%, rgb(var(--orchid-500) / 0.35), transparent 34%), radial-gradient(circle at 18% 120%, rgb(var(--brand-500) / 0.28), transparent 55%)",
+              "radial-gradient(circle at 92% 0%, rgb(var(--brand-500) / 0.22), transparent 46%)",
           }}
           aria-hidden="true"
         />
 
-        <div className="flex flex-wrap items-center gap-4">
+        <div className="flex items-center gap-3">
           <Avatar
             name={vendor.display_name || vendor.business_name}
             src={vendor.logo_url || vendor.avatar_url || undefined}
             size="lg"
-            className="ring-2 ring-white/20 rounded-2xl shrink-0"
+            className="shrink-0 rounded-2xl ring-2 ring-white/15"
           />
           <div className="min-w-0 flex-1">
             <p className="text-micro font-bold uppercase tracking-[0.14em] text-brand-100 dark:text-brand-300">
               {accountKindMeta.label} · Your business workspace
             </p>
-            <h1 className="mt-1 text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
+            <h1 className="mt-0.5 truncate text-xl font-extrabold tracking-tight text-white sm:text-2xl">
               {vendor.display_name || vendor.business_name}
             </h1>
-            <p className="mt-0.5 text-sm text-[#C4D1C8]">
-              @{vendor.vendor_handle} · {role.hint}
+            {/* One line of identity: handle and trading mode, said once. */}
+            <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-2xs text-[#C4D1C8]">
+              <span className="truncate">@{vendor.vendor_handle} ·</span>
+              <span className="font-semibold text-white">
+                {role.emoji} Currently {role.label.toLowerCase()}
+              </span>
+              {vendor.hide_exact_location && (
+                <span className="inline-flex items-center gap-0.5 rounded-full bg-white/10 px-1.5 py-0.5 text-micro">
+                  <Lock size={9} aria-hidden="true" /> Approximate
+                </span>
+              )}
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {vendor.hide_exact_location && (
-              <Badge variant="green" size="md" className="!bg-emerald-500/20 !text-emerald-100 !border !border-emerald-300/30">
-                <Lock size={11} className="mr-1 inline" /> Approximate public location
-              </Badge>
-            )}
-            <Badge variant="purple" size="md" className="!bg-white/10 !text-white !border !border-white/20">
-              {role.emoji} Currently {role.label.toLowerCase()}
-            </Badge>
+          <div className="flex shrink-0 items-center gap-1.5">
             <Link
               to={`/@${vendor.vendor_handle}?edit=1`}
               aria-label="Edit business profile"
-              className="grid place-items-center w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors"
+              className="grid h-9 w-9 place-items-center rounded-xl bg-white/10 text-white transition-colors hover:bg-white/20"
             >
-              <Settings size={18} aria-hidden="true" />
+              <Settings size={16} aria-hidden="true" />
             </Link>
           </div>
         </div>
 
-        {/* Live counts row */}
-        <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
-          <div className="rounded-2xl bg-[#314238] px-3.5 py-3">
-            <p className="text-micro font-semibold text-[#D5E4D9]">Stock items</p>
-            <p className="mt-1 text-2xl font-extrabold text-white tabular-nums">
-              {shelfReady ? String(mine.length) : "—"}
-            </p>
-          </div>
-          <div className="rounded-2xl bg-[#314238] px-3.5 py-3">
-            <p className="text-micro font-semibold text-[#D5E4D9]">Visible listings</p>
-            <p className="mt-1 text-2xl font-extrabold text-white tabular-nums">
-              {shelfReady ? String(visibleCount) : "—"}
-            </p>
-          </div>
-          <div className="rounded-2xl bg-[#314238] px-3.5 py-3">
-            <p className="text-micro font-semibold text-[#D5E4D9]">Open trades</p>
-            <p className="mt-1 text-2xl font-extrabold text-white tabular-nums">
-              {String(openTrades)}
-            </p>
-          </div>
-        </div>
-
-        {/* Dual primary actions: Post local activity + Optional Add stock */}
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Link
-            to="/create?type=available"
-            className="group block rounded-2xl bg-white/10 hover:bg-white/15 border border-white/20 text-white p-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
-          >
-            <div className="flex items-center gap-2.5">
-              <Home size={20} className="text-brand-200 shrink-0" aria-hidden="true" />
-              <span className="text-base font-extrabold">Post a local activity</span>
-              <ArrowUpRight size={18} className="ml-auto text-white/80" aria-hidden="true" />
+        {/* Three numbers, one row, no boxes: the panel is the container. */}
+        <dl className="mt-3 flex items-stretch border-t border-white/10 pt-3">
+          {[
+            ["Stock items", shelfReady ? String(mine.length) : "—"],
+            ["Listings", shelfReady ? String(visibleCount) : "—"],
+            ["Open trades", String(openTrades)],
+          ].map(([label, value], index) => (
+            <div
+              key={label}
+              className={cn(
+                "min-w-0 flex-1 px-3",
+                index === 0 ? "pl-0" : "border-l border-white/10",
+              )}
+            >
+              <dt className="text-micro font-semibold text-[#B8C9C0]">{label}</dt>
+              <dd className="mt-0.5 text-xl font-extrabold tabular-nums leading-none text-white">
+                {value}
+              </dd>
             </div>
-            <p className="mt-1 text-xs text-[#D5E4D9]">
-              Available, Wanted, Scheduled round, or Opportunity — no shop needed.
-            </p>
+          ))}
+        </dl>
+
+        {/* One primary action. Everything else is a quiet second. */}
+        <div className="mt-3 grid gap-2 sm:grid-cols-[1.6fr_1fr]">
+          <Link
+            to="/stock?new=1"
+            className="group flex items-center gap-2.5 rounded-xl bg-[#DDF5E7] px-3 py-2.5 text-[#145A40] transition-colors hover:bg-[#CBEED9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+          >
+            <PlusCircle size={18} className="shrink-0" aria-hidden="true" />
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-extrabold leading-tight">Add stock</span>
+              <span className="block truncate text-micro text-[#175C43]/90">
+                A product or service buyers can find.
+              </span>
+            </span>
+            <ArrowUpRight
+              size={16}
+              className="shrink-0 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
+              aria-hidden="true"
+            />
           </Link>
 
           <Link
-            to="/stock?new=1"
-            className="group block rounded-2xl bg-[#DDF5E7] hover:bg-[#CBEED9] text-[#175C43] p-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            to="/create?type=available"
+            className="group flex items-center gap-2.5 rounded-xl bg-white/10 px-3 py-2.5 text-white transition-colors hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
           >
-            <div className="flex items-center gap-2.5">
-              <PlusCircle size={20} className="text-[#175C43] shrink-0" aria-hidden="true" />
-              <span className="text-base font-extrabold text-[#175C43]">Add stock</span>
-              <ArrowUpRight
-                size={18}
-                className="ml-auto text-[#175C43] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform"
-                aria-hidden="true"
-              />
-            </div>
-            <p className="mt-1 text-xs text-[#175C43]/90">
-              List a product or service for buyers to discover.
-            </p>
+            <Home size={17} className="shrink-0 text-brand-200" aria-hidden="true" />
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-bold leading-tight">Local activity</span>
+              <span className="block truncate text-micro text-[#C4D1C8]">
+                A round, a request, an opportunity.
+              </span>
+            </span>
+            <ArrowUpRight size={15} className="shrink-0 text-white/70" aria-hidden="true" />
           </Link>
         </div>
       </section>
@@ -718,9 +724,9 @@ export default function MePage() {
         <div className="flex items-end justify-between gap-4">
           <div>
             <p className="text-micro font-bold uppercase tracking-[0.14em] text-brand-700 dark:text-brand-300">
-              Control centre
+              01 / Workspace
             </p>
-            <h2 id="quick-actions-heading" className="mt-1 text-xl font-bold text-ink-1">
+            <h2 id="quick-actions-heading" className="mt-1 text-lg font-bold text-ink-1">
               Quick actions
             </h2>
           </div>
