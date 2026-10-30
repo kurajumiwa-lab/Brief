@@ -86,8 +86,14 @@ export function SelectedWork({ items = [], own = false, onAdd, onRemove }) {
             <Badge variant="outline" size="xs">
               {items.length} / {MAX_VISIBLE_WORK}
             </Badge>
-            <Button size="sm" variant="secondary" icon={Plus} onClick={onAdd}>
-              Add work
+            <Button
+              size="sm"
+              variant="secondary"
+              icon={Plus}
+              onClick={onAdd}
+              disabled={items.length >= MAX_VISIBLE_WORK}
+            >
+              {items.length >= MAX_VISIBLE_WORK ? "Showcase full" : "Add work"}
             </Button>
           </div>
         )}
