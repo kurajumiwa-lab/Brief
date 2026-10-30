@@ -19,7 +19,12 @@ class CatalogError(Exception):
 
 def _offer_out(o: catalog.Offer) -> dict:
     return {
-        "key": o.key, "line": o.line, "name": o.name,
+        "key": o.key, "line": o.line,
+        "desk": catalog.desk_for_offer(o),
+        # The permitted next step travels WITH the offer, so no screen can
+        # offer a checkout button for a pilot or a not-yet-live service.
+        "cta": catalog.cta_for(o.readiness),
+        "name": o.name,
         "price_min_kes": o.price_min_kes, "price_max_kes": o.price_max_kes,
         "price_unit": o.price_unit, "price_status": "test_range_not_market_verified",
         "readiness": o.readiness, "readiness_note": o.readiness_note,
@@ -63,6 +68,26 @@ def trial_example(*, today_: Optional[date] = None) -> dict:
     }
 
 
+def _desk_out(d: dict) -> dict:
+    offers = catalog.offers_for_desk(d["key"])
+    priced = [o.price_min_kes for o in offers if o.price_min_kes is not None]
+    return {
+        **d,
+        "offers": [_offer_out(o) for o in offers],
+        "offer_count": len(offers),
+        # A cheap honest signal for the picker: "from KSh 2,500", or nothing at
+        # all when every offer in the desk is quoted rather than published.
+        "starting_price_kes": min(priced) if priced else None,
+        "lead_offer_key": offers[0].key if offers else None,
+        "readiness": sorted({o.readiness for o in offers}),
+    }
+
+
+def desks_payload() -> list[dict]:
+    """The five buying needs, each with the offers that answer it."""
+    return [_desk_out(d) for d in catalog.DESKS]
+
+
 def catalogue_payload() -> dict:
     return {
         "headline": "Sell what businesses already buy",
@@ -76,6 +101,9 @@ def catalogue_payload() -> dict:
             for line in catalog.LINES
         ],
         "offers": [_offer_out(o) for o in catalog.OFFERS],
+        # The buying taxonomy: five needs a customer can recognise, each with
+        # its own offers, price floor and permitted actions.
+        "desks": desks_payload(),
         "account_tiers": [_tier_out(t) for t in catalog.ACCOUNT_TIERS],
         "verification_note": catalog.VERIFICATION_NOTE,
         "trial": trial_example(),
@@ -101,9 +129,14 @@ def account_tier_for_plan(plan_tier: Optional[str]) -> dict:
 
 
 def _enquiry_out(e: CatalogEnquiry) -> dict:
+    desk = catalog.desk_by_key(e.desk_key) if getattr(e, "desk_key", None) else None
     return {
         "id": str(e.id), "offer_key": e.offer_key, "tier_key": e.tier_key,
-        "kind": e.kind, "organisation_name": e.organisation_name,
+        "kind": e.kind,
+        "desk_key": getattr(e, "desk_key", None),
+        "desk_title": desk["title"] if desk else None,
+        "offer_name": catalog.offer_by_key(e.offer_key).name if e.offer_key and catalog.offer_by_key(e.offer_key) else None,
+        "organisation_name": e.organisation_name,
         "contact_name": e.contact_name, "contact_phone": e.contact_phone,
         "notes": e.notes, "status": e.status,
         "acknowledged_first_charge": bool(e.acknowledged_first_charge),
@@ -121,18 +154,34 @@ async def create_enquiry(db: AsyncSession, vendor: Vendor, *, kind: str,
                          offer_key: Optional[str], tier_key: Optional[str],
                          organisation_name: Optional[str], contact_name: Optional[str],
                          contact_phone: Optional[str], notes: Optional[str],
-                         acknowledged_first_charge: bool) -> dict:
+                         acknowledged_first_charge: bool,
+                         desk_key: Optional[str] = None) -> dict:
     kind_clean = (kind or "purchase").strip().lower()
-    if kind_clean not in ("purchase", "trial", "quotation", "discovery_call"):
-        raise CatalogError(f"Unknown enquiry kind '{kind}'", status=400)
+    if kind_clean not in catalog.ENQUIRY_KINDS:
+        raise CatalogError(f"Unknown enquiry kind '{kind_clean}'", status=400)
     offer = catalog.offer_by_key(offer_key) if offer_key else None
     if offer_key and offer is None:
         raise CatalogError(f"Unknown offer '{offer_key}'", status=400)
     tier = catalog.tier_by_key(tier_key) if tier_key else None
     if tier_key and tier is None:
         raise CatalogError(f"Unknown account tier '{tier_key}'", status=400)
-    if kind_clean in ("purchase", "quotation") and offer is None and tier is None:
-        raise CatalogError("Choose an offer or an account tier to enquire about", status=400)
+    # Purchase and quotation are commitments to *something*: they need an offer
+    # or an account tier. A pilot, a requirements submission and a registered
+    # interest are also allowed at desk level ("custom business solutions"),
+    # where the whole point is that no product has been chosen yet.
+    if kind_clean in ("purchase", "quotation", "pilot", "interest") and offer is None and tier is None:
+        raise CatalogError("Choose a service to enquire about", status=400)
+
+    # Which desk the request belongs to, so an operator routes it without
+    # reverse-engineering the offer key. An offer always wins over the client's
+    # claim; a request with no offer belongs to "custom" unless a known desk
+    # was named.
+    desk_clean = catalog.desk_for_offer(offer) if offer else None
+    if desk_clean is None:
+        named = catalog.desk_by_key(desk_key) if desk_key else None
+        if desk_key and named is None:
+            raise CatalogError(f"Unknown business desk '{desk_key}'", status=400)
+        desk_clean = named["key"] if named else "custom"
 
     first_amount = first_date = None
     if kind_clean == "trial":
@@ -150,6 +199,7 @@ async def create_enquiry(db: AsyncSession, vendor: Vendor, *, kind: str,
         offer_key=offer.key if offer else None,
         tier_key=tier.key if tier else None,
         kind=kind_clean,
+        desk_key=desk_clean,
         organisation_name=(organisation_name or "").strip() or None,
         contact_name=(contact_name or "").strip() or None,
         contact_phone=(contact_phone or "").strip() or None,
@@ -170,3 +220,70 @@ async def my_enquiries(db: AsyncSession, vendor: Vendor) -> list[dict]:
         .order_by(CatalogEnquiry.created_at.desc()).limit(50)
     )).scalars().all()
     return [_enquiry_out(e) for e in rows]
+
+
+# ── enquiry management (operators, not customers) ───────────────────────────
+
+def _desk_label(key: Optional[str]) -> str:
+    desk = catalog.desk_by_key(key) if key else None
+    return desk["title"] if desk else "Unrouted"
+
+
+async def inbox(db: AsyncSession, *, status: Optional[str] = None,
+                desk_key: Optional[str] = None, limit: int = 100) -> dict:
+    """Every enquiry, newest first, for the people who answer them.
+
+    Grouped by desk and then by status, because the only question an operator
+    has is "what came in that nobody has picked up yet" — not "show me a table
+    of rows".
+    """
+    stmt = select(CatalogEnquiry, Vendor.vendor_handle, Vendor.business_name).join(
+        Vendor, Vendor.id == CatalogEnquiry.vendor_id
+    )
+    if status:
+        clean = status.strip().lower()
+        if clean not in ("new", "contacted", "quoted", "won", "lost"):
+            raise CatalogError(f"Unknown enquiry status '{status}'", status=400)
+        stmt = stmt.where(CatalogEnquiry.status == clean)
+    if desk_key:
+        stmt = stmt.where(CatalogEnquiry.desk_key == desk_key.strip().lower())
+    rows = (await db.execute(
+        stmt.order_by(CatalogEnquiry.created_at.desc()).limit(max(1, min(limit, 300)))
+    )).all()
+
+    items = []
+    for enquiry, handle, business in rows:
+        items.append({
+            **_enquiry_out(enquiry),
+            "vendor_handle": handle,
+            "vendor_business": business,
+            "desk_title": _desk_label(getattr(enquiry, "desk_key", None)),
+        })
+    by_desk: dict = {}
+    for item in items:
+        by_desk.setdefault(item.get("desk_key") or "custom", []).append(item)
+    return {
+        "items": items,
+        "count": len(items),
+        "by_desk": [
+            {"key": key, "title": _desk_label(key), "count": len(bucket)}
+            for key, bucket in by_desk.items()
+        ],
+        "unpicked": sum(1 for i in items if i["status"] == "new"),
+        "note": "An enquiry is a lead with the offer's fixed scope attached — never a payment.",
+    }
+
+
+async def set_status(db: AsyncSession, enquiry_id, *, status: str) -> dict:
+    clean = (status or "").strip().lower()
+    if clean not in ("new", "contacted", "quoted", "won", "lost"):
+        raise CatalogError(f"Unknown enquiry status '{status}'", status=400)
+    enquiry = (await db.execute(
+        select(CatalogEnquiry).where(CatalogEnquiry.id == enquiry_id)
+    )).scalar_one_or_none()
+    if enquiry is None:
+        raise CatalogError("Enquiry not found", status=404)
+    enquiry.status = clean
+    await db.commit()
+    await db.refresh(enquiry)
+    return _enquiry_out(enquiry)

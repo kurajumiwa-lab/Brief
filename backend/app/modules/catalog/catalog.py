@@ -39,6 +39,9 @@ class Offer:
     exclusions: tuple[str, ...]
     customer_must_provide: tuple[str, ...]
     revisions: Optional[str] = None
+    # Which of the five buying needs this offer answers. Empty means "the same
+    # as its line" — set it only where a need is narrower than the line.
+    desk: str = ""
 
 
 LINES: tuple[dict, ...] = (
@@ -178,7 +181,7 @@ OFFERS: tuple[Offer, ...] = (
         customer_must_provide=("Officer list and a supervisor", "Officers' consent to a work profile on their own phones"),
     ),
     Offer(
-        key="android_device_enrolment", line="field_operations",
+        key="android_device_enrolment", line="field_operations", desk="device_management",
         name="Android device enrolment and configuration",
         price_min_kes=None, price_max_kes=None, price_unit="scoped",
         readiness="scoped",
@@ -189,7 +192,7 @@ OFFERS: tuple[Offer, ...] = (
         customer_must_provide=("Devices or officers' own phones, with owner consent", "An EMM/Android Enterprise admin account"),
     ),
     Offer(
-        key="device_procurement_support", line="field_operations",
+        key="device_procurement_support", line="field_operations", desk="device_management",
         name="Device procurement and ongoing support",
         price_min_kes=None, price_max_kes=None, price_unit="scoped",
         readiness="scoped",
@@ -343,6 +346,109 @@ BYOD_VS_MANAGED: tuple[dict, ...] = (
         ),
     },
 )
+
+
+# ── the business desk: five needs, not three product lines ───────────────────
+#
+# A buyer arrives with a need ("I need a website", "our officers need to file
+# reports"), not with knowledge of how the catalogue is organised internally.
+# These five groups are the *buying* taxonomy. The three `LINES` above remain
+# the *commercial* taxonomy — one line can contain more than one buying need,
+# which is exactly why device management is its own door inside field
+# operations.
+
+DESKS: tuple[dict, ...] = (
+    {
+        "key": "digital_services", "title": "Digital services",
+        "blurb": "Websites, branding, design and automation.",
+        "enquiry_only": False,
+    },
+    {
+        "key": "business_software", "title": "Business software",
+        "blurb": "Business records, memberships and workspaces.",
+        "enquiry_only": False,
+    },
+    {
+        "key": "field_operations", "title": "Field operations",
+        "blurb": "Field teams, mobile forms and reporting.",
+        "enquiry_only": False,
+    },
+    {
+        "key": "device_management", "title": "Device management",
+        "blurb": "Android deployment and device administration.",
+        "enquiry_only": False,
+    },
+    {
+        # The door for "none of the above". It has no offers by design: the
+        # only honest answer to an unclassified need is a conversation, so the
+        # form is the product.
+        "key": "custom", "title": "Custom business solutions",
+        "blurb": "Tell us what your organisation needs.",
+        "enquiry_only": True,
+    },
+)
+
+
+# ── what a customer may do about an offer, decided by its readiness ──────────
+#
+# This table is the guard rail the interface is not allowed to override: a
+# pilot cannot be "purchased", and something not yet live cannot be bought at
+# all. The server sends the action with the offer, so a screen cannot invent a
+# checkout button for work that does not exist.
+
+CTA_FOR_READINESS: dict[str, dict] = {
+    "available_now": {
+        "kind": "purchase", "label": "Purchase or enquire",
+        "note": "Live today. Send an enquiry and a human confirms scope, then invoices. "
+                "No card is collected in the app.",
+    },
+    "service": {
+        "kind": "quotation", "label": "Request a quotation",
+        "note": "Delivered as a service by people. A written quotation fixes scope, "
+                "dates and price before any work starts.",
+    },
+    "pilot": {
+        "kind": "pilot", "label": "Request pilot participation",
+        "note": "Sold as a supervised pilot with a named scope. Nothing is charged "
+                "until the pilot terms are agreed in writing.",
+    },
+    "scoped": {
+        "kind": "requirements", "label": "Submit requirements",
+        "note": "No public price: hardware, licences and integrations decide it. "
+                "Send requirements and a written quotation follows.",
+    },
+    "not_yet_live": {
+        "kind": "interest", "label": "Register interest",
+        "note": "Not live yet. Registering interest records a request; nothing is "
+                "sold, charged or promised.",
+    },
+}
+
+# Every enquiry kind the desk may record. The first four existed before the
+# desk; the last three are the actions the readiness table above can produce.
+ENQUIRY_KINDS: tuple[str, ...] = (
+    "purchase", "trial", "quotation", "discovery_call",
+    "pilot", "requirements", "interest",
+)
+
+
+def desk_for_offer(o: Offer) -> str:
+    """The buying need an offer answers."""
+    return o.desk or o.line
+
+
+def desk_by_key(key: str) -> Optional[dict]:
+    clean = (key or "").strip().lower()
+    return next((d for d in DESKS if d["key"] == clean), None)
+
+
+def cta_for(readiness: str) -> dict:
+    """What a customer may do, given how ready the offer truthfully is."""
+    return CTA_FOR_READINESS.get(readiness) or CTA_FOR_READINESS["not_yet_live"]
+
+
+def offers_for_desk(key: str) -> tuple[Offer, ...]:
+    return tuple(o for o in OFFERS if desk_for_offer(o) == key)
 
 
 def offer_by_key(key: str) -> Optional[Offer]:

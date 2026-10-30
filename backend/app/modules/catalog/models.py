@@ -33,7 +33,11 @@ from sqlalchemy.dialects.postgresql import UUID
 
 from app.database import Base
 
-ENQUIRY_KINDS = ("purchase", "trial", "quotation", "discovery_call")
+# The first four predate the business desk; the rest are the actions the desk's
+# readiness table is allowed to produce. Kept in the same order as
+# `catalog.ENQUIRY_KINDS` so the two never drift.
+ENQUIRY_KINDS = ("purchase", "trial", "quotation", "discovery_call",
+                 "pilot", "requirements", "interest")
 ENQUIRY_STATUSES = ("new", "contacted", "quoted", "won", "lost")
 
 
@@ -41,7 +45,8 @@ class CatalogEnquiry(Base):
     __tablename__ = "catalog_enquiries"
     __table_args__ = (
         CheckConstraint(
-            "kind IN ('purchase','trial','quotation','discovery_call')",
+            "kind IN ('purchase','trial','quotation','discovery_call',"
+            "'pilot','requirements','interest')",
             name="ck_catalog_enquiry_kind",
         ),
         CheckConstraint(
@@ -59,6 +64,10 @@ class CatalogEnquiry(Base):
     offer_key = Column(String(64), nullable=True)
     tier_key = Column(String(24), nullable=True)
     kind = Column(String(24), nullable=False, default="purchase", server_default="purchase")
+    # Which of the five buying needs this arrived through. Recorded so an
+    # operator can route the request without decoding the offer key — and so a
+    # "custom business solutions" enquiry (no offer at all) is still routable.
+    desk_key = Column(String(32), nullable=True, index=True)
     organisation_name = Column(String(200), nullable=True)
     contact_name = Column(String(200), nullable=True)
     contact_phone = Column(String(40), nullable=True)

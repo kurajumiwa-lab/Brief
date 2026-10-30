@@ -86,8 +86,8 @@ const QUICK_ACTIONS = [
 
 const DESTINATIONS = [
   {
-    title: "Storefront & catalogue",
-    description: "Sell services, software and field operations: offers, account tiers, trial and enquiries.",
+    title: "Business desk",
+    description: "Choose what your business needs — services, software, field operations and devices.",
     to: () => "/storefront",
     icon: ShoppingBag,
     tone: "green",

@@ -10,7 +10,7 @@ import NearbyPage from "@/pages/nearby/NearbyPage";
 import PlaceProfile from "@/pages/nearby/PlaceProfile";
 import MarketDetail from "@/pages/markets/MarketDetail";
 import TaskTrack from "@/pages/tasks/TaskTrack";
-import StorefrontPage from "@/pages/storefront/StorefrontPage";
+import BusinessDeskPage from "@/pages/storefront/BusinessDeskPage";
 import CreatePage from "@/pages/create/CreatePage";
 import MorningBriefPage from "@/pages/brief/MorningBriefPage";
 import LegalPage from "@/pages/legal/LegalPage";
@@ -69,6 +69,8 @@ const Analytics = lazy(() => import("@/pages/analytics/Analytics"));
 const Ops = lazy(() => import("@/pages/ops/Ops"));
 const VendorProfile = lazy(() => import("@/pages/vendor/VendorProfile"));
 const CreativePortfolioPage = lazy(() => import("@/pages/portfolio/CreativePortfolioPage"));
+// Operator-only: kept out of the bundle a customer downloads.
+const EnquiryInboxPage = lazy(() => import("@/pages/storefront/EnquiryInboxPage"));
 
 /** Signed in, but the profile call failed. Saying so — with the server's own
     words — beats the old silent bounce to /auth, which was indistinguishable
@@ -149,7 +151,10 @@ function AppRoutes() {
       <Route path="/auth" element={<AuthPage />} />
       {/* Public storefront (v2.14): catalogue, tiers, trial — readable without
           an account; enquiring attaches to a vendor @handle. */}
-      <Route path="/storefront" element={<StorefrontPage />} />
+      <Route path="/storefront" element={<BusinessDeskPage />} />
+      {/* Operator side of the same desk: where a request lands. The API answers
+          403 for anyone without a market-ops role, so the page can be public. */}
+      <Route path="/storefront/inbox" element={<EnquiryInboxPage />} />
       <Route
         element={
           <RequireVendor>

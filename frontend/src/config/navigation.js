@@ -2,7 +2,7 @@ import {
   Home, Compass, ClipboardList, Store, Map, Newspaper, Package,
   Truck, MapPin, Users, Wrench, CalendarDays, Terminal, UserRound, Building2,
   Plus, Bell, MessagesSquare, ShieldCheck, Layers3, BarChart3, FileCheck,
-  Sparkles, Receipt, ShoppingBag, ShoppingCart, List, ListChecks,
+  Sparkles, Receipt, ShoppingBag, ShoppingCart, List, ListChecks, Inbox,
 } from "lucide-react";
 
 /**
@@ -191,6 +191,7 @@ export const SECTION_GROUPS = [
       { to: "/@", label: "Shop front", icon: Building2, dynamic: "shop" },
       { to: "/orders", label: "Orders & trades", icon: ShoppingBag },
       { to: "/analytics", label: "Analytics", icon: BarChart3 },
+      { to: "/storefront", label: "Business desk", icon: ShoppingBag },
       { to: "/passport", label: "Business passport", icon: FileCheck },
       { to: "/growth", label: "Growth planner", icon: Sparkles },
       { to: "/payments", label: "Receipts", icon: Receipt },
@@ -205,7 +206,10 @@ export const SECTION_GROUPS = [
     // /me is a primary tab, so it is deliberately NOT repeated here. Profile
     // settings are reached from the identity panel on /me itself.
     title: "Administration",
-    items: [{ to: "/ops", label: "Ops console", icon: Terminal, quiet: true }],
+    items: [
+      { to: "/ops", label: "Ops console", icon: Terminal, quiet: true },
+      { to: "/storefront/inbox", label: "Enquiry inbox", icon: Inbox, quiet: true },
+    ],
   },
 ];
 

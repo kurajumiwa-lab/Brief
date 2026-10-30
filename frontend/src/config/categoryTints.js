@@ -157,3 +157,25 @@ export const EXPLORE_CATEGORIES = [
   { key: "communities", kind: "community" },
   { key: "collections", kind: "collection" },
 ];
+
+
+/**
+ * THE BUSINESS DESK — the same five hues, borrowed, not invented.
+ *
+ * A desk is a buying need, and it wears the hue of the category it is closest
+ * to: digital work is Goods green, software is Services blue, field work is
+ * Equipment sand, devices are People indigo, and the catch-all is Communities
+ * teal. Reusing the vocabulary is the point — a second palette for a second
+ * screen would mean the colours had stopped meaning anything.
+ */
+export const DESK_TINT = {
+  digital_services: "goods",
+  business_software: "services",
+  field_operations: "equipment",
+  device_management: "people",
+  custom: "communities",
+};
+
+export function tintForDesk(deskKey) {
+  return CATEGORY_TINTS[DESK_TINT[deskKey]] || CATEGORY_TINTS.post;
+}

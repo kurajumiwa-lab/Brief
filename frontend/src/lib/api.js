@@ -594,6 +594,10 @@ export const catalogAPI = {
   catalogue: () => api.get("/catalog"),
   createEnquiry: (body) => api.post("/catalog/enquiries", body),
   myEnquiries: () => api.get("/catalog/enquiries/mine"),
+  // Operator side: the people who answer the requests, not the customers who
+  // send them. Both are refused for a vendor without an ops role (403).
+  inbox: (params) => api.get("/catalog/enquiries", { params }),
+  setEnquiryStatus: (id, status) => api.patch(`/catalog/enquiries/${id}`, { status }),
 };
 
 // ── Outside (v4) — location-aware discovery ────────────────────────────────
