@@ -45,8 +45,18 @@ export function StockIllustration({ item, className }) {
 }
 
 export default function StockThumb({ item, className, ratio = "aspect-[16/10]", rounded = "", children }) {
+  // The card states whether it is showing a photograph or the designed
+  // fallback. "Photos are not visible anywhere" was, in practice, two different
+  // things wearing the same face: a listing that never had a photo, and a
+  // listing whose photo failed to load. The attribute makes them distinguishable
+  // in a test and in DevTools, which is the difference between a bug and a
+  // design decision.
+  const hasPhoto = Boolean(item?.images?.[0]);
   return (
-    <div className={cn("relative overflow-hidden bg-surface-2 border-b border-edge-1", ratio, rounded, className)}>
+    <div
+      data-photo={hasPhoto ? "present" : "missing"}
+      className={cn("relative overflow-hidden bg-surface-2 border-b border-edge-1", ratio, rounded, className)}
+    >
       <Media
         src={item?.images?.[0]}
         alt={item?.name || ""}

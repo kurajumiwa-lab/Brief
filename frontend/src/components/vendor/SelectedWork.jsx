@@ -5,6 +5,7 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Textarea from "@/components/ui/Textarea";
 import Modal from "@/components/ui/Modal";
+import Media from "@/components/ui/Media";
 import { toast } from "@/components/ui/Toast";
 import { readGalleryPhoto } from "@/lib/images";
 import { apiError } from "@/lib/api";
@@ -121,10 +122,12 @@ function WorkCard({ item, own, onRemove }) {
       data-testid="selected-work-card"
     >
       {item.image_url ? (
-        <img
+        // Through <Media>, so a stored bare key ("uploads/…") and a served path
+        // ("/static/…") are the same photo — and a file that has gone missing
+        // falls back to the designed block below instead of a broken glyph.
+        <Media
           src={item.image_url}
           alt={item.title}
-          loading="lazy"
           className="aspect-[4/3] w-full object-cover"
         />
       ) : (
@@ -252,7 +255,7 @@ export function AddWorkItemModal({ open, onClose, onSave }) {
           />
           {form.image_url ? (
             <div className="relative overflow-hidden rounded-2xl border border-edge-1">
-              <img src={form.image_url} alt="Selected work preview" className="aspect-[4/3] w-full object-cover" />
+              <Media src={form.image_url} alt="Selected work preview" className="aspect-[4/3] w-full object-cover" />
               <button
                 type="button"
                 onClick={() => setForm((f) => ({ ...f, image_url: "" }))}

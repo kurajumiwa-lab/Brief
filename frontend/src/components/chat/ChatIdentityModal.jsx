@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Building2, CheckCircle2, Eye, ImagePlus, Lock, ShieldCheck, User, Users, X } from "lucide-react";
+import Media from "@/components/ui/Media";
 import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
@@ -528,7 +529,7 @@ function IdentityGalleryPicker({ label, hint, value, onChange, disabled }) {
           onChange={onFile}
         />
         {value ? (
-          <img src={value} alt={label} className="w-10 h-10 rounded-lg object-cover border border-edge-1 shrink-0" />
+          <Media src={value} alt={label} className="w-10 h-10 rounded-lg object-cover border border-edge-1 shrink-0" />
         ) : (
           <span className="w-10 h-10 rounded-lg bg-brand-500/10 text-brand-700 dark:text-brand-300 grid place-items-center shrink-0">
             <ImagePlus size={16} aria-hidden="true" />

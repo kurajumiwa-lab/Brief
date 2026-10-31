@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import Media from "@/components/ui/Media";
 import { Link } from "react-router-dom";
 import { Package, Truck, Users, Wrench } from "lucide-react";
 import { marketsAPI } from "@/lib/api";
@@ -185,10 +186,9 @@ export default function MarketShelf({
                 className="flex h-full gap-2 rounded-xl border border-edge-1 bg-surface-1 p-2 transition-colors hover:border-brand-400/60 hover:bg-brand-500/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/60"
               >
                 {item.image ? (
-                  <img
+                  <Media
                     src={item.image}
                     alt=""
-                    loading="lazy"
                     className="h-12 w-12 shrink-0 rounded-lg object-cover"
                   />
                 ) : (

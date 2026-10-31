@@ -15,6 +15,7 @@ import Input from "@/components/ui/Input";
 import Textarea from "@/components/ui/Textarea";
 import EmptyState from "@/components/ui/EmptyState";
 import ErrorState from "@/components/ui/ErrorState";
+import Media from "@/components/ui/Media";
 import Breadcrumbs from "@/components/ui/Breadcrumbs";
 import { PageSpinner } from "@/components/ui/Spinner";
 import { toast } from "@/components/ui/Toast";
@@ -514,7 +515,7 @@ export default function VendorProfile() {
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3" data-testid="shop-photo-gallery">
               {galleryPhotos.map((src, idx) => (
                 <div key={`${src}-${idx}`} className="group relative aspect-[4/3] rounded-2xl overflow-hidden border border-edge-1 bg-surface-2">
-                  <img src={src} alt={`${vendor.business_name} gallery ${idx + 1}`} className="w-full h-full object-cover" />
+                  <Media src={src} alt={`${vendor.business_name} gallery ${idx + 1}`} className="w-full h-full object-cover" />
                   {own && (
                     <button
                       type="button"
@@ -833,7 +834,7 @@ function GallerySinglePicker({ label, hint, value, onChange, testId }) {
           onChange={onSelectFile}
         />
         {value ? (
-          <img src={value} alt={label} className="w-12 h-12 rounded-xl object-cover border border-edge-1 shrink-0" />
+          <Media src={value} alt={label} className="w-12 h-12 rounded-xl object-cover border border-edge-1 shrink-0" />
         ) : (
           <span className="w-12 h-12 rounded-xl bg-brand-500/10 text-brand-700 dark:text-brand-300 grid place-items-center shrink-0">
             <ImagePlus size={18} aria-hidden="true" />
@@ -1042,7 +1043,7 @@ function EditProfileDrawer({ open, onClose, vendor, profile, onSaved }) {
               <div className="grid grid-cols-3 gap-2 pt-1">
                 {(form.portfolio_images || []).map((src, idx) => (
                   <div key={`${src}-${idx}`} className="relative aspect-[4/3] rounded-xl overflow-hidden border border-edge-1 bg-surface-2">
-                    <img src={src} alt={`Shop gallery ${idx + 1}`} className="w-full h-full object-cover" />
+                    <Media src={src} alt={`Shop gallery ${idx + 1}`} className="w-full h-full object-cover" />
                     <button
                       type="button"
                       onClick={() => removeGalleryIndex(idx)}

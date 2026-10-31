@@ -70,6 +70,12 @@ const Ops = lazy(() => import("@/pages/ops/Ops"));
 const VendorProfile = lazy(() => import("@/pages/vendor/VendorProfile"));
 // Operator-only: kept out of the bundle a customer downloads.
 const EnquiryInboxPage = lazy(() => import("@/pages/storefront/EnquiryInboxPage"));
+// Operator-only intake desk: photographs of public advertising become market
+// data. The API answers 403 without a market-ops role, so the route is public.
+const MarketIntakePage = lazy(() => import("@/pages/intake/MarketIntakePage"));
+// The product sold to signed-in vendors: prices from public advertising, with
+// seller contacts behind the partner tier.
+const MarketDataPage = lazy(() => import("@/pages/market/MarketDataPage"));
 
 /** Signed in, but the profile call failed. Saying so — with the server's own
     words — beats the old silent bounce to /auth, which was indistinguishable
@@ -154,6 +160,9 @@ function AppRoutes() {
       {/* Operator side of the same desk: where a request lands. The API answers
           403 for anyone without a market-ops role, so the page can be public. */}
       <Route path="/storefront/inbox" element={<EnquiryInboxPage />} />
+      {/* Operator side of the market dataset: read photographs, confirm prices. */}
+      <Route path="/intake" element={<MarketIntakePage />} />
+      <Route path="/market-data" element={<MarketDataPage />} />
       <Route
         element={
           <RequireVendor>

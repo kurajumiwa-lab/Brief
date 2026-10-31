@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Trophy, Zap, Plus, Star, MapPin, Image, Users, Swords, Medal, Map,
 } from "lucide-react";
+import Media from "@/components/ui/Media";
 import Tabs from "@/components/ui/Tabs";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
@@ -326,7 +327,7 @@ function Matches({ me, onChanged }) {
               {c.status === "proof_pending" ? (
                 <div className="space-y-2">
                   {c.proof_photo_url && (
-                    <img src={c.proof_photo_url} alt="Proof" className="max-h-40 rounded-xl" />
+                    <Media src={c.proof_photo_url} alt="Proof" className="max-h-40 rounded-xl" />
                   )}
                   <div className="flex items-center gap-3">
                     <p className="text-xs text-ink-4">Rate the work:</p>
