@@ -127,6 +127,17 @@ describe("mediaUrl", () => {
     expect(mediaUrl("data:image/png;base64,AAA")).toBe("data:image/png;base64,AAA");
   });
 
+  it("brings a URL from another host back to this one when it is this app's own media route", () => {
+    // `/static/<key>` is never served by a third party, so an absolute URL that
+    // carries it was written while some other host was the app — a laptop's
+    // tunnel, an older preview deployment. Left as-is, a phone is asked to fetch
+    // localhost and the photo "disappears".
+    const key = "uploads/44444444-4444-4444-4444-444444444444/stall.jpg";
+    expect(mediaUrl(`http://localhost:8000/static/${key}`)).toBe(`/static/${key}`);
+    expect(mediaUrl(`https://brief-old.vercel.app/static/${key}`)).toBe(`/static/${key}`);
+    expect(mediaUrl(`https://brief-old.vercel.app/${key}`)).toBe(`/static/${key}`);
+  });
+
   it("is empty for nothing at all — never the string 'undefined'", () => {
     expect(mediaUrl(null)).toBe("");
     expect(mediaUrl(undefined)).toBe("");
@@ -241,6 +252,19 @@ describe("a listing states whether it has a photo", () => {
   it("marks a card with no photo as missing — the distinction the bug hid", () => {
     const { container } = render(<StockThumb item={{ name: "Maize", category: "grains" }} />);
     expect(container.firstChild).toHaveAttribute("data-photo", "missing");
+  });
+
+  it("marks a recorded photo whose file is gone as unavailable, not missing", () => {
+    // Three states, not two. "missing" is a listing that never had a photo (a
+    // design decision); "unavailable" is a photo the deployment lost (a bug).
+    // Collapsing them is what made a broken deployment look like a tidy shelf.
+    const { container } = render(
+      <StockThumb item={{ name: "Maize", category: "grains", images: [DEAD] }} />
+    );
+    expect(container.firstChild).toHaveAttribute("data-photo", "present");
+
+    fireEvent.error(container.querySelector("img"));
+    expect(container.firstChild).toHaveAttribute("data-photo", "unavailable");
   });
 });
 

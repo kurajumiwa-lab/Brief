@@ -10,11 +10,20 @@ is what goes into `StockItem.spec_sheet_url` or a chat attachment.
 from typing import List
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.database import get_db
 from app.models.vendor import Vendor
 from app.routes.auth import get_current_vendor
 from app.services.images import UnsupportedImage, prepare_image, supported as image_support
-from app.services.storage import ALLOWED_TYPES, StorageError, max_bytes, safe_filename, storage
+from app.services.storage import (
+    ALLOWED_TYPES,
+    MEDIA_KEY,
+    StorageError,
+    max_bytes,
+    safe_filename,
+    storage,
+)
 
 router = APIRouter()
 
@@ -135,6 +144,117 @@ async def upload_many(
         )
 
     return {"files": stored, "count": len(stored), "rejected": rejected}
+
+
+@router.get("/audit")
+async def audit_media(
+    vendor: Vendor = Depends(get_current_vendor),
+    db: AsyncSession = Depends(get_db),
+):
+    """Which of *your* recorded photos this deployment cannot serve.
+
+    Written for the recovery after the bug this thread exists for: a deploy wrote
+    uploads into the function's ephemeral /tmp, so the records kept their URLs and
+    the bytes were gone by the next request. Every affected card showed the
+    designed placeholder, which is indistinguishable from "never had a photo" —
+    so the seller had no way to find the affected listings except by opening all
+    of them.
+
+    This answers that in one request, from data the seller already owns: a list of
+    named records whose file is not on this deployment and not in the media store.
+    Nothing is repaired here — the file really is gone, and re-uploading is the
+    only way to get the photograph back. The endpoint's job is to say *which*.
+
+    Absolute http(s) URLs are counted but not checked: verifying a third party's
+    host would mean fetching it on every audit, and a slow CDN is not the same
+    problem as a lost file.
+    """
+    from sqlalchemy import select
+
+    from app.models.stock import StockItem
+    from app.models.tools import ToolListing
+    from app.models.vendor import VendorProfile
+
+    refs: list[dict] = []
+
+    stock_rows = (await db.execute(
+        select(StockItem.id, StockItem.name, StockItem.images).where(StockItem.vendor_id == vendor.id)
+    )).all()
+    for stock_id, name, images in stock_rows:
+        for url in images or []:
+            refs.append({"where": "stock", "id": str(stock_id), "label": name, "url": url})
+
+    tool_rows = (await db.execute(
+        select(ToolListing.id, ToolListing.title, ToolListing.images).where(ToolListing.vendor_id == vendor.id)
+    )).all()
+    for tool_id, title, images in tool_rows:
+        for url in images or []:
+            refs.append({"where": "equipment", "id": str(tool_id), "label": title, "url": url})
+
+    profile = (await db.execute(
+        select(VendorProfile).where(VendorProfile.vendor_id == vendor.id)
+    )).scalar_one_or_none()
+    if profile is not None:
+        for field, label in (("logo_url", "Business logo"), ("banner_url", "Shop banner")):
+            url = getattr(profile, field)
+            if url:
+                refs.append({"where": field.replace("_url", ""), "id": str(profile.id), "label": label, "url": url})
+        for url in profile.portfolio_images or []:
+            refs.append({"where": "gallery", "id": str(profile.id), "label": "Shop gallery", "url": url})
+        for index, work in enumerate(profile.work_items or []):
+            url = (work or {}).get("image_url") if isinstance(work, dict) else None
+            if url:
+                refs.append({
+                    "where": "work",
+                    "id": str(profile.id),
+                    "label": (work.get("title") or f"Selected work {index + 1}"),
+                    "url": url,
+                })
+
+    # Normalise to the key the file route would serve, so the check matches what
+    # a browser actually asks for.
+    keys: dict[str, str] = {}
+    ours = 0
+    external = 0
+    for ref in refs:
+        url = str(ref["url"] or "").strip()
+        if not url:
+            continue
+        if url.startswith("/static/"):
+            key = url.removeprefix("/static/")
+        elif url.startswith("uploads/"):
+            key = url
+        elif "/uploads/" in url:
+            # An absolute URL minted while another host was this app; its path is
+            # still this deployment's own media route.
+            key = url[url.index("/uploads/") + 1:]
+        else:
+            external += 1
+            continue
+        if MEDIA_KEY.match(key):
+            keys[key] = url
+            ref["key"] = key
+            ours += 1
+        else:
+            external += 1
+
+    present = await storage.available(list(keys))
+    missing = [ref for ref in refs if ref.get("key") and ref["key"] not in present]
+
+    return {
+        "store": storage.name,
+        "durable": storage.name in ("db", "s3"),
+        "checked": ours,
+        "external": external,
+        "missing": missing,
+        "missing_count": len(missing),
+        "advice": (
+            "Re-upload the photos listed in `missing` — the files are gone, not "
+            "hidden. Everything uploaded from now on is stored durably."
+            if missing
+            else "Every recorded photo this deployment owns can be served."
+        ),
+    }
 
 
 @router.get("/limits")

@@ -254,10 +254,55 @@ class StorageService:
         elif self.use_db:
             await self._db_put(key, file_bytes, ctype)
         else:
+            # Refuse rather than write into a disk that will be thrown away.
+            #
+            # This is the exact failure that emptied a shop front: the deploy had
+            # no ENVIRONMENT variable, `media_store` resolved to `local`, the
+            # write succeeded into the function's /tmp, the row kept the URL, and
+            # the next invocation answered 404 for every photograph. An upload
+            # that fails now is a five-minute fix; an upload that succeeds and
+            # then evaporates is a mystery blamed on the phone.
+            if settings.is_managed_host:
+                raise StorageError(
+                    "This host cannot store uploaded files: its disk is discarded "
+                    "between requests, so the photo would disappear. Set "
+                    "MEDIA_STORE=db (or S3_BUCKET for object storage) on the "
+                    "deployment and redeploy."
+                )
             path = self.local_root / key
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(file_bytes)
         return self.public_url(key)
+
+    async def available(self, keys: list[str]) -> set[str]:
+        """Which of `keys` this deployment can actually serve right now.
+
+        Bulk on purpose: the caller is auditing records after a deployment that
+        wrote media to a disk it lost, and one query beats one per photograph.
+        Anything that is not a `/static/uploads/<uuid>/<name>` key is the
+        caller's business, not this method's.
+        """
+        candidates = [key for key in keys if key and MEDIA_KEY.match(key)]
+        if not candidates:
+            return set()
+
+        present = {key for key in candidates if self.disk_path(key) is not None}
+
+        if self.use_db:
+            try:
+                from sqlalchemy import select
+
+                from app.database import async_session
+                from app.models.media import MediaObject
+
+                async with async_session() as session:
+                    rows = await session.execute(
+                        select(MediaObject.key).where(MediaObject.key.in_(candidates))
+                    )
+                    present.update(row[0] for row in rows)
+            except Exception as exc:  # a missing table must not break the audit
+                log.warning("storage: cannot check media_objects: %s", exc)
+        return present
 
     async def read(self, key: str) -> Optional[Tuple[bytes, str]]:
         """Return `(bytes, content_type)` for a public key, or None.
@@ -354,6 +399,11 @@ class StorageService:
             )
         else:
             self._ensure_voice_root_private()
+            if settings.is_managed_host:  # see the public-upload comment above
+                raise StorageError(
+                    "This host cannot store voice notes: its disk is discarded "
+                    "between requests. Set MEDIA_STORE=db or S3_BUCKET on the deployment."
+                )
             path = self.voice_root / key
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(file_bytes)

@@ -161,7 +161,14 @@ export default function EmptyState({
   illustration,
   stateLabel,
 }) {
-  const kind = resolveIllustration(illustration, title, description, tone);
+  // `description` may be rich text (see ErrorState, which folds the server's own
+  // message into a disclosure); the illustration only needs its prose.
+  const kind = resolveIllustration(
+    illustration,
+    title,
+    typeof description === "string" ? description : "",
+    tone
+  );
   const badgeText =
     stateLabel ||
     (kind === "search"
@@ -198,7 +205,12 @@ export default function EmptyState({
         </span>
       )}
       <h3 className="text-base font-semibold text-ink-1">{title}</h3>
-      {description && <p className="text-xs text-ink-3 mt-1.5 max-w-sm leading-relaxed text-pretty">{description}</p>}
+      {/* A div, not a p: `description` may carry a foldable disclosure
+          (ErrorState shows the server's own message there), and a <details>
+          inside a <p> is invalid HTML that browsers re-parent. */}
+      {description && (
+        <div className="text-xs text-ink-3 mt-1.5 max-w-sm leading-relaxed text-pretty">{description}</div>
+      )}
       {(action || secondaryAction) && (
         <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
           {action}

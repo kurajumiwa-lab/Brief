@@ -90,11 +90,12 @@ for **Production** (and Preview, if you use previews against a real database).
 | `PSP_WEBHOOK_SECRET` | `openssl rand -hex 32` | Only required when `PSP_PROVIDER` is not `mock`. Must match the PSP dashboard. |
 | `OPERATOR_HANDLES` | your vendor handle | Who may read `/api/ops/*` and dispatch jobs. Empty = nobody, which is safe but blind. |
 | `METRICS_TOKEN` | `openssl rand -hex 24` | Or leave it empty and accept `/api/metrics` = 404 in production. |
-| `AUTO_CREATE_TABLES` | `false` | Alembic owns the schema. This is the default in production; set it explicitly so nobody "helpfully" turns it on. |
+| `AUTO_CREATE_TABLES` | `false` | Alembic owns the schema. This is the default in production; set it explicitly so nobody "helpfully" turns it on. `create_all` creates missing **tables** and never missing **columns**, so against a live database it hides drift instead of repairing it. |
+| `RUN_MIGRATIONS_ON_BOOT` | `true` | Applies `alembic upgrade head` at startup, under a Postgres advisory lock, so it is safe when several instances cold-start together. Unset, the host decides: on a managed platform it runs, on a development machine it does not. |
 | `ALLOW_SCHEMA_AUTOCREATE_IN_PRODUCTION` | `false` | Only `true` for one first boot on a completely empty database. |
 | `CORS_ORIGINS` | your app URL | Not needed when the frontend is served by the API or proxied by Vercel. |
 | `REDIS_URL` | your Redis URL | Without it the rate limiter is per-instance, so on Vercel the real limit is *instances × limit*. Worth doing before you have traffic. |
-| `MEDIA_STORE` | `auto` (or `s3`) | Where uploaded photos live. `auto` = S3 if `S3_BUCKET` is set, **Postgres otherwise in production** — because a Vercel function's `/tmp` and a container's disk are both wiped, so a locally-stored photo 404s on the next request. Fine up to a few thousand photos; set `S3_BUCKET` to scale. |
+| `MEDIA_STORE` | `db` (or `s3`) | Where uploaded photos live. `auto` = S3 if `S3_BUCKET` is set, **Postgres otherwise** — and "otherwise" now includes any managed host, even one where `ENVIRONMENT` was forgotten, because a Vercel function's `/tmp` and a container's disk are both wiped and a locally-stored photo 404s on the next request. Fine up to a few thousand photos; set `S3_BUCKET` to scale. On a managed host an upload that would land on a discarded disk is **refused** with a 503 rather than silently lost. |
 
 **Order:** add `SECRET_KEY`, `DATABASE_URL`, `PSP_WEBHOOK_SECRET`,
 `OPERATOR_HANDLES`, `METRICS_TOKEN` first; add `ENVIRONMENT=production` last, in
