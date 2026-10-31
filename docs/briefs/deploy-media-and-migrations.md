@@ -203,33 +203,57 @@ every listing.
 
 ---
 
-## 3. Fix a deployment that is in this state now
+## 3. Set the environment from nothing
 
-The code above makes a new deployment self-correcting. A deployment already
-serving the broken pages needs its environment set once.
+The fastest way, and the one that avoids every "already exists" and "which value
+is it" detour: **delete the project's variables and run the script.** Deleting
+them is safe — nothing in the code supplies a usable default in production, so a
+missing variable fails loudly at startup rather than silently doing the wrong
+thing.
 
 ```bash
-# 1. What is actually wrong, in the deployment's own words.
-curl -s https://<your-app>.vercel.app/api/health | jq
-#    → schema_state.missing_tables / .drifted names the absent objects
-#    → media_store must be "db" or "s3"; "local" means every photo will 404
-
-# 2. Confirm the page-level fault. A 503 here is a schema problem, not a data one.
-curl -s -o /dev/null -w '%{http_code}\n' https://<your-app>.vercel.app/api/vendors/ogallo
+cd backend
+./scripts/vercel_env_fresh.sh
 ```
 
-Then, in **Vercel → Project → Settings → Environment Variables** (Production).
-Some of these probably already exist — set the *value*, do not try to create the
-name again (see the next section if Vercel answers "already exists"):
+It asks for the one value it cannot know (the database URL), generates the two
+that must be random, and sets exactly these, twice-safe to re-run:
 
 | variable | value | why |
 |---|---|---|
-| `ENVIRONMENT` | `production` | turns on the published-secret guard and the production defaults |
-| `MEDIA_STORE` | `db` | bytes go into `media_objects`; survives every redeploy |
-| `RUN_MIGRATIONS_ON_BOOT` | `true` | optional — the host now implies it; set it to be explicit |
-| `AUTO_CREATE_TABLES` | `false` | `create_all` must not run against a deployed database |
-| `SECRET_KEY` | 64 hex chars | **required**: production refuses to start on the shipped default |
-| `DATABASE_URL` | Supabase session-pooler URL | percent-encode reserved characters in the password |
+| `ENVIRONMENT` | `production` | arms the guard that refuses the shipped `SECRET_KEY`; makes `is_production` true |
+| `MEDIA_STORE` | `db` | bytes go into `media_objects` — the whole of "photos survive a redeploy" |
+| `AUTO_CREATE_TABLES` | `false` | `create_all` never adds a column, so against a live database it hides drift |
+| `RUN_MIGRATIONS_ON_BOOT` | `true` | applies `alembic upgrade head` at startup, under an advisory lock |
+| `DATABASE_URL` | Supabase **session pooler** | the direct connection is IPv6-only on new projects; port 6543 is the wrong pooler |
+| `SECRET_KEY` | `openssl rand -hex 32` | signs every login token |
+| `PSP_WEBHOOK_SECRET` | `openssl rand -hex 32` | authenticates payment callbacks; required the moment `PSP_PROVIDER` is not `mock` |
+| `RUN_SCHEDULER` | `false` | a frozen function cannot run the sweeps; run `python -m app.worker` somewhere else |
+
+**Then rebuild.** A saved variable does nothing until a new deployment exists:
+`vercel --prod`, or Deployments → ⋯ → Redeploy.
+
+### The database URL is where this usually fails
+
+Supabase → Project Settings → Database → Connection string → **Session pooler**.
+
+- **Session pooler** (`:5432`, `…pooler.supabase.com`) is what a long-lived API
+  connection needs, and it is IPv4.
+- **Direct connection** is IPv6-only on new Supabase projects; a Vercel function
+  cannot reach it and the failure looks like a timeout, not an auth error.
+- **Transaction pooler** (`:6543`) breaks prepared statements under asyncpg.
+- **Percent-encode the password.** `@` → `%40`, `:` → `%3A`, `/` → `%2F`,
+  `#` → `%23`. An unencoded `@` makes the driver read half a password and half a
+  hostname, and the error names neither.
+
+`scripts/vercel_env_fresh.sh` warns about all four of these before it writes
+anything, and the app itself rewrites `postgres://` to the async driver.
+
+### If you would rather set them by hand
+
+Same values, Vercel → Project → Settings → Environment Variables (Production).
+Some may already exist — set the *value* rather than creating the name again
+(see the next section if Vercel answers "already exists").
 
 Redeploy. The first cold start applies every pending migration under an advisory
 lock; `/api/health` should answer `200` with `at_head: true` and
@@ -245,6 +269,15 @@ cd backend && alembic upgrade head
 Either way, **do this before the first photo after the change**: a database
 migrated after the first `db`-backend upload still works, but the run order is
 easier to reason about when the schema is ahead of the traffic.
+
+### Voice notes need nothing extra
+
+`MEDIA_STORE=db` covers chat recordings as well as photographs, under a private
+`voice-notes/` key in the same table. They are never served from `/static` — the
+public route refuses any key that is not `uploads/<uuid>/<file>` — and playback
+still goes through the room-authorized chat endpoint. Verified end to end: a
+2,052-byte Ogg note uploaded and read back byte-identical on a host with no
+writable disk.
 
 ### If Vercel says the variable already exists, that is the goal
 
@@ -335,7 +368,7 @@ working after the switch.
 | `frontend/src/test/failureHonesty.test.jsx` | 5xx never described in the server's words; only a 404 may say "not found"; the shop front's headline, disclosure and retry; retry withheld for a 404; `data-photo` three states; the audit card |
 | `frontend/src/test/media.test.jsx` | URL shapes, including a URL minted while another host was this app |
 
-Measured on this branch: backend **528 passed**, frontend **409 passed / 39
+Measured on this branch: backend **543 passed**, frontend **409 passed / 39
 files**, `vite build` clean.
 
 ---

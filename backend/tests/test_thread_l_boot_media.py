@@ -38,6 +38,19 @@ HOST_MARKERS = ("VERCEL", "AWS_LAMBDA_FUNCTION_NAME", "K_SERVICE", "RENDER", "DY
 
 
 @pytest.fixture
+def db_store():
+    """Run one test against the database backend, then put it back."""
+    from app.services.storage import STORE_DB
+
+    original = storage.store
+    storage.store = STORE_DB
+    try:
+        yield storage
+    finally:
+        storage.store = original
+
+
+@pytest.fixture
 def clean_env(monkeypatch):
     """Remove every host marker, so a marker a test sets is the only one set."""
     for marker in HOST_MARKERS:
@@ -382,3 +395,36 @@ async def test_health_reports_which_switch_the_process_resolved(client):
     assert isinstance(body["production"], bool)
     assert isinstance(body["managed_host"], bool)
     assert body["media_durable"] == (body["media_store"] in ("db", "s3"))
+
+
+# ── 5. voice notes on a host with no disk ───────────────────────────────────
+
+
+async def test_a_voice_note_is_stored_durably_too(client, db_store):
+    """`MEDIA_STORE=db` must cover chat recordings, not just photographs.
+
+    Voice notes were S3-or-disk only. On a fresh Vercel deploy with no bucket —
+    the configuration this runbook recommends — the recorder would have failed
+    for every user while every photograph worked, which is a worse version of the
+    same bug: a feature that is silently unavailable rather than visibly broken.
+    """
+    from app.services.storage import StorageError, storage as store
+
+    audio = b"OggS" + b"\x00" * 64
+    key = await store.upload_voice(audio, "audio/ogg")
+    assert key.startswith("voice-notes/")
+
+    data, mime = await store.read_voice(key)
+    assert data == audio
+    assert mime == "audio/ogg"
+
+    # Private by construction: the public route refuses anything that is not an
+    # `uploads/<uuid>/<file>` key, so a voice note cannot be fetched without the
+    # room-authorized endpoint.
+    assert not store.disk_path(key)
+    with pytest.raises(StorageError):
+        await store.read_voice("voice-notes/../../etc/passwd")
+
+    await store.delete_voice(key)
+    with pytest.raises(StorageError):
+        await store.read_voice(key)

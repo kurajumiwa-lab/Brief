@@ -397,6 +397,12 @@ class StorageService:
                 Bucket=self.bucket, Key=key, Body=file_bytes, ContentType=mime,
                 CacheControl="private, no-store",
             )
+        elif self.use_db:
+            # Same durable table as photographs, under a `voice-notes/` key. The
+            # public route refuses any key that is not `uploads/<uuid>/<file>`
+            # (see MEDIA_KEY), and reads of these go through the room-authorized
+            # chat endpoint, so privacy is unchanged — only the disk is gone.
+            await self._db_put(key, file_bytes, mime)
         else:
             self._ensure_voice_root_private()
             if settings.is_managed_host:  # see the public-upload comment above
@@ -418,6 +424,11 @@ class StorageService:
         if self.use_s3:
             obj = self.s3.get_object(Bucket=self.bucket, Key=key)
             return obj["Body"].read(), mime
+        if self.use_db:
+            row = await self._db_get(key)
+            if row is None:
+                raise StorageError("Voice note not found")
+            return row
         self._ensure_voice_root_private()
         path = (self.voice_root / key).resolve()
         if self.voice_root not in path.parents:
@@ -434,6 +445,8 @@ class StorageService:
         try:
             if self.use_s3:
                 self.s3.delete_object(Bucket=self.bucket, Key=key)
+            elif self.use_db:
+                await self._db_delete(key)
             else:
                 self._ensure_voice_root_private()
                 path = (self.voice_root / key).resolve()
