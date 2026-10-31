@@ -365,10 +365,10 @@ working after the switch.
 |---|---|
 | `backend/tests/test_thread_l_boot_media.py` | host detection without `ENVIRONMENT`; `db` store + migrations + no `create_all` on a managed host; refusal to write a doomed upload; head == newest revision; every `CRITICAL_TABLES` entry is a real model; column-vs-table wording; the duplicate/stamp rule; health's schema state, missing table, missing column; the audit endpoint |
 | `backend/tests/test_media_static.py` | upload → `/static/<key>` → identical bytes on the `db` backend; disk-then-store reads; key-shape refusals |
-| `frontend/src/test/failureHonesty.test.jsx` | 5xx never described in the server's words; only a 404 may say "not found"; the shop front's headline, disclosure and retry; retry withheld for a 404; `data-photo` three states; the audit card |
+| `frontend/src/test/failureHonesty.test.jsx` | 5xx never described in the server's words; only a 404 may say "not found"; the shop front's headline, disclosure and retry; retry withheld for a 404; `data-photo` three states; the audit card; and an AST sweep asserting **every `<ErrorState>` call site passes only props the component declares** — `PassportPage` and `GrowthPlannerPage` both passed `message=`, which React discards silently, so their failure reason never rendered |
 | `frontend/src/test/media.test.jsx` | URL shapes, including a URL minted while another host was this app |
 
-Measured on this branch: backend **545 passed**, frontend **409 passed / 39
+Measured on this branch: backend **545 passed**, frontend **414 passed / 39
 files**, `vite build` clean.
 
 ---

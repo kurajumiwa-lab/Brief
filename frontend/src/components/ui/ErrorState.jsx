@@ -18,6 +18,12 @@ import EmptyState from "./EmptyState";
 export default function ErrorState({
   title = "That didn't load",
   description,
+  // `message` is accepted as an alias for `description` because two screens used
+  // it and got silence: React drops an undeclared prop, so the reason a page
+  // failed was computed, passed, and never rendered — the reader saw "That
+  // didn't load" and nothing else. An alias is a smaller lie than a component
+  // that quietly ignores the only useful thing it was given.
+  message,
   onRetry,
   retryLabel = "Try again",
   action,
@@ -32,7 +38,9 @@ export default function ErrorState({
       title={title}
       description={
         <>
-          <span>{description || "The network or the server didn't answer. Nothing was changed."}</span>
+          <span>
+            {description || message || "The network or the server didn't answer. Nothing was changed."}
+          </span>
           {detail ? (
             <details className="mt-2 text-left">
               <summary className="cursor-pointer text-micro font-semibold text-ink-3 hover:text-ink-2">

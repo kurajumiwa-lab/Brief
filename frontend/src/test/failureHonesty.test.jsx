@@ -307,3 +307,127 @@ describe("'Check my photos'", () => {
     expect(screen.queryByTestId("photo-audit-result")).not.toBeInTheDocument();
   });
 });
+
+/* ── a prop that is passed but not declared is silent data loss ───────────── */
+
+describe("ErrorState renders the reason it was given", () => {
+  const Default = () => <div>default-description</div>;
+
+  it("uses `description`", async () => {
+    const ErrorState = (await import("@/components/ui/ErrorState")).default;
+    render(<ErrorState description="the shelf could not be read" />);
+    expect(screen.getByText("the shelf could not be read")).toBeInTheDocument();
+  });
+
+  it("also accepts `message` — the prop two screens used and got silence for", async () => {
+    // React drops an undeclared prop without a murmur. `PassportPage` and
+    // `GrowthPlannerPage` both passed `message`, so the reason they computed was
+    // never shown: the reader got "That didn't load" and nothing else.
+    const ErrorState = (await import("@/components/ui/ErrorState")).default;
+    render(<ErrorState message="your passport could not be loaded" />);
+    expect(screen.getByText("your passport could not be loaded")).toBeInTheDocument();
+  });
+
+  it("prefers `description` when both are given", async () => {
+    const ErrorState = (await import("@/components/ui/ErrorState")).default;
+    render(<ErrorState description="chosen" message="ignored" />);
+    expect(screen.getByText("chosen")).toBeInTheDocument();
+    expect(screen.queryByText("ignored")).not.toBeInTheDocument();
+  });
+
+  it("still says something when given neither", async () => {
+    const ErrorState = (await import("@/components/ui/ErrorState")).default;
+    render(<ErrorState />);
+    expect(screen.getByText(/the network or the server didn't answer/i)).toBeInTheDocument();
+    expect(Default).toBeTruthy();
+  });
+});
+
+describe("no screen passes ErrorState a prop it does not declare", () => {
+  /**
+   * The regression guard for the bug above.
+   *
+   * A component's props are its contract. React enforces it by discarding
+   * anything outside it, silently — so an author who writes `message=` instead
+   * of `description=` gets a page that renders a generic sentence and a bug
+   * report that says "it just says it didn't load".
+   */
+  it("every attribute in every <ErrorState> call site is a declared prop", async () => {
+    // Parsed, not pattern-matched: a JSX element nested inside a prop
+    // (`action={<Button size="sm" />}`) puts whole elements between the angle
+    // brackets, and a regular expression cannot tell their attributes from the
+    // component's own. An AST can, exactly.
+    const fs = await import("node:fs");
+    const path = await import("node:path");
+    const parser = (await import("@babel/parser")).default
+      || (await import("@babel/parser"));
+
+    const parse = parser.parse || parser;
+
+    const source = fs.readFileSync(
+      path.resolve(__dirname, "../components/ui/ErrorState.jsx"),
+      "utf8"
+    );
+    const signature = source.slice(
+      source.indexOf("export default function ErrorState({"),
+      source.indexOf("}) {", source.indexOf("export default function ErrorState({"))
+    );
+    const declared = new Set(
+      [...signature.matchAll(/(\w+)\s*(?:=|,)/g)].map((m) => m[1])
+    );
+
+    const root = path.resolve(__dirname, "..");
+    const offenders = [];
+    const seen = [];
+
+    const visit = (node) => {
+      if (!node || typeof node !== "object") return;
+      if (Array.isArray(node)) return node.forEach(visit);
+
+      if (
+        (node.type === "JSXOpeningElement" || node.type === "JSXElement") &&
+        node.openingElement?.name?.name === "ErrorState"
+      ) {
+        seen.push(node);
+        for (const attr of node.openingElement.attributes) {
+          const name = attr.name?.name || (attr.type === "JSXSpreadAttribute" ? "spread" : null);
+          if (!name) continue;
+          if (name === "spread") {
+            offenders.push("a spread attribute hides the props from this check");
+            continue;
+          }
+          if (!declared.has(name) && name !== "key" && !name.startsWith("data-")) {
+            offenders.push(`<ErrorState ${name}=…>`);
+          }
+        }
+        return; // children do not belong to this element's prop list
+      }
+      for (const key of Object.keys(node)) visit(node[key]);
+    };
+
+    const walk = (dir) => {
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          if (entry.name !== "test") walk(full);
+        } else if (/\.jsx?$/.test(entry.name)) {
+          const ast = parse(fs.readFileSync(full, "utf8"), {
+            sourceType: "module",
+            plugins: ["jsx"],
+          });
+          const before = offenders.length;
+          visit(ast.program || ast);
+          if (offenders.length > before) {
+            offenders.splice(before, 0, `in ${path.relative(root, full)}`);
+          }
+        }
+      }
+    };
+    walk(root);
+
+    expect(offenders).toEqual([]);
+    expect(seen.length).toBeGreaterThan(10); // the sweep found the call sites
+    expect(declared.has("description")).toBe(true);
+    expect(declared.has("message")).toBe(true);
+  });
+});

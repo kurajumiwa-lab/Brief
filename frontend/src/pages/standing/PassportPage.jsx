@@ -374,7 +374,14 @@ export default function PassportPage() {
                on ? "Checklist published" : "Checklist unpublished");
   };
 
-  if (error) return <ErrorState message={error} onRetry={load} />;
+  if (error)
+    return (
+      <ErrorState
+        title="Your passport didn't load"
+        description={error}
+        onRetry={load}
+      />
+    );
   if (!passport) return <PageSpinner label="Loading your passport" />;
 
   const counts = passport.counts || {};
