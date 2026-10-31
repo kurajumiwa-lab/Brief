@@ -23,6 +23,7 @@ from app.modules.brief import router as brief_routes
 from app.modules.standing import router as passport_routes
 from app.modules.standing import sweep as standing_sweep
 from app.modules.catalog import router as catalog_routes
+from app.modules.intake import router as intake_routes
 from app.modules.enterprise import router as enterprise_routes
 from app.modules.growth import router as growth_routes
 from app.modules.trade import router as requests_routes
@@ -239,6 +240,9 @@ app.include_router(growth_routes.router, prefix="/api/growth", tags=["Growth & B
 app.include_router(enterprise_routes.router, prefix="/api/enterprise", tags=["Enterprise Workspaces"])
 # v2.14 — public storefront catalogue (offers/tiers/trial) + enquiries
 app.include_router(catalog_routes.router, prefix="/api/catalog", tags=["Storefront Catalogue"])
+# v2.17 — market intake: photographs and pasted signage become confirmed
+# market observations, and the market-data views that read them.
+app.include_router(intake_routes.router, prefix="/api", tags=["Market Intake"])
 app.include_router(orders_routes, prefix="/api/orders", tags=["Order Transactions"])
 # v2.7 — the marketplace map: viewport queries, server-side clustering, lazy details
 app.include_router(map_routes.router, prefix="/api/map", tags=["Map"])

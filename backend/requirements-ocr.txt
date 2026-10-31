@@ -1,0 +1,16 @@
+# Optional — reading photographs instead of pasting text.
+#
+#   pip install -r requirements-ocr.txt
+#
+# RapidOCR is Apache-2.0, runs fully offline and ships its models inside the
+# wheel, so nothing is downloaded at request time. It is NOT in requirements.txt
+# on purpose: onnxruntime + OpenCV + models add roughly 80 MB and several
+# seconds of cold start, which is wrong for a serverless function and fine for
+# the worker or container that runs the intake desk.
+#
+# Without this file installed, POST /api/intake/batches still works — it reads
+# only the pasted `text` field and says so in `ocr_engine: null`. The extractor
+# never needed the engine; a photograph is simply one way to get text.
+rapidocr-onnxruntime>=1.3
+opencv-python-headless>=4.9
+pillow>=10,<13

@@ -103,3 +103,10 @@ from app.models.park import (
     CaesarPark, CaesarParkCircle, CaesarParkMembership, CaesarParkPost,
     PARK_KINDS, ENTRY_RULES, MEMBERSHIP_STATUS, LEASH_STATES,
 )
+
+# v2.17 — market intake (photos/text → confirmed market observations)
+from app.modules.intake.models import (  # noqa: E402,F401
+    MarketIntakeBatch,
+    MarketObservation,
+    MarketPresence,
+)
