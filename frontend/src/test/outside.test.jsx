@@ -172,35 +172,35 @@ const renderAt = (path, element) =>
 describe("Outside navigation", () => {
   it("presents the five Outside destinations with one prominent create action", async () => {
     const { PRIMARY_NAV } = await import("@/config/navigation");
-    expect(PRIMARY_NAV.map((i) => i.label)).toEqual(["Home", "Explore", "Create", "Activity", "Profile"]);
+    expect(PRIMARY_NAV.map((i) => i.label)).toEqual(["Home", "Discover", "Create", "Connect", "My World"]);
     expect(PRIMARY_NAV.filter((i) => i.action).map((i) => i.to)).toEqual(["/create"]);
     expect(new Set(PRIMARY_NAV.map((i) => i.to)).size).toBe(5);
   });
 
   it("keeps every v3 URL resolving to the tab that absorbed it", async () => {
     const { PRIMARY_NAV, isPrimaryActive } = await import("@/config/navigation");
-    const explore = PRIMARY_NAV.find((i) => i.label === "Explore");
-    const activity = PRIMARY_NAV.find((i) => i.label === "Activity");
-    const profile = PRIMARY_NAV.find((i) => i.label === "Profile");
+    const discover = PRIMARY_NAV.find((i) => i.label === "Discover");
+    const connect = PRIMARY_NAV.find((i) => i.label === "Connect");
+    const mine = PRIMARY_NAV.find((i) => i.label === "My World");
 
-    // Browse's discovery surfaces became Explore.
+    // Browse's discovery surfaces are Discover.
     for (const path of ["/explore", "/browse", "/network", "/nearby/food", "/map", "/markets",
       "/news", "/search/goods", "/listing/x", "/place/y", "/events", "/groups", "/lists"]) {
-      expect(isPrimaryActive(explore, path), path).toBe(true);
+      expect(isPrimaryActive(discover, path), path).toBe(true);
     }
-    // Work and Inbox became Activity.
+    // Work and Inbox are Connect.
     for (const path of ["/activity", "/work", "/orders", "/chat", "/tasks", "/locks", "/tools"]) {
-      expect(isPrimaryActive(activity, path), path).toBe(true);
+      expect(isPrimaryActive(connect, path), path).toBe(true);
     }
-    // The workspace is Profile, and only your own handle highlights it.
+    // The workspace is My World, and only your own handle highlights it.
     for (const path of ["/me", "/stock", "/analytics", "/pos", "/passport", "/enterprise"]) {
-      expect(isPrimaryActive(profile, path), path).toBe(true);
+      expect(isPrimaryActive(mine, path), path).toBe(true);
     }
-    expect(isPrimaryActive(profile, "/@achieng", "achieng")).toBe(true);
-    expect(isPrimaryActive(profile, "/@someone_else", "achieng")).toBe(false);
+    expect(isPrimaryActive(mine, "/@achieng", "achieng")).toBe(true);
+    expect(isPrimaryActive(mine, "/@someone_else", "achieng")).toBe(false);
     // Areas never overlap.
-    expect(isPrimaryActive(activity, "/explore")).toBe(false);
-    expect(isPrimaryActive(explore, "/orders")).toBe(false);
+    expect(isPrimaryActive(connect, "/explore")).toBe(false);
+    expect(isPrimaryActive(discover, "/orders")).toBe(false);
   });
 
   it("names all six content types for the single creation entry point", async () => {
@@ -214,7 +214,7 @@ describe("Outside navigation", () => {
     renderAt("/", <MobileTabBar />);
     expect(screen.getByTestId("tab-create")).toBeInTheDocument();
     expect(screen.getByRole("navigation", { name: /primary mobile/i })).toBeInTheDocument();
-    for (const label of ["home", "explore", "activity", "profile"]) {
+    for (const label of ["home", "explore", "activity", "me"]) {
       expect(screen.getByTestId(`tab-${label}`)).toBeInTheDocument();
     }
   });

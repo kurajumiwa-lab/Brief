@@ -4,6 +4,7 @@ import {
   ArrowLeft, CalendarDays, Check, Eye, ImageIcon, Lock, MapPin, Save, Send,
   ShieldCheck, Sparkles, Store, Trash2, X,
 } from "lucide-react";
+import Media from "@/components/ui/Media";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
@@ -730,10 +731,9 @@ function Field({
           <div className="flex flex-wrap items-center gap-2">
             {(draft.media || []).map((ref, index) => (
               <span key={`${ref}-${index}`} className="relative">
-                <img
+                <Media
                   src={ref}
                   alt=""
-                  loading="lazy"
                   className="h-20 w-20 rounded-card-sm border border-edge-1 object-cover"
                 />
                 <button
@@ -1015,7 +1015,7 @@ function Preview({ draft, inference }) {
       </p>
       <div className="rounded-card-sm border border-edge-1 bg-surface-1 p-3">
         {(draft.media || []).length > 0 && (
-          <img src={draft.media[0]} alt="" className="mb-2 aspect-[4/3] w-full rounded-card-sm object-cover" />
+          <Media src={draft.media[0]} alt="" className="mb-2 aspect-[4/3] w-full rounded-card-sm object-cover" />
         )}
         <div className="flex flex-wrap items-center gap-1.5">
           <Chip size="sm" active>{draft.content_type}</Chip>

@@ -10,7 +10,7 @@ import NearbyPage from "@/pages/nearby/NearbyPage";
 import PlaceProfile from "@/pages/nearby/PlaceProfile";
 import MarketDetail from "@/pages/markets/MarketDetail";
 import TaskTrack from "@/pages/tasks/TaskTrack";
-import StorefrontPage from "@/pages/storefront/StorefrontPage";
+import BusinessDeskPage from "@/pages/storefront/BusinessDeskPage";
 import CreatePage from "@/pages/create/CreatePage";
 import MorningBriefPage from "@/pages/brief/MorningBriefPage";
 import LegalPage from "@/pages/legal/LegalPage";
@@ -68,7 +68,14 @@ const POSBridge = lazy(() => import("@/pages/pos/POSBridge"));
 const Analytics = lazy(() => import("@/pages/analytics/Analytics"));
 const Ops = lazy(() => import("@/pages/ops/Ops"));
 const VendorProfile = lazy(() => import("@/pages/vendor/VendorProfile"));
-const CreativePortfolioPage = lazy(() => import("@/pages/portfolio/CreativePortfolioPage"));
+// Operator-only: kept out of the bundle a customer downloads.
+const EnquiryInboxPage = lazy(() => import("@/pages/storefront/EnquiryInboxPage"));
+// Operator-only intake desk: photographs of public advertising become market
+// data. The API answers 403 without a market-ops role, so the route is public.
+const MarketIntakePage = lazy(() => import("@/pages/intake/MarketIntakePage"));
+// The product sold to signed-in vendors: prices from public advertising, with
+// seller contacts behind the partner tier.
+const MarketDataPage = lazy(() => import("@/pages/market/MarketDataPage"));
 
 /** Signed in, but the profile call failed. Saying so — with the server's own
     words — beats the old silent bounce to /auth, which was indistinguishable
@@ -149,7 +156,13 @@ function AppRoutes() {
       <Route path="/auth" element={<AuthPage />} />
       {/* Public storefront (v2.14): catalogue, tiers, trial — readable without
           an account; enquiring attaches to a vendor @handle. */}
-      <Route path="/storefront" element={<StorefrontPage />} />
+      <Route path="/storefront" element={<BusinessDeskPage />} />
+      {/* Operator side of the same desk: where a request lands. The API answers
+          403 for anyone without a market-ops role, so the page can be public. */}
+      <Route path="/storefront/inbox" element={<EnquiryInboxPage />} />
+      {/* Operator side of the market dataset: read photographs, confirm prices. */}
+      <Route path="/intake" element={<MarketIntakePage />} />
+      <Route path="/market-data" element={<MarketDataPage />} />
       <Route
         element={
           <RequireVendor>
@@ -231,8 +244,12 @@ function AppRoutes() {
               model. Lazy-imported above and named in ME_ROOTS, so the surface is
               reachable at the URL the README and the API both use. */}
           <Route path="/enterprise" element={<EnterprisePage />} />
-          <Route path="/portfolio" element={<CreativePortfolioPage />} />
-          <Route path="/studio" element={<CreativePortfolioPage />} />
+          {/* The creative-portfolio page was retired in v2.16. Its capability —
+              showing work — now lives on the shop front (selected work), its
+              price list lives on the Business Desk, and its inquiry pipeline is
+              the enquiry inbox. LinkedIn-old links still land somewhere useful. */}
+          <Route path="/portfolio" element={<Navigate to="/me" replace />} />
+          <Route path="/studio" element={<Navigate to="/me" replace />} />
           <Route path="/@:handle" element={<VendorProfile />} />
           <Route path="/:handle" element={<VendorHandleRoute />} />
 

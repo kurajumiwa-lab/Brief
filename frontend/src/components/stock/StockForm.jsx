@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Image, ClipboardList, Check } from "lucide-react";
+import Media from "@/components/ui/Media";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import Button from "@/components/ui/Button";
@@ -45,11 +46,23 @@ function PhotoNoteForm({ onDone }) {
   const [error, setError] = useState("");
 
   const onFile = async (e) => {
-    const file = e.target.files?.[0];
+    const files = Array.from(e.target.files || []);
+    const file = files[0];
     if (!file) return;
     setUploading(true);
     setError("");
     try {
+      // Several at once where the API supports it; the first is the card image
+      // and the rest ride along on the listing (`images` is a list everywhere).
+      const batch = files.length > 1 ? await fileAPI?.uploadMany?.(files).catch(() => null) : null;
+      if (batch?.data?.files?.length) {
+        setPhoto({
+          url: batch.data.files[0].url,
+          name: file.name,
+          extra: batch.data.files.slice(1).map((f) => f.url),
+        });
+        return;
+      }
       const res = await fileAPI?.upload?.(file);
       if (res?.data?.url) {
         setPhoto({ url: res.data.url, name: file.name });
@@ -74,6 +87,10 @@ function PhotoNoteForm({ onDone }) {
     const price = Number(form.price);
     if (!form.name.trim()) return setError("Give the item a name");
     if (!Number.isFinite(price) || price <= 0) return setError("The price must be a number above zero");
+    // Photos are a must on the shelf: a buyer scrolling a feed decides from the
+    // picture before reading a single word of the listing. Saving without one
+    // used to succeed silently and leave a card that looked broken.
+    if (!photo) return setError("Add a photo — buyers decide from the picture, not the title");
     setSaving(true);
     setError("");
     try {
@@ -84,7 +101,7 @@ function PhotoNoteForm({ onDone }) {
         unit_of_measure: form.unit,
         unit_price: price,
         visible_to_network: true,
-        images: photo ? [photo.url] : [],
+        images: photo ? [photo.url, ...(photo.extra || [])] : [],
       });
       toast.success(`${saved.name} is on the shelf`);
       onDone?.(saved);
@@ -103,10 +120,18 @@ function PhotoNoteForm({ onDone }) {
           onClick={() => fileRef.current?.click()}
           className="w-full rounded-2xl border border-edge-2 bg-surface-1 hover:bg-surface-2 transition-colors p-4 flex items-center gap-3 text-left"
         >
-          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onFile} />
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            aria-label="Choose photos for this listing"
+            onChange={onFile}
+          />
           {photo ? (
             <>
-              <img src={photo.url} alt="" className="w-14 h-14 rounded-xl object-cover" />
+              <Media src={photo.url} alt="" className="w-14 h-14 rounded-xl object-cover" />
               <span className="min-w-0">
                 <span className="block text-sm text-ink-1 font-medium truncate">{photo.name}</span>
                 <span className="block text-2xs text-ink-4 mt-0.5">Tap to replace</span>

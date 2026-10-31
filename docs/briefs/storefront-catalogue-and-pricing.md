@@ -15,7 +15,7 @@
 
 | Line | Offer | Test price | How it can truthfully be sold today |
 |---|---|---|---|
-| A. Digital services | Logo & brand starter | KSh 2,500–8,000 once | Productised studio service (Creative Portfolio exists) |
+| A. Digital services | Logo & brand starter | KSh 2,500–8,000 once | Productised studio service (sold on the Business Desk) |
 | A | Business website | KSh 15,000–45,000 once | Productised service, fixed pages/revisions/milestones |
 | A | Mobile app UI/UX prototype | KSh 8,000–30,000 once | Prototype only — never described as a production app |
 | A | Business automation setup | KSh 5,000–25,000 once | Scoped per workflow after a short audit |

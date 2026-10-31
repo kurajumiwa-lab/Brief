@@ -3,6 +3,7 @@ import {
   Bookmark, CalendarDays, Heart, HeartHandshake, MapPin, MessageSquare, Sparkles,
   Store, Ticket, Users,
 } from "lucide-react";
+import Media from "@/components/ui/Media";
 import Badge from "@/components/ui/Badge";
 import { CategoryPill } from "@/components/explore/CategoryTiles";
 import { cn } from "@/lib/utils";
@@ -83,10 +84,9 @@ export default function ContentCard({ item, onReact, compact = false, className 
     >
       {item.image ? (
         <div className="relative aspect-[4/3] w-full overflow-hidden bg-surface-2">
-          <img
+          <Media
             src={item.image}
             alt=""
-            loading="lazy"
             className="h-full w-full object-cover transition-transform duration-3 group-hover:scale-[1.02]"
           />
           <span className="absolute left-2 top-2">

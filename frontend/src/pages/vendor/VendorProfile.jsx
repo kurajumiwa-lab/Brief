@@ -15,6 +15,7 @@ import Input from "@/components/ui/Input";
 import Textarea from "@/components/ui/Textarea";
 import EmptyState from "@/components/ui/EmptyState";
 import ErrorState from "@/components/ui/ErrorState";
+import Media from "@/components/ui/Media";
 import Breadcrumbs from "@/components/ui/Breadcrumbs";
 import { PageSpinner } from "@/components/ui/Spinner";
 import { toast } from "@/components/ui/Toast";
@@ -22,34 +23,23 @@ import { TrustRow, ReliabilityMeter, vendorLevel } from "@/components/trust/Trus
 import { VerifiedStrip } from "@/components/trust/VerifiedFacts";
 import ParasitismBadge from "@/components/vendor/ParasitismBadge";
 import ConnectionButton from "@/components/vendor/ConnectionButton";
+import { SelectedWork, AddWorkItemModal } from "@/components/vendor/SelectedWork";
 import StockCard, { getStockVisibilityStatus } from "@/components/stock/StockCard";
 import SourceDialog from "@/components/stock/SourceDialog";
 import { Check } from "@/components/forms/GroupForm";
 import { useAuthStore } from "@/stores/authStore";
 import { useChatStore } from "@/stores/chatStore";
-import { vendorAPI, stockAPI, passportAPI, fileAPI, apiError } from "@/lib/api";
+import { vendorAPI, stockAPI, passportAPI, apiError } from "@/lib/api";
+import { readGalleryPhoto } from "@/lib/images";
 import { ROLE_BADGE, VENDOR_ROLES } from "@/config/constants";
 import { currency, num } from "@/lib/formatters";
 import { cn, splitList } from "@/lib/utils";
 
 /**
- * Read a File into a URL: uploads through `/api/files/upload` when available,
- * and falls back to a local data URL so gallery selection works offline or in tests.
+ * Kept as a re-export: the helper moved to `@/lib/images` when selected work
+ * also needed it, and anything importing it from here still resolves.
  */
-export async function readGalleryPhoto(file) {
-  try {
-    const res = await fileAPI?.upload?.(file);
-    if (res?.data?.url) return res.data.url;
-  } catch {
-    /* fall back to local data URL preview */
-  }
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(new Error("Could not read image file"));
-    reader.readAsDataURL(file);
-  });
-}
+export { readGalleryPhoto };
 
 /* ═══════════════════════════════════════════════════════════════════════════
    SHOP FRONT — /@handle
@@ -89,6 +79,7 @@ export default function VendorProfile() {
   const [tab, setTab] = useState("shelf");
   const [q, setQ] = useState("");
   const [uploadingGallery, setUploadingGallery] = useState(false);
+  const [workModalOpen, setWorkModalOpen] = useState(false);
   const galleryInputRef = useRef(null);
 
   const own = me?.vendor_handle === handle;
@@ -211,6 +202,41 @@ export default function VendorProfile() {
     const fromVendor = vendor?.portfolio_images;
     return Array.isArray(fromProfile) ? fromProfile : Array.isArray(fromVendor) ? fromVendor : [];
   }, [profile, vendor]);
+
+  /* Selected work lives on the profile record, so the owner's copy is the
+     freshest one; the public payload is the fallback for visitors. */
+  const workItems = useMemo(() => {
+    const fromProfile = profile?.work_items;
+    const fromVendor = vendor?.work_items;
+    return Array.isArray(fromProfile) ? fromProfile : Array.isArray(fromVendor) ? fromVendor : [];
+  }, [profile, vendor]);
+
+  const saveWorkItems = async (next, successMessage) => {
+    const { data: updatedProfile } = await vendorAPI.updateProfile({ work_items: next });
+    setProfile((prev) => ({ ...(prev || {}), ...(updatedProfile || {}), work_items: next }));
+    setVendor((prev) => (prev ? { ...prev, work_items: next } : prev));
+    toast.success(successMessage);
+  };
+
+  const handleAddWorkItem = async (item) => {
+    try {
+      await saveWorkItems([...workItems, item], "Work added to your shop front");
+    } catch (err) {
+      toast.error(apiError(err, "Couldn't add that piece of work"));
+      throw err;
+    }
+  };
+
+  const handleRemoveWorkItem = async (indexToRemove) => {
+    try {
+      await saveWorkItems(
+        workItems.filter((_, idx) => idx !== indexToRemove),
+        "Work removed"
+      );
+    } catch (err) {
+      toast.error(apiError(err, "Couldn't remove that piece of work"));
+    }
+  };
 
   const handleAddGalleryPhotos = async (e) => {
     const files = Array.from(e.target.files || []);
@@ -421,6 +447,22 @@ export default function VendorProfile() {
         </div>
       </header>
 
+      {/* ══ Selected work — proof before the shelf ══════════════════════ */}
+      <SelectedWork
+        items={workItems}
+        own={own}
+        onAdd={() => setWorkModalOpen(true)}
+        onRemove={handleRemoveWorkItem}
+      />
+
+      {own && (
+        <AddWorkItemModal
+          open={workModalOpen}
+          onClose={() => setWorkModalOpen(false)}
+          onSave={handleAddWorkItem}
+        />
+      )}
+
       {/* ══ Shop photo gallery (gallery photo addition, no URL links) ═══ */}
       {(galleryPhotos.length > 0 || own) && (
         <section aria-labelledby="shop-gallery-heading" className="rounded-3xl border border-edge-1 bg-surface-0 p-5 space-y-3">
@@ -473,7 +515,7 @@ export default function VendorProfile() {
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3" data-testid="shop-photo-gallery">
               {galleryPhotos.map((src, idx) => (
                 <div key={`${src}-${idx}`} className="group relative aspect-[4/3] rounded-2xl overflow-hidden border border-edge-1 bg-surface-2">
-                  <img src={src} alt={`${vendor.business_name} gallery ${idx + 1}`} className="w-full h-full object-cover" />
+                  <Media src={src} alt={`${vendor.business_name} gallery ${idx + 1}`} className="w-full h-full object-cover" />
                   {own && (
                     <button
                       type="button"
@@ -792,7 +834,7 @@ function GallerySinglePicker({ label, hint, value, onChange, testId }) {
           onChange={onSelectFile}
         />
         {value ? (
-          <img src={value} alt={label} className="w-12 h-12 rounded-xl object-cover border border-edge-1 shrink-0" />
+          <Media src={value} alt={label} className="w-12 h-12 rounded-xl object-cover border border-edge-1 shrink-0" />
         ) : (
           <span className="w-12 h-12 rounded-xl bg-brand-500/10 text-brand-700 dark:text-brand-300 grid place-items-center shrink-0">
             <ImagePlus size={18} aria-hidden="true" />
@@ -1001,7 +1043,7 @@ function EditProfileDrawer({ open, onClose, vendor, profile, onSaved }) {
               <div className="grid grid-cols-3 gap-2 pt-1">
                 {(form.portfolio_images || []).map((src, idx) => (
                   <div key={`${src}-${idx}`} className="relative aspect-[4/3] rounded-xl overflow-hidden border border-edge-1 bg-surface-2">
-                    <img src={src} alt={`Shop gallery ${idx + 1}`} className="w-full h-full object-cover" />
+                    <Media src={src} alt={`Shop gallery ${idx + 1}`} className="w-full h-full object-cover" />
                     <button
                       type="button"
                       onClick={() => removeGalleryIndex(idx)}

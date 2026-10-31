@@ -39,6 +39,9 @@ class Offer:
     exclusions: tuple[str, ...]
     customer_must_provide: tuple[str, ...]
     revisions: Optional[str] = None
+    # Which of the five buying needs this offer answers. Empty means "the same
+    # as its line" — set it only where a need is narrower than the line.
+    desk: str = ""
 
 
 LINES: tuple[dict, ...] = (
@@ -66,7 +69,7 @@ OFFERS: tuple[Offer, ...] = (
         name="Logo and brand starter package",
         price_min_kes=2500, price_max_kes=8000, price_unit="one_off",
         readiness="service",
-        readiness_note="Productised studio service (see the Creative Portfolio). Booked as an enquiry, delivered by people — not software.",
+        readiness_note="Productised studio service. Booked as an enquiry, delivered by people — not software.",
         turnaround="3–5 working days from a completed brief (test)",
         deliverables=("Primary logo + one lockup", "Colour and type choices", "Files for print, signage and social use"),
         exclusions=("Trademark registration or legal clearance", "Unlimited concepts or a full brand-guideline book"),
@@ -108,6 +111,36 @@ OFFERS: tuple[Offer, ...] = (
         exclusions=("Third-party subscription fees", "Custom software development unless separately quoted"),
         customer_must_provide=("Access to the tools involved", "One staff owner for the workflow"),
         revisions="One correction round for defects in the agreed setup.",
+    ),
+    # The two capabilities that used to live only on the creative portfolio's
+    # own price list. They are productised studio work like the four above, so
+    # they are sold as offers here — one desk, one price sheet, one enquiry
+    # route. Packaging/print and motion are real capabilities we can deliver;
+    # keeping them on a separate page meant a buyer had to find a portfolio
+    # before they could find a price.
+    Offer(
+        key="packaging_print_suite", line="digital_services",
+        name="Packaging and print suite",
+        price_min_kes=6000, price_max_kes=20000, price_unit="one_off",
+        readiness="service",
+        readiness_note="Productised studio service: dielines, artwork and press-ready files. Booked as an enquiry, delivered by people.",
+        turnaround="2–3 weeks once artwork is approved (test; print lead time decides)",
+        deliverables=("Label or packaging artwork for one product format", "Print-ready files with dielines", "Stock and finish recommendations"),
+        exclusions=("Printing, foil stamping and delivery charges", "Photography of the finished product"),
+        customer_must_provide=("Product dimensions and what is inside it", "A print vendor, or approval to quote one"),
+        revisions="Two artwork rounds included; press checks are quoted separately.",
+    ),
+    Offer(
+        key="motion_launch_pack", line="digital_services",
+        name="Motion and launch pack",
+        price_min_kes=8000, price_max_kes=30000, price_unit="one_off",
+        readiness="service",
+        readiness_note="Productised studio service: an animated identity and a launch video. Booked as an enquiry, delivered by people.",
+        turnaround="2–3 weeks from an approved storyboard (test)",
+        deliverables=("One 30–60 second launch video", "Animated logo ident and transitions", "Two social cut-downs"),
+        exclusions=("Paid media spend", "Voice talent and licensed music fees", "On-location filming"),
+        customer_must_provide=("The logo in vector form, or brand files", "The message and the launch date"),
+        revisions="One storyboard round and one cut round included.",
     ),
     # ── B. Business software ─────────────────────────────────────────────
     Offer(
@@ -178,7 +211,7 @@ OFFERS: tuple[Offer, ...] = (
         customer_must_provide=("Officer list and a supervisor", "Officers' consent to a work profile on their own phones"),
     ),
     Offer(
-        key="android_device_enrolment", line="field_operations",
+        key="android_device_enrolment", line="field_operations", desk="device_management",
         name="Android device enrolment and configuration",
         price_min_kes=None, price_max_kes=None, price_unit="scoped",
         readiness="scoped",
@@ -189,7 +222,7 @@ OFFERS: tuple[Offer, ...] = (
         customer_must_provide=("Devices or officers' own phones, with owner consent", "An EMM/Android Enterprise admin account"),
     ),
     Offer(
-        key="device_procurement_support", line="field_operations",
+        key="device_procurement_support", line="field_operations", desk="device_management",
         name="Device procurement and ongoing support",
         price_min_kes=None, price_max_kes=None, price_unit="scoped",
         readiness="scoped",
@@ -343,6 +376,109 @@ BYOD_VS_MANAGED: tuple[dict, ...] = (
         ),
     },
 )
+
+
+# ── the business desk: five needs, not three product lines ───────────────────
+#
+# A buyer arrives with a need ("I need a website", "our officers need to file
+# reports"), not with knowledge of how the catalogue is organised internally.
+# These five groups are the *buying* taxonomy. The three `LINES` above remain
+# the *commercial* taxonomy — one line can contain more than one buying need,
+# which is exactly why device management is its own door inside field
+# operations.
+
+DESKS: tuple[dict, ...] = (
+    {
+        "key": "digital_services", "title": "Digital services",
+        "blurb": "Websites, branding, design and automation.",
+        "enquiry_only": False,
+    },
+    {
+        "key": "business_software", "title": "Business software",
+        "blurb": "Business records, memberships and workspaces.",
+        "enquiry_only": False,
+    },
+    {
+        "key": "field_operations", "title": "Field operations",
+        "blurb": "Field teams, mobile forms and reporting.",
+        "enquiry_only": False,
+    },
+    {
+        "key": "device_management", "title": "Device management",
+        "blurb": "Android deployment and device administration.",
+        "enquiry_only": False,
+    },
+    {
+        # The door for "none of the above". It has no offers by design: the
+        # only honest answer to an unclassified need is a conversation, so the
+        # form is the product.
+        "key": "custom", "title": "Custom business solutions",
+        "blurb": "Tell us what your organisation needs.",
+        "enquiry_only": True,
+    },
+)
+
+
+# ── what a customer may do about an offer, decided by its readiness ──────────
+#
+# This table is the guard rail the interface is not allowed to override: a
+# pilot cannot be "purchased", and something not yet live cannot be bought at
+# all. The server sends the action with the offer, so a screen cannot invent a
+# checkout button for work that does not exist.
+
+CTA_FOR_READINESS: dict[str, dict] = {
+    "available_now": {
+        "kind": "purchase", "label": "Purchase or enquire",
+        "note": "Live today. Send an enquiry and a human confirms scope, then invoices. "
+                "No card is collected in the app.",
+    },
+    "service": {
+        "kind": "quotation", "label": "Request a quotation",
+        "note": "Delivered as a service by people. A written quotation fixes scope, "
+                "dates and price before any work starts.",
+    },
+    "pilot": {
+        "kind": "pilot", "label": "Request pilot participation",
+        "note": "Sold as a supervised pilot with a named scope. Nothing is charged "
+                "until the pilot terms are agreed in writing.",
+    },
+    "scoped": {
+        "kind": "requirements", "label": "Submit requirements",
+        "note": "No public price: hardware, licences and integrations decide it. "
+                "Send requirements and a written quotation follows.",
+    },
+    "not_yet_live": {
+        "kind": "interest", "label": "Register interest",
+        "note": "Not live yet. Registering interest records a request; nothing is "
+                "sold, charged or promised.",
+    },
+}
+
+# Every enquiry kind the desk may record. The first four existed before the
+# desk; the last three are the actions the readiness table above can produce.
+ENQUIRY_KINDS: tuple[str, ...] = (
+    "purchase", "trial", "quotation", "discovery_call",
+    "pilot", "requirements", "interest",
+)
+
+
+def desk_for_offer(o: Offer) -> str:
+    """The buying need an offer answers."""
+    return o.desk or o.line
+
+
+def desk_by_key(key: str) -> Optional[dict]:
+    clean = (key or "").strip().lower()
+    return next((d for d in DESKS if d["key"] == clean), None)
+
+
+def cta_for(readiness: str) -> dict:
+    """What a customer may do, given how ready the offer truthfully is."""
+    return CTA_FOR_READINESS.get(readiness) or CTA_FOR_READINESS["not_yet_live"]
+
+
+def offers_for_desk(key: str) -> tuple[Offer, ...]:
+    return tuple(o for o in OFFERS if desk_for_offer(o) == key)
 
 
 def offer_by_key(key: str) -> Optional[Offer]:

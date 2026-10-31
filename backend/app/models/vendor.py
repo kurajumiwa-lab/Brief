@@ -151,5 +151,10 @@ class VendorProfile(Base):
     logo_url = Column(String(500))
     banner_url = Column(String(500))
     portfolio_images = Column(JSONB, default=list)
+    # Selected work (v2.16): the case-study capability that used to live on a
+    # separate creative-portfolio page. A list of small, public records —
+    # {title, summary, outcome, discipline, year, image_url} — carried by the
+    # shop front, because that is where a buyer already looks before hiring.
+    work_items = Column(JSONB, default=list)
 
     vendor = relationship("Vendor", back_populates="profile")

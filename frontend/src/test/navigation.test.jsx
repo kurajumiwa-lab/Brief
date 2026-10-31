@@ -24,7 +24,7 @@ describe("Outside navigation map", () => {
 
   it("defines five Outside destinations with exactly one prominent create action", () => {
     expect(PRIMARY_NAV.map(({ label }) => label))
-      .toEqual(["Home", "Explore", "Create", "Activity", "Profile"]);
+      .toEqual(["Home", "Discover", "Create", "Connect", "My World"]);
     expect(new Set(PRIMARY_NAV.map(({ to }) => to)).size).toBe(5);
     // Create is the one visually distinct tab, and it is a tab — not a
     // floating button competing with the content it exists to serve.

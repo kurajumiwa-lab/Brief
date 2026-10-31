@@ -60,7 +60,11 @@ vi.mock("@/lib/api", () => {
     // v2.1
     notificationAPI: { list: vi.fn(() => ok({ unread_count: 0, notifications: [] })), unreadCount: vi.fn(() => ok({ unread_count: 0 })), markRead: vi.fn(() => ok({})), markAllRead: vi.fn(() => ok({})) },
     collectiveAPI: { list: vi.fn(() => ok([])), get: vi.fn(), create: vi.fn(), pledge: vi.fn(), withdraw: vi.fn(), setStatus: vi.fn() },
-    fileAPI: { upload: vi.fn((file) => ok({ url: `/api/files/test/${file?.name || "photo.jpg"}` })), limits: vi.fn(() => ok({ max_mb: 10, allowed: [".pdf", ".jpg", ".png"] })) },
+    fileAPI: {
+      upload: vi.fn((file) => ok({ url: `/api/files/test/${file?.name || "photo.jpg"}` })),
+      uploadMany: vi.fn((files = []) => ok({ files: files.map((f) => ({ url: `/api/files/test/${f.name}`, filename: f.name })), count: files.length })),
+      limits: vi.fn(() => ok({ max_mb: 10, allowed: [".pdf", ".jpg", ".png"] })),
+    },
     passportAPI: { publicView: vi.fn(() => ok({ score: { trust_score: 75, tier: "established" }, public_claims: [] })), catalog: vi.fn(() => ok({ claims: [], checklists: [] })), of: vi.fn(() => ok({ score: { trust_score: 75, tier: "established" }, public_claims: [] })) },
     growthAPI: { blueprint: vi.fn(() => ok({})), pulse: vi.fn(() => ok({ tasks: { done_count: 2, total_count: 5 } })) },
     requestsAPI: { list: vi.fn(() => ok([])) },
@@ -192,27 +196,67 @@ describe("Onboarding handoff", () => {
   //   · the checklist disappears the moment there is nothing left to do, and
   //   · the home pulse is a real read of the vendor's own records — loaded
   //     shelf, open movements, recorded connections — not a marketing panel.
-  it("removes completed steps once the vendor is trading", async () => {
-    useStockStore.setState({ mine: STOCK, movements: MOVEMENTS });
-    mount(<SetupChecklist />, "/");
+  // The vital-information half is hard-coded on purpose. A vendor can dismiss
+  // the trading list, but the four things that make their shop presentable —
+  // a photo on a listing, shop photos, a description, a category — stay on the
+  // home screen until they are done. This is the product requirement: entering
+  // the app must show the task, every time, until it is finished.
+  it("keeps the vital-information tasks visible even after dismissal", async () => {
+    useStockStore.setState({ mine: STOCK, movements: [] });
 
-    // the last step is settled by the connections read, so the card goes away
-    // once the network has answered — not a frame before
-    await waitFor(() => expect(screen.queryByRole("heading", { name: /get trading/i })).not.toBeInTheDocument());
-    expect(screen.queryByRole("heading", { name: /put one item on the shelf/i })).not.toBeInTheDocument();
+    // first visit: everything is outstanding, so there is nothing to dismiss
+    const first = mount(<SetupChecklist />, "/");
+    expect(await screen.findByText("Photograph what you sell")).toBeInTheDocument();
+    expect(screen.getByText("Put a face on the shop")).toBeInTheDocument();
+    expect(screen.getByText("Describe the business in a sentence")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /dismiss setup checklist/i })).not.toBeInTheDocument();
+    first.unmount();
+
+    // a vendor who dismissed the card on an earlier version, with the vital half
+    // still blank, must still be told
+    localStorage.setItem("brief-setup-done:mama_mboga", "1");
+    const second = mount(<SetupChecklist />, "/");
+    expect(await screen.findByText("Photograph what you sell")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /missing its details/i })).toBeInTheDocument();
+    // and the trading half, which they dismissed, stays dismissed
+    expect(screen.queryByText("Connect with a supplier")).not.toBeInTheDocument();
+    second.unmount();
+    localStorage.clear();
   });
 
-  it("shows only remaining setup steps, and dismisses cleanly", async () => {
+  it("disappears once the shop is complete and the loop has run", async () => {
+    useStockStore.setState({
+      mine: [...STOCK.map((i) => ({ ...i, images: ["/api/files/test/veg.jpg"] }))],
+      movements: MOVEMENTS,
+    });
+    useAuthStore.setState({
+      token: "tok",
+      vendor: { ...ME, business_description: "Fresh vegetables, delivered around Kisumu." },
+      ready: true,
+    });
+    api.vendorAPI.profile.mockResolvedValueOnce(ok({ portfolio_images: ["/api/files/test/stall.jpg"] }));
+
+    mount(<SetupChecklist />, "/");
+    await waitFor(() =>
+      expect(screen.queryByRole("heading", { name: /get trading|missing its details/i })).not.toBeInTheDocument()
+    );
+  });
+
+  it("lets a shop photo be picked from the checklist itself", async () => {
     useStockStore.setState({ mine: STOCK, movements: [] });
     mount(<SetupChecklist />, "/");
 
-    expect(await screen.findByText("Run the loop once")).toBeInTheDocument();
-    expect(screen.queryByText("Say what you trade")).not.toBeInTheDocument();
-    expect(screen.queryByText("Put one item on the shelf")).not.toBeInTheDocument();
-    expect(screen.queryByText("Connect with a supplier")).not.toBeInTheDocument();
+    const picker = await screen.findByLabelText(/choose shop photos from your gallery/i);
+    fireEvent.change(picker, {
+      target: { files: [new File(["x"], "stall.jpg", { type: "image/jpeg" })] },
+    });
 
-    fireEvent.click(screen.getByRole("button", { name: /dismiss setup checklist/i }));
-    await waitFor(() => expect(screen.queryByRole("heading", { name: /get trading/i })).not.toBeInTheDocument());
+    await waitFor(() => expect(api.fileAPI.uploadMany).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(api.vendorAPI.updateProfile).toHaveBeenCalledWith({
+        portfolio_images: ["/api/files/test/stall.jpg"],
+      })
+    );
   });
 
   it("reads the home business pulse from the vendor's own records", async () => {
@@ -288,16 +332,42 @@ describe("Stock Room", () => {
     expect(screen.getByLabelText("Remove")).toBeInTheDocument();
   });
 
-  it("adds stock via the form and pulls the full item back", async () => {
+  it("refuses a listing with no photo, then saves once one is picked", async () => {
     mount(<StockRoom />, "/stock");
     fireEvent.click(await screen.findByRole("button", { name: /add stock/i }));
     const dialog = await screen.findByRole("dialog");
     fireEvent.change(within(dialog).getByLabelText(/item name/i), { target: { value: "Spinach" } });
     fireEvent.change(within(dialog).getByLabelText(/^quantity$/i), { target: { value: "120" } });
     fireEvent.change(within(dialog).getByLabelText(/price/i), { target: { value: "30" } });   // a price is required to go on the shelf
+
+    // A listing without a picture is a card that looks broken. The form says so
+    // instead of saving it and leaving the buyer with a blank tile.
+    fireEvent.click(within(dialog).getByRole("button", { name: /add to my stock/i }));
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent(/add a photo/i);
+    expect(api.stockAPI.add).not.toHaveBeenCalled();
+
+    // Two photos in one selection — the batch endpoint handles the whole pick,
+    // and the first is the picture the card shows.
+    const picker = within(dialog).getByLabelText(/choose photos for this listing/i);
+    fireEvent.change(picker, {
+      target: {
+        files: [
+          new File(["x"], "spinach.jpg", { type: "image/jpeg" }),
+          new File(["y"], "spinach-2.jpg", { type: "image/jpeg" }),
+        ],
+      },
+    });
+    await waitFor(() => expect(api.fileAPI.uploadMany).toHaveBeenCalled());
+    expect(api.fileAPI.uploadMany.mock.calls[0][0]).toHaveLength(2);
+
     fireEvent.click(within(dialog).getByRole("button", { name: /add to my stock/i }));
     await waitFor(() => expect(api.stockAPI.add).toHaveBeenCalled());
-    expect(api.stockAPI.add.mock.calls[0][0]).toMatchObject({ name: "Spinach", quantity_in_stock: 120, unit_price: 30 });
+    expect(api.stockAPI.add.mock.calls[0][0]).toMatchObject({
+      name: "Spinach",
+      quantity_in_stock: 120,
+      unit_price: 30,
+      images: ["/api/files/test/spinach.jpg", "/api/files/test/spinach-2.jpg"],
+    });
     await waitFor(() => expect(api.stockAPI.get).toHaveBeenCalledWith("s-new"));
     expect(await screen.findByText("Spinach")).toBeInTheDocument();
   });
@@ -510,52 +580,115 @@ describe("Business Control Centre, Stock Visibility, Shop Front & Gallery Photos
     expect(screen.getByRole("navigation", { name: /shop navigation/i })).toBeInTheDocument();
   });
 
-  it("renders the Creative Portfolio & Freelance Services Platform with discipline filters, editorial case studies, services, and project inquiry flow", async () => {
-    const { default: CreativePortfolioPage } = await import("@/pages/portfolio/CreativePortfolioPage");
-    mount(<CreativePortfolioPage />, "/portfolio");
+  /* ── v2.16 · the portfolio became a capability, not a page ──────────────── */
 
-    // 1. Creative identity hero & CTAs
-    expect(
-      await screen.findByRole("heading", { name: /I design brands that people remember\./i })
-    ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Explore My Work/i })).toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: /Start a Project/i }).length).toBeGreaterThan(0);
+  it("shows a vendor's published work to a visitor on the shop front", async () => {
+    const { default: VendorProfile } = await import("@/pages/vendor/VendorProfile");
+    api.vendorAPI.byHandle.mockResolvedValueOnce(
+      ok({
+        ...OTHER,
+        work_items: [
+          {
+            title: "Kibo Botanicals — identity system",
+            summary: "Wordmark, label architecture and a guideline book for a skincare house.",
+            outcome: "Twelve label formats at launch",
+            discipline: "Branding",
+            year: "2026",
+            image_url: "/api/files/test/kibo.jpg",
+          },
+        ],
+      })
+    );
+    api.stockAPI.network.mockResolvedValueOnce(ok([]));
 
-    // 2. Discipline filter chips (All, Branding, Web Design, Print, Motion)
-    expect(screen.getByTestId("portfolio-filter-all")).toHaveAttribute("aria-pressed", "true");
-    fireEvent.click(screen.getByTestId("portfolio-filter-web-design"));
-    expect(screen.getByTestId("portfolio-filter-web-design")).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByText(/Solstice Roasters — Digital Flagship/i)).toBeInTheDocument();
-    expect(screen.queryByTestId("portfolio-project-card-proj-print-03")).not.toBeInTheDocument();
+    render(
+      <MemoryRouter initialEntries={["/@kibanda_kitchen"]}>
+        <Routes>
+          <Route path="/:rawHandle" element={<VendorProfile />} />
+        </Routes>
+      </MemoryRouter>
+    );
 
-    // Reset filter to All
-    fireEvent.click(screen.getByTestId("portfolio-filter-all"));
+    const section = await screen.findByTestId("selected-work");
+    expect(within(section).getByRole("heading", { name: "Selected work" })).toBeInTheDocument();
+    expect(within(section).getByText("Kibo Botanicals — identity system")).toBeInTheDocument();
+    expect(within(section).getByText("Twelve label formats at launch")).toBeInTheDocument();
+    expect(within(section).getByText("Branding")).toBeInTheDocument();
+    // A visitor never gets an "add work" control.
+    expect(within(section).queryByRole("button", { name: /add work/i })).not.toBeInTheDocument();
+  });
 
-    // 3. Editorial case study sections
-    const caseStudy = screen.getByTestId("editorial-case-study");
-    expect(within(caseStudy).getByText(/01 · The Challenge/i)).toBeInTheDocument();
-    expect(within(caseStudy).getByText(/02 · Creative Process/i)).toBeInTheDocument();
-    expect(within(caseStudy).getByText(/03 · Concepts/i)).toBeInTheDocument();
-    expect(within(caseStudy).getByText(/04 · Final Deliverables/i)).toBeInTheDocument();
-    expect(within(caseStudy).getByText(/05 · Results & Outcome/i)).toBeInTheDocument();
+  it("shows a visitor nothing at all when the vendor has published no work", async () => {
+    const { default: VendorProfile } = await import("@/pages/vendor/VendorProfile");
+    api.vendorAPI.byHandle.mockResolvedValueOnce(ok({ ...OTHER, work_items: [] }));
+    api.stockAPI.network.mockResolvedValueOnce(ok([]));
 
-    // 4. Submit a project inquiry and verify confirmation + Studio Dashboard
-    const inquiryForm = screen.getByRole("form", { name: /start a project inquiry form/i });
-    fireEvent.change(within(inquiryForm).getByLabelText(/Your name or studio/i), {
-      target: { value: "Zuri Collective" },
+    render(
+      <MemoryRouter initialEntries={["/@kibanda_kitchen"]}>
+        <Routes>
+          <Route path="/:rawHandle" element={<VendorProfile />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByRole("heading", { name: "Kibanda Kitchen" })).toBeInTheDocument();
+    // No empty box, no dashed placeholder, no heading with nothing under it.
+    expect(screen.queryByTestId("selected-work")).not.toBeInTheDocument();
+  });
+
+  it("lets the owner add a piece of work and take it down again", async () => {
+    const { default: VendorProfile } = await import("@/pages/vendor/VendorProfile");
+    api.vendorAPI.byHandle.mockResolvedValueOnce(ok({ ...ME, work_items: [] }));
+    api.stockAPI.network.mockResolvedValueOnce(ok([]));
+    api.vendorAPI.profile.mockResolvedValueOnce(ok({ work_items: [] }));
+    api.vendorAPI.updateProfile.mockResolvedValue(ok({}));
+
+    render(
+      <MemoryRouter initialEntries={["/@mama_mboga"]}>
+        <Routes>
+          <Route path="/:rawHandle" element={<VendorProfile />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    fireEvent.click(await screen.findByRole("button", { name: /add work/i }));
+
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.change(within(dialog).getByLabelText(/Title/i), {
+      target: { value: "Solstice Roasters — digital flagship" },
     });
-    fireEvent.change(within(inquiryForm).getByLabelText(/Project brief & goals/i), {
-      target: { value: "We need a full brand identity and web flagship for our Q4 launch." },
+    fireEvent.change(within(dialog).getByLabelText(/What came of it/i), {
+      target: { value: "Subscriptions doubled in the first quarter" },
     });
-    fireEvent.click(within(inquiryForm).getByRole("button", { name: /Send Project Brief/i }));
+    fireEvent.click(within(dialog).getByRole("button", { name: /add to shop front/i }));
 
-    const confirmation = await screen.findByTestId("inquiry-confirmation");
-    expect(confirmation).toHaveTextContent(/Zuri Collective/i);
+    await waitFor(() =>
+      expect(api.vendorAPI.updateProfile).toHaveBeenCalledWith({
+        work_items: [
+          expect.objectContaining({
+            title: "Solstice Roasters — digital flagship",
+            outcome: "Subscriptions doubled in the first quarter",
+          }),
+        ],
+      })
+    );
+    expect(await screen.findByText("Solstice Roasters — digital flagship")).toBeInTheDocument();
 
-    // Switch to Studio Operations Dashboard and verify the inquiry is listed
-    fireEvent.click(within(confirmation).getByRole("button", { name: /View in Studio Dashboard/i }));
-    const dashboard = await screen.findByTestId("studio-operations-dashboard");
-    expect(within(dashboard).getByText("Zuri Collective")).toBeInTheDocument();
+    // And down again — the capability is upkeep, not a one-off upload.
+    fireEvent.click(screen.getByRole("button", { name: /remove Solstice Roasters/i }));
+    await waitFor(() =>
+      expect(api.vendorAPI.updateProfile).toHaveBeenLastCalledWith({ work_items: [] })
+    );
+  });
+
+  it("no longer sends people to a separate creative portfolio shelf", async () => {
+    const { default: MePage } = await import("@/pages/me/MePage");
+    mount(<MePage />, "/me");
+
+    await screen.findByTestId("business-identity");
+    expect(screen.queryByRole("link", { name: /creative portfolio/i })).not.toBeInTheDocument();
+    // The capability is still discoverable — from the shelf it now lives on.
+    expect(screen.getByRole("link", { name: /shop front/i })).toHaveTextContent(/selected work/i);
   });
 });
 
@@ -627,7 +760,7 @@ describe("Drawer navigation", () => {
     useAuthStore.setState({ token: "tok", vendor: ME, ready: true, loading: false });
     mountDrawer();
 
-    for (const label of ["Home", "Explore", "Create", "Activity", "Profile"]) {
+    for (const label of ["Home", "Discover", "Create", "Connect", "My World"]) {
       expect(screen.queryByRole("link", { name: label })).not.toBeInTheDocument();
     }
   });

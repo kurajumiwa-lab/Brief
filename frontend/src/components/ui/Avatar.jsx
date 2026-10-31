@@ -1,5 +1,7 @@
+import { useEffect, useState } from "react";
 import { Building2 } from "lucide-react";
 import { cn, initials } from "@/lib/utils";
+import { mediaUrl } from "@/lib/media";
 
 const sizes = {
   xs: "w-6 h-6 text-micro rounded-lg",
@@ -59,7 +61,22 @@ export default function Avatar({
   const isBusinessPrimary = effectiveMode === "business_logo" || effectiveMode === "business_with_role";
   const isCombined = effectiveMode === "combined";
 
-  const primarySrc = isBusinessPrimary ? logoSrc || src : src;
+  // THE most-shown photograph in the product: a vendor's face appears on every
+  // card, message, shelf and search result. It used to be a bare `<img>` with
+  // whatever string the record held — so a logo stored as `uploads/…` (a key
+  // that lost its `/static/` prefix, which bulk imports and older records do)
+  // resolved against the current route, 404'd, and drew the browser's broken
+  // glyph. That is what "photos are not visible anywhere" looked like.
+  //
+  // Two changes, and they apply for good: every URL is normalised through
+  // `mediaUrl()`, and a file that fails to load falls back to the initials the
+  // avatar already knows how to draw.
+  const primarySrc = mediaUrl(isBusinessPrimary ? logoSrc || src : src);
+  const badgeLogoSrc = mediaUrl(logoSrc);
+  const [primaryFailed, setPrimaryFailed] = useState(false);
+  useEffect(() => {
+    setPrimaryFailed(false);
+  }, [primarySrc]);
   const primaryLabel =
     effectiveMode === "personal_photo" || isCombined
       ? personalName || name
@@ -71,10 +88,11 @@ export default function Avatar({
 
   return (
     <div className={cn("relative shrink-0 inline-flex", className)} data-identity-mode={effectiveMode}>
-      {primarySrc ? (
+      {primarySrc && !primaryFailed ? (
         <img
           src={primarySrc}
           alt=""
+          onError={() => setPrimaryFailed(true)}
           className={cn(
             "object-cover bg-surface-2 border border-edge-1",
             sizeCls,
@@ -107,8 +125,8 @@ export default function Avatar({
           title={secondaryName ? `Business: ${secondaryName}` : "Business logo"}
           data-testid="avatar-business-badge"
         >
-          {logoSrc ? (
-            <img src={logoSrc} alt="" className="w-full h-full object-cover" />
+          {badgeLogoSrc ? (
+            <img src={badgeLogoSrc} alt="" className="w-full h-full object-cover" />
           ) : (
             <span className={cn("w-full h-full flex items-center justify-center", hue(secondaryName || "Biz"))}>
               {secondaryName ? initials(secondaryName).slice(0, 2) : <Building2 size={10} />}

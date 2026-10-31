@@ -25,15 +25,22 @@ export const BRAND = {
   short: "Vendorworld",
   /** The name this network was built under; kept, not erased. */
   parent: "Ogallo",
-  /** One line, used under the mark and in the page title. */
-  tagline: "the trade network with receipts",
+  /**
+   * One line, used under the mark and in the page title.
+   *
+   * v2.18 (direction C) replaced "the trade network with receipts". Receipts
+   * were the promise of the *trading* product; this line is the promise of the
+   * *connection layer* — and it survives the honest description of what exists
+   * today, because connecting people is exactly what is shipped.
+   */
+  tagline: "the digital connection layer for everyday trade",
   /** The address people type. */
   domain: "vendorworld.ke",
   /** Fallback domain shown until the real one is live. */
   legacyDomain: "vendorworld.kikk",
 };
 
-/** `Vendor World — the trade network with receipts` */
+/** `Vendor World — the digital connection layer for everyday trade` */
 export const pageTitle = (suffix = BRAND.tagline) => `${BRAND.name} — ${suffix}`;
 
 export default BRAND;

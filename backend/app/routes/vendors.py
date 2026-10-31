@@ -4,7 +4,7 @@ from typing import List, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,6 +12,13 @@ from app.database import get_db
 from app.models.vendor import ACCOUNT_KINDS, Vendor, VendorProfile, VendorRole, vendor_connections
 from app.routes.auth import get_current_vendor
 from app.services import discovery, patron_service, stock_engine, vendor_network
+from app.services.media_urls import MediaUrlError, clean_image_urls
+from app.services.work_showcase import (
+    MAX_WORK_ITEMS,
+    WorkItem,
+    clean_work_items,
+    public_work_items,
+)
 
 router = APIRouter()
 
@@ -67,6 +74,8 @@ class VendorOut(BaseModel):
     banner_url: Optional[str] = None
     avatar_url: Optional[str] = None
     portfolio_images: list = []
+    # Selected work: what this business has done, shown on its shop front.
+    work_items: list = []
 
 
 class VendorUpdate(BaseModel):
@@ -100,6 +109,30 @@ class ProfileUpdate(BaseModel):
     banner_url: Optional[str] = None
     avatar_url: Optional[str] = None
     portfolio_images: Optional[list[str]] = None
+
+    @field_validator("portfolio_images", mode="before")
+    @classmethod
+    def _check_gallery(cls, value):
+        # A gallery photo is a served path or an absolute URL. A `data:` URL here
+        # is the "my photos are invisible" bug: it draws only in the tab that
+        # made it, and it is megabytes wide in every profile response.
+        if value is None:
+            return None
+        try:
+            return clean_image_urls(value)
+        except MediaUrlError as exc:
+            raise ValueError(str(exc))
+
+    @field_validator("logo_url", "banner_url", "avatar_url", mode="before")
+    @classmethod
+    def _check_single(cls, value):
+        if value in (None, ""):
+            return value
+        try:
+            return clean_image_urls([value], max_images=1)[0]
+        except MediaUrlError as exc:
+            raise ValueError(str(exc))
+    work_items: Optional[List[WorkItem]] = Field(default=None, max_length=MAX_WORK_ITEMS)
     chat_identity: Optional[dict] = None
 
 
@@ -183,6 +216,7 @@ def _extended_profile_dict(profile: VendorProfile) -> dict:
         "banner_url": profile.banner_url,
         "avatar_url": avatar_url,
         "portfolio_images": list(profile.portfolio_images or []),
+        "work_items": public_work_items(profile),
         "chat_identity": {
             "mode": chat_identity.get("mode", "business_logo"),
             "scope": chat_identity.get("scope", "organization"),
@@ -224,6 +258,12 @@ async def update_extended_profile(
         profile = VendorProfile(vendor_id=vendor.id)
         db.add(profile)
     payload = data.model_dump(exclude_none=True)
+    # Work items arrive as validated models; JSONB stores plain dicts.
+    cleaned_work = clean_work_items(data.work_items)
+    if cleaned_work is not None:
+        payload["work_items"] = cleaned_work
+    else:
+        payload.pop("work_items", None)
     avatar_url = payload.pop("avatar_url", None)
     chat_identity = payload.pop("chat_identity", None)
     for field, value in payload.items():
@@ -412,6 +452,7 @@ async def vendor_by_handle(
         out.banner_url = profile.banner_url
         out.avatar_url = cap.get("avatar_url") or chat_identity.get("avatar_url") or None
         out.portfolio_images = list(profile.portfolio_images or [])
+        out.work_items = public_work_items(profile)
     return out
 
 

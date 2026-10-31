@@ -100,6 +100,7 @@ import MarketCard from "@/components/home/cards/MarketCard";
 import { Package } from "lucide-react";
 import CuratedShelf from "@/components/home/CuratedShelf";
 import { mediaUrl } from "@/lib/media";
+import Avatar from "@/components/ui/Avatar";
 import { shelfByKey } from "@/config/homeShelves";
 import { SHELF_TIMEOUT_MS, useHomeFeedStore } from "@/stores/homeFeedStore";
 
@@ -205,6 +206,43 @@ describe("a photo that fails to load", () => {
 });
 
 /* ── 3. the record actually carries the photo ──────────────────────────────── */
+
+describe("the avatar — the most-shown photo in the product", () => {
+  // A vendor's face is drawn on every card, message, shelf and search result.
+  // It used to be a bare <img> with whatever string the record held: a logo
+  // stored as a bare key resolved against the current route, 404'd, and painted
+  // the browser's broken glyph. This is the "photos are not visible anywhere"
+  // report, in one component.
+  it("puts the /static prefix back on a bare storage key", () => {
+    const { container } = render(<Avatar name="Gikomba Textiles" src={BARE} />);
+    expect(container.querySelector("img")).toHaveAttribute("src", `/static/${BARE}`);
+  });
+
+  it("falls back to initials when the file is gone", () => {
+    const { container } = render(<Avatar name="Gikomba Textiles" src={DEAD} />);
+    fireEvent.error(container.querySelector("img"));
+    expect(container.querySelector("img")).toBeNull();
+    expect(container).toHaveTextContent("GT");
+  });
+
+  it("draws initials when there is no photo at all", () => {
+    const { container } = render(<Avatar name="Mama Mboga Fresh" />);
+    expect(container.querySelector("img")).toBeNull();
+    expect(container).toHaveTextContent("MM");
+  });
+});
+
+describe("a listing states whether it has a photo", () => {
+  it("marks a card with a photo as present", () => {
+    const { container } = render(<StockThumb item={{ name: "Kitenge", category: "textiles", images: [PHOTO] }} />);
+    expect(container.firstChild).toHaveAttribute("data-photo", "present");
+  });
+
+  it("marks a card with no photo as missing — the distinction the bug hid", () => {
+    const { container } = render(<StockThumb item={{ name: "Maize", category: "grains" }} />);
+    expect(container.firstChild).toHaveAttribute("data-photo", "missing");
+  });
+});
 
 describe("shelf normalisers", () => {
   it("keeps the equipment listing's photo, which the response model used to drop", async () => {

@@ -30,7 +30,7 @@ const QUICK_ACTIONS = [
   },
   {
     title: "View my shop · Shop front",
-    description: "Preview the public profile",
+    description: "Your public profile: shelf, selected work and photos",
     to: (vendor) => `/@${vendor.vendor_handle}`,
     icon: Store,
   },
@@ -86,8 +86,8 @@ const QUICK_ACTIONS = [
 
 const DESTINATIONS = [
   {
-    title: "Storefront & catalogue",
-    description: "Sell services, software and field operations: offers, account tiers, trial and enquiries.",
+    title: "Business desk",
+    description: "Choose what your business needs — services, software, field operations and devices.",
     to: () => "/storefront",
     icon: ShoppingBag,
     tone: "green",
@@ -116,14 +116,6 @@ const DESTINATIONS = [
     icon: Terminal,
     tone: "amber",
     group: "Stock & integrations",
-  },
-  {
-    title: "Creative portfolio",
-    description: "Showcase branding, web design, print & motion case studies and client services.",
-    to: () => "/portfolio",
-    icon: Sparkles,
-    tone: "green",
-    group: "Work & sourcing",
   },
   {
     title: "Tasks",

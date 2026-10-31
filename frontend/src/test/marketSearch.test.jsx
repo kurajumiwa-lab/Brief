@@ -35,7 +35,6 @@ vi.mock("@/stores/authStore", () => ({
 
 const { default: MarketSearch } = await import("@/components/home/MarketSearch");
 const { default: HomeTrustStrip } = await import("@/components/home/HomeTrustStrip");
-const { default: ShelfTiles } = await import("@/components/home/ShelfTiles");
 const { default: HomeHero } = await import("@/components/home/HomeHero");
 
 function Where() {
@@ -209,18 +208,8 @@ describe("The blended home furniture", () => {
     expect(strip).toHaveTextContent(/verified businesses/i);
   });
 
-  it("draws every real shelf as a tile that goes where See all goes", () => {
-    render(
-      <MemoryRouter>
-        <ShelfTiles />
-      </MemoryRouter>
-    );
-    const tiles = screen.getByTestId("home-shelf-tiles");
-    const links = tiles.querySelectorAll("a");
-    // Nine shelves + the "View all" door.
-    expect(links).toHaveLength(10);
-    expect(screen.getByRole("link", { name: /^Stock$/ })).toHaveAttribute("href", "/browse?type=goods");
-    expect(screen.getByRole("link", { name: /^Markets$/ })).toHaveAttribute("href", "/markets");
-    expect(screen.getByRole("link", { name: /^Notices$/ })).toHaveAttribute("href", "/notices");
-  });
+  // The nine-tile shelf strip this used to assert was removed in v2.18: its
+  // first three tiles read "Online services · Farms · Your category", which made
+  // the product look agricultural. `TradeNetworkPanel` replaced it, and its own
+  // specs live in `networkIdentity.test.jsx`.
 });

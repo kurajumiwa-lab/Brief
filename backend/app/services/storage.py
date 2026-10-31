@@ -47,6 +47,11 @@ ALLOWED_TYPES = {
     ".jpeg": "image/jpeg",
     ".webp": "image/webp",
     ".gif": "image/gif",
+    # iPhone gallery defaults. Accepted here and transcoded to JPEG in
+    # `app/services/images.py` before storage, because no browser outside Safari
+    # paints HEIC — a stored-but-invisible photo is the bug this exists to kill.
+    ".heic": "image/heic",
+    ".heif": "image/heif",
     ".csv": "text/csv",
 }
 VOICE_TYPES = {
@@ -84,7 +89,7 @@ def safe_filename(filename: str, content_type: Optional[str] = None) -> tuple[st
         guessed = mimetypes.guess_extension(content_type or "") or ""
         guessed = ".jpg" if guessed == ".jpe" else guessed
         if guessed not in ALLOWED_TYPES:
-            raise StorageError("Unsupported file type. Allowed: PDF, PNG, JPG, WEBP, GIF, CSV")
+            raise StorageError("Unsupported file type. Allowed: PDF, PNG, JPG, WEBP, GIF, HEIC, CSV")
         ext = guessed
         name = (Path(name).stem or "file") + ext
     stem = _SAFE.sub("-", Path(name).stem).strip("-.") or "file"

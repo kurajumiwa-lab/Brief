@@ -53,7 +53,7 @@ async def test_catalogue_is_public_with_three_lines_and_test_prices(client):
     body = res.json()
     assert [line["key"] for line in body["lines"]] == [
         "digital_services", "business_software", "field_operations"]
-    assert len(body["offers"]) == 12
+    assert len(body["offers"]) == 14
     offers = {o["key"]: o for o in body["offers"]}
     assert (offers["business_website"]["price_min_kes"], offers["business_website"]["price_max_kes"]) == (15000, 45000)
     assert (offers["logo_brand_starter"]["price_min_kes"], offers["logo_brand_starter"]["price_max_kes"]) == (2500, 8000)

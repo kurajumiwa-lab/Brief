@@ -364,6 +364,12 @@ export const fileAPI = {
     form.append("file", file);
     return api.post("/files/upload", form, { headers: { "Content-Type": "multipart/form-data" } });
   },
+  /** Up to twelve files in one request — a gallery selection is not twelve taps. */
+  uploadMany: (files) => {
+    const form = new FormData();
+    for (const file of files || []) form.append("files", file);
+    return api.post("/files/upload-many", form, { headers: { "Content-Type": "multipart/form-data" } });
+  },
   limits: () => api.get("/files/limits"),
 };
 
@@ -594,6 +600,36 @@ export const catalogAPI = {
   catalogue: () => api.get("/catalog"),
   createEnquiry: (body) => api.post("/catalog/enquiries", body),
   myEnquiries: () => api.get("/catalog/enquiries/mine"),
+  // Operator side: the people who answer the requests, not the customers who
+  // send them. Both are refused for a vendor without an ops role (403).
+  inbox: (params) => api.get("/catalog/enquiries", { params }),
+  setEnquiryStatus: (id, status) => api.patch(`/catalog/enquiries/${id}`, { status }),
+};
+
+// ── Market intake (v2.17) — photographs become a price dataset ──────────────
+// Uploading is multipart with up to twelve files in one request; the operator
+// endpoints are refused for anyone without a market-ops role.
+export const intakeAPI = {
+  /** 1–12 photographs (File[]) plus optional text, market and note. */
+  upload: (files, { text = "", market = "", note = "" } = {}) => {
+    const form = new FormData();
+    for (const file of files || []) form.append("files", file);
+    if (text) form.append("text", text);
+    if (market) form.append("market", market);
+    if (note) form.append("note", note);
+    return api.post("/intake/batches", form, { headers: { "Content-Type": "multipart/form-data" } });
+  },
+  /** The same intake with no photograph — paste what the sign says. */
+  fromText: (body) => api.post("/intake/batches/text", body),
+  batches: (limit = 20) => api.get("/intake/batches", { params: { limit } }),
+  batch: (id) => api.get(`/intake/batches/${id}`),
+  decide: (id, status) => api.patch(`/intake/observations/${id}`, { status }),
+};
+
+export const marketDataAPI = {
+  summary: () => api.get("/market-data/summary"),
+  observations: (params) => api.get("/market-data/observations", { params }),
+  claim: (virtualId) => api.post(`/market-data/presences/${encodeURIComponent(virtualId)}/claim`),
 };
 
 // ── Outside (v4) — location-aware discovery ────────────────────────────────
