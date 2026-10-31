@@ -22,11 +22,33 @@
 
 const ABSOLUTE = /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i;
 
+/**
+ * An absolute URL that points at *this platform's own* media route.
+ *
+ * `/static/<key>` is never served by a third party — it is this API's own file
+ * route — so `http://localhost:8000/static/uploads/…` (written while developing
+ * through a tunnel) and `https://some-old-preview.vercel.app/static/uploads/…`
+ * are both the same file this deployment should serve. Returned as written they
+ * ask a phone to fetch a laptop's localhost, which fails silently and looks like
+ * a lost photograph.
+ *
+ * A real bucket or CDN URL does not carry `/static/` and is left alone.
+ */
+function ownMediaPath(url) {
+  if (!ABSOLUTE.test(url)) return "";
+  const match = /^[a-z][a-z0-9+.-]*:\/\/[^/?#]+(\/(?:static\/)?uploads\/[^?#]*)/i.exec(url);
+  return match ? match[1] : "";
+}
+
 export function mediaUrl(src) {
   if (typeof src !== "string") return "";
   const url = src.trim();
   if (!url) return "";
-  if (ABSOLUTE.test(url)) return url;
+  if (ABSOLUTE.test(url)) {
+    const own = ownMediaPath(url);
+    if (own) return own.startsWith("/static/") ? own : `/static${own}`;
+    return url;
+  }
   if (url.startsWith("/static/")) return url;
   if (url.startsWith("/uploads/")) return `/static${url}`;
   if (url.startsWith("uploads/")) return `/static/${url}`;

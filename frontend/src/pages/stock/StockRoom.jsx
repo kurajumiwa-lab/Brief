@@ -16,6 +16,7 @@ import SourceDialog from "@/components/stock/SourceDialog";
 import StockCompareModal from "@/components/stock/StockCompareModal";
 import StockVerifyDialog from "@/components/stock/StockVerifyDialog";
 import BulkImport from "@/components/stock/BulkImport";
+import PhotoAuditCard from "@/components/stock/PhotoAuditCard";
 import MovementRow from "@/components/stock/MovementRow";
 import { useStockStore, needsMyAction } from "@/stores/stockStore";
 import { useChatStore } from "@/stores/chatStore";
@@ -212,7 +213,7 @@ export default function StockRoom() {
               </div>
 
               {(checkOpen || statusCounts.published < mine.length) && (
-                <div className="grid gap-2.5 sm:grid-cols-3 pt-2 border-t border-edge-1 text-micro text-ink-3">
+                <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-4 pt-2 border-t border-edge-1 text-micro text-ink-3">
                   <div className="flex items-start gap-2.5 rounded-xl bg-surface-0 border border-edge-1 p-2.5">
                     <span className="grid place-items-center w-8 h-8 rounded-lg bg-surface-2 text-brand-700 dark:text-brand-300 shrink-0">
                       <CheckCircle2 size={16} aria-hidden="true" />
@@ -260,6 +261,9 @@ export default function StockRoom() {
                       </Link>
                     </div>
                   </div>
+                  {/* A hidden listing and a lost photograph look the same on a
+                      card. This is the one that can be checked from here. */}
+                  <PhotoAuditCard />
                 </div>
               )}
             </div>

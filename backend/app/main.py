@@ -95,6 +95,7 @@ from app.routes import (
 from app.routes import (
     surface as surface_routes,
 )
+from app import schema
 from app.services import geo_data, payment_worker, pos_sync
 from app.services.psp_client import PSPError
 
@@ -126,7 +127,37 @@ async def lifespan(app: FastAPI):
     # Validated on construction too; re-stated here so a misconfigured deploy
     # fails at startup with the same message rather than at first request.
     validate_production_settings(settings)
-    if settings.auto_create_tables:
+    # The schema comes first, because almost everything below reads a table.
+    #
+    # A deployed host runs the real migrations: `create_all` creates missing
+    # tables and never missing columns, so on a database that was built once and
+    # then never migrated it silently leaves a schema that fails every query
+    # touching a newer column — and reports the failure as "the tables do not
+    # exist". That is precisely what a phone showed us: one screen claiming an
+    # empty database while the next rendered the same vendor's shelf.
+    if settings.run_migrations_on_boot:
+        try:
+            result = await schema.upgrade_to_head()
+            _boot.pop("database", None)
+            if result.get("error"):
+                _boot["schema"] = result["error"]
+            else:
+                _boot.pop("schema", None)
+                if result.get("applied") or result.get("stamped_revisions"):
+                    log.info(
+                        "boot: schema migrated to %s — applied %d, stamped %d "
+                        "(already present on the database, recorded rather than re-run)",
+                        result.get("head"),
+                        len(result.get("applied") or []),
+                        len(result.get("stamped_revisions") or []),
+                    )
+        except Exception as exc:
+            # Serve anyway: /api/health then explains what is wrong, instead of
+            # the platform returning an opaque 500 for every request.
+            _boot["schema"] = _safe_error(exc)
+            log.exception("boot: migration failed — the API will start, but queries "
+                          "needing the newer schema fail until it is applied")
+    elif settings.auto_create_tables:
         try:
             await init_db()
             _boot.pop("database", None)
@@ -305,47 +336,104 @@ async def api_root():
 
 @app.get("/api/health", tags=["Ops"])
 async def health():
-    """Liveness plus a real database round-trip and schema probe.
+    """Liveness, a real database round-trip, and **where the schema actually is**.
 
-    `degraded` (503) means the database is unreachable *or* the schema has not
-    been created yet — the two things that make sign-in and registration fail.
-    `error` carries a redacted driver message so a deploy can be diagnosed
-    without digging through logs.
+    `degraded` (503) means the database is unreachable *or* the schema is not at
+    the revision this code expects — the two things that make sign-in,
+    registration and shop fronts fail.
+
+    `schema_state` is the diagnostic that was missing when this endpoint could
+    only answer "tables exist: yes". A database can have every table 0001 created
+    and still be twelve migrations behind, which fails on the first column it
+    reads and looks like anything but a migration problem. This reports the
+    revision, the head, the pending list, and which critical tables are absent.
     """
     db_ok = False
-    schema_ok = None
     error = _boot.get("database")
+    state: dict = {}
     try:
         async with engine.connect() as conn:
             await conn.execute(text("SELECT 1"))
             db_ok = True
-            try:
-                schema_ok = bool(await conn.scalar(text("SELECT to_regclass('public.vendors') IS NOT NULL")))
-            except Exception:  # pragma: no cover - dialect without to_regclass
-                schema_ok = None
-            if db_ok and schema_ok is not False:
-                _boot.pop("database", None)
-                error = None
+            _boot.pop("database", None)
+            error = None
     except Exception as exc:  # pragma: no cover - depends on the environment
         log.warning("health: database unreachable: %s", exc)
         error = _safe_error(exc)
 
-    ok = db_ok and schema_ok is not False
+    if db_ok:
+        try:
+            state = await schema.report()
+        except Exception as exc:  # pragma: no cover - the report itself is guarded
+            log.warning("health: schema report failed: %s", exc)
+            state = {"error": _safe_error(exc)}
+
+    missing = state.get("missing_tables") or []
+    drifted = state.get("drifted") or {}
+    pending = state.get("pending_count") or 0
+    current = state.get("current")
+    head = state.get("head")
+    # The schema is healthy when the tables and columns this code reads actually
+    # exist. A create_all database is unstamped but complete; a stamped one that
+    # lags behind head is not. Both facts are reported; only a missing object
+    # makes the deployment degraded, because only a missing object breaks a page.
+    schema_ok = db_ok and not missing and not drifted
+
+    ok = schema_ok
+    media_durable = settings.media_store in ("db", "s3")
     payload = {
         "status": "ok" if ok else "degraded",
         "database": db_ok,
         "schema": schema_ok,
         "version": settings.VERSION,
+        # Which switch this process thinks it is running under. An operator
+        # setting environment variables by name cannot tell one that was
+        # *accepted* from one whose value is stale — and a stale ENVIRONMENT is
+        # the difference between enforcing the published-secret guard and not.
+        "environment": settings.ENVIRONMENT,
+        "production": settings.is_production,
+        "managed_host": settings.is_managed_host,
+        "media_store": settings.media_store,
+        # Durable is the property that matters: `local` means the next request
+        # may not find the file, whichever host wrote it.
+        "media_durable": media_durable,
+        "schema_state": state,
     }
     if error:
         payload["error"] = error
+    if _boot.get("schema"):
+        payload["boot_error"] = _boot["schema"]
     if not ok:
-        payload["hint"] = (
-            "The schema has not been created yet — redeploy with AUTO_CREATE_TABLES=true "
-            "or run `alembic upgrade head` once against this database."
-            if schema_ok is False
-            else "Check DATABASE_URL in the deployment's environment variables "
-                 "(percent-encode special characters in the password), then redeploy."
+        if not db_ok:
+            payload["hint"] = (
+                "Check DATABASE_URL in the deployment's environment variables "
+                "(percent-encode special characters in the password), then redeploy."
+            )
+        elif missing:
+            payload["hint"] = (
+                "These tables are missing: " + ", ".join(missing) + ". "
+                "Run `alembic upgrade head` against this database, or set "
+                "RUN_MIGRATIONS_ON_BOOT=true and redeploy."
+            )
+        else:
+            payload["hint"] = (
+                "These tables exist but are missing columns this version writes: "
+                + "; ".join(f"{table}.{', '.join(cols)}" for table, cols in drifted.items())
+                + ". Run `alembic upgrade head` against this database — "
+                "`create_all` never adds a column to an existing table."
+            )
+    if not media_durable:
+        payload["media_hint"] = (
+            f"media_store is '{settings.media_store}': uploads land on a disk that "
+            "does not survive this host, so every photo 404s after the next deploy. "
+            "Set MEDIA_STORE=db (or S3_BUCKET) on the deployment. Uploads are "
+            "refused here on a managed host rather than lost."
+        )
+    if pending and not (missing or drifted):
+        payload["note"] = (
+            f"{pending} migration(s) not recorded as applied (the schema is at "
+            f"{current or 'no revision'}, head is {head}). Harmless while the "
+            "tables and columns match, but stamp it: `alembic upgrade head`."
         )
     return JSONResponse(status_code=200 if ok else 503, content=payload)
 
@@ -368,16 +456,28 @@ async def database_unavailable(request, exc):  # pragma: no cover - depends on t
 
 
 async def schema_missing(request, exc):  # pragma: no cover - depends on the environment
+    """A `ProgrammingError` — but *which* one?
+
+    Every missing table, missing column, bad cast and permission failure arrives
+    as the same exception class. Answering all of them with "the tables do not
+    exist yet" is how a vendor's shop front came to announce an empty database
+    while their stock rendered fine: the real fault was a column added by a
+    migration that never ran. `schema.describe_missing` names the actual cause,
+    and the hint says how to fix it either way.
+    """
     log.error("schema missing on %s %s: %s", request.method, request.url.path, exc)
-    return JSONResponse(
-        status_code=503,
-        content={
-            "detail": "The database is reachable but its tables do not exist yet.",
-            "error": _safe_error(exc),
-            "hint": "Deploy once with AUTO_CREATE_TABLES=true, or run `alembic upgrade head` "
-                    "against this database, then retry.",
-        },
-    )
+    detail = schema.describe_missing(exc)
+    body = {
+        "detail": detail or "The database rejected this query: its schema and this code disagree.",
+        "error": _safe_error(exc),
+        "hint": (
+            "The database schema is behind the application. Run `alembic upgrade head` "
+            "against this database (or set RUN_MIGRATIONS_ON_BOOT=true and redeploy), "
+            "then retry."
+        ),
+        "code": "schema_out_of_date",
+    }
+    return JSONResponse(status_code=503, content=body)
 
 
 # Register the handler for every way a failed connection surfaces. SQLAlchemy
