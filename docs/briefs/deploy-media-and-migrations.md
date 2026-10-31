@@ -368,7 +368,7 @@ working after the switch.
 | `frontend/src/test/failureHonesty.test.jsx` | 5xx never described in the server's words; only a 404 may say "not found"; the shop front's headline, disclosure and retry; retry withheld for a 404; `data-photo` three states; the audit card |
 | `frontend/src/test/media.test.jsx` | URL shapes, including a URL minted while another host was this app |
 
-Measured on this branch: backend **543 passed**, frontend **409 passed / 39
+Measured on this branch: backend **545 passed**, frontend **409 passed / 39
 files**, `vite build` clean.
 
 ---
@@ -389,3 +389,13 @@ files**, `vite build` clean.
 - **The audit verifies only this deployment's own keys.** An absolute `https://`
   URL to a third party is counted as `external` and not fetched; a slow CDN and a
   lost file are different problems.
+- **`alembic/versions/` must reach the function.** Nothing else in the backend
+  writes to disk — an audit of every `open(…, "wb")`, `write_bytes`, `tempfile`
+  and `mkdir` under `app/` finds none outside `services/storage.py`, uploads go
+  through the store, images are transcoded in memory, and the CSV export streams
+  from memory — but boot-time migration needs the revision files. `alembic.ini`
+  is **not** required (`script_location` is resolved from `app/schema.py`), and
+  `.gitignore`/`.vercelignore` contain no rule that drops either. If a deploy
+  nonetheless omits `alembic/`, `/api/health` reports
+  `migrations_available: false` and the message names the alternative:
+  `alembic upgrade head` from CI or a laptop.

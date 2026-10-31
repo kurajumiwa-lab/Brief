@@ -69,6 +69,18 @@ CRITICAL_TABLES = (
 )
 
 
+def migrations_available() -> bool:
+    """Can this process migrate at all?
+
+    Only `alembic/versions/` is required. `alembic.ini` is optional and is not
+    used for anything that matters here — `_config()` sets `script_location` from
+    this file's location, so a host that ships the migrations but not the ini can
+    still apply them. Requiring the ini too turned "the files are there" into a
+    boot-time refusal for no reason.
+    """
+    return ALEMBIC_DIR.exists() and any(ALEMBIC_DIR.glob("versions/*.py"))
+
+
 def _config():
     """An Alembic config that works whatever the process's cwd is.
 
@@ -229,7 +241,7 @@ async def report() -> dict:
         "missing_tables": state["missing_tables"],
         "drifted": state["drifted"],
         "reachable": state["reachable"],
-        "migrations_available": ALEMBIC_INI.exists() and ALEMBIC_DIR.exists(),
+        "migrations_available": migrations_available(),
     }
 
 
@@ -349,10 +361,17 @@ def _upgrade_sync() -> dict:
 
 async def upgrade_to_head() -> dict:
     """Apply every pending migration, then report where the database ended up."""
-    if not (ALEMBIC_INI.exists() and ALEMBIC_DIR.exists()):
+    if not migrations_available():
         # A deploy that did not ship `alembic/` cannot migrate. Say so once,
         # clearly, instead of failing on the first query that needs a column.
-        return {"ran": False, "error": "alembic/ was not deployed with the API"}
+        return {
+            "ran": False,
+            "error": (
+                "alembic/versions was not deployed with the API, so this process "
+                "cannot apply migrations. Run `alembic upgrade head` against the "
+                "database from CI or a laptop instead."
+            ),
+        }
 
     result = await asyncio.to_thread(_upgrade_sync)
     state = await report()

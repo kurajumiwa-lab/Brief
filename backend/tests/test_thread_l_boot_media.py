@@ -428,3 +428,39 @@ async def test_a_voice_note_is_stored_durably_too(client, db_store):
     await store.delete_voice(key)
     with pytest.raises(StorageError):
         await store.read_voice(key)
+
+
+# ── 6. what a deploy actually ships ─────────────────────────────────────────
+
+
+def test_only_the_migrations_directory_is_required(monkeypatch, tmp_path):
+    """`alembic.ini` is optional; `alembic/versions/*.py` is not.
+
+    A host can ship the migrations and not the ini. Requiring the ini as well
+    turned a working deploy into a boot-time refusal, and the refusal's advice
+    ("deploy alembic/") was wrong — the file it wanted was a config it does not
+    use, because `_config()` sets `script_location` from its own location.
+    """
+    assert schema.migrations_available() is True, "the repository itself must pass"
+
+    # An ini-less deploy: the directory is there, the config file is not.
+    monkeypatch.setattr(schema, "ALEMBIC_INI", tmp_path / "alembic.ini")
+    assert schema.migrations_available() is True
+    assert schema._config().get_main_option("script_location")
+
+    # An empty versions/ directory cannot migrate and must say so.
+    empty = tmp_path / "alembic"
+    (empty / "versions").mkdir(parents=True)
+    monkeypatch.setattr(schema, "ALEMBIC_DIR", empty)
+    assert schema.migrations_available() is False
+
+
+async def test_a_deploy_without_the_migrations_says_what_to_run_instead(monkeypatch, tmp_path):
+    """The failure names the alternative, and does not pretend to have migrated."""
+    monkeypatch.setattr(schema, "ALEMBIC_DIR", tmp_path / "not-shipped")
+
+    result = await schema.upgrade_to_head()
+
+    assert result["ran"] is False
+    assert "alembic upgrade head" in result["error"]
+    assert "CI or a laptop" in result["error"]
