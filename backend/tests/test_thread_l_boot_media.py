@@ -366,3 +366,19 @@ async def test_the_audit_names_the_photos_this_deployment_cannot_serve(client):
     assert body["missing"][0]["where"] == "stock"
     assert "Re-upload" in body["advice"]
     assert good not in [m["url"] for m in body["missing"]]
+
+
+async def test_health_reports_which_switch_the_process_resolved(client):
+    """The values a dashboard cannot show, so `check_deploy.py` can grade them.
+
+    A variable that *exists* is a claim about the project. `/api/health` has to
+    report what the running process did with it, because a stale
+    `ENVIRONMENT=development` turns off the guard that refuses the shipped
+    `SECRET_KEY` while every "set this variable" instruction looks satisfied.
+    """
+    body = (await client.get("/api/health")).json()
+
+    assert "environment" in body
+    assert isinstance(body["production"], bool)
+    assert isinstance(body["managed_host"], bool)
+    assert body["media_durable"] == (body["media_store"] in ("db", "s3"))

@@ -386,6 +386,13 @@ async def health():
         "database": db_ok,
         "schema": schema_ok,
         "version": settings.VERSION,
+        # Which switch this process thinks it is running under. An operator
+        # setting environment variables by name cannot tell one that was
+        # *accepted* from one whose value is stale — and a stale ENVIRONMENT is
+        # the difference between enforcing the published-secret guard and not.
+        "environment": settings.ENVIRONMENT,
+        "production": settings.is_production,
+        "managed_host": settings.is_managed_host,
         "media_store": settings.media_store,
         # Durable is the property that matters: `local` means the next request
         # may not find the file, whichever host wrote it.

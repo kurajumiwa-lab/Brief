@@ -218,7 +218,9 @@ curl -s https://<your-app>.vercel.app/api/health | jq
 curl -s -o /dev/null -w '%{http_code}\n' https://<your-app>.vercel.app/api/vendors/ogallo
 ```
 
-Then, in **Vercel → Project → Settings → Environment Variables** (Production):
+Then, in **Vercel → Project → Settings → Environment Variables** (Production).
+Some of these probably already exist — set the *value*, do not try to create the
+name again (see the next section if Vercel answers "already exists"):
 
 | variable | value | why |
 |---|---|---|
@@ -243,6 +245,59 @@ cd backend && alembic upgrade head
 Either way, **do this before the first photo after the change**: a database
 migrated after the first `db`-backend upload still works, but the run order is
 easier to reason about when the schema is ahead of the traffic.
+
+### If Vercel says the variable already exists, that is the goal
+
+    A variable with the name `MEDIA_STORE` already exists for the target production
+
+is not an error worth fixing. It means the **name** is registered. What it does
+not mean — and what the dashboard will not tell you — is that the value is right,
+or that it was picked up by a running process:
+
+- a variable created months ago may hold `MEDIA_STORE=local`, which is the value
+  that discarded every upload;
+- a variable may hold `ENVIRONMENT=development`, which turns off the guard that
+  refuses the shipped `SECRET_KEY` (the app serves perfectly, with a public
+  signing key);
+- **a new value does nothing until a new deployment is built.** Saving in the
+  dashboard is not deploying.
+
+Three ways to change a value, in order of least friction:
+
+1. **Dashboard** — Settings → Environment Variables → edit the existing row →
+   Save → **Redeploy** (Deployments → ⋯ → Redeploy, with "use existing build
+   cache" unchecked).
+2. **REST** — `POST /v10/projects/{id}/env?upsert=true` updates in place instead of
+   failing with `403 …already exists`. Without `upsert` it refuses a duplicate,
+   which is the message above.
+3. **CLI** — `vercel env rm MEDIA_STORE production` then
+   `vercel env add MEDIA_STORE production`; there is no `vercel env update`.
+
+### Verify the deployment, not the settings panel
+
+The settings panel says what the project *should* pass to a build. This says what
+the running process actually resolved, and whether a photograph comes back:
+
+```bash
+cd backend
+python scripts/check_deploy.py https://<your-app>.vercel.app \
+  --photo /static/uploads/<uuid>/<file>.jpg
+```
+
+```
+  PASS the database answers
+  PASS every table and column this code reads exists
+  PASS schema is at 0030_market_intake
+  FAIL photos are stored on this host's disk (local) — every upload will 404 after the next request
+        → Set MEDIA_STORE=db (or S3_BUCKET for object storage) and redeploy. …
+  NOTE ENVIRONMENT is 'development', not 'production'
+        → … the startup guard that refuses the shipped SECRET_KEY never runs …
+```
+
+Exit code 0 only when nothing is broken, so it also works as a post-deploy gate
+in CI. `--json` for machines, `--photo` to prove a specific file still loads.
+`/api/health` now reports `environment`, `production` and `managed_host` for
+exactly this reason: a variable that exists is a claim, and this is the check.
 
 ### Then: re-add the photos that were lost
 
