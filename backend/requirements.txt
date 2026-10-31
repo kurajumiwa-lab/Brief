@@ -16,3 +16,9 @@ pydantic-settings==2.1.0
 email-validator==2.1.1
 python-dotenv==1.0.0
 boto3==1.34.34
+# Phone photographs. Required for two things the product promises: an iPhone
+# HEIC is transcoded to a JPEG a browser can actually paint, and a 5 MB camera
+# photo is downscaled to fit the upload cap instead of being refused. Without
+# this the API still runs — `app/services/images.py` degrades — but HEIC uploads
+# are refused with an explanation and every photo keeps its original size.
+pillow>=10,<13

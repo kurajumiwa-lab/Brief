@@ -18,6 +18,7 @@ from app.models.vendor import Vendor
 from app.models.vendor_list import VendorList, VendorListMembership
 from app.routes.auth import get_current_vendor
 from app.services import notification_service, patron_service, stock_engine
+from app.services.media_urls import MediaUrlError, clean_image_urls
 from app.services.storage import is_public_url
 
 # What a vendor may set on their own stock; `patron_verified` only comes from a patron.
@@ -54,6 +55,17 @@ class StockItemCreate(BaseModel):
     images: list = []
     specifications: dict = {}
     tags: list[str] = []
+
+    @field_validator("images", mode="before")
+    @classmethod
+    def _check_images(cls, value):
+        # A photo is a served path or an absolute URL. `data:` and `blob:` are
+        # refused by name — see `app/services/media_urls.py` for the bug that
+        # made this necessary.
+        try:
+            return clean_image_urls(value)
+        except MediaUrlError as exc:
+            raise ValueError(str(exc))
     # Quality verification (v2.1 §3.1)
     quality_status: Optional[QualityStatus] = None
     spec_sheet_url: Optional[str] = Field(None, max_length=500)
@@ -81,6 +93,16 @@ class StockItemUpdate(BaseModel):
     visible_to_groups: Optional[list] = None
     images: Optional[list] = None
     specifications: Optional[dict] = None
+
+    @field_validator("images", mode="before")
+    @classmethod
+    def _check_images(cls, value):
+        if value is None:
+            return None
+        try:
+            return clean_image_urls(value)
+        except MediaUrlError as exc:
+            raise ValueError(str(exc))
     tags: Optional[list[str]] = None
     quality_status: Optional[QualityStatus] = None
     spec_sheet_url: Optional[str] = Field(None, max_length=500)
