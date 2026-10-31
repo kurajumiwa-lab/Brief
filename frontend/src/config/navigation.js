@@ -2,35 +2,38 @@ import {
   Home, Compass, ClipboardList, Store, Map, Newspaper, Package,
   Truck, MapPin, Users, Wrench, CalendarDays, Terminal, UserRound, Building2,
   Plus, Bell, MessagesSquare, ShieldCheck, Layers3, BarChart3, FileCheck,
-  Sparkles, Receipt, ShoppingBag, ShoppingCart, List, ListChecks, Inbox,
+  Sparkles, Receipt, ShoppingBag, ShoppingCart, List, ListChecks, Inbox, ScanLine,
 } from "lucide-react";
 
 /**
- * OUTSIDE — five primary destinations (v4 IA).
+ * THE FIVE DESTINATIONS — three activities, one anchor and one door (v2.18).
  *
- * The previous map (Home · Browse · Work · Inbox · Business) was organised
- * around what a *trader* is doing. Outside is organised around what a *person*
- * is doing, because trading is now one thing among several:
+ * The previous map was organised around what a *trader* is doing. Direction C
+ * organises it around what a *participant* is doing, because a school, a
+ * household and an artisan do the same three things here:
  *
- *   Home      what is happening around you, in shelves
- *   Explore   search and browse across every content type, with distance
- *   Create    ONE publishing entry point for all six content types
- *   Activity  notifications, invitations, replies and what is waiting on you
- *   Profile   your identity, your published content, your settings
+ *   Discover   find vendors, suppliers, services and products
+ *   Connect    contact, request a quotation, establish a relationship
+ *   My World   manage your identity, vendor front, clients and purchases
  *
- * Nothing was deleted to get here. Every v3 URL still resolves and still
- * highlights the right tab — the areas below absorb the old destinations:
- * Browse's discovery surfaces became Explore, and Work + Inbox became
- * Activity. See `docs/outside/01-route-map.md`.
+ * Home stays as the anchor — it is where the three are explained in one
+ * screenful — and Create stays as the one publishing door, which is how a
+ * household becomes a supplier on the same day it buys something.
+ *
+ * The *routes* did not change. Discover is `/explore`, Connect is `/activity`
+ * and My World is `/me`; renaming a tab is not worth breaking a link someone
+ * saved, and the areas below still absorb every older URL:
+ * Browse's discovery surfaces are Discover, and Work + Inbox are Connect.
+ * See `docs/outside/01-route-map.md`.
  */
 export const PRIMARY_NAV = [
   { to: "/", label: "Home", icon: Home, end: true },
-  { to: "/explore", label: "Explore", icon: Compass, area: "explore" },
+  { to: "/explore", label: "Discover", icon: Compass, area: "explore" },
   // `action` marks the one visually prominent tab. It is deliberately
   // restrained — a filled pill, not a floating button competing with content.
   { to: "/create", label: "Create", icon: Plus, action: true },
-  { to: "/activity", label: "Activity", icon: Bell, area: "activity", badge: "activity" },
-  { to: "/me", label: "Profile", icon: UserRound, area: "me" },
+  { to: "/activity", label: "Connect", icon: Bell, area: "activity", badge: "activity" },
+  { to: "/me", label: "My World", icon: UserRound, area: "me" },
 ];
 
 /** Explore: every discovery surface, old and new. */
@@ -212,6 +215,8 @@ export const SECTION_GROUPS = [
     items: [
       { to: "/ops", label: "Ops console", icon: Terminal, quiet: true },
       { to: "/storefront/inbox", label: "Enquiry inbox", icon: Inbox, quiet: true },
+      { to: "/market-data", label: "Market data", icon: BarChart3 },
+      { to: "/intake", label: "Market intake", icon: ScanLine, quiet: true },
     ],
   },
 ];

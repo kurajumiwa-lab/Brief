@@ -141,7 +141,10 @@ export default function ActivityPage() {
   return (
     <div className="min-w-0" data-testid="activity-page">
       {/* ── 1. the heading, and nothing under it ─────────────────────────── */}
-      <h1 className="mb-3 text-2xl font-bold leading-tight tracking-tight text-ink-1">Activity</h1>
+      {/* "Connect" (v2.18): everything that is waiting on you or on someone
+          else — replies, invitations, orders, quotations. The route is still
+          /activity and every notification deep link still lands here. */}
+      <h1 className="mb-3 text-2xl font-bold leading-tight tracking-tight text-ink-1">Connect</h1>
 
       {/* ── 2. three numbers, always all three, always in one row ────────── */}
       <ul

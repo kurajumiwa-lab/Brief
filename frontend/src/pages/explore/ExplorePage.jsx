@@ -147,7 +147,10 @@ export default function ExplorePage() {
     <div className="space-y-s3">
       {/* ── one row of identity: the screen and the place ─────────────────── */}
       <div className="flex items-center justify-between gap-2">
-        <h1 className="text-title-section font-bold tracking-tight text-ink-1">Explore</h1>
+        {/* The tab is "Discover" (v2.18): find vendors, suppliers, services and
+            products. The heading follows the tab — two names for one screen is
+            how a product starts to feel like two products. */}
+        <h1 className="text-title-section font-bold tracking-tight text-ink-1">Discover</h1>
         <button
           type="button"
           onClick={() => setPlaceOpen((v) => !v)}

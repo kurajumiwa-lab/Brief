@@ -7,7 +7,9 @@ import TradeOverviewShelf from "@/components/home/TradeOverviewShelf";
 import HomeFeed from "@/components/home/HomeFeed";
 import CommunityStrip from "@/components/home/CommunityStrip";
 import HomeTrustStrip from "@/components/home/HomeTrustStrip";
-import ShelfTiles from "@/components/home/ShelfTiles";
+import TradeNetworkPanel from "@/components/home/TradeNetworkPanel";
+import ParticipantBand from "@/components/home/ParticipantBand";
+import FoundationStrip from "@/components/home/FoundationStrip";
 import MarketsAround from "@/components/markets/MarketsAround";
 import { useTradeOverviewStore } from "@/stores/tradeOverviewStore";
 
@@ -19,11 +21,14 @@ import { useTradeOverviewStore } from "@/stores/tradeOverviewStore";
  *   1  **identity and search** — the market hero: who you are, one field that
  *      finds goods, suppliers, people, markets and rentals, and the suggestions
  *      that make the field obvious. This is the only place Home raises its voice.
- *   2  **the setup card**, for the vendors who still have a first trade to run.
- *      Once it is done it renders nothing at all — the business numbers have
- *      their own band further down.
- *   3  **the marketplace** — discovery doors, then shelves of real records from
- *      other vendors, then your business band, then the wider network.
+ *   2  **the setup card** — the hard-coded vital-information task. It is not
+ *      optional and it is not dismissible until the shop has a photo, a face, a
+ *      sentence and a category. Once it is done it renders nothing at all.
+ *   3  **the categories** — five doors with descriptions, replacing the shelf
+ *      strip whose first three tiles read "Online services · Farms · Your
+ *      category".
+ *   4  **the architecture, in order** — the guarantees, the participants, the
+ *      four systems, then the live marketplace itself.
  *
  * What changed in v3.3:
  *   · Trade overview is now a compact shelf instead of oversized cards
@@ -51,24 +56,38 @@ export default function HomeHub() {
 
   return (
     <div className="space-y-5 sm:space-y-6">
+      {/* ── the connection layer, stated once ──────────────────────────────
+          Identity, one search, the doors, and the ask. The photograph is a
+          workshop floor rather than a market stall, because this is
+          infrastructure for trade, not a market garden. */}
       <HomeHero />
 
-      {/* The reference designs' opening band: what this network guarantees,
-          then a picture of the aisles. Both are views over facts the product
-          already states — no invented numbers, no second taxonomy. */}
+      {/* The hard-coded vital-information task. It is second on the page on
+          purpose: a vendor who has not yet put a photo, a face, a sentence and a
+          category on their shop needs to be told that before they are shown
+          anything else. It renders nothing at all once those are done. */}
+      <SetupChecklist />
+
+      {/* The five categories, as doors with descriptions — the replacement for
+          the "Online services · Farms · Your category" shelf. */}
+      <TradeNetworkPanel />
+
+      {/* Four guarantees, each already true of the product. */}
       <HomeTrustStrip />
-      <ShelfTiles />
+
+      {/* Who is on the network, and the fact that everyone trades both ways. */}
+      <ParticipantBand />
+
+      {/* The four systems underneath, each pointing at the screen it lives on. */}
+      <FoundationStrip />
 
       {/* The way into the community: static by design, so it cannot be the
           reason Home has a hole in it. */}
       <CommunityStrip />
 
-      {/* New vendors get four steps; established traders get nothing here. */}
       {/* Markets around you — loaded by itself, at a walking radius, busiest
           first. This replaces "press Scan and pick a radius starting at 150 km". */}
       <MarketsAround limit={3} />
-
-      <SetupChecklist />
 
       {/* Compact trade overview - replaces oversized cards (v3.3) */}
       <TradeOverviewShelf />

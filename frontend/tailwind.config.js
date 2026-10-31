@@ -22,6 +22,11 @@ export default {
         accent: scale("accent", RAMP),
         // Legacy name, cool slate value: identity, selected state, focus.
         orchid: scale("orchid", RAMP),
+        // v2.18 (direction C). `tech` is confirmation and live state — the
+        // "this exists and works" green. It is never an action colour.
+        // `electric` is the one place a screen points forward.
+        tech: scale("tech", RAMP),
+        electric: scale("electric", RAMP),
         surface: { ...scale("surface", [0, 1, 2, 3, 4]), inverse: token("surface-inverse") },
         // Semantic status colours. A screen picks `danger`, never a hue, so
         // there is exactly one red in the product and it always means the same

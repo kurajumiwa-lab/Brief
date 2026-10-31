@@ -87,7 +87,9 @@ export default function MobileTabBar() {
                 to={item.to}
                 end={item.end}
                 aria-current={active ? "page" : undefined}
-                data-testid={`tab-${item.label.toLowerCase()}`}
+                // Keyed by route, not by label: renaming a tab ("Explore" →
+                // "Discover") must not rename a test hook.
+                data-testid={`tab-${item.to === "/" ? "home" : item.to.replace(/\W+/g, "")}`}
                 className={({ isActive }) =>
                   cn(
                     "relative flex flex-col items-center justify-center gap-1 min-h-16 py-2 text-2xs font-semibold transition-colors",

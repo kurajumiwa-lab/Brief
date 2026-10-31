@@ -3,9 +3,13 @@ import { cn } from "@/lib/utils";
 import { BRAND } from "@/config/brand";
 
 /**
- * The mark: a shelf glyph (three stacked bars, the top one short — stock going
- * out) inside a rounded square, with a brand dot for the "live" network.
- * Drawn inline so it costs nothing and inherits the theme.
+ * The mark: three nodes and the lines between them, inside a rounded square —
+ * the connection layer, drawn. It replaces a shelf glyph (stacked bars), which
+ * said "stock" and nothing else; a school looking for an electrician is not
+ * looking at a shelf.
+ *
+ * The third node is `tech` green: the network's second voice, meaning "this
+ * exists and works". Drawn inline so it costs nothing and inherits the theme.
  */
 export function LogoMark({ size = 32, className }) {
   return (
@@ -14,11 +18,17 @@ export function LogoMark({ size = 32, className }) {
       style={{ width: size, height: size }}
       aria-hidden="true"
     >
-      <svg width={size * 0.56} height={size * 0.56} viewBox="0 0 20 20" fill="none">
-        <rect x="2" y="3.5" width="10" height="2.6" rx="1.3" fill="currentColor" />
-        <rect x="2" y="8.7" width="16" height="2.6" rx="1.3" fill="currentColor" opacity="0.72" />
-        <rect x="2" y="13.9" width="13" height="2.6" rx="1.3" fill="currentColor" opacity="0.45" />
-        <circle cx="16.4" cy="4.8" r="2.4" className="fill-brand-500" />
+      <svg width={size * 0.6} height={size * 0.6} viewBox="0 0 20 20" fill="none">
+        <path
+          d="M10 5.1v9.6M5.4 14.4h9.2M6.6 6.6 3.9 12.7M13.4 6.6l2.7 6.1"
+          stroke="currentColor"
+          strokeWidth="1.3"
+          strokeLinecap="round"
+          opacity="0.5"
+        />
+        <circle cx="10" cy="4.3" r="2.1" fill="currentColor" />
+        <circle cx="3.9" cy="16" r="2.1" fill="currentColor" />
+        <circle cx="16.1" cy="16" r="2.1" className="fill-tech-500" />
       </svg>
     </span>
   );
@@ -35,7 +45,7 @@ export default function Logo({ to = "/", compact = false, className }) {
       {!compact && (
         <span className="hidden sm:flex items-baseline gap-1">
           <span className="text-lg font-extrabold tracking-tight text-ink-1 leading-none">{BRAND.wordmark}</span>
-          <span className="w-1.5 h-1.5 rounded-full bg-brand-500 mb-0.5" aria-hidden="true" />
+          <span className="w-1.5 h-1.5 rounded-full bg-tech-500 mb-0.5" aria-hidden="true" />
         </span>
       )}
     </Link>

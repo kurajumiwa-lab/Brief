@@ -5,11 +5,21 @@
    `tailwind.config.js` resolves through `rgb(var(--token) / <alpha-value>)`,
    so `.dark` is a true peer theme rather than a pile of `dark:` overrides.
 
-   What Outside changes, and why:
+   What changed in v2.18 (direction C — the connected trade network):
 
-     · BRAND is pine green (#176344 at 500) — the colour of going outside.
-       It replaces the brighter trading green, which read as "commerce"
-       before it read as "discovery".
+     · BRAND is deep forest teal (#103C35 at 600) — the colour of
+       infrastructure, not agriculture. It replaces pine green, which made the
+       product read as a market garden rather than a connection layer.
+     · TECH (#19A783) is the second voice: confirmation, live states, the
+       "this exists and works" green. It is NOT a second action colour.
+     · ELECTRIC (#5265E8) is the accent: links inside dark surfaces, focus on
+       the teal, and the one place a screen points forward.
+     · SURFACES move to a neutral-cool #F5F7F6 and ink to #182522, so the
+       teal reads as an identity instead of tinting the whole page.
+
+   What Outside had changed, and why:
+
+     · BRAND was pine green (#176344 at 500) — the colour of going outside.
      · SURFACES stay near-neutral on purpose. Content and media are the
        colour on this screen; chrome is not.
      · SEMANTIC colours are named by meaning (ok / warn / danger / info),
@@ -30,38 +40,64 @@
 :root {
   color-scheme: light;
 
-  /* ── Surfaces: near-neutral so media carries the colour ───────────────── */
-  --surface-0: 251 251 249; /* page */
-  --surface-1: 255 255 255; /* card */
-  --surface-2: 244 245 242; /* quiet field / hover */
-  --surface-3: 234 236 232;
-  --surface-4: 219 222 217;
-  --surface-inverse: 17 24 20;
+  /* ── Surfaces: neutral-cool so media carries the colour ───────────────── */
+  --surface-0: 245 247 246; /* page   #F5F7F6 */
+  --surface-1: 255 255 255; /* card   #FFFFFF */
+  --surface-2: 239 242 240; /* quiet field / hover */
+  --surface-3: 229 234 231;
+  --surface-4: 213 220 216;
+  --surface-inverse: 24 37 34;
 
   /* ── Ink ──────────────────────────────────────────────────────────────── */
-  --ink-1: 23 30 26;  /* titles            14.9:1 on surface-1 */
-  --ink-2: 55 66 60;  /* body               7.4:1 */
-  --ink-3: 88 101 94; /* secondary          4.6:1 */
-  --ink-4: 116 128 121; /* metadata         3.1:1 — large text & icons only */
+  --ink-1: 24 37 34;    /* #182522 titles    15.0:1 on surface-1 */
+  --ink-2: 51 68 63;    /* body               8.9:1 */
+  --ink-3: 86 104 98;   /* secondary          5.0:1 */
+  --ink-4: 116 133 127; /* metadata           3.4:1 — large text & icons only */
   --ink-inverse: 255 255 255;
 
   /* ── Edges ───────────────────────────────────────────────────────────── */
-  --edge-1: 228 231 226;
-  --edge-2: 209 214 208;
-  --edge-3: 184 191 183;
+  --edge-1: 227 232 229;
+  --edge-2: 208 216 211;
+  --edge-3: 184 194 189;
 
-  /* ── Brand: pine green — discovery, confirmation, trust ──────────────── */
-  --brand-50: 236 246 240;
-  --brand-100: 214 236 225;
-  --brand-200: 180 220 201;
-  --brand-300: 132 197 168;
-  --brand-400: 74 165 126;
-  --brand-500: 23 99 68;   /* #176344 — the Outside green */
-  --brand-600: 20 88 60;
-  --brand-700: 17 71 49;
-  --brand-800: 14 56 39;
-  --brand-900: 11 42 30;
-  --brand-950: 5 24 17;
+  /* ── Brand: deep forest teal — infrastructure, identity, trust ───────── */
+  --brand-50: 236 246 243;
+  --brand-100: 214 236 230;
+  --brand-200: 178 218 208;
+  --brand-300: 128 195 178;
+  --brand-400: 66 158 138;
+  --brand-500: 31 122 102;  /* #1F7A66 — the working teal */
+  --brand-600: 16 60 53;    /* #103C35 — the primary. 10.4:1 with white */
+  --brand-700: 12 46 41;
+  --brand-800: 9 35 31;
+  --brand-900: 6 25 22;
+  --brand-950: 3 16 14;
+
+  /* ── Tech: the second voice. Confirmation and live state — never a CTA ─ */
+  --tech-50: 232 248 243;
+  --tech-100: 204 240 228;
+  --tech-200: 163 227 207;
+  --tech-300: 110 209 181;
+  --tech-400: 61 190 156;
+  --tech-500: 25 167 131;   /* #19A783 */
+  --tech-600: 21 140 110;
+  --tech-700: 17 112 88;
+  --tech-800: 14 88 70;
+  --tech-900: 11 66 53;
+  --tech-950: 5 38 30;
+
+  /* ── Electric: the one place a screen points forward ─────────────────── */
+  --electric-50: 238 240 253;
+  --electric-100: 223 227 252;
+  --electric-200: 195 202 249;
+  --electric-300: 156 168 245;
+  --electric-400: 118 132 240;
+  --electric-500: 82 101 232; /* #5265E8 */
+  --electric-600: 67 82 205;
+  --electric-700: 54 66 168;
+  --electric-800: 44 54 137;
+  --electric-900: 34 42 108;
+  --electric-950: 19 23 68;
 
   /* ── Accent: warm amber — money and market cues only ─────────────────── */
   --accent-50: 255 251 235;
@@ -90,14 +126,14 @@
   --orchid-950: 15 24 35;
 
   /* ── Semantic status. Named by meaning, never by hue ─────────────────── */
-  --ok: 23 99 68;        --ok-soft: 232 244 236;
+  --ok: 25 167 131;      --ok-soft: 232 248 243;
   --warn: 180 83 9;      --warn-soft: 254 243 214;
   --danger: 176 42 42;   --danger-soft: 252 233 233;
-  --info: 51 80 112;     --info-soft: 228 236 245;
+  --info: 82 101 232;    --info-soft: 238 240 253;
 
-  /* ── The deep-green discovery surface ────────────────────────────────── */
-  --market-1: 11 42 30;  /* brand-900 */
-  --market-2: 5 24 17;   /* brand-950 */
+  /* ── The deep-teal surface the hero and the network bands sit on ─────── */
+  --market-1: 16 60 53;  /* #103C35 */
+  --market-2: 8 35 30;   /* one step darker, for scrims */
 
   /* ── Spacing scale. New layout uses this and nothing else ───────────────
      4px base, so the rhythm is 4/8/12/16/24/32/48/64. Tailwind's own scale
@@ -149,35 +185,42 @@
 .dark {
   color-scheme: dark;
 
-  --market-1: 14 56 39;
-  --market-2: 8 36 25;
+  --market-1: 12 46 41;
+  --market-2: 8 30 26;
 
-  --surface-0: 12 15 13;
-  --surface-1: 20 24 21;
-  --surface-2: 27 32 28;
-  --surface-3: 37 43 38;
-  --surface-4: 48 56 49;
-  --surface-inverse: 247 248 246;
+  --surface-0: 11 16 14;
+  --surface-1: 19 25 22;
+  --surface-2: 26 33 29;
+  --surface-3: 36 44 39;
+  --surface-4: 47 57 51;
+  --surface-inverse: 244 247 245;
 
-  --ink-1: 247 248 246;
-  --ink-2: 213 218 213;
-  --ink-3: 166 175 168;
-  --ink-4: 143 153 145;
-  --ink-inverse: 12 15 13;
+  --ink-1: 244 247 245;
+  --ink-2: 210 217 213;
+  --ink-3: 164 175 169;
+  --ink-4: 141 153 146;
+  --ink-inverse: 11 16 14;
 
-  --edge-1: 39 45 40;
-  --edge-2: 54 62 55;
-  --edge-3: 76 85 77;
+  --edge-1: 38 46 41;
+  --edge-2: 53 63 56;
+  --edge-3: 75 87 79;
 
-  --brand-50: 13 37 26;
-  --brand-100: 16 52 34;
-  --brand-200: 20 70 45;
-  --brand-300: 132 197 168;
-  --brand-400: 74 165 126;
-  --brand-500: 52 178 121;   /* lifted for 4.5:1 on surface-1 */
-  --brand-600: 36 150 100;
-  --brand-700: 26 118 79;
-  --brand-800: 19 92 62;
+  --brand-50: 12 34 30;
+  --brand-100: 16 48 42;
+  --brand-200: 20 66 57;
+  --brand-300: 128 195 178;
+  --brand-400: 66 178 152;
+  --brand-500: 62 190 160;   /* lifted for 4.5:1 on surface-1 */
+  --brand-600: 37 163 134;
+  --brand-700: 28 132 108;
+  --brand-800: 21 105 86;
+
+  /* The teal and electric ramps are readable as-is on a dark surface; only the
+     lowest steps move, because a #103C35 chip on #131916 has no edge. */
+  --tech-50: 9 32 26;
+  --tech-100: 11 45 36;
+  --electric-50: 20 23 52;
+  --electric-100: 27 31 70;
 
   --orchid-50: 24 34 46;
   --orchid-100: 31 45 61;
@@ -191,10 +234,10 @@
   --orchid-900: 32 50 70;
   --orchid-950: 18 29 41;
 
-  --ok: 74 165 126;      --ok-soft: 18 46 34;
+  --ok: 61 190 156;      --ok-soft: 12 40 32;
   --warn: 232 168 56;    --warn-soft: 48 36 14;
   --danger: 226 110 110; --danger-soft: 52 24 24;
-  --info: 130 160 193;   --info-soft: 24 36 50;
+  --info: 118 132 240;   --info-soft: 19 24 56;
 
   --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.4);
   --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.45), 0 1px 2px -1px rgb(0 0 0 / 0.4);

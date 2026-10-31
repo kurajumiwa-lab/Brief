@@ -4,15 +4,26 @@
 
 | tab | route | what it is |
 |---|---|---|
-| **Home** | `/` | Personalised discovery feed: location bar, curated shelves, quiet-network fallback |
-| **Explore** | `/explore` | One search across every content type, with distance, date and price filters |
-| **Create** | `/create` | The single publishing entry point for all six content types |
-| **Activity** | `/activity` | Grouped notifications, invitations, replies and waiting counts |
-| **Profile** | `/me` | Identity, published content, saved items, settings |
+| **Home** | `/` | The connection layer in one screenful: hero, the vital-information task, the five trade categories, the participants, the four systems, then the live marketplace |
+| **Discover** | `/explore` | One search across every content type, with distance, date and price filters |
+| **Create** | `/create` | The single publishing entry point — how a household becomes a supplier the same day it buys |
+| **Connect** | `/activity` | Grouped notifications, invitations, replies and waiting counts |
+| **My World** | `/me` | Identity, vendor front, published content, saved items, settings |
 
 `Create` is the one visually distinct tab (`action: true` in
 `frontend/src/config/navigation.js`) — a filled pill in the middle of the
 bottom bar, not a floating button.
+
+### v2.18 relabel (direction C)
+
+The three activities are **Discover · Connect · My World**, because a school, a
+household and an artisan do the same three things here and none of them is
+"buying" or "selling". The **routes did not change** — `Discover` is still
+`/explore`, `Connect` is still `/activity`, `My World` is still `/me` — so every
+saved link, deep link and area array above keeps working. The mobile tab bar is
+now keyed by route (`tab-explore`, `tab-activity`, `tab-me`) rather than by
+label, so a future rename cannot silently rename a test hook.
+See `docs/briefs/trade-network-identity.md`.
 
 ## Where every v3 destination went
 

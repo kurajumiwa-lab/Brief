@@ -170,7 +170,8 @@ describe("Activity — the compact header", () => {
     const Page = await ActivityPage();
     renderAt(<Page />);
 
-    const heading = await screen.findByRole("heading", { level: 1, name: "Activity" });
+    // The tab is "Connect" (v2.18); the route is still /activity.
+    const heading = await screen.findByRole("heading", { level: 1, name: "Connect" });
     expect(heading).toBeInTheDocument();
     expect(screen.queryByText(/what's waiting for you/i)).toBeNull();
     expect(screen.queryByText(/measured by real follow-through/i)).toBeNull();
