@@ -108,6 +108,8 @@ export default function AuthPage() {
       } else {
         if (!/^[a-z0-9_]{3,30}$/.test(form.vendor_handle)) return toast.error("Handle: 3–30 lowercase letters, numbers or _");
         if (form.password.length < 8) return toast.error("Password needs at least 8 characters");
+        if (!/[A-Z]/.test(form.password) || !/[0-9]/.test(form.password))
+          return toast.error("Password needs one uppercase letter and one number");
         const cleanName = form.business_name.trim();
         await register({
           account_kind: form.account_kind,
@@ -300,7 +302,7 @@ export default function AuthPage() {
                     hint="How neighbours address you. Lowercase letters, numbers and underscores."
                   />
                   <Input label="Email" icon={Mail} type="email" required autoComplete="email" value={form.email} onChange={set("email")} />
-                  <Input label="Password" icon={Lock} type="password" required autoComplete="new-password" minLength={8} value={form.password} onChange={set("password")} hint="At least 8 characters" />
+                  <Input label="Password" icon={Lock} type="password" required autoComplete="new-password" minLength={8} value={form.password} onChange={set("password")} hint="At least 8 characters, with one uppercase letter and one number" />
 
                   <label className="flex items-start gap-2.5 rounded-xl border border-edge-1 bg-surface-1 p-3 cursor-pointer">
                     <input
