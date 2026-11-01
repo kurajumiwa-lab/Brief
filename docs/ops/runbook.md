@@ -125,6 +125,22 @@ pipeline instead of the customer. Full write-up, including the environment set
 from nothing and how to recover photographs that were already lost:
 `docs/briefs/deploy-media-and-migrations.md`.
 
+The chain is tested from nothing (`pytest tests/test_migrations.py`), which is
+the easy case. The deployed database is not empty, so the chain is also tested
+against one that already holds rows — a migration that adds a `NOT NULL` column
+without a default applies perfectly to an empty schema and kills the first cold
+start after the deploy that was meant to fix something else:
+
+```bash
+# Builds an old schema, inserts vendors/stock/profiles/movements, applies every
+# remaining migration, then checks the rows survived and the newer columns read.
+# Creates its own throwaway database; --dsn targets a copy (never production),
+# --from picks the revision to seed at.
+cd backend && python scripts/migration_drill.py
+```
+
+CI runs it in `backend-tests` on every push, next to the from-nothing run.
+
 ```bash
 # Apply, then check that models and migrations agree:
 cd backend && alembic upgrade head && alembic check

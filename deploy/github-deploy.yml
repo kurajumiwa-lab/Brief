@@ -71,6 +71,11 @@ jobs:
           alembic upgrade head
           alembic check
           alembic downgrade base
+      - name: Migrations apply over a database that already has rows
+        working-directory: backend
+        # The from-nothing run above is the easy case. Production is not empty:
+        # this seeds an older schema and applies the rest over it.
+        run: python scripts/migration_drill.py
       - name: Tests
         working-directory: backend
         run: pytest -q
