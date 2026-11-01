@@ -33,6 +33,17 @@ async def _register(client, handle: str, categories: list[str], role: str = "bot
     return tok, headers
 
 
+async def _set_plan_for(vendor_id, plan_tier):
+    from sqlalchemy import update
+
+    from app.database import async_session
+    from app.models.vendor import Vendor
+
+    async with async_session() as db:
+        await db.execute(update(Vendor).where(Vendor.id == uuid.UUID(str(vendor_id))).values(plan_tier=plan_tier))
+        await db.commit()
+
+
 async def _me(client, headers) -> dict:
     r = await client.get("/api/vendors/me", headers=headers)
     assert r.status_code == 200
@@ -77,6 +88,9 @@ async def test_trade_analytics_dashboard(client):
     _, seller = await _register(client, "grower", ["fresh produce"], "selling")
     _, buyer = await _register(client, "eatery", ["food service"], "sourcing")
     _, peer = await _register(client, "rival", ["fresh produce"], "selling")
+    # Advanced analytics (price position, counterparty history) is a Growth feature.
+    seller_id = (await _me(client, seller))["id"]
+    await _set_plan_for(seller_id, "readiness")
 
     # a category only this test trades in, so the network benchmark is exactly
     # the one peer shelf below (the suite shares one database across files)

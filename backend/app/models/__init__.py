@@ -54,6 +54,7 @@ from app.modules.outside.models import (
     OutsidePost, OutsideReaction, OutsideDiscoveryPref, OutsideContentReport,
 )
 from app.modules.billing.models import Subscription, SubscriptionInvoice
+from app.modules.entitlements.models import FeatureEntitlement
 from app.modules.ledger.models import (
     LocalActivity, ActivityResponse, ActivityBooking, ActivityFeedback,
     ActivityLedgerEvent, ActivityWatch, SavedRelationship,

@@ -91,6 +91,8 @@ def _spec(plan_tier: str):
             f"plan_tier must be one of {', '.join(growth_rules.PLAN_CATALOG)}", status=400
         )
     spec = growth_rules.PLAN_CATALOG[key]
+    if not spec.public_offer:
+        raise BillingError(f"{spec.name} is not available to new subscribers.", status=400)
     if spec.price_kes_monthly <= 0:
         raise BillingError(
             f"{spec.name} is free — there is nothing to charge. "
@@ -193,6 +195,7 @@ async def overview(db: AsyncSession, vendor: Vendor) -> dict:
                 "max_watches": s.max_watches,
             }
             for s in growth_rules.PLAN_CATALOG.values()
+            if s.public_offer
         ],
         "terms": {
             "trial_days": TRIAL_DAYS,
@@ -244,6 +247,8 @@ async def start_subscription(
 
     now = _now()
     price = _price(spec, billing_period)
+    if price is None:
+        raise BillingError(f"{spec.name} is not offered on {billing_period} billing yet.", status=400)
     trial_end = _add_days(now, trial_days) if trial_days else None
 
     # No trial left: the invoice is due now, and the plan waits for payment.

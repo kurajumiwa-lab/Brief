@@ -79,6 +79,8 @@ export function apiError(err, fallback = "Something went wrong") {
     const where = Array.isArray(first?.loc) ? first.loc.slice(-1)[0] : null;
     return where ? `${where}: ${first.msg}` : first.msg || fallback;
   }
+  // A locked feature (402) carries a sentence for the user in `detail.message`.
+  if (d && typeof d === "object" && typeof d.message === "string" && d.message.trim()) return d.message;
   if (err?.isTimeout || err?.code === "ECONNABORTED") return "The server took too long to respond";
   if (err?.message === "Network Error") return "Can't reach the network right now";
   return fallback;
@@ -106,6 +108,7 @@ export function failureReason(err, fallback = "Something went wrong") {
   if (status === 403) return "This account isn't allowed to read that.";
   if (status === 404) return "That endpoint doesn't exist on this server — the app and the API are out of step.";
   if (status === 422 || status === 400) return apiError(err, fallback);
+  if (status === 402) return apiError(err, "This feature is part of a paid plan.");
   if (status === 429) return "Too many requests just now. Give it a moment.";
   if (status >= 500) return `The server answered ${status}. Nothing was changed — this is a server-side problem.`;
   return `${apiError(err, fallback)} (${status})`;

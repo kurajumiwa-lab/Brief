@@ -292,6 +292,8 @@ app.include_router(ops_routes.router, prefix="/api", tags=["Ops"])
 # v2.15 — Morning Brief: deterministic, read-only, vendor-scoped
 app.include_router(brief_routes.router, prefix="/api/brief", tags=["Morning Brief"])
 app.include_router(billing_routes.router, prefix="/api/billing", tags=["Subscription Billing"])
+from app.modules.entitlements.router import router as entitlements_router  # noqa: E402
+app.include_router(entitlements_router, prefix="/api/entitlements", tags=["Entitlements"])
 
 # Uploaded files (spec sheets, product photos, CSVs), public by unguessable key.
 # One route serves disk AND database bytes — see app/routes/media.py for why a

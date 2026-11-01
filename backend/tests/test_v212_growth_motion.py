@@ -384,20 +384,20 @@ async def test_plan_entitlements_verification_guardrail_and_motion_shutdown(clie
     assert seat_fail.status_code == 403
     assert "Upgrade your plan" in seat_fail.json()["detail"]
 
-    # Upgrade to Readiness (3 seats, 25 watches) — must NOT grant is_verified!
-    plan_res = await client.put("/api/growth/plan", headers=vendor_tok, json={"plan_tier": "readiness"})
+    # Upgrade to Business Pro (network: 3 seats, 50 watches; Growth has no staff seats) — must NOT grant is_verified!
+    plan_res = await client.put("/api/growth/plan", headers=vendor_tok, json={"plan_tier": "network"})
     assert plan_res.status_code == 200, plan_res.text
     ent = plan_res.json()
-    assert ent["tier"] == "readiness"
+    assert ent["tier"] == "network"
     assert ent["max_seats"] == 3
-    assert ent["max_watches"] == 25
+    assert ent["max_watches"] == 50
 
     me = (await client.get("/api/vendors/me", headers=vendor_tok)).json()
-    assert me["plan_tier"] == "readiness"
+    assert me["plan_tier"] == "network"
     assert me["is_verified"] is False  # Paid plan never confers verification
 
     watches_info = (await client.get("/api/requests/watches", headers=vendor_tok)).json()
-    assert watches_info["limit"] == 25
+    assert watches_info["limit"] == 50
 
     # Now adding 2 team seats succeeds (total 3 seats used), 4th fails
     s1 = await client.post("/api/growth/seats", headers=vendor_tok, json={
