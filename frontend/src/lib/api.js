@@ -1,4 +1,5 @@
 import axios from "axios";
+import { describeFailure } from "@/lib/failure";
 import { useAuthStore } from "@/stores/authStore";
 
 const api = axios.create({
@@ -46,8 +47,31 @@ api.interceptors.response.use(
   }
 );
 
-/** Human-readable message from an axios error (FastAPI `detail` may be a string or a list). */
+/**
+ * Human-readable message from an axios error, for a toast or a form's error line.
+ *
+ * The rule this enforces: **a 5xx is never described in the server's words.** A
+ * `detail` written for an operator ("The database is reachable but its tables do
+ * not exist yet") reads as an accusation on a vendor's phone, and a page that used
+ * it as a headline was the bug that sent us looking for a deleted business that
+ * had never been deleted. Client errors (4xx) are the server explaining a rule to
+ * the person holding the phone, so those keep their `detail`.
+ *
+ * `describeFailure()` in `@/lib/failure` is the fuller version — kind, headline,
+ * description and the technical text kept separate — and is what a whole-screen
+ * failure should use.
+ */
 export function apiError(err, fallback = "Something went wrong") {
+  // An error that carries its own user-facing words (a failed photo upload says
+  // *why*: HEIC, too large, session expired). Checked first because it may wrap
+  // a 5xx, whose generic "the server hit a problem" would be less true and less
+  // useful. Only errors that opt in with `expose` are trusted: a stray
+  // `TypeError` message is a bug report, not a sentence for a customer.
+  if (err?.expose && typeof err.message === "string" && err.message.trim()) {
+    return err.message;
+  }
+  const status = err?.response?.status;
+  if (status >= 500) return describeFailure(err).description;
   const d = err?.response?.data?.detail;
   if (typeof d === "string") return d;
   if (Array.isArray(d) && d.length) {
@@ -55,7 +79,7 @@ export function apiError(err, fallback = "Something went wrong") {
     const where = Array.isArray(first?.loc) ? first.loc.slice(-1)[0] : null;
     return where ? `${where}: ${first.msg}` : first.msg || fallback;
   }
-  if (err?.code === "ECONNABORTED") return "The server took too long to respond";
+  if (err?.isTimeout || err?.code === "ECONNABORTED") return "The server took too long to respond";
   if (err?.message === "Network Error") return "Can't reach the network right now";
   return fallback;
 }
@@ -371,6 +395,14 @@ export const fileAPI = {
     return api.post("/files/upload-many", form, { headers: { "Content-Type": "multipart/form-data" } });
   },
   limits: () => api.get("/files/limits"),
+  /**
+   * Which of *my* recorded photos this deployment cannot serve.
+   *
+   * The recovery tool for a deployment that wrote uploads to a disk it lost: the
+   * records keep their URLs, the files are gone, and every affected card looks
+   * identical to one that never had a photo. This names them.
+   */
+  audit: () => api.get("/files/audit"),
 };
 
 // ── Market news (derived from real rows; see backend/app/routes/news.py) ───

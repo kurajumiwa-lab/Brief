@@ -30,6 +30,7 @@ import { Check } from "@/components/forms/GroupForm";
 import { useAuthStore } from "@/stores/authStore";
 import { useChatStore } from "@/stores/chatStore";
 import { vendorAPI, stockAPI, passportAPI, apiError } from "@/lib/api";
+import { describeFailure } from "@/lib/failure";
 import { readGalleryPhoto } from "@/lib/images";
 import { ROLE_BADGE, VENDOR_ROLES } from "@/config/constants";
 import { currency, num } from "@/lib/formatters";
@@ -73,7 +74,7 @@ export default function VendorProfile() {
   const [ownShelf, setOwnShelf] = useState([]);
   const [profile, setProfile] = useState(null);
   const [perf, setPerf] = useState(null);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState(null);   // describeFailure(...) — see @/lib/failure
   const [editing, setEditing] = useState(false);
   const [sourcing, setSourcing] = useState(null);
   const [tab, setTab] = useState("shelf");
@@ -81,6 +82,9 @@ export default function VendorProfile() {
   const [uploadingGallery, setUploadingGallery] = useState(false);
   const [workModalOpen, setWorkModalOpen] = useState(false);
   const galleryInputRef = useRef(null);
+  // Bumped by "Try again" on the failure screen so the loader re-runs. A counter
+  // rather than a boolean: two retries in a row must both fire.
+  const [reloadNonce, setReloadNonce] = useState(0);
 
   const own = me?.vendor_handle === handle;
 
@@ -120,13 +124,13 @@ export default function VendorProfile() {
             ?.catch(() => {});
         }
       } catch (e) {
-        if (alive) setError(apiError(e, "Vendor not found"));
+        if (alive) setError(describeFailure(e, { subject: `@${handle}` }));
       }
     })();
     return () => {
       alive = false;
     };
-  }, [handle, me?.vendor_handle]);
+  }, [handle, me?.vendor_handle, reloadNonce]);
 
   useEffect(() => {
     if (params.get("edit") && own) {
@@ -276,10 +280,15 @@ export default function VendorProfile() {
   if (error)
     return (
       <ErrorState
-        title={error}
-        description={`No vendor answers to @${handle}. The handle may have changed, or the business may have left the network.`}
+        title={error.title}
+        description={error.description}
+        detail={error.technical}
+        // Only offer a retry when asking again could plausibly work. A 404 will
+        // not turn into a shop front by being repeated, and a button that
+        // cannot help is another way of saying nothing useful.
+        onRetry={error.retryable ? () => setReloadNonce((n) => n + 1) : undefined}
         action={
-          <Button size="sm" onClick={() => navigate("/network")}>
+          <Button size="sm" variant="ghost" onClick={() => navigate("/network")}>
             Back to the network
           </Button>
         }

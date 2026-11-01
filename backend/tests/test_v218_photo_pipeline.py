@@ -259,3 +259,79 @@ async def test_limits_report_the_image_pipeline(client: AsyncClient):
     assert ".heic" in body["allowed"]
     assert body["batch_max"] == 12
     assert body["images"]["resize"] is True
+
+
+# ── the iPhone, end to end ────────────────────────────────────────────────
+#
+# Every photograph taken on an iPhone is HEIC unless somebody changed a setting
+# buried three levels into Settings. Chrome and Firefox cannot paint one, so a
+# stored HEIC is an `<img>` that fails for everyone except Safari. `images.py`
+# already refused them with an explanation, which is honest and useless: the
+# seller is told to change a camera setting they have never seen.
+#
+# These use a real HEIC — encoded here, not a fixture — so the round trip is
+# proven rather than assumed, and they skip cleanly where the reader is absent
+# (a developer's machine without the extra, a slim image).
+#
+#   pick a photo  →  HEIC bytes  →  prepare_image  →  JPEG  →  <img> paints
+
+def _heic(size=(640, 480), colour=(20, 90, 70)) -> bytes:
+    pillow_heif = pytest.importorskip("pillow_heif")
+    from PIL import Image
+
+    pillow_heif.register_heif_opener()
+    buffer = io.BytesIO()
+    Image.new("RGB", size, colour).save(buffer, format="HEIF", quality=85)
+    return buffer.getvalue()
+
+
+def test_a_real_heic_becomes_a_jpeg_a_browser_can_paint():
+    data = _heic()
+    assert data[4:8] == b"ftyp", "the sample is not HEIF at all"
+
+    from PIL import Image
+
+    stored, name, ctype = prepare_image(data, "IMG_4821.HEIC", "image/heic")
+
+    assert ctype == "image/jpeg", f"a browser cannot paint {ctype}"
+    assert stored.startswith(b"\xff\xd8\xff"), "the bytes are not a JPEG"
+    assert name.lower().endswith((".jpg", ".jpeg"))
+    # Decodable without any HEIF reader in the picture — this is the assertion
+    # that matters: whatever comes out must open in a plain image library, which
+    # is all a browser is.
+    served = Image.open(io.BytesIO(stored))
+    assert served.format == "JPEG"
+    assert served.size == (640, 480)
+
+
+def test_the_bytes_decide_not_the_filename():
+    """A phone that reports no type at all still gets a usable photo."""
+    stored, _, ctype = prepare_image(_heic(), "upload", "application/octet-stream")
+
+    assert ctype == "image/jpeg"
+    assert stored.startswith(b"\xff\xd8\xff")
+
+
+def test_a_camera_sized_heic_fits_inside_the_upload_cap():
+    """Normalisation happens before the size check, or every phone photo is refused."""
+    big = _heic(size=(4000, 3000))
+    cap = len(big) // 2  # comfortably under the original, comfortably over the result
+
+    from PIL import Image
+
+    stored, _, ctype = prepare_image(big, "IMG_9999.HEIC", "image/heic", max_bytes=cap)
+
+    assert ctype == "image/jpeg"
+    assert len(stored) <= cap
+    assert Image.open(io.BytesIO(stored)).size[0] <= MAX_EDGE
+
+
+async def test_limits_say_whether_heic_will_actually_work(client: AsyncClient):
+    """`allowed` lists `.heic` either way; only the report knows if it can be read."""
+    headers = await _register(client)
+    body = (await client.get("/api/files/limits", headers=headers)).json()
+
+    # A bool, not a guess: the panel tells the operator whether HEIC will work
+    # on this deployment, which is the difference between "photos work" and
+    # "every iPhone upload is refused with advice nobody reads".
+    assert isinstance(body["images"]["heif"], bool)

@@ -10,7 +10,11 @@
 #                        checked), a load-test smoke run against a live API,
 #                        frontend lint (eslint.config.js) + tests + build
 #   push → main        : build & push both images to GHCR, then SSH to the host and
-#                        `docker compose -f docker-compose.prod.yml up -d` (migrations run in the entrypoint)
+#                        `docker compose -f docker-compose.prod.yml up -d` (migrations run in the entrypoint),
+#                        then grade the rollout with scripts/check_deploy.py — which fails the
+#                        pipeline if the schema is behind the code or media is not durable.
+#                        A green /api/health alone would not: media_store=local answers 200
+#                        while discarding every upload.
 #
 # Deploy needs these repository secrets: DEPLOY_HOST, DEPLOY_USER, DEPLOY_SSH_KEY,
 # DEPLOY_PATH (checkout on the host containing .env). Skipped when they are absent.
@@ -67,6 +71,11 @@ jobs:
           alembic upgrade head
           alembic check
           alembic downgrade base
+      - name: Migrations apply over a database that already has rows
+        working-directory: backend
+        # The from-nothing run above is the easy case. Production is not empty:
+        # this seeds an older schema and applies the rest over it.
+        run: python scripts/migration_drill.py
       - name: Tests
         working-directory: backend
         run: pytest -q
@@ -167,6 +176,8 @@ jobs:
         with:
           context: backend
           push: true
+          build-args: |
+            COMMIT_SHA=${{ github.sha }}
           tags: |
             ${{ env.IMAGE_BACKEND }}:${{ github.sha }}
             ${{ env.IMAGE_BACKEND }}:latest
@@ -177,6 +188,8 @@ jobs:
         with:
           context: frontend
           push: true
+          build-args: |
+            COMMIT_SHA=${{ github.sha }}
           tags: |
             ${{ env.IMAGE_FRONTEND }}:${{ github.sha }}
             ${{ env.IMAGE_FRONTEND }}:latest
@@ -225,3 +238,27 @@ jobs:
             echo "backend never became healthy" >&2
             docker compose -f docker-compose.prod.yml logs --tail=100 backend
             exit 1
+
+      # A 200 from /api/health is not the same as "this deployment can serve a
+      # photograph". `media_store: local` answers 200 happily: the app is up, the
+      # schema is right, and every upload is written to a filesystem that the
+      # next `up -d` replaces. That is precisely how a shop front came to show
+      # placeholders while every health check was green.
+      #
+      # check_deploy.py grades what health reports (schema at head, every column
+      # the code reads, media durable) and exits non-zero on the two faults that
+      # actually break a page. Run inside the backend container, so it needs no
+      # public URL and no extra secret.
+      - name: Verify the deployment can serve photos and its schema
+        if: steps.gate.outputs.ready == 'true'
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script_stop: true
+          script: |
+            cd "${{ secrets.DEPLOY_PATH }}"
+            docker compose -f docker-compose.prod.yml exec -T backend \
+              python scripts/check_deploy.py http://localhost:8000 \
+                --expect-commit "${{ github.sha }}"

@@ -92,6 +92,62 @@ numbers and the exit code are.
 Production never creates tables at boot. `ALLOW_SCHEMA_AUTOCREATE_IN_PRODUCTION`
 defaults to `false` and should stay that way; Alembic owns the schema.
 
+A managed host (Vercel, Fly, Render, a container) applies `alembic upgrade head`
+**itself** at startup, under a Postgres advisory lock, because there is no
+separate release phase to hang it on — `RUN_MIGRATIONS_ON_BOOT` defaults to "yes
+on a managed host, no on a developer's machine". It is a no-op once the schema is
+at head, and it converges from a `create_all` database too (a revision whose
+object is already present is stamped rather than re-run).
+
+Two faults are worth knowing about because they look like something else, and a
+green `/api/health` does not rule either out:
+
+- **media on a disk that does not survive.** `MEDIA_STORE=local` on a deployed
+  host answers `200`, keeps the schema right, and writes every upload into a
+  filesystem the next request does not have. The app is healthy; the photographs
+  are not.
+- **a schema behind the code.** `create_all` adds missing *tables* and never
+  missing *columns*, so a database built once and never migrated fails the first
+  query that reads a newer column — and the driver reports it as if a table were
+  absent.
+
+```bash
+# Grade a deployment from outside: schema at head, every column the code reads,
+# media durable, and (optionally) one photograph actually served.
+# Exit 0 only when nothing is broken, so it works as a deploy gate.
+cd backend && python scripts/check_deploy.py https://<your-app> \
+  --photo /static/uploads/<uuid>/<file>.jpg
+```
+
+`deploy/github-deploy.yml` runs the same script inside the backend container
+after every rollout, so a server that is up but cannot serve a photo fails the
+pipeline instead of the customer.
+
+Add `--expect-commit $(git rev-parse --short HEAD)` to require that this URL is
+serving the release you just shipped. Two hosts can serve one repository, and a
+two-week-old build answers `/api/health` with `200` and `status: ok` exactly like
+a new one; the commit it reports is the only thing that separates them. When in
+doubt, run it against every candidate URL — the one that fails is not the app.
+
+Full write-up, including the environment set from nothing and how to recover
+photographs that were already lost: `docs/briefs/deploy-media-and-migrations.md`.
+
+The chain is tested from nothing (`pytest tests/test_migrations.py`), which is
+the easy case. The deployed database is not empty, so the chain is also tested
+against one that already holds rows — a migration that adds a `NOT NULL` column
+without a default applies perfectly to an empty schema and kills the first cold
+start after the deploy that was meant to fix something else:
+
+```bash
+# Builds an old schema, inserts vendors/stock/profiles/movements, applies every
+# remaining migration, then checks the rows survived and the newer columns read.
+# Creates its own throwaway database; --dsn targets a copy (never production),
+# --from picks the revision to seed at.
+cd backend && python scripts/migration_drill.py
+```
+
+CI runs it in `backend-tests` on every push, next to the from-nothing run.
+
 ```bash
 # Apply, then check that models and migrations agree:
 cd backend && alembic upgrade head && alembic check

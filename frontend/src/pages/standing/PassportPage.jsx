@@ -196,7 +196,7 @@ function ClaimForm({ catalog, initial, onClose, onSaved }) {
         </label>
         <label className="block">
           <span className="text-2xs font-semibold text-ink-2">Evidence (PDF or image)</span>
-          <input type="file" accept=".pdf,.png,.jpg,.jpeg,.webp"
+          <input type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.heic,.heif"
                  onChange={(e) => setFile(e.target.files?.[0] || null)}
                  className="block w-full text-2xs text-ink-3 file:mr-2 file:rounded-lg file:border-0 file:bg-surface-2 file:px-2 file:py-1.5 file:text-2xs file:font-semibold file:text-ink-2" />
         </label>
@@ -374,7 +374,14 @@ export default function PassportPage() {
                on ? "Checklist published" : "Checklist unpublished");
   };
 
-  if (error) return <ErrorState message={error} onRetry={load} />;
+  if (error)
+    return (
+      <ErrorState
+        title="Your passport didn't load"
+        description={error}
+        onRetry={load}
+      />
+    );
   if (!passport) return <PageSpinner label="Loading your passport" />;
 
   const counts = passport.counts || {};

@@ -99,7 +99,7 @@ export default function GrowthPlannerPage() {
 
   if (loading) return <PageSpinner label="Loading Business Planner & Live Pulse…" />;
   if (error || !data) {
-    return <ErrorState title="Planner unavailable" message={error} onRetry={load} />;
+    return <ErrorState title="Planner unavailable" description={error} onRetry={load} />;
   }
 
   const {

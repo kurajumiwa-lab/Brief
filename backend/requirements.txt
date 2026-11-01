@@ -22,3 +22,9 @@ boto3==1.34.34
 # this the API still runs — `app/services/images.py` degrades — but HEIC uploads
 # are refused with an explanation and every photo keeps its original size.
 pillow>=10,<13
+# The reader behind the sentence above. `pillow` alone cannot open a HEIC, so
+# without this package every iPhone photograph is *refused* — with a message
+# asking the seller to change a camera setting they have never opened. iPhone is
+# the default phone here; "Most Compatible" is a setting nobody knows about.
+# With it, the photo is transcoded and the upload just works.
+pillow-heif>=0.13

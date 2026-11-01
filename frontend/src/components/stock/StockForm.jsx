@@ -8,6 +8,7 @@ import { toast } from "@/components/ui/Toast";
 import { STOCK_UNITS } from "@/config/constants";
 import { useStockStore } from "@/stores/stockStore";
 import { apiError, fileAPI } from "@/lib/api";
+import { readGalleryPhoto } from "@/lib/images";
 import { numOrNull, splitList } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
@@ -63,18 +64,12 @@ function PhotoNoteForm({ onDone }) {
         });
         return;
       }
-      const res = await fileAPI?.upload?.(file);
-      if (res?.data?.url) {
-        setPhoto({ url: res.data.url, name: file.name });
-      } else {
-        const dataUrl = await new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result);
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-        setPhoto({ url: String(dataUrl), name: file.name });
-      }
+      // No `data:` fallback. That is the bug that made a shop look empty to
+      // everyone else: a base64 URL renders only in the tab that produced it,
+      // so the seller saw their photo and every buyer saw a blank tile.
+      // `readGalleryPhoto` throws with the reason instead of inventing a URL.
+      const url = await readGalleryPhoto(file);
+      if (url) setPhoto({ url, name: file.name });
     } catch (err) {
       setError(apiError(err, "The photo could not be uploaded"));
     } finally {

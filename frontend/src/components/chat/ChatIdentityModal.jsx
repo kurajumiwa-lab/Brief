@@ -10,7 +10,8 @@ import Badge from "@/components/ui/Badge";
 import { toast } from "@/components/ui/Toast";
 import { useChatStore, DEFAULT_CHAT_IDENTITY } from "@/stores/chatStore";
 import { useAuthStore } from "@/stores/authStore";
-import { apiError, fileAPI } from "@/lib/api";
+import { apiError } from "@/lib/api";
+import { readGalleryPhoto } from "@/lib/images";
 import { cn } from "@/lib/utils";
 
 export const CHAT_IDENTITY_MODES = [
@@ -495,18 +496,10 @@ function IdentityGalleryPicker({ label, hint, value, onChange, disabled }) {
     if (!file) return;
     setUploading(true);
     try {
-      const res = await fileAPI?.upload?.(file);
-      if (res?.data?.url) {
-        onChange(res.data.url);
-      } else {
-        const dataUrl = await new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(String(reader.result));
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-        onChange(dataUrl);
-      }
+      // A stored URL or an honest failure — never a `data:` URL, which exists
+      // only in this tab and would show as an empty tile to everyone else.
+      const url = await readGalleryPhoto(file);
+      if (url) onChange(url);
     } catch (err) {
       toast.error(apiError(err, "Could not load photo from gallery"));
     } finally {

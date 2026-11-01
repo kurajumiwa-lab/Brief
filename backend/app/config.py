@@ -1,3 +1,4 @@
+import os
 from typing import List, Optional
 
 from pydantic import field_validator
@@ -117,6 +118,11 @@ class Settings(BaseSettings):
     # Dev convenience: create tables at boot. Production runs `alembic upgrade head`
     # (see the `auto_create_tables` property for the production policy).
     AUTO_CREATE_TABLES: bool = True
+    # Apply `alembic upgrade head` at boot. `None` means "decide from the host":
+    # on a managed platform (Vercel, a container, any host whose disk does not
+    # survive a deploy) migrations run; on a development machine they do not,
+    # because a developer's database is usually created by `create_all`.
+    RUN_MIGRATIONS_ON_BOOT: Optional[bool] = None
     # Escape hatch for a production first-boot that genuinely has no schema yet.
     ALLOW_SCHEMA_AUTOCREATE_IN_PRODUCTION: bool = False
     # entrypoint.sh keeps retrying this many seconds for Postgres to accept connections
@@ -365,6 +371,79 @@ class Settings(BaseSettings):
         return (self.ENVIRONMENT or "").strip().lower() in ("production", "prod")
 
     @property
+    def is_managed_host(self) -> bool:
+        """Is this process on a platform whose disk does not survive a request?
+
+        `ENVIRONMENT` is a *convention* — it is only production if somebody
+        remembered to set it. The host, on the other hand, always knows where it
+        is running, and these variables are set by the platforms themselves.
+
+        This exists because a deploy without `ENVIRONMENT=production` resolved
+        `media_store` to `local`, wrote uploads into a read-only image's `/tmp`,
+        and served a 404 for every photograph afterwards — while the records kept
+        the URLs and the UI kept drawing empty placeholders. The symptom was
+        "photos do not work"; the cause was a missing environment variable.
+        """
+        markers = (
+            "VERCEL",
+            "AWS_LAMBDA_FUNCTION_NAME",
+            "K_SERVICE",
+            "NETLIFY",
+            "CF_PAGES",
+            "DYNO",
+            "RAILWAY_ENVIRONMENT",
+            "FLY_APP_NAME",
+            "RENDER",
+        )
+        return any(os.environ.get(marker) for marker in markers)
+
+    @property
+    def host_name(self) -> str:
+        """Which platform is answering, as the platform itself spells it.
+
+        `is_managed_host` answers "will my disk survive?"; this answers "who am
+        I?". Two hosts can serve the same repository, and only one of them is
+        the URL a vendor opens — a deployment that has not run since October
+        looks exactly like a live one from the outside until somebody asks the
+        process which build it is.
+        """
+        for marker, name in (
+            ("VERCEL", "vercel"),
+            ("RAILWAY_ENVIRONMENT", "railway"),
+            ("FLY_APP_NAME", "fly"),
+            ("K_SERVICE", "cloud-run"),
+            ("RENDER", "render"),
+            ("DYNO", "heroku"),
+            ("AWS_LAMBDA_FUNCTION_NAME", "lambda"),
+            ("CF_PAGES", "cloudflare-pages"),
+        ):
+            if os.environ.get(marker):
+                return name
+        return "local"
+
+    @property
+    def build_commit(self) -> str:
+        """The commit this process was built from, if the build said so.
+
+        Every platform records it under a different name and nothing sets it on
+        a developer's machine, so "unknown" is the honest answer there. Deploy
+        metadata that arrives via `COMMIT_SHA`/`GIT_SHA` in the Dockerfile is
+        checked too, because a container is built from a tag, not a checkout.
+        """
+        for marker in (
+            "COMMIT_SHA",
+            "GIT_SHA",
+            "GIT_COMMIT",
+            "SOURCE_COMMIT",
+            "VERCEL_GIT_COMMIT_SHA",
+            "RAILWAY_GIT_COMMIT_SHA",
+        ):
+            value = (os.environ.get(marker) or "").strip()
+            if value:
+                return value[:40]
+        return "unknown"
+
+    @property
     def media_store(self) -> str:
         """The storage backend actually in use: `s3`, `db` or `local`.
 
@@ -377,8 +456,10 @@ class Settings(BaseSettings):
         if self.S3_BUCKET:
             return "s3"
         # A production disk — serverless /tmp, or a container that is replaced on
-        # every deploy — does not survive the next request. Postgres does.
-        if self.is_production:
+        # every deploy — does not survive the next request. Postgres does. The
+        # host is trusted here, not just ENVIRONMENT: relying on the variable
+        # alone is what silently turned every upload into a 404.
+        if self.is_production or self.is_managed_host:
             return "db"
         return "local"
 
@@ -412,7 +493,19 @@ class Settings(BaseSettings):
         """
         if not self.AUTO_CREATE_TABLES:
             return False
+        # `create_all` creates missing *tables* and never missing *columns*, so on
+        # a deployed host it does not repair a schema — it disguises one. The
+        # database is migrated instead (`RUN_MIGRATIONS_ON_BOOT`).
+        if self.is_managed_host:
+            return False
         return not self.is_production or self.ALLOW_SCHEMA_AUTOCREATE_IN_PRODUCTION
+
+    @property
+    def run_migrations_on_boot(self) -> bool:
+        """Whether startup should bring the schema to head."""
+        if self.RUN_MIGRATIONS_ON_BOOT is not None:
+            return self.RUN_MIGRATIONS_ON_BOOT
+        return self.is_production or self.is_managed_host
 
     @property
     def payments_available(self) -> bool:

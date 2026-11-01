@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Package } from "lucide-react";
 import Media from "@/components/ui/Media";
 import { cn } from "@/lib/utils";
@@ -45,16 +46,30 @@ export function StockIllustration({ item, className }) {
 }
 
 export default function StockThumb({ item, className, ratio = "aspect-[16/10]", rounded = "", children }) {
-  // The card states whether it is showing a photograph or the designed
-  // fallback. "Photos are not visible anywhere" was, in practice, two different
-  // things wearing the same face: a listing that never had a photo, and a
-  // listing whose photo failed to load. The attribute makes them distinguishable
-  // in a test and in DevTools, which is the difference between a bug and a
-  // design decision.
-  const hasPhoto = Boolean(item?.images?.[0]);
+  // The card states what it is showing. "Photos are not visible anywhere" was,
+  // in practice, THREE different things wearing the same face:
+  //
+  //   present      a photograph, loaded
+  //   missing      the listing never had one — a design decision, not a fault
+  //   unavailable  a photo is recorded but its file could not be fetched
+  //
+  // Only the third is a bug, and it is the one that emptied a deployed shop
+  // front while every card politely showed the designed placeholder. Naming the
+  // state makes the difference visible in a test, in DevTools, and to whoever
+  // reads the next screenshot.
+  const photo = item?.images?.[0];
+  const hasPhoto = Boolean(photo);
+  const [unavailable, setUnavailable] = useState(false);
+
+  // A recycled card (a shelf that re-renders after a retry) must not carry the
+  // previous record's failure onto a file that loads perfectly well.
+  useEffect(() => {
+    setUnavailable(false);
+  }, [photo]);
+
   return (
     <div
-      data-photo={hasPhoto ? "present" : "missing"}
+      data-photo={!hasPhoto ? "missing" : unavailable ? "unavailable" : "present"}
       className={cn("relative overflow-hidden bg-surface-2 border-b border-edge-1", ratio, rounded, className)}
     >
       <Media
@@ -62,6 +77,7 @@ export default function StockThumb({ item, className, ratio = "aspect-[16/10]", 
         alt={item?.name || ""}
         className="absolute inset-0 w-full h-full object-cover"
         fallback={<StockIllustration item={item} />}
+        onFail={() => setUnavailable(true)}
       />
       {children}
     </div>
