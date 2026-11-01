@@ -392,6 +392,10 @@ async def health():
         # the difference between enforcing the published-secret guard and not.
         "environment": settings.ENVIRONMENT,
         "production": settings.is_production,
+        # Which build and which platform are answering. A green /api/health on a
+        # two-week-old deployment is still green; this is what tells them apart.
+        "host": settings.host_name,
+        "commit": settings.build_commit,
         "managed_host": settings.is_managed_host,
         "media_store": settings.media_store,
         # Durable is the property that matters: `local` means the next request

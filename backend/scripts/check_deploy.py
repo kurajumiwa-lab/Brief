@@ -3,6 +3,7 @@
     python scripts/check_deploy.py https://brief-navy-rho.vercel.app
     python scripts/check_deploy.py https://… --photo /static/uploads/<uuid>/<file>.jpg
     python scripts/check_deploy.py https://… --json
+    python scripts/check_deploy.py https://… --expect-commit $(git rev-parse --short HEAD)
 
 Run this after setting environment variables and redeploying. It answers the
 question the Vercel dashboard cannot: **did the values take effect, and can this
@@ -44,7 +45,7 @@ TIMEOUT = 20
 # ── the judgement, separated from the network so it can be tested ───────────
 
 
-def inspect_health(payload: dict) -> list[tuple[str, str, str]]:
+def inspect_health(payload: dict, expect_commit: str | None = None) -> list[tuple[str, str, str]]:
     """Grade a `/api/health` body. Returns `(level, title, advice)` rows.
 
     Every FAIL here is one of the two faults that emptied a shop front: media on
@@ -135,16 +136,67 @@ def inspect_health(payload: dict) -> list[tuple[str, str, str]]:
     elif payload.get("production") is True:
         rows.append((PASS, "ENVIRONMENT=production, so the published-secret guard is armed", ""))
 
+    # ── who is answering, and which build is it ─────────────────────────────
+    rows.append(_build_row(payload, expect_commit))
+
     return rows
 
 
-def verdict(payload: dict, photo: dict | None = None) -> tuple[bool, list[tuple[str, str, str]]]:
+def _build_row(payload: dict, expect_commit: str | None) -> tuple[str, str, str]:
+    """Name the platform and the commit behind this URL.
+
+    Two hosts can serve one repository. The one whose dashboard is green is not
+    necessarily the one a vendor opens, and a deployment that stopped running
+    in October still answers `/api/health` with `200` and `status: ok` if it is
+    the one being asked. Without the commit there is no way to tell which of two
+    green URLs is the release — which is exactly how a two-week-old build sat
+    behind passing previews.
+    """
+    commit = str(payload.get("commit") or "unknown").strip()
+    host = str(payload.get("host") or "unknown").strip()
+    short = commit[:7]
+
+    if expect_commit:
+        expected = expect_commit.strip()
+        matches = bool(commit) and commit != "unknown" and (
+            commit.startswith(expected) or expected.startswith(commit)
+        )
+        if not matches and commit == "unknown":
+            return (
+                FAIL,
+                "this deployment does not report the commit it was built from",
+                "The build did not pass build metadata (Railway and Vercel set it "
+                "themselves; a Docker build needs --build-arg COMMIT_SHA=$(git rev-parse "
+                "HEAD)). Without it an old deployment is indistinguishable from a new one.",
+            )
+        if not matches:
+            return (
+                FAIL,
+                f"this is a different build: serving {short} on {host}, expected {expected[:7]}",
+                "The URL you checked is not the deployment you just shipped. Check which "
+                "host actually serves this app before trusting any other result here — "
+                "two hosts, one repository, and only one of them is the live URL.",
+            )
+        return (PASS, f"the build that answers is {short} on {host}", "")
+
+    if commit == "unknown":
+        return (
+            NOTE,
+            f"the deployment does not report its commit (host: {host})",
+            "Pass build metadata so an old build can be told from a new one: "
+            "--expect-commit $(git rev-parse --short HEAD).",
+        )
+    return (PASS, f"answering build {short} on {host}", "")
+
+
+def verdict(payload: dict, photo: dict | None = None,
+            expect_commit: str | None = None) -> tuple[bool, list[tuple[str, str, str]]]:
     """All findings, plus whether the deployment passes.
 
     A photo check that was asked for and did not happen is a failure: silence is
     how "the picture is missing" became a mystery in the first place.
     """
-    rows = inspect_health(payload)
+    rows = inspect_health(payload, expect_commit)
     if photo is not None:
         if photo.get("ok"):
             rows.append((PASS, f"the photo at {photo['path']} is served ({photo['content_type']}, {photo['bytes']} bytes)", ""))
@@ -199,6 +251,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("base", help="e.g. https://brief-navy-rho.vercel.app")
     parser.add_argument("--photo", help="a /static/uploads/… URL to fetch and grade")
     parser.add_argument("--json", action="store_true", help="machine-readable output")
+    parser.add_argument(
+        "--expect-commit",
+        help="the commit this URL must be serving, e.g. $(git rev-parse --short HEAD). "
+             "Answers 'which host is actually live?' — the other one fails.",
+    )
     args = parser.parse_args(argv)
 
     try:
@@ -209,7 +266,7 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     photo = fetch_photo(args.base, args.photo) if args.photo else None
-    ok, rows = verdict(payload, photo)
+    ok, rows = verdict(payload, photo, args.expect_commit)
 
     if args.json:
         print(json.dumps({"base": args.base, "http_status": status, "ok": ok,

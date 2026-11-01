@@ -121,9 +121,16 @@ cd backend && python scripts/check_deploy.py https://<your-app> \
 
 `deploy/github-deploy.yml` runs the same script inside the backend container
 after every rollout, so a server that is up but cannot serve a photo fails the
-pipeline instead of the customer. Full write-up, including the environment set
-from nothing and how to recover photographs that were already lost:
-`docs/briefs/deploy-media-and-migrations.md`.
+pipeline instead of the customer.
+
+Add `--expect-commit $(git rev-parse --short HEAD)` to require that this URL is
+serving the release you just shipped. Two hosts can serve one repository, and a
+two-week-old build answers `/api/health` with `200` and `status: ok` exactly like
+a new one; the commit it reports is the only thing that separates them. When in
+doubt, run it against every candidate URL — the one that fails is not the app.
+
+Full write-up, including the environment set from nothing and how to recover
+photographs that were already lost: `docs/briefs/deploy-media-and-migrations.md`.
 
 The chain is tested from nothing (`pytest tests/test_migrations.py`), which is
 the easy case. The deployed database is not empty, so the chain is also tested

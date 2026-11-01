@@ -327,6 +327,41 @@ python scripts/check_deploy.py https://<your-app>.vercel.app \
         → … the startup guard that refuses the shipped SECRET_KEY never runs …
 ```
 
+### Which host is actually answering?
+
+Two hosts can serve one repository, and only one of them is the URL a vendor
+opens. Vercel builds a preview for every pull request, so previews went green
+twice a day while the host that served the app had last deployed on
+2026-10-18 — a two-week-old build with a green `/api/health`, a schema at head
+and durable media. Every check above passes on it. Nothing in a dashboard says
+which of the two green URLs is the live one.
+
+The build now reports which commit it is and which platform it is on, so one
+command answers it, and `--expect-commit` turns a stale host into a failure:
+
+```bash
+cd backend
+# The full SHA, shortened for display. Railway/Vercel set the variable
+# themselves; a Docker build needs `--build-arg COMMIT_SHA=$(git rev-parse HEAD)`.
+python scripts/check_deploy.py https://<url> --expect-commit $(git rev-parse --short HEAD)
+```
+
+```
+  PASS answering build 2d2616d on railway
+```
+
+```
+  FAIL this is a different build: serving 2ecfaca on railway, expected 2d2616d
+        → The URL you checked is not the deployment you just shipped. Check which
+          host actually serves this app before trusting any other result here.
+```
+
+Run it against **every** URL you think might be production. The one that fails
+is not the app; the one that passes is, and its host is where the environment
+variables and the release actually go. `deploy/github-deploy.yml` pins the same
+check to `${{ github.sha }}` inside the container after the rollout, so a rollout
+that silently kept an older image fails its own pipeline.
+
 Exit code 0 only when nothing is broken, so it also works as a post-deploy gate
 in CI. `--json` for machines, `--photo` to prove a specific file still loads.
 `/api/health` now reports `environment`, `production` and `managed_host` for

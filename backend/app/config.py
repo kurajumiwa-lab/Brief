@@ -398,6 +398,52 @@ class Settings(BaseSettings):
         return any(os.environ.get(marker) for marker in markers)
 
     @property
+    def host_name(self) -> str:
+        """Which platform is answering, as the platform itself spells it.
+
+        `is_managed_host` answers "will my disk survive?"; this answers "who am
+        I?". Two hosts can serve the same repository, and only one of them is
+        the URL a vendor opens — a deployment that has not run since October
+        looks exactly like a live one from the outside until somebody asks the
+        process which build it is.
+        """
+        for marker, name in (
+            ("VERCEL", "vercel"),
+            ("RAILWAY_ENVIRONMENT", "railway"),
+            ("FLY_APP_NAME", "fly"),
+            ("K_SERVICE", "cloud-run"),
+            ("RENDER", "render"),
+            ("DYNO", "heroku"),
+            ("AWS_LAMBDA_FUNCTION_NAME", "lambda"),
+            ("CF_PAGES", "cloudflare-pages"),
+        ):
+            if os.environ.get(marker):
+                return name
+        return "local"
+
+    @property
+    def build_commit(self) -> str:
+        """The commit this process was built from, if the build said so.
+
+        Every platform records it under a different name and nothing sets it on
+        a developer's machine, so "unknown" is the honest answer there. Deploy
+        metadata that arrives via `COMMIT_SHA`/`GIT_SHA` in the Dockerfile is
+        checked too, because a container is built from a tag, not a checkout.
+        """
+        for marker in (
+            "COMMIT_SHA",
+            "GIT_SHA",
+            "GIT_COMMIT",
+            "SOURCE_COMMIT",
+            "VERCEL_GIT_COMMIT_SHA",
+            "RAILWAY_GIT_COMMIT_SHA",
+        ):
+            value = (os.environ.get(marker) or "").strip()
+            if value:
+                return value[:40]
+        return "unknown"
+
+    @property
     def media_store(self) -> str:
         """The storage backend actually in use: `s3`, `db` or `local`.
 

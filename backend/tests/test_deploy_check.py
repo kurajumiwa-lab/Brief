@@ -251,3 +251,106 @@ def test_the_checker_ships_inside_the_backend_image():
     assert "COPY backend/ ." in dockerfile
     assert "python:3.11" in dockerfile, "the gate invokes `python`, which the slim image provides"
     assert os.path.isfile(os.path.join(root, "backend", "scripts", "check_deploy.py"))
+
+
+# ── which host is answering, and is it the release? ────────────────────────
+#
+# Two hosts can serve one repository. Vercel previewed every pull request and
+# reported green twice a day; the host that actually served the app had not
+# deployed since October. A two-week-old build answers `/api/health` with `200`,
+# `status: ok`, a schema at head and durable media — every check above passes on
+# a release nobody has shipped. The only thing that tells them apart is the
+# commit the process was built from.
+
+def test_an_old_but_healthy_build_is_not_the_release():
+    ok, rows = verdict(health(commit="2ecfaca9f1", host="railway"),
+                       expect_commit="d0595f3")
+
+    assert ok is False
+    assert FAIL in levels(rows)
+    assert "different build" in titles(rows)
+    assert "2ecfaca" in titles(rows) and "d0595f3" in titles(rows)
+    advice = " ".join(a for level, _, a in rows if level == FAIL)
+    assert "which host actually serves this app" in advice
+
+
+def test_the_commit_that_answers_is_named_when_it_matches():
+    ok, rows = verdict(health(commit="2d2616d" + "0" * 33, host="vercel"),
+                       expect_commit="2d2616d")
+
+    assert ok is True
+    assert any(level == PASS and "2d2616d" in title and "vercel" in title
+               for level, title, _ in rows)
+
+
+def test_a_short_expectation_matches_a_long_commit_and_the_reverse():
+    long_sha = "0123456789abcdef0123456789abcdef01234567"
+    for expected in (long_sha, "0123456"):
+        ok, rows = verdict(health(commit=long_sha, host="railway"), expect_commit=expected)
+        assert ok is True, f"{expected!r} was not matched against {long_sha!r}"
+
+
+def test_a_build_that_does_not_say_its_commit_fails_the_pin():
+    ok, rows = verdict(health(commit="unknown", host="local"), expect_commit="d0595f3")
+
+    assert ok is False
+    assert "does not report the commit" in titles(rows)
+    assert "--build-arg COMMIT_SHA" in " ".join(a for _, _, a in rows)
+
+
+def test_without_a_pin_an_unknown_commit_is_only_a_note():
+    ok, rows = verdict(health(commit="unknown", host="local"))
+
+    assert ok is True
+    assert any(level == NOTE and "does not report its commit" in title
+               for level, title, _ in rows)
+
+
+def test_without_a_pin_a_known_commit_is_reported_with_its_host():
+    ok, rows = verdict(health(commit="abcdef1234567", host="railway"))
+
+    assert ok is True
+    assert any(level == PASS and "abcdef1 on railway" in title for level, title, _ in rows)
+
+
+def test_the_platform_and_commit_come_from_the_environment(monkeypatch):
+    """`Settings` is a singleton built at import; these read the environment."""
+    from app.config import settings
+
+    monkeypatch.delenv("COMMIT_SHA", raising=False)
+    monkeypatch.delenv("GIT_SHA", raising=False)
+    monkeypatch.delenv("VERCEL_GIT_COMMIT_SHA", raising=False)
+    monkeypatch.setenv("RAILWAY_GIT_COMMIT_SHA", "deadbeef" * 5)
+    monkeypatch.setenv("RAILWAY_ENVIRONMENT", "production")
+    monkeypatch.delenv("VERCEL", raising=False)
+
+    assert settings.host_name == "railway"
+    assert settings.build_commit == "deadbeef" * 5
+
+    monkeypatch.setenv("COMMIT_SHA", "build-arg-wins-0000000000000000000000")
+    assert settings.build_commit.startswith("build-arg-wins")
+
+    monkeypatch.delenv("RAILWAY_ENVIRONMENT")
+    monkeypatch.delenv("FLY_APP_NAME", raising=False)
+    monkeypatch.delenv("K_SERVICE", raising=False)
+    monkeypatch.delenv("RENDER", raising=False)
+    monkeypatch.delenv("DYNO", raising=False)
+    monkeypatch.delenv("AWS_LAMBDA_FUNCTION_NAME", raising=False)
+    monkeypatch.delenv("CF_PAGES", raising=False)
+    assert settings.host_name == "local"
+
+
+def test_the_health_endpoint_publishes_the_build_and_the_platform():
+    """A deploy gate is worthless if the payload it grades cannot name the build."""
+    source = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                               "app", "main.py"), encoding="utf-8").read()
+    assert '"commit": settings.build_commit' in source
+    assert '"host": settings.host_name' in source
+
+
+def test_the_deploy_gate_pins_the_rollout_to_the_commit_being_shipped():
+    workflow = open(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
+        os.path.abspath(__file__)))), "deploy", "github-deploy.yml"), encoding="utf-8").read()
+
+    assert "--expect-commit" in workflow
+    assert "COMMIT_SHA=${{ github.sha }}" in workflow

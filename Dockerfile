@@ -9,8 +9,12 @@ COPY frontend/ .
 RUN npm run build
 
 FROM python:3.11-slim
+# Which build is this? `/api/health` reports it, so a deploy can be graded
+# against the release it was meant to ship instead of merely being reachable.
+ARG COMMIT_SHA=unknown
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 \
-    FRONTEND_DIST=/app/frontend/dist AUTO_CREATE_TABLES=false
+    FRONTEND_DIST=/app/frontend/dist AUTO_CREATE_TABLES=false \
+    COMMIT_SHA=${COMMIT_SHA}
 WORKDIR /app/backend
 RUN apt-get update && apt-get install -y --no-install-recommends libpq5 curl && rm -rf /var/lib/apt/lists/*
 COPY backend/requirements.txt .

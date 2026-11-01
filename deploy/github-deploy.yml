@@ -176,6 +176,8 @@ jobs:
         with:
           context: backend
           push: true
+          build-args: |
+            COMMIT_SHA=${{ github.sha }}
           tags: |
             ${{ env.IMAGE_BACKEND }}:${{ github.sha }}
             ${{ env.IMAGE_BACKEND }}:latest
@@ -186,6 +188,8 @@ jobs:
         with:
           context: frontend
           push: true
+          build-args: |
+            COMMIT_SHA=${{ github.sha }}
           tags: |
             ${{ env.IMAGE_FRONTEND }}:${{ github.sha }}
             ${{ env.IMAGE_FRONTEND }}:latest
@@ -256,4 +260,5 @@ jobs:
           script: |
             cd "${{ secrets.DEPLOY_PATH }}"
             docker compose -f docker-compose.prod.yml exec -T backend \
-              python scripts/check_deploy.py http://localhost:8000
+              python scripts/check_deploy.py http://localhost:8000 \
+                --expect-commit "${{ github.sha }}"
