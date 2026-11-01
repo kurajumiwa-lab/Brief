@@ -212,3 +212,42 @@ def test_the_cli_does_not_crash_on_help_or_no_arguments(argv):
 
     with pytest.raises(SystemExit):
         check_deploy.main(argv)
+
+
+# ── the gate has to be in the pipeline, not only in the runbook ─────────────
+
+
+def test_the_deploy_workflow_runs_the_checker_after_rolling_out():
+    """A written-down check that nobody runs is a coincidence away from nothing.
+
+    The container HEALTHCHECK is `curl -fsS /api/health`, which fails only on a
+    5xx. `media_store=local` answers 200 with a correct schema and a working app —
+    and discards every upload. So the rollout step alone would have passed the
+    deployment that lost the photographs.
+    """
+    import os
+
+    path = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+        "deploy",
+        "github-deploy.yml",
+    )
+    workflow = open(path, encoding="utf-8").read()
+
+    assert "scripts/check_deploy.py" in workflow, "the template does not run the checker"
+    assert "http://localhost:8000" in workflow, "it must grade the server it just rolled out"
+    # Order matters: a gate that runs before the rollout proves nothing.
+    assert workflow.index("docker compose -f docker-compose.prod.yml up -d") < workflow.index(
+        "scripts/check_deploy.py"
+    )
+
+
+def test_the_checker_ships_inside_the_backend_image():
+    """`COPY backend/ ./` is what puts scripts/ in the container; assert it stays."""
+    import os
+
+    root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    dockerfile = open(os.path.join(root, "Dockerfile"), encoding="utf-8").read()
+    assert "COPY backend/ ." in dockerfile
+    assert "python:3.11" in dockerfile, "the gate invokes `python`, which the slim image provides"
+    assert os.path.isfile(os.path.join(root, "backend", "scripts", "check_deploy.py"))

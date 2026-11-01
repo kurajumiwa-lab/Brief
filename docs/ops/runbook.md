@@ -92,6 +92,39 @@ numbers and the exit code are.
 Production never creates tables at boot. `ALLOW_SCHEMA_AUTOCREATE_IN_PRODUCTION`
 defaults to `false` and should stay that way; Alembic owns the schema.
 
+A managed host (Vercel, Fly, Render, a container) applies `alembic upgrade head`
+**itself** at startup, under a Postgres advisory lock, because there is no
+separate release phase to hang it on — `RUN_MIGRATIONS_ON_BOOT` defaults to "yes
+on a managed host, no on a developer's machine". It is a no-op once the schema is
+at head, and it converges from a `create_all` database too (a revision whose
+object is already present is stamped rather than re-run).
+
+Two faults are worth knowing about because they look like something else, and a
+green `/api/health` does not rule either out:
+
+- **media on a disk that does not survive.** `MEDIA_STORE=local` on a deployed
+  host answers `200`, keeps the schema right, and writes every upload into a
+  filesystem the next request does not have. The app is healthy; the photographs
+  are not.
+- **a schema behind the code.** `create_all` adds missing *tables* and never
+  missing *columns*, so a database built once and never migrated fails the first
+  query that reads a newer column — and the driver reports it as if a table were
+  absent.
+
+```bash
+# Grade a deployment from outside: schema at head, every column the code reads,
+# media durable, and (optionally) one photograph actually served.
+# Exit 0 only when nothing is broken, so it works as a deploy gate.
+cd backend && python scripts/check_deploy.py https://<your-app> \
+  --photo /static/uploads/<uuid>/<file>.jpg
+```
+
+`deploy/github-deploy.yml` runs the same script inside the backend container
+after every rollout, so a server that is up but cannot serve a photo fails the
+pipeline instead of the customer. Full write-up, including the environment set
+from nothing and how to recover photographs that were already lost:
+`docs/briefs/deploy-media-and-migrations.md`.
+
 ```bash
 # Apply, then check that models and migrations agree:
 cd backend && alembic upgrade head && alembic check
