@@ -62,6 +62,14 @@ api.interceptors.response.use(
  * failure should use.
  */
 export function apiError(err, fallback = "Something went wrong") {
+  // An error that carries its own user-facing words (a failed photo upload says
+  // *why*: HEIC, too large, session expired). Checked first because it may wrap
+  // a 5xx, whose generic "the server hit a problem" would be less true and less
+  // useful. Only errors that opt in with `expose` are trusted: a stray
+  // `TypeError` message is a bug report, not a sentence for a customer.
+  if (err?.expose && typeof err.message === "string" && err.message.trim()) {
+    return err.message;
+  }
   const status = err?.response?.status;
   if (status >= 500) return describeFailure(err).description;
   const d = err?.response?.data?.detail;

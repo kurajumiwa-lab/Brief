@@ -78,7 +78,7 @@ export default function StockVerifyDialog({ item, open, onClose, onDone }) {
           <Input label="Origin country" value={form.origin_country} onChange={set("origin_country")} placeholder="Kenya" />
           <Input label="Expiry / best-before" type="date" value={form.expiry_date} onChange={set("expiry_date")} />
         </div>
-        <FileUpload file={file} onFile={setFile} accept=".pdf,.png,.jpg,.jpeg,.webp" label="Spec sheet or certificate" hint="PDF or image, up to the upload limit. Stored with the item." />
+        <FileUpload file={file} onFile={setFile} accept=".pdf,.png,.jpg,.jpeg,.webp,.heic,.heif" label="Spec sheet or certificate" hint="PDF or image, up to the upload limit. Stored with the item." />
         <label className="flex items-center gap-2.5 rounded-lg border border-edge-1 bg-surface-1 px-3 py-2.5 cursor-pointer">
           <input type="checkbox" checked={form.lab_certified} onChange={set("lab_certified")} disabled={!hasSheet} className="accent-brand-500 w-4 h-4" />
           <span className="text-sm text-ink-2">Lab-certified</span>

@@ -30,6 +30,12 @@ export class PhotoUploadError extends Error {
     super(message);
     this.name = "PhotoUploadError";
     this.cause = cause;
+    // This message is written to be read by the person holding the phone — the
+    // HEIC advice, the size limit, the refusal. Without this flag every caller
+    // that formats an error through `apiError` throws it away and shows
+    // "Couldn't read that photo" instead, which is what happened: the advice
+    // existed and never reached a screen.
+    this.expose = true;
   }
 }
 

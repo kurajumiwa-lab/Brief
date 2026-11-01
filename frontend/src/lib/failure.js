@@ -81,6 +81,15 @@ const STATUS_TITLE = {
  * @returns {{kind,status,title,description,technical,retryable}}
  */
 export function describeFailure(err, { subject = "that page" } = {}) {
+  // A failure that explains itself — the photo upload path composes a sentence
+  // naming the actual cause (a HEIC file, a size limit, a refusal). Keep the
+  // *kind* from whatever it wraps, so retry-ability and the status still come
+  // from the transport, but show its words rather than "You're not connected"
+  // for what may well have been a 500 from a reachable server.
+  if (err?.expose && err.cause && err.cause !== err && typeof err.message === "string") {
+    return { ...describeFailure(err.cause, { subject }), description: err.message, technical: err.message };
+  }
+
   const status = err?.response?.status || 0;
   const data = err?.response?.data;
   const technical = apiDetail(err) || err?.message || null;

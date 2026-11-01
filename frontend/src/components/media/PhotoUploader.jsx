@@ -64,6 +64,13 @@ export default function PhotoUploader({
     setBusy(accepted.length);
     const uploaded = [];
     const failed = [];
+    // The reason travels with the failure. Swallowing it here is how "6 photos
+    // could not be read" reached the seller when the real answer was "each is
+    // over the 5 MB limit" — true, unhelpful, and not something they can fix.
+    let reason = null;
+    const remember = (err) => {
+      if (!reason) reason = apiError(err, "");
+    };
 
     // One request for the whole selection where the API supports it, one file
     // at a time otherwise (an older server, or a local fallback in tests). The
@@ -71,14 +78,16 @@ export default function PhotoUploader({
     try {
       const { data } = await fileAPI.uploadMany(accepted);
       for (const stored of data?.files || []) if (stored?.url) uploaded.push(stored.url);
-    } catch {
+    } catch (batchError) {
+      remember(batchError);
       for (const file of accepted) {
         try {
           const url = await readGalleryPhoto(file);
           if (url) uploaded.push(url);
           else failed.push(file.name);
-        } catch {
+        } catch (err) {
           failed.push(file.name);
+          remember(err);
         } finally {
           setBusy((n) => Math.max(0, n - 1));
         }
@@ -88,10 +97,11 @@ export default function PhotoUploader({
 
     if (uploaded.length) onChange([...photos, ...uploaded]);
     if (failed.length) {
+      const detail = reason ? ` — ${reason}` : "";
       const message =
         failed.length === 1
-          ? `${failed[0]} could not be read`
-          : `${failed.length} photos could not be read`;
+          ? `${failed[0]} could not be read${detail}`
+          : `${failed.length} photos could not be read${detail}`;
       setError(message);
       toast.error(apiError({ response: { data: { detail: message } } }, message));
     }

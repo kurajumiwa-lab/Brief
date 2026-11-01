@@ -431,3 +431,136 @@ describe("no screen passes ErrorState a prop it does not declare", () => {
     expect(declared.has("message")).toBe(true);
   });
 });
+
+// ── the advice that was written and never shown ────────────────────────────
+//
+// `readGalleryPhoto` composes a specific sentence — HEIC, size, the server's
+// refusal — and throws it. Every call site formats the error with `apiError`,
+// which used to return its fallback for anything without a `response`, so the
+// one sentence written for the person holding the phone was replaced on the way
+// to the toast by "Couldn't read that photo". These pin the opt-in.
+
+describe("an error that explains itself", () => {
+  it("keeps the upload advice instead of the generic fallback", async () => {
+    const { PhotoUploadError } = await import("@/lib/images");
+    const err = new PhotoUploadError("That photo is too large — crop it or pick another.");
+
+    expect(apiError(err, "Couldn't read that photo")).toBe(
+      "That photo is too large — crop it or pick another."
+    );
+  });
+
+  it("still refuses to read a stray error's message aloud", () => {
+    // A TypeError's text is a bug report, not a sentence for a customer.
+    const bug = new TypeError("Cannot read properties of undefined (reading 'files')");
+    expect(apiError(bug, "Couldn't read that photo")).toBe("Couldn't read that photo");
+  });
+
+  it("keeps the cause's kind but the wrapper's words", async () => {
+    const { PhotoUploadError } = await import("@/lib/images");
+    const server = Object.assign(new Error("Request failed with status code 503"), {
+      response: { status: 503, data: { detail: "upload store unavailable" } },
+    });
+    const err = new PhotoUploadError(
+      "That photo could not be uploaded. Check the connection and try again.",
+      server
+    );
+
+    const described = describeFailure(err, { subject: "your photo" });
+    expect(described.description).toBe(
+      "That photo could not be uploaded. Check the connection and try again."
+    );
+    // The kind still comes from what actually happened, so retry stays truthful.
+    expect(described.status).toBe(503);
+  });
+
+  it("names HEIC and the server's own reason on a rejected upload", async () => {
+    const { readGalleryPhoto } = await import("@/lib/images");
+    const { fileAPI } = await import("@/lib/api");
+    const spy = vi.spyOn(fileAPI, "upload").mockRejectedValue(
+      Object.assign(new Error("Request failed with status code 413"), {
+        response: { status: 413, data: { detail: "photo is 9 MB, the limit is 5 MB" } },
+      })
+    );
+
+    const file = new File([new Uint8Array([0, 1, 2])], "IMG_4821.HEIC", { type: "image/heic" });
+    const err = await readGalleryPhoto(file).catch((e) => e);
+
+    expect(err.expose).toBe(true);
+    // The server's reason survives, and the phone-specific advice is attached to it.
+    expect(err.message).toContain("photo is 9 MB, the limit is 5 MB");
+    expect(err.message).toContain("HEIC");
+    // And that is what a caller formatting the error will show.
+    expect(apiError(err, "Couldn't read that photo")).toContain("5 MB");
+    spy.mockRestore();
+  });
+});
+
+// ── the bug itself must not come back ──────────────────────────────────────
+//
+// A photograph read into a `data:` URL and saved as its own address renders in
+// the tab that made it and nowhere else: the seller sees their picture, every
+// buyer sees a blank tile, nobody sees an error. That is what "photos aren't
+// visible in the whole app" was. Two pickers still had the fallback months after
+// it was removed everywhere else, so it is now checked rather than remembered.
+
+describe("no photo path invents its own address", () => {
+  it("nothing outside the tests turns a picked file into a data: URL", async () => {
+    const fs = await import("node:fs");
+    const path = await import("node:path");
+    const root = path.resolve(process.cwd(), "src");
+    const offenders = [];
+
+    const walk = (dir) => {
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          if (entry.name !== "test") walk(full);
+        } else if (/\.jsx?$/.test(entry.name)) {
+          const source = fs.readFileSync(full, "utf8");
+          if (/readAsDataURL|new FileReader\s*\(/.test(source)) {
+            offenders.push(path.relative(root, full));
+          }
+        }
+      }
+    };
+    walk(root);
+
+    expect(offenders).toEqual([]);
+  });
+});
+
+describe("a document picker accepts what a phone actually produces", () => {
+  it("every explicit accept list includes HEIC, which is what an iPhone hands over", async () => {
+    // The server transcodes HEIC (app/services/images.py). A picker that lists
+    // extensions without it greys the file out before the upload is ever tried,
+    // so an iPhone photograph of a passport or a certificate simply cannot be
+    // selected — and the person has no way to know why.
+    const fs = await import("node:fs");
+    const path = await import("node:path");
+    const root = path.resolve(process.cwd(), "src");
+    const offenders = [];
+    let seen = 0;
+
+    const walk = (dir) => {
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          if (entry.name !== "test") walk(full);
+        } else if (/\.jsx?$/.test(entry.name)) {
+          const source = fs.readFileSync(full, "utf8");
+          for (const match of source.matchAll(/accept="(\.[^"]+)"/g)) {
+            seen += 1;
+            if (!/\.heic|\.heif|image\/\*/.test(match[1])) {
+              offenders.push(`${path.relative(root, full)}: accept="${match[1]}"`);
+            }
+          }
+        }
+      }
+    };
+    walk(root);
+
+    expect(offenders).toEqual([]);
+    expect(seen).toBeGreaterThan(0); // the sweep found the pickers
+  });
+});
