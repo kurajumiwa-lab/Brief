@@ -411,6 +411,13 @@ files**, `vite build` clean.
 ## 5. Known limits
 
 - **A lost file cannot be recovered.** Only named, and re-photographed.
+- **HEIC depends on `pillow-heif` being installed.** An iPhone writes HEIC, no
+  browser but Safari can paint it, so the API transcodes it to JPEG on upload.
+  That needs `pillow-heif` (`requirements.txt`), and a build that loses it
+  *refuses* every iPhone photo with a message telling the seller to change a
+  camera setting instead of silently storing an image nobody can see. Check it:
+  `/api/files/limits` reports `images.heif`; `false` on a live deployment means
+  the upload works for Android and not for iPhone.
 - **`media_objects` has no retention job.** Deleting a listing does not delete
   its bytes; `storage.delete()` does, and nothing calls it on cascade.
 - **Migrations at boot are not a substitute for reviewing a migration.** An
