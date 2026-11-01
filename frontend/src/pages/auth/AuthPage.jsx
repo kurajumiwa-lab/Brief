@@ -39,7 +39,7 @@ const LOOP = [
   },
   {
     icon: Receipt,
-    title: "Non-custodial bookings & reusable records",
+    title: "Book safely, and keep a record of every deal",
     body: "Settle directly in cash, M-Pesa, or in-kind. Mutual completion creates a private reusable record while keeping local alternatives visible.",
   },
 ];
@@ -161,7 +161,7 @@ export default function AuthPage() {
 
         <div className="relative max-w-lg">
           <h1 className="text-4xl font-extrabold tracking-tight text-ink-1 leading-[1.1] text-balance">
-            Arrange local help, repairs, rounds & trade with records you can <span className="text-brand-600 dark:text-brand-400">actually trust</span>.
+            Find trusted local help, repairs & trade. <span className="text-brand-600 dark:text-brand-400">Keep a record</span> of every deal.
           </h1>
           <p className="mt-4 text-sm text-ink-3 leading-relaxed text-pretty">
             For neighbours, households, fundis, community groups, and local businesses alike. Post what is Available, Wanted, Scheduled, or an Opportunity — without needing a shopfront to participate.
@@ -350,16 +350,10 @@ export default function AuthPage() {
               )}
 
               <Button type="submit" size="lg" fullWidth loading={loading} iconRight={ArrowRight}>
-                {mode === "login" ? "Enter" : "Join the network"}
+                {mode === "login" ? "Sign in to your network" : "Create my free account"}
               </Button>
             </form>
 
-            {mode === "login" && (
-              <p className="mt-4 text-2xs text-ink-3 text-center bg-surface-2 rounded-xl px-3 py-2.5">
-                Demo network: <span className="font-mono text-ink-1">@mama_mboga</span> ·{" "}
-                <span className="font-mono text-ink-1">Brief-demo-2026</span>
-              </p>
-            )}
           </div>
 
           <p className="mt-6 text-2xs text-ink-4 text-center">
@@ -369,7 +363,7 @@ export default function AuthPage() {
               onClick={() => switchMode(mode === "login" ? "register" : "login")}
               className="text-brand-700 dark:text-brand-400 font-semibold hover:underline underline-offset-2 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50"
             >
-              {mode === "login" ? "Join the network" : "Enter"}
+              {mode === "login" ? "Create a free account" : "Sign in"}
             </button>
           </p>
         </div>
