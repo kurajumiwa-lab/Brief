@@ -313,3 +313,11 @@ async def test_logistics_admin_list_is_operator_only(client, monkeypatch):
     _, headers, _ = await _vendor(client, "lo")
     monkeypatch.setattr(live_settings, "OPERATOR_HANDLES", "nobody_here")
     assert (await client.get("/api/logistics/admin/orders", headers=headers)).status_code == 403
+
+
+async def test_billing_overview_says_sales_are_closed(client):
+    """The billing page reads these flags instead of guessing: free for now, no sales."""
+    _, headers, _ = await _vendor(client, "flags")
+    body = (await client.get("/api/billing/me", headers=headers)).json()
+    assert body["free_for_now"] is True
+    assert body["sales_open"] is False

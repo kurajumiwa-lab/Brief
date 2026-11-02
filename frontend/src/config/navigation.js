@@ -134,6 +134,7 @@ const EXPLORE_ROOTS = [
     the aggregation lives at /activity. */
 const ACTIVITY_ROOTS = [
   "/activity", "/activities", "/work", "/orders", "/chat", "/tasks", "/locks", "/tools", "/payments",
+  "/logistics",
 ];
 
 // `/portfolio` and `/studio` were retired in v2.16: the showcase now lives on
@@ -141,7 +142,7 @@ const ACTIVITY_ROOTS = [
 // to /me rather than holding a destination of their own.
 const ME_ROOTS = [
   "/me", "/stock", "/analytics", "/pos", "/brief", "/passport", "/growth", "/billing",
-  "/enterprise", "/governance", "/ops",
+  "/enterprise", "/governance", "/ops", "/membership",
 ];
 
 const inArea = (pathname, roots) => roots.some((root) => pathname === root || pathname.startsWith(`${root}/`));
@@ -200,6 +201,8 @@ export const SECTION_GROUPS = [
       { to: "/storefront", label: "Business desk", icon: ShoppingBag },
       { to: "/passport", label: "Business passport", icon: FileCheck },
       { to: "/growth", label: "Growth planner", icon: Sparkles },
+      { to: "/membership", label: "Membership", icon: UserRound },
+      { to: "/logistics", label: "Group orders", icon: Truck },
       { to: "/payments", label: "Receipts", icon: Receipt },
       { to: "/tools", label: "Rentals & logistics", icon: Truck },
       { to: "/tasks", label: "Tasks", icon: ListChecks },

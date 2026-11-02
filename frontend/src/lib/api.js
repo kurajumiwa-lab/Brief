@@ -759,6 +759,35 @@ export const billingAPI = {
   simulatePayment: (invoiceId) => api.post(`/billing/invoices/${invoiceId}/simulate`),
 };
 
+// ── Membership (free for now) ──────────────────────────────────────────────
+export const membershipAPI = {
+  categories: () => api.get("/membership/categories"),
+  me: () => api.get("/membership/me"),
+  update: (data) => api.put("/membership/me", data),
+  requestVerification: () => api.post("/membership/me/verification"),
+  events: () => api.get("/membership/me/events"),
+  directory: (params) => api.get("/membership/directory", { params: noEmpty(params) }),
+};
+
+// ── Group logistics (free for now) ─────────────────────────────────────────
+export const logisticsAPI = {
+  providers: () => api.get("/logistics/providers"),
+  openOrders: () => api.get("/logistics/orders/open"),
+  mine: () => api.get("/logistics/orders/mine"),
+  create: (data) => api.post("/logistics/orders", data),
+  get: (id) => api.get(`/logistics/orders/${id}`),
+  join: (id, quantity_note) => api.post(`/logistics/orders/${id}/join`, { quantity_note: quantity_note || null }),
+  leave: (id) => api.post(`/logistics/orders/${id}/leave`),
+  route: (id, data) => api.post(`/logistics/orders/${id}/route`, data),
+  schedule: (id, data) => api.post(`/logistics/orders/${id}/schedule`, data),
+  status: (id, status, note) => api.post(`/logistics/orders/${id}/status`, { status, note: note || null }),
+};
+
+// ── Fees (schedule is public; nothing is charged while free) ───────────────
+export const feesAPI = {
+  schedule: () => api.get("/fees/schedule"),
+};
+
 export const accountAPI = {
   /** Everything this account put into the network, as one JSON document. */
   export: () => api.get("/vendors/me/export"),

@@ -177,6 +177,9 @@ async def overview(db: AsyncSession, vendor: Vendor) -> dict:
     spec = growth_rules.plan_spec(vendor.plan_tier)
     return {
         "billing": billing_live(),
+        # Free for now: paid plans are not on sale. The page reads these instead of guessing.
+        "free_for_now": bool(settings.FREE_FOR_NOW),
+        "sales_open": bool(billing_open()),
         "subscription": _subscription_out(sub),
         "invoices": [_invoice_out(i) for i in invoices],
         "plan": {
@@ -207,6 +210,11 @@ async def overview(db: AsyncSession, vendor: Vendor) -> dict:
     }
 
 
+def billing_open() -> bool:
+    """New paid subscriptions can be started only when billing is on AND free-for-now is off."""
+    return bool(settings.BILLING_ENABLED) and not settings.FREE_FOR_NOW
+
+
 async def start_subscription(
     db: AsyncSession,
     vendor: Vendor,
@@ -215,7 +223,7 @@ async def start_subscription(
     billing_period: str = "monthly",
 ) -> dict:
     """Begin a subscription with a trial and its first invoice."""
-    if not settings.BILLING_ENABLED:
+    if not billing_open():
         # Free for now: no new subscription can be started. Existing subscriptions
         # are not changed by this switch.
         raise BillingError("Paid plans are not open yet. Everything is free for now.", status=403)
