@@ -294,6 +294,12 @@ app.include_router(brief_routes.router, prefix="/api/brief", tags=["Morning Brie
 app.include_router(billing_routes.router, prefix="/api/billing", tags=["Subscription Billing"])
 from app.modules.entitlements.router import router as entitlements_router  # noqa: E402
 app.include_router(entitlements_router, prefix="/api/entitlements", tags=["Entitlements"])
+from app.modules.membership.router import router as membership_router  # noqa: E402
+app.include_router(membership_router, prefix="/api/membership", tags=["Membership"])
+from app.modules.fees.router import router as fees_router  # noqa: E402
+app.include_router(fees_router, prefix="/api/fees", tags=["Fees"])
+from app.modules.logistics.router import router as logistics_router  # noqa: E402
+app.include_router(logistics_router, prefix="/api/logistics", tags=["Group Logistics"])
 
 # Uploaded files (spec sheets, product photos, CSVs), public by unguessable key.
 # One route serves disk AND database bytes — see app/routes/media.py for why a

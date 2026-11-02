@@ -18,6 +18,14 @@ from app.database import async_session
 
 pytestmark = pytest.mark.asyncio
 
+@pytest.fixture(autouse=True)
+def _paywall_on(monkeypatch):
+    """These tests cover the paid-plan gate. Free for now is the product default, so
+    the gate is switched back on here, and only here."""
+    monkeypatch.setattr(live_settings, "FREE_FOR_NOW", False)
+    monkeypatch.setattr(live_settings, "BILLING_ENABLED", True)
+
+
 PASSWORD = "Correct-horse-9"
 
 

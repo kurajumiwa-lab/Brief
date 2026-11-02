@@ -6,6 +6,7 @@ from fastapi import Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.database import get_db
 from app.models.vendor import Vendor
 from app.modules.entitlements.models import FeatureEntitlement
@@ -50,7 +51,9 @@ async def status_for(db: AsyncSession, vendor: Vendor) -> list[dict]:
         label, desc, _ = SEED_BY_KEY.get(key, (key, "", min_tier))
         if key in rows:
             label, desc = rows[key].label, rows[key].description or desc
-        unlocked = enabled and TIER_RANK[tier] >= TIER_RANK[min_tier]
+        # Free for now: every feature is open to every account. An operator
+        # switch can still turn one feature off for everyone.
+        unlocked = enabled and (settings.FREE_FOR_NOW or TIER_RANK[tier] >= TIER_RANK[min_tier])
         out.append({
             "key": key,
             "label": label,
@@ -70,6 +73,8 @@ async def check(db: AsyncSession, vendor: Vendor, key: str) -> None:
     min_tier, enabled = _row_or_seed(row, key)
     if not enabled:
         raise HTTPException(403, "This feature is temporarily unavailable.")
+    if settings.FREE_FOR_NOW:
+        return
     tier = tier_for_vendor(vendor)
     if TIER_RANK[tier] < TIER_RANK[min_tier]:
         needed = PLAN_CATALOG[TIER_TO_PLAN[min_tier]].name

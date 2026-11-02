@@ -215,6 +215,10 @@ async def start_subscription(
     billing_period: str = "monthly",
 ) -> dict:
     """Begin a subscription with a trial and its first invoice."""
+    if not settings.BILLING_ENABLED:
+        # Free for now: no new subscription can be started. Existing subscriptions
+        # are not changed by this switch.
+        raise BillingError("Paid plans are not open yet. Everything is free for now.", status=403)
     status = billing_live()
     if not status["live"] and status["provider"] != "mock":
         raise BillingError(status["reason"] or "Payments are unavailable", status=503)

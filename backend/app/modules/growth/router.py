@@ -8,6 +8,7 @@
     DELETE /api/growth/seats/{seat_id}  revoke a team seat
 """
 
+from app.config import settings
 from typing import Optional
 from uuid import UUID
 
@@ -63,6 +64,14 @@ async def update_plan(
     Paid plans never automatically verify a vendor or approve compliance claims."""
     key = (body.plan_tier or "").strip().lower()
     if key in rules.PLAN_CATALOG and key != "starter":
+        if settings.FREE_FOR_NOW or not settings.BILLING_ENABLED:
+            raise HTTPException(
+                403,
+                detail={
+                    "message": "Paid plans are not open yet. Everything is free for now.",
+                    "plan_tier": key,
+                },
+            )
         # A paid plan starts with a payment, and billing activates it. This
         # endpoint may only move a vendor to Free.
         raise HTTPException(

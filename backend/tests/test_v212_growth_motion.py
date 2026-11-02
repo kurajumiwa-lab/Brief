@@ -431,7 +431,7 @@ async def test_plan_entitlements_verification_guardrail_and_motion_shutdown(clie
 
     # New experimental plan upgrades and new collective buys are stopped (409)
     refused = await client.put("/api/growth/plan", headers=vendor_tok, json={"plan_tier": "network"})
-    assert refused.status_code == 402  # paid plans start with a payment
+    assert refused.status_code == 403  # free for now: paid plans are not open yet
     from app.modules.growth import rules as growth_rules
     from app.modules.growth import service as growth_service
     async with async_session() as db:
