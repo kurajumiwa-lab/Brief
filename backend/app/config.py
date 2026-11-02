@@ -111,6 +111,17 @@ class Settings(BaseSettings):
     # commands stay `requested` (audited, never reported as carried out).
     ENTERPRISE_DEVICE_COMMANDS_DISPATCH_ENABLED: bool = False
 
+    # Free for now (product decision, 2026-11). Every capability is open to every
+    # account: no paywall, no membership subscription and no logistics fee is
+    # collected. Set to False only when monetisation is deliberately switched on.
+    FREE_FOR_NOW: bool = True
+    # Subscription billing (Growth / Business Pro) is off by default. While off,
+    # no new subscription can be started. Existing subscriptions are not touched.
+    BILLING_ENABLED: bool = False
+    # Future fee engine. Off by default: fee rules are read and reported but
+    # never applied to a transaction until this is switched on.
+    FEES_ENABLED: bool = False
+
     # Database — Postgres only. Either shape is accepted; both derived URLs are
     # normalised in the validators below.
     DATABASE_URL: str = "postgresql+asyncpg://brief:brief@db:5432/brief_vendors"

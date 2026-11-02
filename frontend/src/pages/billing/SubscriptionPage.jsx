@@ -7,6 +7,7 @@ import Badge from "@/components/ui/Badge";
 import { PageSpinner } from "@/components/ui/Spinner";
 import { toast } from "@/components/ui/Toast";
 import { billingAPI, apiError } from "@/lib/api";
+import FeeSchedule from "@/components/billing/FeeSchedule";
 
 /**
  * SUBSCRIPTION — Track 2 (v2.15).
@@ -80,6 +81,9 @@ export default function SubscriptionPage() {
   const live = data?.billing?.live;
   const meta = sub ? STATUS_META[sub.status] || STATUS_META.expired : null;
   const paidPlans = (data?.catalogue || []).filter((p) => p.price_kes_monthly > 0);
+  // Free for now: paid plans are not on sale. Default to closed if the server does not say.
+  const salesOpen = data?.sales_open === true;
+  const freeForNow = data?.free_for_now !== false;
 
   return (
     <div className="max-w-3xl space-y-4">
@@ -165,7 +169,20 @@ export default function SubscriptionPage() {
         </Card>
       )}
 
-      {!sub && (
+      {!sub && !salesOpen && (
+        <Card>
+          <p className="text-sm font-bold text-ink-1">Everything is free for now</p>
+          <p className="text-2xs text-ink-3 mt-1 leading-relaxed">
+            Every feature in Brief is open to every account, including advanced analytics,
+            broadcasts, staff accounts and group orders. No card is needed and nothing is charged.
+            {freeForNow && paidPlans.length ? " Paid plans are not open to new accounts yet." : ""}
+          </p>
+        </Card>
+      )}
+
+      <FeeSchedule />
+
+      {!sub && salesOpen && (
         <Card>
           <p className="text-sm font-bold text-ink-1">Choose a plan</p>
           <p className="text-2xs text-ink-3 mt-0.5 mb-3">

@@ -54,6 +54,12 @@ from app.modules.outside.models import (
     OutsidePost, OutsideReaction, OutsideDiscoveryPref, OutsideContentReport,
 )
 from app.modules.billing.models import Subscription, SubscriptionInvoice
+from app.modules.entitlements.models import FeatureEntitlement
+from app.modules.membership.models import MemberProfile, MembershipEvent  # noqa: F401
+from app.modules.fees.models import FeeRule, FeeRecord  # noqa: F401
+from app.modules.logistics.models import (  # noqa: F401
+    LogisticsProvider, GroupOrder, GroupOrderParticipant, LogisticsEvent,
+)
 from app.modules.ledger.models import (
     LocalActivity, ActivityResponse, ActivityBooking, ActivityFeedback,
     ActivityLedgerEvent, ActivityWatch, SavedRelationship,

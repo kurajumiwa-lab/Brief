@@ -91,6 +91,8 @@ def _spec(plan_tier: str):
             f"plan_tier must be one of {', '.join(growth_rules.PLAN_CATALOG)}", status=400
         )
     spec = growth_rules.PLAN_CATALOG[key]
+    if not spec.public_offer:
+        raise BillingError(f"{spec.name} is not available to new subscribers.", status=400)
     if spec.price_kes_monthly <= 0:
         raise BillingError(
             f"{spec.name} is free — there is nothing to charge. "
@@ -175,6 +177,9 @@ async def overview(db: AsyncSession, vendor: Vendor) -> dict:
     spec = growth_rules.plan_spec(vendor.plan_tier)
     return {
         "billing": billing_live(),
+        # Free for now: paid plans are not on sale. The page reads these instead of guessing.
+        "free_for_now": bool(settings.FREE_FOR_NOW),
+        "sales_open": bool(billing_open()),
         "subscription": _subscription_out(sub),
         "invoices": [_invoice_out(i) for i in invoices],
         "plan": {
@@ -193,6 +198,7 @@ async def overview(db: AsyncSession, vendor: Vendor) -> dict:
                 "max_watches": s.max_watches,
             }
             for s in growth_rules.PLAN_CATALOG.values()
+            if s.public_offer
         ],
         "terms": {
             "trial_days": TRIAL_DAYS,
@@ -204,6 +210,11 @@ async def overview(db: AsyncSession, vendor: Vendor) -> dict:
     }
 
 
+def billing_open() -> bool:
+    """New paid subscriptions can be started only when billing is on AND free-for-now is off."""
+    return bool(settings.BILLING_ENABLED) and not settings.FREE_FOR_NOW
+
+
 async def start_subscription(
     db: AsyncSession,
     vendor: Vendor,
@@ -212,6 +223,10 @@ async def start_subscription(
     billing_period: str = "monthly",
 ) -> dict:
     """Begin a subscription with a trial and its first invoice."""
+    if not billing_open():
+        # Free for now: no new subscription can be started. Existing subscriptions
+        # are not changed by this switch.
+        raise BillingError("Paid plans are not open yet. Everything is free for now.", status=403)
     status = billing_live()
     if not status["live"] and status["provider"] != "mock":
         raise BillingError(status["reason"] or "Payments are unavailable", status=503)
@@ -244,6 +259,8 @@ async def start_subscription(
 
     now = _now()
     price = _price(spec, billing_period)
+    if price is None:
+        raise BillingError(f"{spec.name} is not offered on {billing_period} billing yet.", status=400)
     trial_end = _add_days(now, trial_days) if trial_days else None
 
     # No trial left: the invoice is due now, and the plan waits for payment.

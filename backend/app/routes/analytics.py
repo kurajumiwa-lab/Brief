@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.models.vendor import Vendor
 from app.routes.auth import get_current_vendor
+from app.modules.entitlements.service import is_unlocked, require_feature
 from app.services import analytics_service, discovery
 
 router = APIRouter()
@@ -31,7 +32,15 @@ async def analytics_overview(
     vendor: Vendor = Depends(get_current_vendor),
     db: AsyncSession = Depends(get_db),
 ):
-    return await analytics_service.overview(db, vendor, days)
+    body = await analytics_service.overview(db, vendor, days)
+    # The dashboard opens with price position; a locked vendor must not get it
+    # here either, or the gate on /price-position could be walked around.
+    if not await is_unlocked(db, vendor, "advanced_analytics"):
+        body["price_position"] = []
+        body["locked_features"] = ["advanced_analytics"]
+    else:
+        body["locked_features"] = []
+    return body
 
 
 @router.get("/trend")
@@ -65,7 +74,7 @@ async def analytics_categories(
 @router.get("/price-position")
 async def analytics_price_position(
     days: int = Query(90, ge=7, le=730),
-    vendor: Vendor = Depends(get_current_vendor),
+    vendor: Vendor = Depends(require_feature("advanced_analytics")),
     db: AsyncSession = Depends(get_db),
 ):
     """Where your shelf sits against the network's, category by category."""
@@ -85,7 +94,7 @@ async def analytics_network(
 async def analytics_counterparty(
     handle: str,
     days: int = Query(180, ge=7, le=730),
-    vendor: Vendor = Depends(get_current_vendor),
+    vendor: Vendor = Depends(require_feature("advanced_analytics")),
     db: AsyncSession = Depends(get_db),
 ):
     """Trade history with one counterparty — both directions, by month."""

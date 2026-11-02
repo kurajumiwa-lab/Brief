@@ -15,6 +15,10 @@ import CreatePage from "@/pages/create/CreatePage";
 import MorningBriefPage from "@/pages/brief/MorningBriefPage";
 import LegalPage from "@/pages/legal/LegalPage";
 import SubscriptionPage from "@/pages/billing/SubscriptionPage";
+import MembershipPage from "@/pages/membership/MembershipPage";
+import DirectoryPage from "@/pages/membership/DirectoryPage";
+import LogisticsPage from "@/pages/logistics/LogisticsPage";
+import LogisticsOrderPage from "@/pages/logistics/LogisticsOrderPage";
 import ReceiptsPage from "@/pages/payments/ReceiptsPage";
 import { useAuthStore } from "@/stores/authStore";
 
@@ -183,6 +187,11 @@ function AppRoutes() {
           <Route path="/brief" element={<MorningBriefPage />} />
           <Route path="/legal" element={<LegalPage />} />
           <Route path="/billing" element={<SubscriptionPage />} />
+          {/* Free for now: membership, member directory and group orders */}
+          <Route path="/membership" element={<MembershipPage />} />
+          <Route path="/membership/directory" element={<DirectoryPage />} />
+          <Route path="/logistics" element={<LogisticsPage />} />
+          <Route path="/logistics/:id" element={<LogisticsOrderPage />} />
           <Route path="/payments" element={<ReceiptsPage />} />
           {/* ── Outside destinations (v4) ──────────────────────────────────
               Explore absorbs Browse's discovery surfaces; Activity absorbs

@@ -6,10 +6,13 @@ import { billingAPI } from "@/lib/api";
 
 vi.mock("@/lib/api", () => ({
   billingAPI: { me: vi.fn(), subscribe: vi.fn(), cancel: vi.fn(), simulatePayment: vi.fn() },
+  feesAPI: { schedule: vi.fn(() => Promise.resolve({ data: { fees_live: false, message: "Free for now. No fees are being charged.", rules: [] } })) },
   apiError: (_error, fallback) => fallback,
 }));
 
 const base = (overrides = {}) => ({
+  free_for_now: true,
+  sales_open: false,
   billing: { live: false, provider: "mock", reason: "The mock payment provider accepts test events only." },
   subscription: null,
   invoices: [],
@@ -37,8 +40,15 @@ describe("Subscription", () => {
     renderPage();
     expect(await screen.findByText("Recurring billing is not live")).toBeInTheDocument();
     expect(screen.getByText(/mock payment provider accepts test events only/i)).toBeInTheDocument();
-    // Free starter is not offered as something to buy.
-    expect(screen.queryByRole("button", { name: /Subscribe/ })).toBeInTheDocument(); // readiness only
+    // Free for now: paid plans are not on sale, so there is nothing to subscribe to.
+    expect(screen.getByText("Everything is free for now")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Subscribe/ })).not.toBeInTheDocument();
+  });
+
+  it("offers Subscribe only once sales are open", async () => {
+    billingAPI.me.mockResolvedValue({ data: base({ free_for_now: false, sales_open: true }) });
+    renderPage();
+    expect(await screen.findByRole("button", { name: /Subscribe/ })).toBeInTheDocument();
     expect(screen.getByText("Readiness")).toBeInTheDocument();
   });
 
@@ -83,7 +93,7 @@ describe("Subscription", () => {
   });
 
   it("subscribes only after the vendor chooses a paid plan", async () => {
-    billingAPI.me.mockResolvedValue({ data: base() });
+    billingAPI.me.mockResolvedValue({ data: base({ free_for_now: false, sales_open: true }) });
     billingAPI.subscribe.mockResolvedValue({ data: {} });
     renderPage();
 

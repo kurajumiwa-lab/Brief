@@ -23,6 +23,14 @@ from app.services.psp_client import sign_webhook
 
 pytestmark = pytest.mark.asyncio
 
+@pytest.fixture(autouse=True)
+def _paywall_on(monkeypatch):
+    """These tests cover the paid-plan gate. Free for now is the product default, so
+    the gate is switched back on here, and only here."""
+    monkeypatch.setattr(live_settings, "FREE_FOR_NOW", False)
+    monkeypatch.setattr(live_settings, "BILLING_ENABLED", True)
+
+
 PASSWORD = "Correct-horse-9"
 
 
@@ -66,7 +74,7 @@ async def test_billing_says_it_is_not_live_on_the_mock_provider(client):
     assert "mock" in body["billing"]["provider"]
     assert body["billing"]["reason"]
     assert body["subscription"] is None
-    assert any(p["tier"] == "readiness" for p in body["catalogue"])
+    assert any(p["tier"] == "growth" for p in body["catalogue"])
 
 
 async def test_free_tier_cannot_be_subscribed_to(client):
@@ -88,7 +96,7 @@ async def test_paid_invoice_activates_the_plan_exactly_once(client):
     handle, headers, vendor_id = await _vendor(client, "happy")
 
     r = await client.post("/api/billing/subscribe",
-                          json={"plan_tier": "readiness", "billing_period": "monthly"},
+                          json={"plan_tier": "growth", "billing_period": "monthly"},
                           headers=headers)
     assert r.status_code == 201, r.text
     body = r.json()
@@ -109,7 +117,7 @@ async def test_paid_invoice_activates_the_plan_exactly_once(client):
     after = (await client.get("/api/billing/me", headers=headers)).json()
     assert after["subscription"]["status"] == "active"
     assert after["invoices"][0]["status"] == "paid"
-    assert after["plan"]["tier"] == "readiness"
+    assert after["plan"]["tier"] == "growth"
 
     # Replay: identical body, identical reference. Nothing may move twice.
     replay = await client.post("/api/payments/webhook", content=raw, headers={
@@ -128,14 +136,14 @@ async def test_paid_invoice_activates_the_plan_exactly_once(client):
 
 async def test_a_mismatched_amount_does_not_settle(client):
     _, headers, _ = await _vendor(client, "amount")
-    body = (await client.post("/api/billing/subscribe", json={"plan_tier": "readiness"},
+    body = (await client.post("/api/billing/subscribe", json={"plan_tier": "growth"},
                               headers=headers)).json()
     raw = json.dumps({"type": "subscription.paid", "api_ref": body["invoice"]["psp_reference"],
                       "amount": 1, "id": "MOCK-BAD"}).encode()
     r = await client.post("/api/payments/webhook", content=raw, headers={
         "Content-Type": "application/json", "X-Webhook-Signature": sign_webhook(raw)})
     # The handler refuses to apply it, so the PSP is told to retry rather than
-    # the platform silently accepting a KES 1 payment for a KES 2,900 plan.
+    # the platform silently accepting a KES 1 payment for a KES 299 plan.
     assert r.status_code == 502
     after = (await client.get("/api/billing/me", headers=headers)).json()
     assert after["invoices"][0]["status"] == "pending"
@@ -143,9 +151,9 @@ async def test_a_mismatched_amount_does_not_settle(client):
 
 async def test_a_forged_subscription_event_is_rejected_at_the_door(client):
     handle, headers, _ = await _vendor(client, "forged_sub")
-    await client.post("/api/billing/subscribe", json={"plan_tier": "readiness"}, headers=headers)
+    await client.post("/api/billing/subscribe", json={"plan_tier": "growth"}, headers=headers)
     raw = json.dumps({"type": "subscription.paid", "api_ref": "SUBINV-FORGED-1-AAAAAA",
-                      "amount": 2900}).encode()
+                      "amount": 299}).encode()
     r = await client.post("/api/payments/webhook", content=raw, headers={
         "Content-Type": "application/json", "X-Webhook-Signature": "0" * 64})
     assert r.status_code == 401
@@ -157,7 +165,7 @@ async def test_failed_charge_enters_grace_then_lapses_to_starter(client, monkeyp
     handle, headers, vendor_id = await _vendor(client, "lapse")
     monkeypatch.setattr(live_settings, "OPERATOR_HANDLES", handle)
 
-    body = (await client.post("/api/billing/subscribe", json={"plan_tier": "readiness"},
+    body = (await client.post("/api/billing/subscribe", json={"plan_tier": "growth"},
                               headers=headers)).json()
     reference = body["invoice"]["psp_reference"]
 
@@ -173,7 +181,7 @@ async def test_failed_charge_enters_grace_then_lapses_to_starter(client, monkeyp
     assert after["invoices"][0]["status"] == "failed"
     assert after["invoices"][0]["failure_reason"] == "Insufficient funds"
     # Grace keeps the features the vendor is already relying on.
-    assert after["plan"]["tier"] == "readiness"
+    assert after["plan"]["tier"] == "growth"
 
     # Force the clock past grace and run the sweep the scheduler would run.
     sub = await _sub_row(vendor_id)
@@ -199,7 +207,7 @@ async def test_cancel_at_period_end_keeps_the_plan_until_the_period_ends(client,
     handle, headers, vendor_id = await _vendor(client, "cancel")
     monkeypatch.setattr(live_settings, "OPERATOR_HANDLES", handle)
 
-    body = (await client.post("/api/billing/subscribe", json={"plan_tier": "readiness"},
+    body = (await client.post("/api/billing/subscribe", json={"plan_tier": "growth"},
                               headers=headers)).json()
     # Settle it first so the vendor is on a paid period, not a trial.
     await client.post(f"/api/billing/invoices/{body['invoice']['id']}/simulate", headers=headers)
@@ -208,7 +216,7 @@ async def test_cancel_at_period_end_keeps_the_plan_until_the_period_ends(client,
     assert cancel.status_code == 200, cancel.text
     assert cancel.json()["subscription"]["cancel_at_period_end"] is True
     # Still on the plan they paid for.
-    assert (await client.get("/api/billing/me", headers=headers)).json()["plan"]["tier"] == "readiness"
+    assert (await client.get("/api/billing/me", headers=headers)).json()["plan"]["tier"] == "growth"
 
     from datetime import datetime, timedelta
     from app.modules.billing import service as billing
@@ -231,7 +239,7 @@ async def test_cancel_at_period_end_keeps_the_plan_until_the_period_ends(client,
 
 async def test_simulate_is_unavailable_once_a_real_provider_is_configured(client, monkeypatch):
     _, headers, _ = await _vendor(client, "no_sim")
-    body = (await client.post("/api/billing/subscribe", json={"plan_tier": "readiness"},
+    body = (await client.post("/api/billing/subscribe", json={"plan_tier": "growth"},
                               headers=headers)).json()
     monkeypatch.setattr(live_settings, "PSP_PROVIDER", "intasend")
     r = await client.post(f"/api/billing/invoices/{body['invoice']['id']}/simulate", headers=headers)
@@ -252,7 +260,7 @@ async def test_mock_provider_cannot_grant_a_plan_in_production(client, monkeypat
 
     _, headers, _ = await _vendor(client, "prod_mock")
     monkeypatch.setattr(cfg, "ENVIRONMENT", "production")
-    r = await client.post("/api/billing/subscribe", json={"plan_tier": "readiness"}, headers=headers)
+    r = await client.post("/api/billing/subscribe", json={"plan_tier": "growth"}, headers=headers)
     assert r.status_code == 503
     assert "not configured" in r.json()["detail"]
     body = (await client.get("/api/billing/me", headers=headers)).json()
@@ -266,7 +274,7 @@ async def test_a_settled_invoice_leaves_revenue_evidence(client):
     from app.models.governance import RevenueEvent
 
     _, headers, _ = await _vendor(client, "revenue")
-    body = (await client.post("/api/billing/subscribe", json={"plan_tier": "readiness"},
+    body = (await client.post("/api/billing/subscribe", json={"plan_tier": "growth"},
                               headers=headers)).json()
     await client.post(f"/api/billing/invoices/{body['invoice']['id']}/simulate", headers=headers)
 
@@ -291,7 +299,7 @@ async def test_the_scheduler_itself_expires_a_lapsed_subscription(client):
     from app.services import payment_worker
 
     _, headers, vendor_id = await _vendor(client, "sched")
-    body = (await client.post("/api/billing/subscribe", json={"plan_tier": "readiness"},
+    body = (await client.post("/api/billing/subscribe", json={"plan_tier": "growth"},
                               headers=headers)).json()
     assert body["subscription"]["status"] == "trialing"
 

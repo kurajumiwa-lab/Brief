@@ -50,6 +50,8 @@ class PlanSpec:
     consortium_builder: bool
     buyer_shortlists: bool
     features: tuple[str, ...]
+    # False = not sold to new subscribers; existing subscribers keep it.
+    public_offer: bool = True
     verification_guardrail: str = (
         "Payment unlocks seats, watch capacity and queue SLA priority — it never "
         "automatically verifies your account or approves compliance claims."
@@ -59,10 +61,10 @@ class PlanSpec:
 PLAN_CATALOG: dict[str, PlanSpec] = {
     "starter": PlanSpec(
         key="starter",
-        name="Starter (Freemium)",
+        name="Free",
         price_kes_monthly=0,
         price_kes_annual=0,
-        audience="Any business getting started on the trade network",
+        audience="Everyone. Storefront, messaging, voice notes and activity search stay free.",
         max_seats=1,
         max_watches=10,
         included_claim_reviews_per_quarter=0,
@@ -76,6 +78,43 @@ PLAN_CATALOG: dict[str, PlanSpec] = {
             "Up to 10 active RequestWatch opportunity radars",
         ),
     ),
+    "growth": PlanSpec(
+        key="growth",
+        name="Growth",
+        price_kes_monthly=299,
+        price_kes_annual=None,  # annual billing not offered yet
+        audience="Vendors who want analytics to grow their trade",
+        max_seats=1,
+        max_watches=25,
+        included_claim_reviews_per_quarter=0,
+        priority_verification_queue=False,
+        consortium_builder=False,
+        buyer_shortlists=False,
+        features=(
+            "Everything in Free",
+            "Advanced analytics: price position against the network and counterparty history",
+            "Up to 25 active RequestWatch radars",
+        ),
+    ),
+    "business_pro": PlanSpec(
+        key="business_pro",
+        name="Business Pro",
+        price_kes_monthly=699,
+        price_kes_annual=None,  # annual billing not offered yet
+        audience="Vendors who run a team and need broadcast tools",
+        max_seats=3,
+        max_watches=50,
+        included_claim_reviews_per_quarter=2,
+        priority_verification_queue=True,
+        consortium_builder=False,
+        buyer_shortlists=False,
+        features=(
+            "Everything in Growth",
+            "Broadcast tools and staff accounts (up to 3 seats)",
+            "Up to 50 active RequestWatch radars",
+            "Priority verification queue (2 claim reviews per quarter included)",
+        ),
+    ),
     "readiness": PlanSpec(
         key="readiness",
         name="Readiness",
@@ -86,6 +125,7 @@ PLAN_CATALOG: dict[str, PlanSpec] = {
         max_watches=25,
         included_claim_reviews_per_quarter=2,
         priority_verification_queue=True,
+        public_offer=False,
         consortium_builder=False,
         buyer_shortlists=False,
         features=(
@@ -105,6 +145,7 @@ PLAN_CATALOG: dict[str, PlanSpec] = {
         max_watches=50,
         included_claim_reviews_per_quarter=6,
         priority_verification_queue=True,
+        public_offer=False,
         consortium_builder=True,
         buyer_shortlists=False,
         features=(
@@ -124,6 +165,7 @@ PLAN_CATALOG: dict[str, PlanSpec] = {
         max_watches=100,
         included_claim_reviews_per_quarter=20,
         priority_verification_queue=True,
+        public_offer=False,
         consortium_builder=True,
         buyer_shortlists=True,
         features=(
