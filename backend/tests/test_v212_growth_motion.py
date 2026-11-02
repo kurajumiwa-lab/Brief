@@ -27,6 +27,7 @@ from sqlalchemy import select, update
 from app.config import settings
 from app.database import async_session
 from app.models.stock import StockItem, StockMovement, StockReservation
+from app.models.vendor import Vendor
 from app.modules.standing import sweep as standing_sweep
 from app.modules.standing.models import BusinessClaim
 from app.platform import event_outbox
@@ -245,7 +246,7 @@ async def test_business_pulse_and_blueprint_match_database_records(client, monke
     assert len(blueprint["inverted_pyramid"]) == 4
     assert blueprint["inverted_pyramid"][0]["active"] is True
     assert blueprint["inverted_pyramid"][1]["active"] is True
-    assert len(blueprint["plans"]) == 4
+    assert len(blueprint["plans"]) == 6  # Free, Growth, Business Pro + 3 legacy plans on record
     assert len(blueprint["hard_coded_rules"]) == 6
     assert len(blueprint["six_month_rollout"]) == 6
     assert len(blueprint["acceptance_gates"]) == 9
@@ -384,20 +385,20 @@ async def test_plan_entitlements_verification_guardrail_and_motion_shutdown(clie
     assert seat_fail.status_code == 403
     assert "Upgrade your plan" in seat_fail.json()["detail"]
 
-    # Upgrade to Business Pro (network: 3 seats, 50 watches; Growth has no staff seats) — must NOT grant is_verified!
-    plan_res = await client.put("/api/growth/plan", headers=vendor_tok, json={"plan_tier": "network"})
-    assert plan_res.status_code == 200, plan_res.text
-    ent = plan_res.json()
-    assert ent["tier"] == "network"
+    # Upgrade to Readiness (3 seats, 25 watches) — must NOT grant is_verified!
+    # Paid plans start with a payment: billing activates them through the growth
+    # service. The public PUT refuses paid tiers (see test_v31_entitlements).
+    ent = await _activate_paid_plan(client, vendor_tok, "readiness")
+    assert ent["tier"] == "readiness"
     assert ent["max_seats"] == 3
-    assert ent["max_watches"] == 50
+    assert ent["max_watches"] == 25
 
     me = (await client.get("/api/vendors/me", headers=vendor_tok)).json()
-    assert me["plan_tier"] == "network"
+    assert me["plan_tier"] == "readiness"
     assert me["is_verified"] is False  # Paid plan never confers verification
 
     watches_info = (await client.get("/api/requests/watches", headers=vendor_tok)).json()
-    assert watches_info["limit"] == 50
+    assert watches_info["limit"] == 25
 
     # Now adding 2 team seats succeeds (total 3 seats used), 4th fails
     s1 = await client.post("/api/growth/seats", headers=vendor_tok, json={
@@ -429,9 +430,18 @@ async def test_plan_entitlements_verification_guardrail_and_motion_shutdown(clie
     monkeypatch.setattr(settings, "SIX_MONTH_PROGRAM_ENABLED", False)
 
     # New experimental plan upgrades and new collective buys are stopped (409)
-    blocked_plan = await client.put("/api/growth/plan", headers=vendor_tok, json={"plan_tier": "network"})
-    assert blocked_plan.status_code == 409
-    assert "six-month rollout window is closed" in blocked_plan.json()["detail"]
+    refused = await client.put("/api/growth/plan", headers=vendor_tok, json={"plan_tier": "network"})
+    assert refused.status_code == 402  # paid plans start with a payment
+    from app.modules.growth import rules as growth_rules
+    from app.modules.growth import service as growth_service
+    async with async_session() as db:
+        vendor = (await db.execute(select(Vendor).where(Vendor.id == uuid.UUID(
+            (await client.get("/api/vendors/me", headers=vendor_tok)).json()["id"])))).scalar_one()
+        # Activation (what billing calls) is what the rollout window stops: 409.
+        with pytest.raises(growth_rules.GrowthRuleError) as exc:
+            await growth_service.change_plan(db, vendor, "network")
+    assert exc.value.status == 409
+    assert "six-month rollout window is closed" in str(exc.value)
 
     grp = await client.post("/api/groups/create", headers=vendor_tok, json={
         "name": f"Shutdown Group {uuid.uuid4().hex[:4]}",
@@ -489,3 +499,15 @@ async def test_fulfilment_mark_sample_size_thresholds(client):
     v.movements_cancelled = 1
     assert stock_engine.fulfillment_mark(v)["key"] == "top"
 
+
+
+async def _activate_paid_plan(client, headers, plan_tier):
+    """What billing does on a verified payment: activate through the growth service."""
+    from app.modules.growth import service as growth_service
+
+    me = (await client.get("/api/vendors/me", headers=headers)).json()
+    async with async_session() as db:
+        vendor = (await db.execute(select(Vendor).where(Vendor.id == uuid.UUID(me["id"])))).scalar_one()
+        result = await growth_service.change_plan(db, vendor, plan_tier)
+        await db.commit()
+    return result

@@ -25,6 +25,7 @@ SEED = (
     ("inventory_automation", "Inventory automation", "Automatic stock updates from your point-of-sale system.", "growth"),
     ("broadcast_tools", "Broadcast tools", "Send one message to many contacts.", "business_pro"),
     ("staff_accounts", "Staff accounts", "Extra logins for your team.", "business_pro"),
+    ("advanced_reporting", "Advanced reporting", "Exportable reports for your records and your accountant.", "business_pro"),
 )
 
 

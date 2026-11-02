@@ -1,21 +1,23 @@
 """Tiers, the plan each tier is sold as, and the feature list.
 
-Plan keys (``starter``, ``readiness``, ``network``) are the values stored on
-``vendors.plan_tier``. They stay as they are so existing subscribers keep their
-access; the commercial names are shown to users.
+Plan keys are the values stored on ``vendors.plan_tier``. Legacy keys stay so
+existing subscribers keep their access and their prices.
 """
 
 TIERS = ("free", "growth", "business_pro")
 TIER_RANK = {tier: rank for rank, tier in enumerate(TIERS)}
 
-#: Commercial tier -> the plan key that sells it (prices live in growth/rules.py).
-TIER_TO_PLAN = {"free": "starter", "growth": "readiness", "business_pro": "network"}
+#: Commercial tier -> the plan key that is sold as it.
+TIER_TO_PLAN = {"free": "starter", "growth": "growth", "business_pro": "business_pro"}
 
-#: Stored plan key -> commercial tier. Institution is treated as Business Pro so
-#: anyone already on it keeps everything they had.
+#: Stored plan key -> commercial tier. The legacy plans (Readiness, Network,
+#: Institution) are no longer sold, but their existing customers keep at least
+#: what they bought: all of them map to Business Pro, the widest tier.
 PLAN_TO_TIER = {
     "starter": "free",
-    "readiness": "growth",
+    "growth": "growth",
+    "business_pro": "business_pro",
+    "readiness": "business_pro",
     "network": "business_pro",
     "institution": "business_pro",
 }
@@ -31,5 +33,6 @@ FEATURE_SEED: tuple[tuple[str, str, str, str], ...] = (
     ("inventory_automation", "Inventory automation", "Automatic stock updates from your point-of-sale system.", "growth"),
     ("broadcast_tools", "Broadcast tools", "Send one message to many contacts.", "business_pro"),
     ("staff_accounts", "Staff accounts", "Extra logins for your team.", "business_pro"),
+    ("advanced_reporting", "Advanced reporting", "Exportable reports for your records and your accountant.", "business_pro"),
 )
 SEED_BY_KEY = {key: (label, desc, tier) for key, label, desc, tier in FEATURE_SEED}

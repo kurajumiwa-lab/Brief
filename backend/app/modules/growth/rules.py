@@ -50,7 +50,7 @@ class PlanSpec:
     consortium_builder: bool
     buyer_shortlists: bool
     features: tuple[str, ...]
-    # Hidden from new sales when False (existing subscribers keep their plan).
+    # False = not sold to new subscribers; existing subscribers keep it.
     public_offer: bool = True
     verification_guardrail: str = (
         "Payment unlocks seats, watch capacity and queue SLA priority — it never "
@@ -78,55 +78,94 @@ PLAN_CATALOG: dict[str, PlanSpec] = {
             "Up to 10 active RequestWatch opportunity radars",
         ),
     ),
-    "readiness": PlanSpec(
-        key="readiness",
+    "growth": PlanSpec(
+        key="growth",
         name="Growth",
         price_kes_monthly=299,
         price_kes_annual=None,  # annual billing not offered yet
         audience="Vendors who want analytics to grow their trade",
         max_seats=1,
         max_watches=25,
-        included_claim_reviews_per_quarter=2,
-        priority_verification_queue=True,
+        included_claim_reviews_per_quarter=0,
+        priority_verification_queue=False,
         consortium_builder=False,
         buyer_shortlists=False,
         features=(
             "Everything in Free",
             "Advanced analytics: price position against the network and counterparty history",
             "Up to 25 active RequestWatch radars",
-            "Priority verification queue (2 claim reviews per quarter included)",
         ),
     ),
-    "network": PlanSpec(
-        key="network",
+    "business_pro": PlanSpec(
+        key="business_pro",
         name="Business Pro",
         price_kes_monthly=699,
         price_kes_annual=None,  # annual billing not offered yet
         audience="Vendors who run a team and need broadcast tools",
         max_seats=3,
         max_watches=50,
-        included_claim_reviews_per_quarter=6,
+        included_claim_reviews_per_quarter=2,
         priority_verification_queue=True,
-        consortium_builder=True,
+        consortium_builder=False,
         buyer_shortlists=False,
         features=(
             "Everything in Growth",
-            "Broadcast tools",
-            "Staff accounts (up to 3 seats)",
+            "Broadcast tools and staff accounts (up to 3 seats)",
             "Up to 50 active RequestWatch radars",
+            "Priority verification queue (2 claim reviews per quarter included)",
+        ),
+    ),
+    "readiness": PlanSpec(
+        key="readiness",
+        name="Readiness",
+        price_kes_monthly=2900,
+        price_kes_annual=29000,
+        audience="Suppliers with dated compliance & eligibility requirements",
+        max_seats=3,
+        max_watches=25,
+        included_claim_reviews_per_quarter=2,
+        priority_verification_queue=True,
+        public_offer=False,
+        consortium_builder=False,
+        buyer_shortlists=False,
+        features=(
+            "3 team seats sharing one Business Passport (owner, finance, clerk)",
+            "18-claim Document Vault + 30/14/7-day expiry reminders",
+            "Priority verification queue (≤72h target SLA, 2 claim reviews/quarter included)",
+            "Up to 25 active RequestWatch radars + unlimited requirement fit checks",
+        ),
+    ),
+    "network": PlanSpec(
+        key="network",
+        name="Network",
+        price_kes_monthly=9500,
+        price_kes_annual=95000,
+        audience="Growth wholesalers, Patrons, consortium leads and multi-route couriers",
+        max_seats=10,
+        max_watches=50,
+        included_claim_reviews_per_quarter=6,
+        priority_verification_queue=True,
+        public_offer=False,
+        consortium_builder=True,
+        buyer_shortlists=False,
+        features=(
+            "10 team seats + dedicated verification desk queue",
+            "Up to 50 active RequestWatch radars + consent-based introductions",
+            "Consortium / bid-team builder for AGPO & joint-venture checklists",
+            "Full 30/90/180/365-day Trade Analytics & Price Position benchmarks",
         ),
     ),
     "institution": PlanSpec(
         key="institution",
         name="Institution",
         price_kes_monthly=90000,
-        price_kes_annual=None,
+        price_kes_annual=900000,
         audience="Counties, hospitals, large hospitality buyers, SACCOs and programme offices",
-        public_offer=False,
         max_seats=25,
         max_watches=100,
         included_claim_reviews_per_quarter=20,
         priority_verification_queue=True,
+        public_offer=False,
         consortium_builder=True,
         buyer_shortlists=True,
         features=(

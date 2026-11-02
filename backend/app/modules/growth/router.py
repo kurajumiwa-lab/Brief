@@ -61,6 +61,18 @@ async def update_plan(
 ):
     """Change subscription plan and server-side seat/watch entitlements.
     Paid plans never automatically verify a vendor or approve compliance claims."""
+    key = (body.plan_tier or "").strip().lower()
+    if key in rules.PLAN_CATALOG and key != "starter":
+        # A paid plan starts with a payment, and billing activates it. This
+        # endpoint may only move a vendor to Free.
+        raise HTTPException(
+            402,
+            detail={
+                "message": f"{rules.PLAN_CATALOG[key].name} starts with a payment. Choose a paid plan under Billing.",
+                "plan_tier": key,
+                "upgrade": True,
+            },
+        )
     try:
         return await service.change_plan(db, vendor, body.plan_tier)
     except rules.GrowthRuleError as exc:

@@ -389,7 +389,7 @@ async def test_billing_and_measurement_never_cross_tenants(client, monkeypatch):
     handle, alice, _ = await _vendor(client, "iso_bill_alice")
     _, bob, _ = await _vendor(client, "iso_bill_bob")
 
-    await client.post("/api/billing/subscribe", json={"plan_tier": "readiness"}, headers=alice)
+    await client.post("/api/billing/subscribe", json={"plan_tier": "growth"}, headers=alice)
     alice_billing = (await client.get("/api/billing/me", headers=alice)).json()
     bob_billing = (await client.get("/api/billing/me", headers=bob)).json()
 
