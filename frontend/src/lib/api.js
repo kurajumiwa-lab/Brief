@@ -769,6 +769,25 @@ export const membershipAPI = {
   directory: (params) => api.get("/membership/directory", { params: noEmpty(params) }),
 };
 
+// ── Calendar: my week, plans, services, hours and appointments ─────────────
+export const scheduleAPI = {
+  week: (start) => api.get("/schedule/week", { params: noEmpty({ start }) }),
+  addEntry: (data) => api.post("/schedule/entries", data),
+  updateEntry: (id, data) => api.patch(`/schedule/entries/${id}`, data),
+  deleteEntry: (id) => api.delete(`/schedule/entries/${id}`),
+  services: () => api.get("/schedule/services"),
+  addService: (data) => api.post("/schedule/services", data),
+  updateService: (id, data) => api.patch(`/schedule/services/${id}`, data),
+  availability: () => api.get("/schedule/availability"),
+  setAvailability: (windows) => api.put("/schedule/availability", windows),
+  vendorServices: (vendorId) => api.get(`/schedule/vendors/${vendorId}/services`),
+  slots: (vendorId, serviceId, day) =>
+    api.get(`/schedule/vendors/${vendorId}/slots`, { params: { service_id: serviceId, day } }),
+  book: (data) => api.post("/schedule/appointments", data),
+  appointments: (role) => api.get("/schedule/appointments", { params: { role } }),
+  setAppointmentStatus: (id, status) => api.post(`/schedule/appointments/${id}/status`, { status }),
+};
+
 // ── Group logistics (free for now) ─────────────────────────────────────────
 export const logisticsAPI = {
   providers: () => api.get("/logistics/providers"),

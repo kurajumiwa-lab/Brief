@@ -116,3 +116,4 @@ from app.modules.intake.models import (  # noqa: E402,F401
     MarketObservation,
     MarketPresence,
 )
+from app.modules.schedule.models import ScheduleEntry, BookableService, AvailabilityRule, Appointment  # noqa: F401
