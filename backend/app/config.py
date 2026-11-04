@@ -139,6 +139,11 @@ class Settings(BaseSettings):
     # entrypoint.sh keeps retrying this many seconds for Postgres to accept connections
     # before it gives up with "database never became reachable" (0 = one attempt).
     DB_WAIT_TIMEOUT: int = 60
+    # Connections each running copy of the API may hold open. Serverless hosts run
+    # many copies at once, and the Supabase Session pooler caps the total (15 on the
+    # live project). On Vercel use DB_POOL_SIZE=2 and DB_MAX_OVERFLOW=0.
+    DB_POOL_SIZE: int = 5
+    DB_MAX_OVERFLOW: int = 10
 
     # Redis for the rate limiter (optional; falls back to in-process memory).
     REDIS_URL: str = "redis://redis:6379/0"

@@ -310,3 +310,26 @@ The code cannot tell you whether any of this is useful. Ten vendors can.
 - Don't widen `OPERATOR_HANDLES` to a handle you have not registered yourself.
 - Don't claim live payments or subscriptions until §8 step 5 and §10 step 2 have
   actually run.
+
+## Fix: "max clients reached" (500 errors on the live site)
+
+Symptom: pages return 500 or take several seconds; Vercel logs show
+`EMAXCONNSESSION ... pool_size: 15`.
+
+Cause: each running copy of the API opens its own database connections, and the
+Supabase Session pooler allows only 15 at once. The background jobs were also
+starting on every copy.
+
+On Vercel → project **brief** → Settings → Environment Variables, set these for
+**Production**, then redeploy:
+
+| Name | Value |
+|---|---|
+| `RUN_SCHEDULER` | `false` |
+| `DB_POOL_SIZE` | `2` |
+| `DB_MAX_OVERFLOW` | `0` |
+
+The background jobs (payments housekeeping, POS sync, event reminders, the
+outbox and the standing sweep) then need to run in one always-on place: start
+`python -m app.worker` as its own process. Until that runs, those jobs do not
+run on the live site.
