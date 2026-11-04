@@ -17,8 +17,21 @@ _ENGINE_TIMEOUTS = (
     }
 )
 
+
+
+def _pool_options() -> dict:
+    """Pool sizing for the active database. SQLite has no pool to size."""
+    if settings.DATABASE_URL.startswith("sqlite"):
+        return {}
+    return {"pool_size": settings.DB_POOL_SIZE, "max_overflow": settings.DB_MAX_OVERFLOW}
+
+
 engine = create_async_engine(
-    settings.DATABASE_URL, echo=settings.DEBUG, pool_pre_ping=True, **_ENGINE_TIMEOUTS
+    settings.DATABASE_URL,
+    echo=settings.DEBUG,
+    pool_pre_ping=True,
+    **_ENGINE_TIMEOUTS,
+    **_pool_options(),
 )
 async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
