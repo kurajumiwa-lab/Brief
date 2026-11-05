@@ -19,6 +19,8 @@ import MembershipPage from "@/pages/membership/MembershipPage";
 import DirectoryPage from "@/pages/membership/DirectoryPage";
 import LogisticsPage from "@/pages/logistics/LogisticsPage";
 import LogisticsOrderPage from "@/pages/logistics/LogisticsOrderPage";
+import CalendarPage from "@/pages/calendar/CalendarPage";
+import BookPage from "@/pages/calendar/BookPage";
 import ReceiptsPage from "@/pages/payments/ReceiptsPage";
 import { useAuthStore } from "@/stores/authStore";
 
@@ -192,6 +194,9 @@ function AppRoutes() {
           <Route path="/membership/directory" element={<DirectoryPage />} />
           <Route path="/logistics" element={<LogisticsPage />} />
           <Route path="/logistics/:id" element={<LogisticsOrderPage />} />
+          {/* Calendar: my week, appointments and a booking page for clients */}
+          <Route path="/calendar" element={<CalendarPage />} />
+          <Route path="/book/:vendorId" element={<BookPage />} />
           <Route path="/payments" element={<ReceiptsPage />} />
           {/* ── Outside destinations (v4) ──────────────────────────────────
               Explore absorbs Browse's discovery surfaces; Activity absorbs

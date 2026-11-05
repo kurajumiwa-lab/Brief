@@ -134,7 +134,7 @@ const EXPLORE_ROOTS = [
     the aggregation lives at /activity. */
 const ACTIVITY_ROOTS = [
   "/activity", "/activities", "/work", "/orders", "/chat", "/tasks", "/locks", "/tools", "/payments",
-  "/logistics",
+  "/logistics", "/calendar", "/book",
 ];
 
 // `/portfolio` and `/studio` were retired in v2.16: the showcase now lives on
@@ -203,6 +203,7 @@ export const SECTION_GROUPS = [
       { to: "/growth", label: "Growth planner", icon: Sparkles },
       { to: "/membership", label: "Membership", icon: UserRound },
       { to: "/logistics", label: "Group orders", icon: Truck },
+      { to: "/calendar", label: "Calendar", icon: CalendarDays },
       { to: "/payments", label: "Receipts", icon: Receipt },
       { to: "/tools", label: "Rentals & logistics", icon: Truck },
       { to: "/tasks", label: "Tasks", icon: ListChecks },
