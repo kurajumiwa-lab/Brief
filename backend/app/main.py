@@ -304,6 +304,9 @@ app.include_router(logistics_router, prefix="/api/logistics", tags=["Group Logis
 from app.modules.schedule.router import router as schedule_router  # noqa: E402
 app.include_router(schedule_router, prefix="/api/schedule", tags=["Calendar"])
 
+from app.modules.offers.router import router as offers_router  # noqa: E402
+app.include_router(offers_router, prefix="/api/offers", tags=["Verified offers"])
+
 # Uploaded files (spec sheets, product photos, CSVs), public by unguessable key.
 # One route serves disk AND database bytes — see app/routes/media.py for why a
 # StaticFiles mount was not enough on an ephemeral, read-only host.

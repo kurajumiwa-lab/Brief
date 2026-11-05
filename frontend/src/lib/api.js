@@ -154,6 +154,12 @@ export const vendorAPI = {
 };
 
 // ── Stock ──────────────────────────────────────────────────────────────────
+// ── Verified offer shelf ───────────────────────────────────────────────────
+export const offersAPI = {
+  confirmed: (params) => api.get("/offers/confirmed", { params: noEmpty(params) }),
+  mine: () => api.get("/offers/mine"),
+};
+
 export const stockAPI = {
   add: (data) => api.post("/stock/add", data),
   get: (id) => api.get(`/stock/${id}`),

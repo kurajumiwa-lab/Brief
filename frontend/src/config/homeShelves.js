@@ -32,6 +32,7 @@ import {
   groupAPI,
   listAPI,
   marketsAPI,
+  offersAPI,
   requestsAPI,
   squadAPI,
   stockAPI,
@@ -98,6 +99,49 @@ function interleave(a = [], b = []) {
 /* ── shelves ──────────────────────────────────────────────────────────────── */
 
 export const SHELVES = [
+  // The primary shelf. Only offers that pass the confirmed-offer rule
+  // (verified seller, and a completed deal with another business or a hand
+  // confirmation by the Brief team). Backroom stock is not shown here.
+  {
+    key: "offers",
+    group: "discovery",
+    card: "product",
+    title: "Confirmed on the network",
+    subtitle: "Offers from verified businesses that other businesses have already bought from",
+    seeAll: { to: "/browse?type=goods", label: "See all offers" },
+    limit: 12,
+    async load() {
+      // A failed request is an empty shelf, never a crash for the whole feed.
+      let body = null;
+      try {
+        body = await fetchFrom(() => offersAPI?.confirmed, { limit: 12 });
+      } catch {
+        return [];
+      }
+      const rows = asArray(body?.offers);
+      return rows
+        .filter((row) => row && row.status === "confirmed" && available(row) > 0)
+        .map((row) => ({
+          id: String(row.id),
+          kind: "product",
+          to: `/listing/${row.id}`,
+          owner: { id: row.seller?.id, handle: row.seller?.handle, name: row.seller?.name },
+          title: text(row.name) || "Offer",
+          category: row.category,
+          image: firstImage(row.images),
+          price: money(row.unit_price) ?? money(row.wholesale_price),
+          wholesalePrice: money(row.wholesale_price),
+          unitPrice: money(row.unit_price),
+          unit: row.unit || "unit",
+          quantity: available(row),
+          moq: row.min_order_quantity ?? null,
+          quality: "confirmed",
+          vendorName: row.seller?.name || (row.seller?.handle ? `@${row.seller.handle}` : "A business"),
+          raw: row,
+        }));
+    },
+  },
+
   {
     key: "stock",
     group: "discovery",
