@@ -75,6 +75,7 @@ const calls = { nearby: [], place: [], market: [], join: [], tools: [] };
 vi.mock("@/lib/api", () => {
   const apiError = (e, f = "Something went wrong") => e?.message || f;
   return {
+  routineAPI: { today: () => new Promise(() => {}), catalogue: () => new Promise(() => {}) },
     apiError,
     newsAPI: { feed: vi.fn(() => ok(FEED)) },
     squadAPI: {

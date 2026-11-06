@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import SetupChecklist from "@/components/onboarding/SetupChecklist";
 import SourceDialog from "@/components/stock/SourceDialog";
 import HomeHero from "@/components/home/HomeHero";
+import TodayCard from "@/components/home/TodayCard";
 import TradeOverviewShelf from "@/components/home/TradeOverviewShelf";
 import HomeFeed from "@/components/home/HomeFeed";
 import CommunityStrip from "@/components/home/CommunityStrip";
@@ -67,6 +68,9 @@ export default function HomeHub() {
           category on their shop needs to be told that before they are shown
           anything else. It renders nothing at all once those are done. */}
       <SetupChecklist />
+
+      {/* Today: only what is waiting. Renders nothing when nothing is. */}
+      <TodayCard />
 
       {/* The five categories, as doors with descriptions — the replacement for
           the "Online services · Farms · Your category" shelf. */}

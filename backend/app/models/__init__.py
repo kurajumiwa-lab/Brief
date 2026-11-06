@@ -118,3 +118,6 @@ from app.modules.intake.models import (  # noqa: E402,F401
 )
 from app.modules.schedule.models import ScheduleEntry, BookableService, AvailabilityRule, Appointment  # noqa: F401
 from app.modules.offers.models import OfferConfirmation  # noqa: F401
+from app.modules.knowledge.models import KnowledgeListing, KnowledgeRegistration, KnowledgeReview  # noqa: F401
+from app.modules.routine.models import RoutinePreference, RoutineCompletion  # noqa: F401
+from app.modules.blueprints.models import BlueprintStart, BlueprintStepDone  # noqa: F401

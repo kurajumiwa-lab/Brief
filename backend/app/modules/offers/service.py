@@ -16,7 +16,7 @@ no dispute record to read yet; add it when one exists.
 import uuid
 from dataclasses import dataclass
 
-from sqlalchemy import exists, func, or_, select
+from sqlalchemy import and_, exists, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.stock import StockItem, StockMovement
@@ -142,3 +142,48 @@ async def remove_by_hand(db: AsyncSession, item_id: uuid.UUID) -> bool:
     await db.delete(row)
     await db.flush()
     return True
+
+
+TRUST_CONFIRMED = "confirmed"
+TRUST_NEW = "new"
+
+
+async def public_offers(db: AsyncSession, limit: int = 24, category: str | None = None,
+                        q: str | None = None) -> list[dict]:
+    """Everything shared with the network and in stock, readable with no account.
+
+    Nothing is hidden for being new: a listed item is open to look at, like any
+    shop shelf. Each item carries a plain trust label so a buyer can tell a
+    confirmed offer (traded with another business) from a new one.
+    """
+    confirmed = and_(_seller_verified(), or_(_deal_with_other_business(), _by_hand()))
+    query = (
+        select(StockItem, Vendor, confirmed.label("confirmed"), _seller_verified().label("seller_verified"))
+        .join(Vendor, Vendor.id == StockItem.vendor_id)
+        .where(StockItem.visible_to_network.is_(True), StockItem.quantity_available >= 1)
+        .order_by(confirmed.desc(), StockItem.updated_at.desc())
+        .limit(min(max(limit, 1), 100))
+    )
+    if category:
+        query = query.where(StockItem.category.ilike(category))
+    if q and q.strip():
+        query = query.where(StockItem.name.ilike(f"%{q.strip()}%"))
+
+    out = []
+    for item, seller, is_confirmed, verified in (await db.execute(query)).all():
+        if is_confirmed:
+            trust = {"level": TRUST_CONFIRMED, "label": "Confirmed: traded with another business"}
+        elif verified:
+            trust = {"level": TRUST_NEW, "label": "New on the network"}
+        else:
+            trust = {"level": TRUST_NEW, "label": "New: seller not yet verified"}
+        out.append({
+            "id": str(item.id), "name": item.name, "category": item.category,
+            "unit_price": item.unit_price, "wholesale_price": item.wholesale_price,
+            "unit": item.unit_of_measure, "quantity_available": item.quantity_available,
+            "min_order_quantity": item.min_order_quantity, "images": item.images or [],
+            "trust": trust,
+            "seller": {"handle": seller.vendor_handle, "name": seller.business_name,
+                       "verified": bool(verified)},
+        })
+    return out

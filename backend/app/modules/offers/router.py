@@ -1,6 +1,7 @@
 """Offers API — the verified offer shelf.
 
-    GET    /api/offers/confirmed           offers other businesses can source from (home shelf)
+    GET    /api/offers/public              open browse, no account: every shared item with a trust label
+    GET    /api/offers/confirmed           confirmed offers for signed-in businesses (home shelf)
     GET    /api/offers/mine                my items, each with its status and the reason
     POST   /api/offers/{item_id}/confirm   Brief team: confirm an item by hand (reason required)
     DELETE /api/offers/{item_id}/confirm   Brief team: take a hand confirmation back
@@ -43,6 +44,13 @@ def _offer_out(item: StockItem, vendor: Vendor) -> dict:
         "status": service.CONFIRMED,
         "seller": {"id": str(vendor.id), "handle": vendor.vendor_handle, "name": vendor.business_name},
     }
+
+
+@router.get("/public")
+async def public_browse(limit: int = Query(24, ge=1, le=100), category: Optional[str] = None,
+                        q: Optional[str] = Query(None, max_length=120), db: AsyncSession = Depends(get_db)):
+    """Open to everyone, no account needed. Lists every shared, in-stock item with its trust label."""
+    return {"offers": await service.public_offers(db, limit=limit, category=category, q=q)}
 
 
 @router.get("/confirmed")
