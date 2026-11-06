@@ -6,6 +6,8 @@ import ActivityList from "@/components/home/ActivityList";
 import DiscoveryLink from "@/components/home/DiscoveryLink";
 import DailyWelcome from "@/components/home/DailyWelcome";
 import CategoryRequest from "@/components/home/CategoryRequest";
+import StatusShelf from "@/components/statuses/StatusShelf";
+import RadarStrip from "@/components/statuses/RadarStrip";
 import { CATEGORY_REQUIREMENTS, pendingCategoryRequest } from "@/config/categoryRequirements";
 
 /**
@@ -13,7 +15,8 @@ import { CATEGORY_REQUIREMENTS, pendingCategoryRequest } from "@/config/category
  *
  * Four sections, in this order, and nothing else:
  *
- *   1  header         who this is, and the shop's setup count (2/6)
+ *   1  header         who this is, the shop's setup count (2/6), the status
+ *                     shelf of businesses you follow, and the radar counts
  *   2  action centre  the next one or two things that need doing; "View all"
  *                     expands the rest in place; hidden when nothing is pending
  *   3  activity       the three latest trades; hidden when there are none
@@ -52,7 +55,11 @@ export default function HomeHub({ rules = CATEGORY_REQUIREMENTS }) {
 
   return (
     <div className="space-y-5 sm:space-y-6">
-      <HomeHeader progress={progress} />
+      <div className="space-y-3">
+        <HomeHeader progress={progress} />
+        <StatusShelf />
+        <RadarStrip />
+      </div>
       <ActionCentre progress={progress} />
       <ActivityList />
       <DiscoveryLink />

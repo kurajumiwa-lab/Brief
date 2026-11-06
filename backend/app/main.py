@@ -304,8 +304,10 @@ app.include_router(logistics_router, prefix="/api/logistics", tags=["Group Logis
 from app.modules.schedule.router import router as schedule_router  # noqa: E402
 app.include_router(schedule_router, prefix="/api/schedule", tags=["Calendar"])
 
+from app.modules.statuses.router import router as statuses_router
 from app.modules.offers.router import router as offers_router  # noqa: E402
 app.include_router(offers_router, prefix="/api/offers", tags=["Verified offers"])
+app.include_router(statuses_router, prefix="/api/statuses", tags=["Statuses"])
 
 from app.modules.knowledge.router import router as knowledge_router  # noqa: E402
 app.include_router(knowledge_router, prefix="/api/knowledge", tags=["Knowledge directory"])

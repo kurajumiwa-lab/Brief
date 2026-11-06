@@ -64,6 +64,7 @@ class NotificationType(str, PyEnum):
     CLAIM_EXPIRING = "claim_expiring"        # Renew soon: 30/14/7 days before expiry
     CLAIM_VERIFICATION_REQUESTED = "claim_verification_requested"  # Verifier desk queue
     OPPORTUNITY_MATCH = "opportunity_match"  # A posted request matches a standing watch
+    BUSINESS_FOLLOW = "business_follow"      # A business started following you
     SYSTEM = "system"                        # Platform announcements
 
 

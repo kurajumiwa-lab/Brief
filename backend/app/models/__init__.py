@@ -121,3 +121,4 @@ from app.modules.offers.models import OfferConfirmation  # noqa: F401
 from app.modules.knowledge.models import KnowledgeListing, KnowledgeRegistration, KnowledgeReview  # noqa: F401
 from app.modules.routine.models import RoutinePreference, RoutineCompletion  # noqa: F401
 from app.modules.blueprints.models import BlueprintStart, BlueprintStepDone  # noqa: F401
+from app.modules.statuses.models import BusinessFollow, BusinessStatus, StatusView  # noqa: F401
