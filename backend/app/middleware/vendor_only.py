@@ -27,7 +27,7 @@ OPEN_PREFIXES = ("/api/auth/", "/api/health", "/api/metrics", "/api/payments/web
 # under these prefixes that is personal or changes data still depends on
 # `get_current_vendor`, so it answers 401 without a token at the route level too.
 PUBLIC_READ_PREFIXES = ("/api/offers/public", "/api/knowledge/sectors", "/api/knowledge/listings",
-                        "/api/blueprints")
+                        "/api/blueprints", "/api/trust/public")
 
 
 class VendorOnlyMiddleware(BaseHTTPMiddleware):
