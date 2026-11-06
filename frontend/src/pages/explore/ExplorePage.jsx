@@ -168,6 +168,14 @@ export default function ExplorePage() {
         </button>
       </div>
 
+      {/* Discovery owns offers, suppliers and product browsing. Home links here
+          and does not repeat them, so the doors to each must live here. */}
+      <nav aria-label="Browse the network" className="flex flex-wrap gap-2">
+        <Link to="/offers" className="rounded-full border border-edge-1 bg-surface-0 px-3 py-1.5 text-2xs font-bold text-ink-2 hover:bg-surface-1">Verified offers</Link>
+        <Link to="/browse?type=people" className="rounded-full border border-edge-1 bg-surface-0 px-3 py-1.5 text-2xs font-bold text-ink-2 hover:bg-surface-1">Suppliers</Link>
+        <Link to="/browse?type=goods" className="rounded-full border border-edge-1 bg-surface-0 px-3 py-1.5 text-2xs font-bold text-ink-2 hover:bg-surface-1">Goods</Link>
+      </nav>
+
       <SearchInput
         value={q}
         onChange={onSearch}

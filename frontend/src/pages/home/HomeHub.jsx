@@ -1,110 +1,72 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import SetupChecklist from "@/components/onboarding/SetupChecklist";
-import SourceDialog from "@/components/stock/SourceDialog";
-import HomeHero from "@/components/home/HomeHero";
-import TodayCard from "@/components/home/TodayCard";
-import TradeOverviewShelf from "@/components/home/TradeOverviewShelf";
-import HomeFeed from "@/components/home/HomeFeed";
-import CommunityStrip from "@/components/home/CommunityStrip";
-import HomeTrustStrip from "@/components/home/HomeTrustStrip";
-import TradeNetworkPanel from "@/components/home/TradeNetworkPanel";
-import ParticipantBand from "@/components/home/ParticipantBand";
-import FoundationStrip from "@/components/home/FoundationStrip";
-import MarketsAround from "@/components/markets/MarketsAround";
-import { useTradeOverviewStore } from "@/stores/tradeOverviewStore";
+import { useState } from "react";
+import { useSetupProgress } from "@/components/onboarding/useSetupProgress";
+import HomeHeader from "@/components/home/HomeHeader";
+import ActionCentre from "@/components/home/ActionCentre";
+import ActivityList from "@/components/home/ActivityList";
+import DiscoveryLink from "@/components/home/DiscoveryLink";
+import DailyWelcome from "@/components/home/DailyWelcome";
+import CategoryRequest from "@/components/home/CategoryRequest";
+import { CATEGORY_REQUIREMENTS, pendingCategoryRequest } from "@/config/categoryRequirements";
 
 /**
- * HOME — the trade network, shown rather than described (v3.3).
+ * HOME — for doing. Discovery is for finding.
  *
- * The hierarchy, and the order it is read in:
+ * Four sections, in this order, and nothing else:
  *
- *   1  **identity and search** — the market hero: who you are, one field that
- *      finds goods, suppliers, people, markets and rentals, and the suggestions
- *      that make the field obvious. This is the only place Home raises its voice.
- *   2  **the setup card** — the hard-coded vital-information task. It is not
- *      optional and it is not dismissible until the shop has a photo, a face, a
- *      sentence and a category. Once it is done it renders nothing at all.
- *   3  **the categories** — five doors with descriptions, replacing the shelf
- *      strip whose first three tiles read "Online services · Farms · Your
- *      category".
- *   4  **the architecture, in order** — the guarantees, the participants, the
- *      four systems, then the live marketplace itself.
+ *   1  header         who this is, and the shop's setup count (2/6)
+ *   2  action centre  the next one or two things that need doing; "View all"
+ *                     expands the rest in place; hidden when nothing is pending
+ *   3  activity       the three latest trades; hidden when there are none
+ *   4  discovery      one line to Discovery, which owns offers, suppliers and
+ *                     product browsing
  *
- * What changed in v3.3:
- *   · Trade overview is now a compact shelf instead of oversized cards
- *   · Business pulse simplified to focus on growth, metrics moved to dedicated screens
- *   · Reduced vertical space substantially without removing functionality
+ * Two popups may appear over Home, never both:
+ *   · a category data request, when a category needs a fact the business has
+ *     not given yet. It has priority.
+ *   · the daily welcome, at most once every 24 hours.
  *
- * What stays exactly where it was: the header and its own search (owned by the
- * app shell), the first-run checklist, the sourcing dialog, the bottom
- * navigation and every route anything links to.
+ * Nothing above is hidden by a feature flag. Sections with no content render
+ * nothing; there are no placeholders to scroll past.
  */
-export default function HomeHub() {
-  const navigate = useNavigate();
-  const [sourcing, setSourcing] = useState(null);
+export default function HomeHub({ rules = CATEGORY_REQUIREMENTS }) {
+  // One read of the shop's progress, shared by the header and the action
+  // centre, so Home makes one profile request and one connections request.
+  const progress = useSetupProgress();
+  // Category requests answered or put off during this visit. A saved answer is
+  // also visible in the profile, but a field the backend does not echo back
+  // must not bring the same popup back in this session.
+  const [settled, setSettled] = useState([]);
 
-  // A connection that comes back should heal the overview without the reader
-  // hunting for the retry link.
-  useEffect(() => {
-    const onOnline = () => {
-      const state = useTradeOverviewStore.getState();
-      if (state.status === "error" && state.retryable) state.retry();
-    };
-    window.addEventListener("online", onOnline);
-    return () => window.removeEventListener("online", onOnline);
-  }, []);
+  const request = progress.loaded
+    ? pendingCategoryRequest({ rules, vendor: progress.vendor, profile: progress.profile, dismissedKeys: settled })
+    : null;
+
+  const settle = (rule, value) => {
+    setSettled((list) => [...list, rule.key]);
+    if (value !== undefined && rule.scope !== "vendor") {
+      progress.setProfile?.((prev) => ({ ...(prev || {}), [rule.field]: value }));
+    }
+  };
+
+  const name = progress.vendor?.business_name || progress.vendor?.vendor_handle;
 
   return (
     <div className="space-y-5 sm:space-y-6">
-      {/* ── the connection layer, stated once ──────────────────────────────
-          Identity, one search, the doors, and the ask. The photograph is a
-          workshop floor rather than a market stall, because this is
-          infrastructure for trade, not a market garden. */}
-      <HomeHero />
+      <HomeHeader progress={progress} />
+      <ActionCentre progress={progress} />
+      <ActivityList />
+      <DiscoveryLink />
 
-      {/* The hard-coded vital-information task. It is second on the page on
-          purpose: a vendor who has not yet put a photo, a face, a sentence and a
-          category on their shop needs to be told that before they are shown
-          anything else. It renders nothing at all once those are done. */}
-      <SetupChecklist />
-
-      {/* Today: only what is waiting. Renders nothing when nothing is. */}
-      <TodayCard />
-
-      {/* The five categories, as doors with descriptions — the replacement for
-          the "Online services · Farms · Your category" shelf. */}
-      <TradeNetworkPanel />
-
-      {/* Four guarantees, each already true of the product. */}
-      <HomeTrustStrip />
-
-      {/* Who is on the network, and the fact that everyone trades both ways. */}
-      <ParticipantBand />
-
-      {/* The four systems underneath, each pointing at the screen it lives on. */}
-      <FoundationStrip />
-
-      {/* The way into the community: static by design, so it cannot be the
-          reason Home has a hole in it. */}
-      <CommunityStrip />
-
-      {/* Markets around you — loaded by itself, at a walking radius, busiest
-          first. This replaces "press Scan and pick a radius starting at 150 km". */}
-      <MarketsAround limit={3} />
-
-      {/* Compact trade overview - replaces oversized cards (v3.3) */}
-      <TradeOverviewShelf />
-
-      {/* ── the marketplace itself ─────────────────────────────────────── */}
-      <HomeFeed onSource={setSourcing} />
-
-      <SourceDialog
-        item={sourcing}
-        open={!!sourcing}
-        onClose={() => setSourcing(null)}
-        onDone={() => navigate("/orders")}
-      />
+      {request ? (
+        <CategoryRequest
+          key={request.key}
+          rule={request}
+          onAnswered={(rule, value) => settle(rule, value)}
+          onLater={(rule) => settle(rule)}
+        />
+      ) : progress.loaded ? (
+        <DailyWelcome name={name} />
+      ) : null}
     </div>
   );
 }
