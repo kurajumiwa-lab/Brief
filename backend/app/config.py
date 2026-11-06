@@ -196,6 +196,9 @@ class Settings(BaseSettings):
     SLOW_REQUEST_MS: int = 1000          # requests above this are logged and listed by /api/ops/slow
 
     # Tool bookings & routing (v2.2 §5.x)
+    # Short videos in business statuses. Off until the video storage decision is made
+    # (uploads currently accept images only). Photos and text are always on.
+    STATUS_VIDEO_ENABLED: bool = False
     BOOKING_MAX_DAYS: int = 365          # longest window a single booking may span
     ROUTE_DEFAULT_SPEED_KMH: float = 25.0
 
