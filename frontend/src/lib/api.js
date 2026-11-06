@@ -890,6 +890,27 @@ export const socialAPI = {
   unblock: (targetId, kind = "block") => api.delete(`/social/blocks/${targetId}`, { params: { kind } }),
 };
 
+// ── Business statuses (v3.7) ──────────────────────────────────────────────
+/**
+ * Businesses follow businesses. A status (text, photo or video) is seen only by
+ * the businesses that follow its author, and expires after 24 hours. Following
+ * a business sends it a notification; a status post does not.
+ */
+export const statusesAPI = {
+  feed: () => api.get("/statuses/feed"),
+  mine: () => api.get("/statuses/mine"),
+  radar: () => api.get("/statuses/radar"),
+  suggestions: () => api.get("/statuses/suggestions"),
+  following: () => api.get("/statuses/following"),
+  post: (data) => api.post("/statuses", data),
+  remove: (id) => api.delete(`/statuses/${id}`),
+  view: (id) => api.post(`/statuses/${id}/view`),
+  viewers: (id) => api.get(`/statuses/${id}/viewers`),
+  followState: (vendorId) => api.get(`/statuses/follow/${vendorId}`),
+  follow: (vendorId) => api.post(`/statuses/follow/${vendorId}`),
+  unfollow: (vendorId) => api.delete(`/statuses/follow/${vendorId}`),
+};
+
 // ── Caesar the guide ───────────────────────────────────────────────────────
 /**
  * Suggestions, the shelf map, and the demand signal.
