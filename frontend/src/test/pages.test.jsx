@@ -30,6 +30,7 @@ const MESSAGES = [
 vi.mock("@/lib/api", () => {
   const apiError = (e, f = "Something went wrong") => e?.response?.data?.detail || f;
   return {
+  routineAPI: { today: () => new Promise(() => {}), catalogue: () => new Promise(() => {}) },
     default: {},
     apiError,
     authAPI: { login: vi.fn(() => ok({ access_token: "tok" })), register: vi.fn(() => ok({})) },

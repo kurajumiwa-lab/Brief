@@ -154,6 +154,54 @@ export const vendorAPI = {
 };
 
 // ── Stock ──────────────────────────────────────────────────────────────────
+// ── Public offer browse (no account) and the verified offer shelf ─────────
+export const offersPublicAPI = {
+  browse: (params) => api.get("/offers/public", { params: noEmpty(params) }),
+};
+
+// ── Knowledge directory: seminars, courses, mentor sessions ───────────────
+export const knowledgeAPI = {
+  sectors: () => api.get("/knowledge/sectors"),
+  listings: (params) => api.get("/knowledge/listings", { params: noEmpty(params) }),
+  listing: (id) => api.get(`/knowledge/listings/${id}`),
+  mine: () => api.get("/knowledge/mine"),
+  create: (data) => api.post("/knowledge/listings", data),
+  publish: (id) => api.post(`/knowledge/listings/${id}/publish`),
+  cancel: (id) => api.post(`/knowledge/listings/${id}/cancel`),
+  deliver: (id, delivered_outcomes) => api.post(`/knowledge/listings/${id}/deliver`, { delivered_outcomes }),
+  attendees: (id) => api.get(`/knowledge/listings/${id}/attendees`),
+  checkIn: (id, vendorId) => api.post(`/knowledge/listings/${id}/check-in/${vendorId}`),
+  register: (id) => api.post(`/knowledge/listings/${id}/register`),
+  unregister: (id) => api.delete(`/knowledge/listings/${id}/register`),
+  review: (id, data) => api.post(`/knowledge/listings/${id}/review`, data),
+  me: (id) => api.get(`/knowledge/listings/${id}/me`),
+};
+
+// ── Daily routine: the Today window ───────────────────────────────────────
+export const routineAPI = {
+  today: () => api.get("/routine/today"),
+  catalogue: () => api.get("/routine/catalogue"),
+  setChecks: (checks) => api.put("/routine/preferences", { checks }),
+  done: (key) => api.post(`/routine/done/${key}`),
+  undo: (key) => api.delete(`/routine/done/${key}`),
+};
+
+// ── Free blueprints (templates) ───────────────────────────────────────────
+export const blueprintsAPI = {
+  library: () => api.get("/blueprints"),
+  one: (key) => api.get(`/blueprints/${key}`),
+  mine: () => api.get("/blueprints/mine/progress"),
+  start: (key) => api.post(`/blueprints/${key}/start`),
+  tick: (key, step) => api.post(`/blueprints/${key}/steps/${step}`),
+  untick: (key, step) => api.delete(`/blueprints/${key}/steps/${step}`),
+};
+
+// ── Verified offer shelf ───────────────────────────────────────────────────
+export const offersAPI = {
+  confirmed: (params) => api.get("/offers/confirmed", { params: noEmpty(params) }),
+  mine: () => api.get("/offers/mine"),
+};
+
 export const stockAPI = {
   add: (data) => api.post("/stock/add", data),
   get: (id) => api.get(`/stock/${id}`),

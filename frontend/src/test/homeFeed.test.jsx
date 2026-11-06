@@ -123,6 +123,7 @@ vi.mock("@/lib/api", () => {
   const failureReason = (e, f = "Something went wrong") =>
     e?.response ? apiError(e, f) : "The network couldn't be reached. Check your connection and try again.";
   return {
+  routineAPI: { today: () => new Promise(() => {}), catalogue: () => new Promise(() => {}) },
     apiError,
     failureReason,
     stockAPI: {

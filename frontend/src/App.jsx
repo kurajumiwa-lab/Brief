@@ -21,6 +21,13 @@ import LogisticsPage from "@/pages/logistics/LogisticsPage";
 import LogisticsOrderPage from "@/pages/logistics/LogisticsOrderPage";
 import CalendarPage from "@/pages/calendar/CalendarPage";
 import BookPage from "@/pages/calendar/BookPage";
+import OffersBrowsePage from "@/pages/offers/OffersBrowsePage";
+import LearnPage from "@/pages/learn/LearnPage";
+import LearnDetailPage from "@/pages/learn/LearnDetailPage";
+import LearnNewPage from "@/pages/learn/LearnNewPage";
+import TodayPage from "@/pages/today/TodayPage";
+import BlueprintsPage from "@/pages/templates/BlueprintsPage";
+import BlueprintDetailPage from "@/pages/templates/BlueprintDetailPage";
 import ReceiptsPage from "@/pages/payments/ReceiptsPage";
 import { useAuthStore } from "@/stores/authStore";
 
@@ -163,6 +170,12 @@ function AppRoutes() {
       {/* Public storefront (v2.14): catalogue, tiers, trial — readable without
           an account; enquiring attaches to a vendor @handle. */}
       <Route path="/storefront" element={<BusinessDeskPage />} />
+      {/* Open to everyone, no account: browse offers, the knowledge directory and free templates. */}
+      <Route path="/offers" element={<OffersBrowsePage />} />
+      <Route path="/learn" element={<LearnPage />} />
+      <Route path="/learn/:id" element={<LearnDetailPage />} />
+      <Route path="/templates" element={<BlueprintsPage />} />
+      <Route path="/templates/:key" element={<BlueprintDetailPage />} />
       {/* Operator side of the same desk: where a request lands. The API answers
           403 for anyone without a market-ops role, so the page can be public. */}
       <Route path="/storefront/inbox" element={<EnquiryInboxPage />} />
@@ -196,6 +209,8 @@ function AppRoutes() {
           <Route path="/logistics/:id" element={<LogisticsOrderPage />} />
           {/* Calendar: my week, appointments and a booking page for clients */}
           <Route path="/calendar" element={<CalendarPage />} />
+          <Route path="/learn/new" element={<LearnNewPage />} />
+          <Route path="/today" element={<TodayPage />} />
           <Route path="/book/:vendorId" element={<BookPage />} />
           <Route path="/payments" element={<ReceiptsPage />} />
           {/* ── Outside destinations (v4) ──────────────────────────────────

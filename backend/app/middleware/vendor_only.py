@@ -22,10 +22,20 @@ OPEN_PREFIXES = ("/api/auth/", "/api/health", "/api/metrics", "/api/payments/web
                  "/api/social/accounts")
 
 
+# Read-only public browsing (no account): the open offer list, the knowledge
+# directory and the free blueprint library. Only GET is open here. Every route
+# under these prefixes that is personal or changes data still depends on
+# `get_current_vendor`, so it answers 401 without a token at the route level too.
+PUBLIC_READ_PREFIXES = ("/api/offers/public", "/api/knowledge/sectors", "/api/knowledge/listings",
+                        "/api/blueprints")
+
+
 class VendorOnlyMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         path = request.url.path
-        if path.startswith("/api/") and not path.startswith(OPEN_PREFIXES) and request.method != "OPTIONS":
+        public_read = request.method == "GET" and path.startswith(PUBLIC_READ_PREFIXES)
+        if path.startswith("/api/") and not path.startswith(OPEN_PREFIXES) and not public_read \
+                and request.method != "OPTIONS":
             auth = request.headers.get("authorization", "")
             # WebSocket upgrades authenticate with ?token= inside the handler.
             is_ws = request.headers.get("upgrade", "").lower() == "websocket"
