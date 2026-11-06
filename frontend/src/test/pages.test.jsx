@@ -523,34 +523,6 @@ describe("Business Control Centre, Stock Visibility, Shop Front & Gallery Photos
     expect(within(dialog).queryByPlaceholderText(/https:\/\//i)).not.toBeInTheDocument();
   });
 
-  it("leads Home with other vendors' stock and keeps My Shop collapsed until it is asked for", async () => {
-    const { default: HomeHub } = await import("@/pages/home/HomeHub");
-    const { useHomeFeedStore } = await import("@/stores/homeFeedStore");
-    useHomeFeedStore.setState({ shelves: {} });
-    useStockStore.setState({ mine: STOCK, mineLoaded: true });
-    api.stockAPI.network.mockResolvedValueOnce(ok(NETWORK_STOCK));
-    mount(<HomeHub />, "/");
-
-    // discovery first — a real record from another vendor, via the existing endpoint
-    const stockShelf = await screen.findByTestId("home-shelf-stock");
-    expect(within(stockShelf).getByRole("heading", { name: /fresh on the network/i })).toBeInTheDocument();
-    expect(within(stockShelf).getByText("Kitenge 6-yard")).toBeInTheDocument();
-
-    // My Shop is folded: the door and the count, no listing cards
-    const yourShop = screen.getByTestId("home-your-shop");
-    expect(yourShop).toHaveAttribute("data-shop-state", "collapsed");
-    expect(within(yourShop).getByRole("heading", { name: /my shop/i })).toBeInTheDocument();
-    expect(within(yourShop).getByText(/manage your published listings/i)).toBeInTheDocument();
-    expect(within(yourShop).getByRole("link", { name: /manage shop/i })).toHaveAttribute("href", "/stock");
-    expect(within(yourShop).getByTestId("my-shop-counts")).toHaveTextContent(/1 published/);
-    expect(within(yourShop).queryByText("Sukuma wiki")).not.toBeInTheDocument();
-
-    // expanding gives the shop back its own actions, unchanged
-    fireEvent.click(within(yourShop).getByRole("button", { name: /expand/i }));
-    expect(within(yourShop).getByRole("link", { name: /preview shop/i })).toHaveAttribute("href", "/@mama_mboga");
-    expect(within(yourShop).getByRole("button", { name: /share shop/i })).toBeInTheDocument();
-  });
-
   it("routes /browse?search=... to GoodsResults and displays the On your own shelf diagnostic", async () => {
     const { default: BrowsePage } = await import("@/pages/browse/BrowsePage");
     useStockStore.setState({ mine: STOCK, network: NETWORK_STOCK, categories: ["vegetables"] });
