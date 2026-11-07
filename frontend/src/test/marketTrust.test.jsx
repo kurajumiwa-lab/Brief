@@ -2,18 +2,21 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { trustAPI } from "@/lib/api";
+import { getCustomerKey } from "@/lib/customerKey";
 import TrustBrowsePage from "@/pages/trust/TrustBrowsePage";
 import TrustBranchPage from "@/pages/trust/TrustBranchPage";
 import TrustMePage from "@/pages/trust/TrustMePage";
 import TrustStaffPage from "@/pages/trust/TrustStaffPage";
+import TrustMyReviewsPage from "@/pages/trust/TrustMyReviewsPage";
 import { scoreText, POINTS_NOTE } from "@/pages/trust/trustCore";
 
 vi.mock("@/lib/api", async (importOriginal) => ({
   ...(await importOriginal()),
   trustAPI: {
-    branches: vi.fn(), branch: vi.fn(), reviews: vi.fn(), mine: vi.fn(), addBranch: vi.fn(),
-    issueToken: vi.fn(), review: vi.fn(), points: vi.fn(), services: vi.fn(), redeem: vi.fn(),
-    pendingBranches: vi.fn(), verify: vi.fn(),
+    branches: vi.fn(), branch: vi.fn(), reviews: vi.fn(), customerReview: vi.fn(), customerReviews: vi.fn(),
+    customerProfile: vi.fn(), mine: vi.fn(), addBranch: vi.fn(), issueToken: vi.fn(), review: vi.fn(),
+    points: vi.fn(), services: vi.fn(), redeem: vi.fn(), pendingBranches: vi.fn(), verify: vi.fn(),
+    flaggedReviews: vi.fn(), moderateReview: vi.fn(),
   },
 }));
 
@@ -23,11 +26,17 @@ const shop = (over = {}) => ({
   verification_level: 2, reputation: { score: null, review_count: 0 }, ...over,
 });
 
-beforeEach(() => vi.clearAllMocks());
+const noRep = { score: null, review_count: 0, verified_review_count: 0, service_average: null, product_average: null, raw_average: null };
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  trustAPI.flaggedReviews.mockResolvedValue({ data: { reviews: [] } });
+  trustAPI.pendingBranches.mockResolvedValue({ data: { branches: [] } });
+});
 
 describe("checked shops page", () => {
   it("shows shops, and says plainly when a shop has no reviews yet", async () => {
-    trustAPI.branches.mockResolvedValue({ data: { branches: [shop()] } });
+    trustAPI.branches.mockResolvedValue({ data: { branches: [shop({ reputation: noRep })] } });
     render(<MemoryRouter><TrustBrowsePage /></MemoryRouter>);
     expect(await screen.findByText("Kondele Stores")).toBeInTheDocument();
     expect(screen.getByText(/Not enough reviews yet/)).toBeInTheDocument();
@@ -48,7 +57,15 @@ describe("checked shops page", () => {
   });
 });
 
-describe("shop page: rating", () => {
+describe("customer device key", () => {
+  it("is created once, reused, and is long enough for the server", () => {
+    const first = getCustomerKey();
+    expect(first.length).toBeGreaterThanOrEqual(16);
+    expect(getCustomerKey()).toBe(first);
+  });
+});
+
+describe("shop page: customer review with a till code", () => {
   const renderShop = () => render(
     <MemoryRouter initialEntries={["/trust/branches/b1"]}>
       <Routes><Route path="/trust/branches/:id" element={<TrustBranchPage />} /></Routes>
@@ -56,41 +73,78 @@ describe("shop page: rating", () => {
   );
 
   beforeEach(() => {
-    trustAPI.branch.mockResolvedValue({ data: { branch: shop(), reputation: { score: null, review_count: 0 } } });
+    trustAPI.branch.mockResolvedValue({ data: { branch: shop(), reputation: noRep } });
     trustAPI.reviews.mockResolvedValue({ data: { reviews: [] } });
   });
 
-  it("asks for a star first", async () => {
+  it("needs a till code before it sends anything", async () => {
     renderShop();
-    fireEvent.click(await screen.findByRole("button", { name: "Publish my rating" }));
-    expect(await screen.findByText("Tap a star rating first.")).toBeInTheDocument();
-    expect(trustAPI.review).not.toHaveBeenCalled();
+    fireEvent.click(await screen.findByRole("button", { name: "Publish my review" }));
+    expect(await screen.findByText(/Enter the till code/)).toBeInTheDocument();
+    expect(trustAPI.customerReview).not.toHaveBeenCalled();
   });
 
-  it("publishes a rating with no till code, and says the points were added", async () => {
-    trustAPI.review.mockResolvedValue({ data: { points_earned: 20 } });
+  it("needs all three star ratings", async () => {
     renderShop();
-    fireEvent.click(await screen.findByRole("button", { name: "4 stars" }));
-    fireEvent.click(screen.getByRole("button", { name: "Publish my rating" }));
-    await waitFor(() => expect(trustAPI.review).toHaveBeenCalledWith("b1", { rating: 4 }));
-    expect(await screen.findByText(/20 points were added/)).toBeInTheDocument();
+    fireEvent.change(await screen.findByLabelText(/Till code from your receipt/), { target: { value: "TKN-AB12-CD34-EF56" } });
+    fireEvent.click(screen.getByRole("button", { name: "Publish my review" }));
+    expect(await screen.findByText(/Tap a star rating for service, product and your overall/)).toBeInTheDocument();
+    expect(trustAPI.customerReview).not.toHaveBeenCalled();
   });
 
-  it("sends the till code when one is typed", async () => {
-    trustAPI.review.mockResolvedValue({ data: { points_earned: 20 } });
+  it("sends the code and the three ratings, with no login", async () => {
+    trustAPI.customerReview.mockResolvedValue({ data: { status: "published", message: "Thanks. Your review is published." } });
     renderShop();
-    fireEvent.click(await screen.findByRole("button", { name: "5 stars" }));
-    fireEvent.change(screen.getByLabelText(/Till code/), { target: { value: "TKN-AB12-CD34-EF56" } });
-    fireEvent.click(screen.getByRole("button", { name: "Publish my rating" }));
-    await waitFor(() => expect(trustAPI.review).toHaveBeenCalledWith("b1", { rating: 5, transaction_token: "TKN-AB12-CD34-EF56" }));
+    fireEvent.change(await screen.findByLabelText(/Till code from your receipt/), { target: { value: "TKN-AB12-CD34-EF56" } });
+    fireEvent.click(screen.getByRole("button", { name: "Service: 4 stars" }));
+    fireEvent.click(screen.getByRole("button", { name: "Product quality: 3 stars" }));
+    fireEvent.click(screen.getByRole("button", { name: "Overall experience: 5 stars" }));
+    fireEvent.click(screen.getByRole("button", { name: "Publish my review" }));
+    await waitFor(() => expect(trustAPI.customerReview).toHaveBeenCalledWith("b1", {
+      transaction_code: "TKN-AB12-CD34-EF56", service_rating: 4, product_rating: 3, overall_rating: 5, comment: undefined,
+    }));
+    expect(await screen.findByText("Thanks. Your review is published.")).toBeInTheDocument();
   });
 
-  it("asks a visitor who is not signed in to sign in, without an error", async () => {
-    trustAPI.review.mockRejectedValue({ response: { status: 401 } });
+  it("tells the customer when a review is held for a check", async () => {
+    trustAPI.customerReview.mockResolvedValue({ data: { status: "hidden_pending_review", message: "Thanks. Your review is being checked before it is published." } });
     renderShop();
-    fireEvent.click(await screen.findByRole("button", { name: "2 stars" }));
-    fireEvent.click(screen.getByRole("button", { name: "Publish my rating" }));
-    expect(await screen.findByRole("link", { name: "Sign in" })).toBeInTheDocument();
+    fireEvent.change(await screen.findByLabelText(/Till code from your receipt/), { target: { value: "TKN-AB12-CD34-EF56" } });
+    fireEvent.click(screen.getByRole("button", { name: "Service: 2 stars" }));
+    fireEvent.click(screen.getByRole("button", { name: "Product quality: 2 stars" }));
+    fireEvent.click(screen.getByRole("button", { name: "Overall experience: 2 stars" }));
+    fireEvent.click(screen.getByRole("button", { name: "Publish my review" }));
+    expect(await screen.findByText(/being checked before it is published/)).toBeInTheDocument();
+  });
+
+  it("shows the server's reason when a code does not work", async () => {
+    trustAPI.customerReview.mockRejectedValue({ response: { status: 422, data: { detail: "That code has already been used or has expired." } } });
+    renderShop();
+    fireEvent.change(await screen.findByLabelText(/Till code from your receipt/), { target: { value: "TKN-AB12-CD34-EF56" } });
+    fireEvent.click(screen.getByRole("button", { name: "Service: 4 stars" }));
+    fireEvent.click(screen.getByRole("button", { name: "Product quality: 4 stars" }));
+    fireEvent.click(screen.getByRole("button", { name: "Overall experience: 4 stars" }));
+    fireEvent.click(screen.getByRole("button", { name: "Publish my review" }));
+    expect(await screen.findByText("That code has already been used or has expired.")).toBeInTheDocument();
+  });
+});
+
+describe("verified and unverified reviews", () => {
+  it("labels each review and shows the score breakdown", async () => {
+    trustAPI.branch.mockResolvedValue({ data: { branch: shop(), reputation: { score: 4, review_count: 2, verified_review_count: 1, service_average: 4, product_average: 3.5, raw_average: 4 } } });
+    trustAPI.reviews.mockResolvedValue({ data: { reviews: [
+      { id: "r1", overall: 5, service: 5, product: 4, evidence_tier: "confirmed_token", reviewer: "Achieng", comment: null, created_at: "2026-11-07T10:00:00" },
+      { id: "r2", overall: 3, service: null, product: null, evidence_tier: "unverified", reviewer: "Business", comment: null, created_at: "2026-11-07T11:00:00" },
+    ] } });
+    render(
+      <MemoryRouter initialEntries={["/trust/branches/b1"]}>
+        <Routes><Route path="/trust/branches/:id" element={<TrustBranchPage />} /></Routes>
+      </MemoryRouter>,
+    );
+    expect(await screen.findByText("Verified visit")).toBeInTheDocument();
+    expect(screen.getByText("Not verified")).toBeInTheDocument();
+    expect(screen.getByText(/1 verified visit \(till code used\) · 1 not verified/)).toBeInTheDocument();
+    expect(screen.getByText("Achieng")).toBeInTheDocument();
   });
 });
 
@@ -128,7 +182,8 @@ describe("my shops and points page", () => {
     expect(await screen.findByRole("button", { name: "Not enough points" })).toBeDisabled();
   });
 
-  it("offers a till code only for a checked shop", async () => {
+  it("asks for a receipt reference before making a till code, and only for a checked shop", async () => {
+    trustAPI.issueToken.mockResolvedValue({ data: { token: "TKN-1111-2222-3333", expires_at: "2026-11-07T12:00:00", detail: "x" } });
     setup({
       shops: [
         { id: "s1", branch_name: "Waiting shop", country_code: "KE", status: "pending" },
@@ -136,60 +191,44 @@ describe("my shops and points page", () => {
       ],
     });
     expect(await screen.findByText("Waiting shop")).toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: "Get a till code" })).toHaveLength(1);
-  });
-});
-
-describe("catalogue approval and points history", () => {
-  it("says services cannot be exchanged yet, and shows no exchange list, while unapproved", async () => {
-    trustAPI.points.mockResolvedValue({ data: { balance_points: 0, note: POINTS_NOTE, entries: [] } });
-    trustAPI.services.mockResolvedValue({ data: { approved: false, services: [] } });
-    trustAPI.mine.mockResolvedValue({ data: { branches: [] } });
-    render(<MemoryRouter><TrustMePage /></MemoryRouter>);
-    expect(await screen.findByText(/Nothing can be exchanged yet/)).toBeInTheDocument();
-    expect(screen.queryByLabelText("Exchange points")).not.toBeInTheDocument();
-  });
-
-  it("states that points are rewards, not money", async () => {
-    trustAPI.points.mockResolvedValue({ data: { balance_points: 20, note: POINTS_NOTE, entries: [] } });
-    trustAPI.services.mockResolvedValue({ data: { approved: false, services: [] } });
-    trustAPI.mine.mockResolvedValue({ data: { branches: [] } });
-    render(<MemoryRouter><TrustMePage /></MemoryRouter>);
-    expect(await screen.findByText(/Points are rewards, not money/)).toBeInTheDocument();
+    const make = screen.getAllByRole("button", { name: "Make a till code for this sale" });
+    expect(make).toHaveLength(1);
+    fireEvent.click(make[0]);
+    expect(await screen.findByText(/Enter the receipt or sale reference first/)).toBeInTheDocument();
+    expect(trustAPI.issueToken).not.toHaveBeenCalled();
   });
 
   it("lists points history with a plus sign for rewards", async () => {
-    trustAPI.points.mockResolvedValue({ data: { balance_points: 20, note: POINTS_NOTE, entries: [
-      { entry_type: "earn", points: 20, reason_key: "accepted_review", country_code: "KE", created_at: "2026-11-07T10:00:00" },
-    ] } });
-    trustAPI.services.mockResolvedValue({ data: { approved: false, services: [] } });
-    trustAPI.mine.mockResolvedValue({ data: { branches: [] } });
-    render(<MemoryRouter><TrustMePage /></MemoryRouter>);
+    setup({ entries: [{ entry_type: "earn", points: 20, reason_key: "accepted_review", country_code: "KE", created_at: "2026-11-07T10:00:00" }], points: 20 });
     expect(await screen.findByText("Rating published")).toBeInTheDocument();
     expect(screen.getByText("+20")).toBeInTheDocument();
   });
+
+  it("says services cannot be exchanged yet while the catalogue is unapproved", async () => {
+    setup();
+    expect(await screen.findByText(/Nothing can be exchanged yet/)).toBeInTheDocument();
+  });
 });
 
-describe("verified and unverified reviews", () => {
-  it("labels each review so a visitor can tell them apart", async () => {
-    trustAPI.branch.mockResolvedValue({ data: { branch: shop(), reputation: { score: 4, review_count: 2, verified_review_count: 1, verified_average: 5 } } });
-    trustAPI.reviews.mockResolvedValue({ data: { reviews: [
-      { id: "r1", rating: 5, evidence_tier: "confirmed_token", created_at: "2026-11-07T10:00:00" },
-      { id: "r2", rating: 3, evidence_tier: "unverified", created_at: "2026-11-07T11:00:00" },
+describe("my reviews page (customer)", () => {
+  it("lists the customer's own reviews, including held ones, and lets them set a name", async () => {
+    trustAPI.customerReviews.mockResolvedValue({ data: { display_name: null, reviews: [
+      { id: "x1", branch_id: "b1", branch_name: "Kondele Stores", country_code: "KE", overall: 5, service: 4, product: 5, status: "published", created_at: "2026-11-07T10:00:00" },
+      { id: "x2", branch_id: "b2", branch_name: "Kampala Shop", country_code: "UG", overall: 2, service: 2, product: 2, status: "hidden_pending_review", created_at: "2026-11-07T11:00:00" },
     ] } });
-    render(
-      <MemoryRouter initialEntries={["/trust/branches/b1"]}>
-        <Routes><Route path="/trust/branches/:id" element={<TrustBranchPage />} /></Routes>
-      </MemoryRouter>,
-    );
-    expect(await screen.findByText("Verified visit: till code used")).toBeInTheDocument();
-    expect(screen.getByText("Not verified: no till code")).toBeInTheDocument();
-    expect(screen.getByText(/1 verified visit · 1 not verified/)).toBeInTheDocument();
+    trustAPI.customerProfile.mockResolvedValue({ data: { display_name: "Achieng" } });
+    render(<MemoryRouter><TrustMyReviewsPage /></MemoryRouter>);
+    expect(await screen.findByText("Kondele Stores")).toBeInTheDocument();
+    expect(screen.getByText("Being checked")).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Achieng" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save name" }));
+    await waitFor(() => expect(trustAPI.customerProfile).toHaveBeenCalledWith("Achieng"));
   });
 });
 
 describe("check desk (staff)", () => {
   const pending = { id: "b9", branch_name: "Nyalenda Duka", address_text: "Nyalenda", country_code: "KE" };
+  const held = { id: "r7", branch_name: "Kondele Stores", country_code: "KE", overall: 1, service: 1, product: 2, comment: "Long wait", reasons: ["code_used_too_fast"] };
 
   it("says plainly when the visitor is not staff", async () => {
     trustAPI.pendingBranches.mockRejectedValue({ response: { status: 403 } });
@@ -207,11 +246,23 @@ describe("check desk (staff)", () => {
     }));
   });
 
-  it("will not reject without a reason the owner can read", async () => {
+  it("will not reject a shop without a reason the owner can read", async () => {
     trustAPI.pendingBranches.mockResolvedValue({ data: { branches: [pending] } });
     render(<MemoryRouter><TrustStaffPage /></MemoryRouter>);
     fireEvent.click(await screen.findByRole("button", { name: "Reject" }));
     expect(await screen.findByText(/at least 10 characters/)).toBeInTheDocument();
     expect(trustAPI.verify).not.toHaveBeenCalled();
+  });
+
+  it("shows held reviews with the reasons, and publishes only with a reason", async () => {
+    trustAPI.pendingBranches.mockResolvedValue({ data: { branches: [] } });
+    trustAPI.flaggedReviews.mockResolvedValue({ data: { reviews: [held] } });
+    trustAPI.moderateReview.mockResolvedValue({ data: { status: "published" } });
+    render(<MemoryRouter><TrustStaffPage /></MemoryRouter>);
+    fireEvent.click(await screen.findByRole("tab", { name: "Reviews held" }));
+    expect(await screen.findByText("Till code used within seconds of being made")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Publish" }));
+    expect(await screen.findByText(/at least 10 characters/)).toBeInTheDocument();
+    expect(trustAPI.moderateReview).not.toHaveBeenCalled();
   });
 });

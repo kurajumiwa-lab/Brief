@@ -1,3 +1,4 @@
+import { getCustomerKey } from "@/lib/customerKey";
 import axios from "axios";
 import { describeFailure } from "@/lib/failure";
 import { useAuthStore } from "@/stores/authStore";
@@ -952,19 +953,28 @@ export const parksAPI = {
 export default api;
 
 // ── MarketTrust: shops, till codes, reviews, points (Kenya · Ethiopia · Uganda) ──
-// Points are not money. Public reads need no login; everything else does.
+// Points are rewards, not money. Public reads and customer reviews need no login.
+// Customer calls carry a device key instead (see lib/customerKey.js).
+
+const customerHeaders = () => ({ headers: { "X-Customer-Key": getCustomerKey() } });
+
 export const trustAPI = {
   branches: (params) => api.get("/trust/public/branches", { params: noEmpty(params) }),
   branch: (id) => api.get(`/trust/public/branches/${id}`),
   reviews: (id) => api.get(`/trust/public/branches/${id}/reviews`),
+  customerReview: (id, body) => api.post(`/trust/customer/branches/${id}/reviews`, body, customerHeaders()),
+  customerReviews: () => api.get("/trust/customer/reviews", customerHeaders()),
+  customerProfile: (display_name) => api.put("/trust/customer/profile", { display_name }, customerHeaders()),
   mine: () => api.get("/trust/branches/mine"),
   addBranch: (data) => api.post("/trust/branches", data),
-  issueToken: (id) => api.post(`/trust/branches/${id}/tokens`),
+  issueToken: (id, data) => api.post(`/trust/branches/${id}/tokens`, data),
   review: (id, data) => api.post(`/trust/branches/${id}/reviews`, data),
   points: () => api.get("/trust/points"),
   services: () => api.get("/trust/services"),
-  pendingBranches: () => api.get("/trust/admin/branches", { params: { status: "pending" } }),
-  verify: (id, data) => api.post(`/trust/admin/branches/${id}/verifications`, data),
   redeem: (data, idempotencyKey) =>
     api.post("/trust/points/redeem", data, { headers: { "Idempotency-Key": idempotencyKey } }),
+  pendingBranches: () => api.get("/trust/admin/branches", { params: { status: "pending" } }),
+  verify: (id, data) => api.post(`/trust/admin/branches/${id}/verifications`, data),
+  flaggedReviews: () => api.get("/trust/admin/reviews/flagged"),
+  moderateReview: (id, data) => api.post(`/trust/admin/reviews/${id}/moderation`, data),
 };

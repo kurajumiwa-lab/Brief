@@ -26,6 +26,7 @@ import TrustBrowsePage from "@/pages/trust/TrustBrowsePage";
 import TrustBranchPage from "@/pages/trust/TrustBranchPage";
 import TrustMePage from "@/pages/trust/TrustMePage";
 import TrustStaffPage from "@/pages/trust/TrustStaffPage";
+import TrustMyReviewsPage from "@/pages/trust/TrustMyReviewsPage";
 import LearnPage from "@/pages/learn/LearnPage";
 import LearnDetailPage from "@/pages/learn/LearnDetailPage";
 import LearnNewPage from "@/pages/learn/LearnNewPage";
@@ -179,6 +180,8 @@ function AppRoutes() {
       {/* MarketTrust: checked shops in Kenya, Ethiopia and Uganda. Open to everyone; rating needs sign-in. */}
       <Route path="/trust" element={<TrustBrowsePage />} />
       <Route path="/trust/branches/:id" element={<TrustBranchPage />} />
+      {/* A customer's own review history on this device. No account needed. */}
+      <Route path="/trust/my-reviews" element={<TrustMyReviewsPage />} />
       <Route path="/learn" element={<LearnPage />} />
       <Route path="/learn/:id" element={<LearnDetailPage />} />
       <Route path="/templates" element={<BlueprintsPage />} />

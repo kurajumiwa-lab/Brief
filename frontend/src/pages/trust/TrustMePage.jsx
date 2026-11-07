@@ -30,6 +30,7 @@ export default function TrustMePage() {
   const [formError, setFormError] = useState(null);
   const [codes, setCodes] = useState({});
   const [busy, setBusy] = useState(null);
+  const [receipts, setReceipts] = useState({});
 
   const load = useCallback(() => {
     Promise.all([trustAPI.points(), trustAPI.services(), trustAPI.mine()])
@@ -62,11 +63,16 @@ export default function TrustMePage() {
   }
 
   async function getCode(shop) {
+    const receipt = (receipts[shop.id] || "").trim();
+    if (receipt.length < 3) {
+      setNotice("Enter the receipt or sale reference first. The code is tied to that sale.");
+      return;
+    }
     setBusy(shop.id);
     setNotice(null);
     try {
-      const { data } = await trustAPI.issueToken(shop.id);
-      setCodes((c) => ({ ...c, [shop.id]: data }));
+      const { data } = await trustAPI.issueToken(shop.id, { receipt_ref: receipt });
+      setCodes((c) => ({ ...c, [shop.id]: { ...data, receipt_ref: receipt } }));
     } catch (err) {
       setNotice(errorText(err, "A till code could not be made. Try again."));
     } finally {
@@ -179,14 +185,20 @@ export default function TrustMePage() {
               <p className="text-sm font-semibold text-ink-1">{s.branch_name}</p>
               {s.status === "active" && (
                 <>
+                  <Input
+                    label="Receipt or sale reference"
+                    value={receipts[s.id] || ""}
+                    onChange={(e) => setReceipts({ ...receipts, [s.id]: e.target.value })}
+                    hint="One code per sale. Write the reference from your receipt."
+                  />
                   <Button size="sm" variant="secondary" loading={busy === s.id} onClick={() => getCode(s)}>
-                    Get a till code
+                    Make a till code for this sale
                   </Button>
                   {codes[s.id] && (
                     <div className="rounded-lg bg-surface-2 p-3">
                       <p className="text-xs text-ink-3">Show this at the till</p>
                       <p className="text-lg font-semibold tabular-nums tracking-wider text-ink-1">{codes[s.id].token}</p>
-                      <p className="text-xs text-ink-3">Works once. Expires in two hours.</p>
+                      <p className="text-xs text-ink-3">For sale {codes[s.id].receipt_ref}. Works once. Expires in two hours.</p>
                     </div>
                   )}
                 </>
