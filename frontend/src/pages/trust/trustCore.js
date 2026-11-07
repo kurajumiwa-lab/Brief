@@ -9,7 +9,7 @@ export const COUNTRIES = [
   { code: "UG", name: "Uganda", currency: "UGX" },
 ];
 
-export const POINTS_NOTE = "Points are not money. They have no cash value and cannot be withdrawn.";
+export const POINTS_NOTE = "Points are rewards, not money. They cannot be cashed out, withdrawn or sent to anyone.";
 
 export const countryName = (code) => COUNTRIES.find((c) => c.code === code)?.name || code;
 
@@ -20,9 +20,21 @@ export function scoreText(reputation) {
 }
 
 export const TIER_LABEL = {
-  confirmed_token: "Till code used: a real visit",
-  unverified: "Not checked with a till code",
+  confirmed_token: "Verified visit: till code used",
+  unverified: "Not verified: no till code",
 };
+
+export const TIER_BADGE = {
+  confirmed_token: "brand",
+  unverified: "gray",
+};
+
+export const CHECK_METHODS = [
+  { value: "storefront_photo", label: "Storefront photo seen" },
+  { value: "field_visit", label: "Visited in person" },
+  { value: "document", label: "Business papers seen" },
+  { value: "community_corroboration", label: "Confirmed by other businesses" },
+];
 
 export const STATUS_LABEL = {
   pending: "Waiting for a Brief check",

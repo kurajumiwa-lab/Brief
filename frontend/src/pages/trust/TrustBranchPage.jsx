@@ -6,7 +6,7 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { PageSpinner } from "@/components/ui/Spinner";
 import { trustAPI, apiError } from "@/lib/api";
-import { countryName, scoreText, TIER_LABEL, POINTS_NOTE, errorText } from "./trustCore";
+import { countryName, scoreText, TIER_LABEL, TIER_BADGE, POINTS_NOTE, errorText } from "./trustCore";
 
 /**
  * One shop: its checked status, its rating, and its reviews. Anyone can read.
@@ -72,11 +72,11 @@ export default function TrustBranchPage() {
         <h1 className="text-xl font-semibold text-ink-1">{branch.branch_name}</h1>
         <p className="text-sm text-ink-3">{branch.address_text}</p>
         <p className="text-sm font-medium text-ink-1">{scoreText(reputation)}</p>
-        {reputation.verified_review_count > 0 && (
-          <p className="text-xs text-ink-3">
-            {reputation.verified_review_count} from a real visit (till code used)
-          </p>
-        )}
+        <p className="text-xs text-ink-3">
+          {reputation.verified_review_count} verified visit{reputation.verified_review_count === 1 ? "" : "s"}
+          {" · "}
+          {reputation.review_count - reputation.verified_review_count} not verified
+        </p>
       </header>
 
       <Card padding="p-4" className="space-y-3">
@@ -129,7 +129,7 @@ export default function TrustBranchPage() {
         {reviews.map((r) => (
           <Card key={r.id} padding="p-3" className="space-y-1">
             <p className="text-sm text-ink-1">{"★".repeat(r.rating)}<span className="text-ink-4">{"★".repeat(5 - r.rating)}</span></p>
-            <p className="text-xs text-ink-3">{TIER_LABEL[r.evidence_tier] || "Not checked with a till code"}</p>
+            <Badge variant={TIER_BADGE[r.evidence_tier] || "gray"}>{TIER_LABEL[r.evidence_tier] || "Not verified"}</Badge>
           </Card>
         ))}
       </section>

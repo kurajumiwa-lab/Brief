@@ -9,6 +9,8 @@ import { PageSpinner } from "@/components/ui/Spinner";
 import { trustAPI, apiError } from "@/lib/api";
 import { COUNTRIES, POINTS_NOTE, STATUS_LABEL, newIdempotencyKey, errorText } from "./trustCore";
 
+const ENTRY_LABEL = (reason) => (reason === "accepted_review" ? "Rating published" : "Exchanged for help");
+
 /**
  * MY SHOPS & POINTS — for a signed-in business.
  * Add a shop (it waits for a Brief check), get a till code for a checked shop,
@@ -19,6 +21,7 @@ const EMPTY_FORM = { branch_name: "", country: "KE", address_text: "" };
 export default function TrustMePage() {
   const [points, setPoints] = useState(null);
   const [services, setServices] = useState([]);
+  const [approved, setApproved] = useState(false);
   const [shops, setShops] = useState(null);
   const [error, setError] = useState(null);
   const [notice, setNotice] = useState(null);
@@ -33,6 +36,7 @@ export default function TrustMePage() {
       .then(([p, s, m]) => {
         setPoints(p.data);
         setServices(s.data.services || []);
+        setApproved(Boolean(s.data.approved));
         setShops(m.data.branches || []);
         setError(null);
       })
@@ -48,7 +52,7 @@ export default function TrustMePage() {
     try {
       await trustAPI.addBranch(form);
       setForm(EMPTY_FORM);
-      setNotice("Shop added. It will show here once Brief has checked it.");
+      setNotice("Shop submitted. It will show to customers once Brief has checked it.");
       load();
     } catch (err) {
       setFormError(errorText(err, "The shop could not be added."));
@@ -100,6 +104,7 @@ export default function TrustMePage() {
         <p className="text-xs text-ink-3">
           <Link to="/trust" className="font-medium text-brand-700 underline">See all checked shops</Link>
         </p>
+        <p className="text-xs text-ink-3">Reviews are written by signed-in businesses. Customers see the ratings.</p>
       </header>
 
       {notice && <p role="status" className="text-sm text-ink-2">{notice}</p>}
@@ -111,7 +116,35 @@ export default function TrustMePage() {
         <p className="text-xs text-ink-3">You earn 20 points for each rating you publish on a checked shop.</p>
       </Card>
 
-      {services.length > 0 && (
+      {points.entries?.length > 0 && (
+        <section aria-label="Points history" className="space-y-2">
+          <h2 className="text-sm font-semibold text-ink-1">Points history</h2>
+          <Card padding="p-0" className="divide-y divide-edge-1">
+            {points.entries.map((e, i) => (
+              <div key={`${e.created_at}-${i}`} className="flex items-center justify-between gap-3 p-3">
+                <div>
+                  <p className="text-sm text-ink-1">{ENTRY_LABEL(e.reason_key)}</p>
+                  <p className="text-xs text-ink-3">{new Date(e.created_at).toLocaleDateString("en-KE")}</p>
+                </div>
+                <p className={`text-sm font-semibold tabular-nums ${e.points > 0 ? "text-emerald-700" : "text-ink-2"}`}>
+                  {e.points > 0 ? `+${e.points}` : e.points}
+                </p>
+              </div>
+            ))}
+          </Card>
+        </section>
+      )}
+
+      {!approved && (
+        <Card padding="p-3" className="bg-surface-2">
+          <p className="text-sm text-ink-2">
+            Points can be exchanged for help once the Brief team has approved the list of services.
+            Nothing can be exchanged yet.
+          </p>
+        </Card>
+      )}
+
+      {approved && services.length > 0 && (
         <section aria-label="Exchange points" className="space-y-2">
           <h2 className="text-sm font-semibold text-ink-1">Exchange points for help</h2>
           {services.map((s) => (
@@ -150,10 +183,11 @@ export default function TrustMePage() {
                     Get a till code
                   </Button>
                   {codes[s.id] && (
-                    <p className="text-sm text-ink-1">
-                      Code: <strong className="tabular-nums">{codes[s.id].token}</strong>
-                      <span className="block text-xs text-ink-3">{codes[s.id].detail}</span>
-                    </p>
+                    <div className="rounded-lg bg-surface-2 p-3">
+                      <p className="text-xs text-ink-3">Show this at the till</p>
+                      <p className="text-lg font-semibold tabular-nums tracking-wider text-ink-1">{codes[s.id].token}</p>
+                      <p className="text-xs text-ink-3">Works once. Expires in two hours.</p>
+                    </div>
                   )}
                 </>
               )}
@@ -185,9 +219,13 @@ export default function TrustMePage() {
             required
           />
           {formError && <p role="alert" className="text-sm text-red-600">{formError}</p>}
-          <Button type="submit" variant="primary" loading={saving}>Add my shop</Button>
+          <Button type="submit" variant="primary" loading={saving}>Submit my shop for a check</Button>
         </form>
       </Card>
+
+      <p className="text-center text-xs text-ink-3">
+        Brief staff? <Link to="/trust/staff" className="font-medium text-brand-700 underline">Open the check desk</Link>
+      </p>
     </div>
   );
 }

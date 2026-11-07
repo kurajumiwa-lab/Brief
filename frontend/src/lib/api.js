@@ -963,6 +963,8 @@ export const trustAPI = {
   review: (id, data) => api.post(`/trust/branches/${id}/reviews`, data),
   points: () => api.get("/trust/points"),
   services: () => api.get("/trust/services"),
+  pendingBranches: () => api.get("/trust/admin/branches", { params: { status: "pending" } }),
+  verify: (id, data) => api.post(`/trust/admin/branches/${id}/verifications`, data),
   redeem: (data, idempotencyKey) =>
     api.post("/trust/points/redeem", data, { headers: { "Idempotency-Key": idempotencyKey } }),
 };

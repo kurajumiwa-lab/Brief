@@ -5,6 +5,7 @@ import { trustAPI } from "@/lib/api";
 import TrustBrowsePage from "@/pages/trust/TrustBrowsePage";
 import TrustBranchPage from "@/pages/trust/TrustBranchPage";
 import TrustMePage from "@/pages/trust/TrustMePage";
+import TrustStaffPage from "@/pages/trust/TrustStaffPage";
 import { scoreText, POINTS_NOTE } from "@/pages/trust/trustCore";
 
 vi.mock("@/lib/api", async (importOriginal) => ({
@@ -12,6 +13,7 @@ vi.mock("@/lib/api", async (importOriginal) => ({
   trustAPI: {
     branches: vi.fn(), branch: vi.fn(), reviews: vi.fn(), mine: vi.fn(), addBranch: vi.fn(),
     issueToken: vi.fn(), review: vi.fn(), points: vi.fn(), services: vi.fn(), redeem: vi.fn(),
+    pendingBranches: vi.fn(), verify: vi.fn(),
   },
 }));
 
@@ -93,9 +95,9 @@ describe("shop page: rating", () => {
 });
 
 describe("my shops and points page", () => {
-  const setup = ({ services = [], shops = [], points = 0 } = {}) => {
-    trustAPI.points.mockResolvedValue({ data: { balance_points: points, note: POINTS_NOTE, entries: [] } });
-    trustAPI.services.mockResolvedValue({ data: { services } });
+  const setup = ({ services = [], shops = [], points = 0, entries = [] } = {}) => {
+    trustAPI.points.mockResolvedValue({ data: { balance_points: points, note: POINTS_NOTE, entries } });
+    trustAPI.services.mockResolvedValue({ data: { approved: services.length > 0, services } });
     trustAPI.mine.mockResolvedValue({ data: { branches: shops } });
     return render(<MemoryRouter><TrustMePage /></MemoryRouter>);
   };
@@ -135,5 +137,81 @@ describe("my shops and points page", () => {
     });
     expect(await screen.findByText("Waiting shop")).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "Get a till code" })).toHaveLength(1);
+  });
+});
+
+describe("catalogue approval and points history", () => {
+  it("says services cannot be exchanged yet, and shows no exchange list, while unapproved", async () => {
+    trustAPI.points.mockResolvedValue({ data: { balance_points: 0, note: POINTS_NOTE, entries: [] } });
+    trustAPI.services.mockResolvedValue({ data: { approved: false, services: [] } });
+    trustAPI.mine.mockResolvedValue({ data: { branches: [] } });
+    render(<MemoryRouter><TrustMePage /></MemoryRouter>);
+    expect(await screen.findByText(/Nothing can be exchanged yet/)).toBeInTheDocument();
+    expect(screen.queryByLabelText("Exchange points")).not.toBeInTheDocument();
+  });
+
+  it("states that points are rewards, not money", async () => {
+    trustAPI.points.mockResolvedValue({ data: { balance_points: 20, note: POINTS_NOTE, entries: [] } });
+    trustAPI.services.mockResolvedValue({ data: { approved: false, services: [] } });
+    trustAPI.mine.mockResolvedValue({ data: { branches: [] } });
+    render(<MemoryRouter><TrustMePage /></MemoryRouter>);
+    expect(await screen.findByText(/Points are rewards, not money/)).toBeInTheDocument();
+  });
+
+  it("lists points history with a plus sign for rewards", async () => {
+    trustAPI.points.mockResolvedValue({ data: { balance_points: 20, note: POINTS_NOTE, entries: [
+      { entry_type: "earn", points: 20, reason_key: "accepted_review", country_code: "KE", created_at: "2026-11-07T10:00:00" },
+    ] } });
+    trustAPI.services.mockResolvedValue({ data: { approved: false, services: [] } });
+    trustAPI.mine.mockResolvedValue({ data: { branches: [] } });
+    render(<MemoryRouter><TrustMePage /></MemoryRouter>);
+    expect(await screen.findByText("Rating published")).toBeInTheDocument();
+    expect(screen.getByText("+20")).toBeInTheDocument();
+  });
+});
+
+describe("verified and unverified reviews", () => {
+  it("labels each review so a visitor can tell them apart", async () => {
+    trustAPI.branch.mockResolvedValue({ data: { branch: shop(), reputation: { score: 4, review_count: 2, verified_review_count: 1, verified_average: 5 } } });
+    trustAPI.reviews.mockResolvedValue({ data: { reviews: [
+      { id: "r1", rating: 5, evidence_tier: "confirmed_token", created_at: "2026-11-07T10:00:00" },
+      { id: "r2", rating: 3, evidence_tier: "unverified", created_at: "2026-11-07T11:00:00" },
+    ] } });
+    render(
+      <MemoryRouter initialEntries={["/trust/branches/b1"]}>
+        <Routes><Route path="/trust/branches/:id" element={<TrustBranchPage />} /></Routes>
+      </MemoryRouter>,
+    );
+    expect(await screen.findByText("Verified visit: till code used")).toBeInTheDocument();
+    expect(screen.getByText("Not verified: no till code")).toBeInTheDocument();
+    expect(screen.getByText(/1 verified visit · 1 not verified/)).toBeInTheDocument();
+  });
+});
+
+describe("check desk (staff)", () => {
+  const pending = { id: "b9", branch_name: "Nyalenda Duka", address_text: "Nyalenda", country_code: "KE" };
+
+  it("says plainly when the visitor is not staff", async () => {
+    trustAPI.pendingBranches.mockRejectedValue({ response: { status: 403 } });
+    render(<MemoryRouter><TrustStaffPage /></MemoryRouter>);
+    expect(await screen.findByText("This page is for Brief staff only.")).toBeInTheDocument();
+  });
+
+  it("approves a shop with the chosen check method", async () => {
+    trustAPI.pendingBranches.mockResolvedValue({ data: { branches: [pending] } });
+    trustAPI.verify.mockResolvedValue({ data: {} });
+    render(<MemoryRouter><TrustStaffPage /></MemoryRouter>);
+    fireEvent.click(await screen.findByRole("button", { name: "Approve" }));
+    await waitFor(() => expect(trustAPI.verify).toHaveBeenCalledWith("b9", {
+      method: "storefront_photo", result: "approved", note: null,
+    }));
+  });
+
+  it("will not reject without a reason the owner can read", async () => {
+    trustAPI.pendingBranches.mockResolvedValue({ data: { branches: [pending] } });
+    render(<MemoryRouter><TrustStaffPage /></MemoryRouter>);
+    fireEvent.click(await screen.findByRole("button", { name: "Reject" }));
+    expect(await screen.findByText(/at least 10 characters/)).toBeInTheDocument();
+    expect(trustAPI.verify).not.toHaveBeenCalled();
   });
 });

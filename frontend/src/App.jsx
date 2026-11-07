@@ -25,6 +25,7 @@ import OffersBrowsePage from "@/pages/offers/OffersBrowsePage";
 import TrustBrowsePage from "@/pages/trust/TrustBrowsePage";
 import TrustBranchPage from "@/pages/trust/TrustBranchPage";
 import TrustMePage from "@/pages/trust/TrustMePage";
+import TrustStaffPage from "@/pages/trust/TrustStaffPage";
 import LearnPage from "@/pages/learn/LearnPage";
 import LearnDetailPage from "@/pages/learn/LearnDetailPage";
 import LearnNewPage from "@/pages/learn/LearnNewPage";
@@ -268,6 +269,8 @@ function AppRoutes() {
           <Route path="/me" element={<MePage />} />
           {/* MarketTrust, signed in: my shops, till codes and points. Linked from /trust. */}
           <Route path="/trust/me" element={<TrustMePage />} />
+          {/* MarketTrust check desk: Brief staff approve or reject shops. The API refuses everyone else. */}
+          <Route path="/trust/staff" element={<TrustStaffPage />} />
           {/* Brief is the legacy name for the Me workspace; keep old links alive. */}
           <Route path="/brief" element={<Navigate to="/me" replace />} />
           <Route path="/profile" element={<Navigate to="/me" replace />} />
