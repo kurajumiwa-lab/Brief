@@ -122,3 +122,6 @@ from app.modules.knowledge.models import KnowledgeListing, KnowledgeRegistration
 from app.modules.routine.models import RoutinePreference, RoutineCompletion  # noqa: F401
 from app.modules.blueprints.models import BlueprintStart, BlueprintStepDone  # noqa: F401
 from app.modules.statuses.models import BusinessFollow, BusinessStatus, StatusView  # noqa: F401
+from app.modules.trust.models import (  # noqa: F401
+    TrustBranch, BranchVerification, TransactionToken, BusinessReview, AuditEvent, PointsEntry,
+)
