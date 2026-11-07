@@ -27,7 +27,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.vendor import Vendor
 from app.modules.trust import catalogue
 from app.modules.trust.models import (
-    COUNTRY_CODES, AuditEvent, BusinessReview, BranchVerification, PointsEntry, TransactionToken, TrustBranch,
+    COUNTRY_CODES, AuditEvent, BusinessReview, BranchVerification, PointsEntry, ReviewFlag, ReviewIdentity,
+    ReviewModeration, TransactionToken, TrustBranch,
 )
 
 
@@ -59,6 +60,19 @@ WEIGHT_CONFIRMED = 1.00
 WEIGHT_UNVERIFIED = 0.25
 TIER_CONFIRMED = "confirmed_token"
 TIER_UNVERIFIED = "unverified"
+
+# Customer review rules (fraud and duplicate detection). Held reviews are not refused:
+# they stay out of the public rating until a staff member checks them.
+VELOCITY_HOLD_PER_DAY = 3      # this many reviews in 24 hours -> held
+VELOCITY_REFUSE_PER_DAY = 5    # this many already today -> refused
+FAST_CODE_SECONDS = 10         # code used this soon after it was made -> held
+DUPLICATE_LOOKBACK_DAYS = 60   # same wording on the same shop in this window -> held
+MIN_REVIEW_KEY_LEN = 16
+FLAG_TEXT = {
+    "velocity_day": "Several reviews in one day",
+    "code_used_too_fast": "Till code used within seconds of being made",
+    "duplicate_comment": "Same wording as another review of this shop",
+}
 
 # Reputation parameters. Proposals, to be calibrated on real data.
 REP_METHOD = "rep-v1"
@@ -208,8 +222,12 @@ async def decide_verification(db: AsyncSession, staff: Vendor, branch_id: uuid.U
 
 # ── transaction tokens ────────────────────────────────────────────────────────
 
-async def issue_token(db: AsyncSession, owner: Vendor, branch_id: uuid.UUID) -> tuple[str, datetime]:
-    """The owner gets a one-time code to show at the till. Shown once, never stored in clear."""
+async def issue_token(db: AsyncSession, owner: Vendor, branch_id: uuid.UUID,
+                      receipt_ref: str) -> tuple[str, datetime]:
+    """The owner gets a one-time code for one sale. Shown once, never stored in clear."""
+    receipt_ref = (receipt_ref or "").strip()
+    if not 3 <= len(receipt_ref) <= 40:
+        raise TrustError("Enter the receipt or sale reference (3 to 40 characters).", status=422)
     branch = await get_branch(db, branch_id)
     if branch.vendor_id != owner.id:
         raise TrustError("Only the owner of this branch can issue codes for it.", status=403)
@@ -218,15 +236,17 @@ async def issue_token(db: AsyncSession, owner: Vendor, branch_id: uuid.UUID) -> 
     token = new_token()
     expires = now() + TOKEN_TTL
     db.add(TransactionToken(
-        branch_id=branch.id, token_hash=hash_token(token), issued_by_vendor_id=owner.id,
-        expires_at=expires, created_at=now(),
+        branch_id=branch.id, token_hash=hash_token(token), receipt_ref=receipt_ref,
+        issued_by_vendor_id=owner.id, expires_at=expires, created_at=now(),
     ))
     await db.flush()
-    await audit(db, owner, "token_issued", "business_branch", branch.id, branch.country_code)
+    await audit(db, owner, "token_issued", "business_branch", branch.id, branch.country_code,
+                {"receipt_ref": receipt_ref})
     return token, expires
 
 
-async def _consume_token(db: AsyncSession, reviewer: Vendor, branch: TrustBranch, token: str) -> uuid.UUID:
+async def _consume_token(db: AsyncSession, branch: TrustBranch, token: str,
+                         consumer_vendor_id: Optional[uuid.UUID] = None) -> tuple[uuid.UUID, datetime]:
     row = (await db.execute(select(TransactionToken).where(TransactionToken.token_hash == hash_token(token)))).scalar_one_or_none()
     if row is None or row.branch_id != branch.id:
         raise TrustError("That code does not match this branch.", status=422)
@@ -235,12 +255,12 @@ async def _consume_token(db: AsyncSession, reviewer: Vendor, branch: TrustBranch
         update(TransactionToken)
         .where(TransactionToken.id == row.id, TransactionToken.consumed_at.is_(None),
                TransactionToken.expires_at > now())
-        .values(consumed_at=now(), consumed_by_vendor_id=reviewer.id)
+        .values(consumed_at=now(), consumed_by_vendor_id=consumer_vendor_id)
         .returning(TransactionToken.id)
     )
     if result.first() is None:
         raise TrustError("That code has already been used or has expired.", status=422)
-    return row.id
+    return row.id, row.created_at
 
 
 # ── reviews ───────────────────────────────────────────────────────────────────
@@ -263,7 +283,7 @@ async def submit_review(db: AsyncSession, reviewer: Vendor, branch_id: uuid.UUID
 
     token_id, tier, weight = None, TIER_UNVERIFIED, WEIGHT_UNVERIFIED
     if token:
-        token_id = await _consume_token(db, reviewer, branch, token)
+        token_id, _made = await _consume_token(db, branch, token, reviewer.id)
         tier, weight = TIER_CONFIRMED, WEIGHT_CONFIRMED
 
     review = BusinessReview(
@@ -296,6 +316,166 @@ async def branch_reviews(db: AsyncSession, branch_id: uuid.UUID, *, verified_onl
     return list((await db.execute(q.order_by(BusinessReview.created_at.desc()).limit(200))).scalars().all())
 
 
+# ── customer reviews (no account: a device key plus a till code) ──────────────
+
+def _normalise_text(text_: str) -> str:
+    return " ".join("".join(ch for ch in text_.lower() if ch.isalnum() or ch.isspace()).split())
+
+
+async def identity_for_key(db: AsyncSession, raw_key: Optional[str]) -> ReviewIdentity:
+    """The customer's device identity. Created on first use; only a hash of the key is stored."""
+    if not raw_key or not (MIN_REVIEW_KEY_LEN <= len(raw_key) <= 200):
+        raise TrustError("Your review profile key is missing. Reload the page and try again.", status=400)
+    key_hash = hashlib.sha256(raw_key.encode()).hexdigest()
+
+    async def _find():
+        return (await db.execute(select(ReviewIdentity).where(ReviewIdentity.key_hash == key_hash))).scalar_one_or_none()
+
+    row = await _find()
+    if row is None:
+        row = ReviewIdentity(key_hash=key_hash, status="active", created_at=now())
+        try:
+            async with db.begin_nested():
+                db.add(row)
+                await db.flush()
+        except IntegrityError:
+            row = await _find()  # another request created it first
+    if row.status != "active":
+        raise TrustError("This review profile is paused. Contact Brief.", status=403)
+    return row
+
+
+async def customer_review(db: AsyncSession, identity: ReviewIdentity, branch_id: uuid.UUID, *,
+                          token: str, service: int, product: int, overall: int,
+                          comment: Optional[str]) -> tuple[BusinessReview, list[str]]:
+    branch = await get_branch(db, branch_id)
+    if branch.status != "active":
+        raise TrustError("This shop is not public yet.", status=409)
+    for label, value in (("Service", service), ("Product", product), ("Overall", overall)):
+        if not 1 <= value <= 5:
+            raise TrustError(f"{label} rating must be from 1 to 5 stars.", status=422)
+    if not token or not token.strip():
+        raise TrustError("To review a shop you need the till code it shows you after your purchase.", status=422)
+    comment = (comment or "").strip()[:500] or None
+
+    current = await db.execute(select(BusinessReview.id).where(
+        BusinessReview.branch_id == branch.id, BusinessReview.review_identity_id == identity.id,
+        BusinessReview.is_current.is_(True)))
+    if current.first() is not None:
+        raise TrustError("You have already reviewed this shop.", status=409)
+
+    day_ago = now() - timedelta(days=1)
+    today = (await db.execute(select(func.count()).select_from(BusinessReview).where(
+        BusinessReview.review_identity_id == identity.id, BusinessReview.created_at >= day_ago))).scalar_one()
+    if today >= VELOCITY_REFUSE_PER_DAY:
+        raise TrustError("You have reviewed several shops today. Please try again tomorrow.", status=429)
+
+    token_id, made_at = await _consume_token(db, branch, token)
+
+    reasons: list[str] = []
+    if today + 1 >= VELOCITY_HOLD_PER_DAY:
+        reasons.append("velocity_day")
+    if (now() - made_at).total_seconds() < FAST_CODE_SECONDS:
+        reasons.append("code_used_too_fast")
+    if comment and len(_normalise_text(comment)) >= 12:
+        since = now() - timedelta(days=DUPLICATE_LOOKBACK_DAYS)
+        others = (await db.execute(select(BusinessReview.comment).where(
+            BusinessReview.branch_id == branch.id, BusinessReview.created_at >= since,
+            BusinessReview.comment.isnot(None)).limit(500))).scalars().all()
+        target = _normalise_text(comment)
+        if any(_normalise_text(o) == target for o in others):
+            reasons.append("duplicate_comment")
+
+    review = BusinessReview(
+        branch_id=branch.id, reviewer_vendor_id=None, review_identity_id=identity.id, token_id=token_id,
+        stage="quick", rating=overall, service_rating=service, product_rating=product, comment=comment,
+        evidence_tier=TIER_CONFIRMED, evidence_weight=WEIGHT_CONFIRMED,
+        status="hidden_pending_review" if reasons else "published",
+        version=1, is_current=True, created_at=now(),
+    )
+    db.add(review)
+    try:
+        await db.flush()
+    except IntegrityError:
+        raise TrustError("You have already reviewed this shop.", status=409)
+    for reason in reasons:
+        db.add(ReviewFlag(review_id=review.id, reason_key=reason, detail=FLAG_TEXT[reason], created_at=now()))
+    await audit(db, None, "review_held" if reasons else "review_published", "business_review", review.id,
+                branch.country_code, {"tier": TIER_CONFIRMED, "overall": overall, "flags": reasons})
+    return review, reasons
+
+
+async def customer_history(db: AsyncSession, identity: ReviewIdentity) -> list[dict]:
+    rows = await db.execute(
+        select(BusinessReview, TrustBranch).join(TrustBranch, TrustBranch.id == BusinessReview.branch_id)
+        .where(BusinessReview.review_identity_id == identity.id)
+        .order_by(BusinessReview.created_at.desc()).limit(200))
+    out = []
+    for review, branch in rows.all():
+        out.append({
+            "id": str(review.id), "branch_id": str(branch.id), "branch_name": branch.branch_name,
+            "country_code": branch.country_code, "overall": review.rating,
+            "service": review.service_rating, "product": review.product_rating,
+            "status": review.status, "created_at": review.created_at.isoformat(),
+        })
+    return out
+
+
+async def set_display_name(db: AsyncSession, identity: ReviewIdentity, name: Optional[str]) -> None:
+    name = (name or "").strip()
+    if name and not (2 <= len(name) <= 40):
+        raise TrustError("Display name must be 2 to 40 characters, or empty.", status=422)
+    identity.display_name = name or None
+
+
+async def display_names(db: AsyncSession, reviews: list) -> dict:
+    ids = {r.review_identity_id for r in reviews if r.review_identity_id}
+    if not ids:
+        return {}
+    rows = await db.execute(select(ReviewIdentity.id, ReviewIdentity.display_name).where(ReviewIdentity.id.in_(ids)))
+    return {str(i): n for i, n in rows.all()}
+
+
+async def flagged_reviews(db: AsyncSession) -> list[dict]:
+    rows = await db.execute(
+        select(BusinessReview, TrustBranch).join(TrustBranch, TrustBranch.id == BusinessReview.branch_id)
+        .where(BusinessReview.status == "hidden_pending_review")
+        .order_by(BusinessReview.created_at).limit(200))
+    out = []
+    for review, branch in rows.all():
+        reasons = (await db.execute(select(ReviewFlag.reason_key).where(ReviewFlag.review_id == review.id))).scalars().all()
+        out.append({
+            "id": str(review.id), "branch_id": str(branch.id), "branch_name": branch.branch_name,
+            "country_code": branch.country_code, "overall": review.rating,
+            "service": review.service_rating, "product": review.product_rating,
+            "comment": review.comment, "reasons": sorted(set(reasons)),
+            "created_at": review.created_at.isoformat(),
+        })
+    return out
+
+
+async def moderate_review(db: AsyncSession, staff: Vendor, review_id: uuid.UUID, *, action: str,
+                          reason: str) -> BusinessReview:
+    if action not in ("publish", "remove"):
+        raise TrustError("Action must be publish or remove.", status=422)
+    if len((reason or "").strip()) < 10:
+        raise TrustError("Give a reason of at least 10 characters.", status=422)
+    review = await db.get(BusinessReview, review_id)
+    if review is None:
+        raise TrustError("That review was not found.", status=404)
+    if review.status != "hidden_pending_review":
+        raise TrustError("This review is not waiting for a check.", status=409)
+    branch = await db.get(TrustBranch, review.branch_id)
+    if branch.vendor_id == staff.id:
+        raise TrustError("You cannot moderate reviews of your own business.", status=403)
+    review.status = "published" if action == "publish" else "removed"
+    db.add(ReviewModeration(review_id=review.id, staff_vendor_id=staff.id, action=action,
+                            reason=reason.strip(), created_at=now()))
+    await audit(db, staff, f"review_{action}ed", "business_review", review.id, branch.country_code,
+                {"reason_len": len(reason.strip())})
+    return review
+
+
 # ── reputation ────────────────────────────────────────────────────────────────
 
 def reputation(reviews: list) -> dict:
@@ -304,28 +484,34 @@ def reputation(reviews: list) -> dict:
       R_w = sum(w_i r_i) / sum(w_i)
       S   = (n R_w + m C) / (n + m),  n = sum(w_i)
 
+    The score uses the overall rating. Service and product averages are shown beside it.
     Pure and reproducible: the same reviews always give the same `input_hash`.
     With no reviews every score is None and the message says why.
     """
     rows = sorted(
-        ((str(r.id), int(r.rating), float(r.evidence_weight), r.evidence_tier) for r in reviews),
+        ((str(r.id), int(r.rating), float(r.evidence_weight), r.evidence_tier,
+          getattr(r, "service_rating", None), getattr(r, "product_rating", None)) for r in reviews),
         key=lambda t: t[0],
     )
     digest = hashlib.sha256(repr(rows).encode()).hexdigest()
     if not rows:
         return {
-            "score": None, "raw_average": None, "verified_average": None, "confidence": None,
-            "review_count": 0, "verified_review_count": 0, "method_version": REP_METHOD,
-            "input_hash": digest, "message": "Not enough reviews yet.",
+            "score": None, "raw_average": None, "verified_average": None, "service_average": None,
+            "product_average": None, "confidence": None, "review_count": 0, "verified_review_count": 0,
+            "method_version": REP_METHOD, "input_hash": digest, "message": "Not enough reviews yet.",
         }
-    n = sum(w for _, _, w, _ in rows)
-    r_w = sum(w * rating for _, rating, w, _ in rows) / n
+    n = sum(w for _, _, w, _, _, _ in rows)
+    r_w = sum(w * rating for _, rating, w, _, _, _ in rows) / n
     score = (n * r_w + REP_M * REP_C) / (n + REP_M)
-    verified = [rating for _, rating, _, tier in rows if tier == TIER_CONFIRMED]
+    verified = [rating for _, rating, _, tier, _, _ in rows if tier == TIER_CONFIRMED]
+    services = [sv for *_, sv, _ in rows if sv is not None]
+    products = [pv for *_, pv in rows if pv is not None]
     return {
         "score": round(score, 2),
-        "raw_average": round(sum(rating for _, rating, _, _ in rows) / len(rows), 2),
+        "raw_average": round(sum(rating for _, rating, _, _, _, _ in rows) / len(rows), 2),
         "verified_average": round(sum(verified) / len(verified), 2) if verified else None,
+        "service_average": round(sum(services) / len(services), 2) if services else None,
+        "product_average": round(sum(products) / len(products), 2) if products else None,
         "confidence": round(n / (n + REP_M), 2),
         "review_count": len(rows),
         "verified_review_count": len(verified),

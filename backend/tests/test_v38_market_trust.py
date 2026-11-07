@@ -242,10 +242,10 @@ async def test_only_the_branch_owner_issues_a_code_and_only_when_public(client, 
     _, other, _ = await _business(client, "tok2")
     _, staff, _ = await _staff(client, None, ops, "tokstaff")
     bid = await _branch(client, owner)
-    assert (await client.post(f"/api/trust/branches/{bid}/tokens", headers=owner)).status_code == 409
+    assert (await client.post(f"/api/trust/branches/{bid}/tokens", headers=owner, json={"receipt_ref": "RCPT-0001"})).status_code == 409
     await _approve(client, staff, bid)
-    assert (await client.post(f"/api/trust/branches/{bid}/tokens", headers=other)).status_code == 403
-    r = await client.post(f"/api/trust/branches/{bid}/tokens", headers=owner)
+    assert (await client.post(f"/api/trust/branches/{bid}/tokens", headers=other, json={"receipt_ref": "RCPT-0001"})).status_code == 403
+    r = await client.post(f"/api/trust/branches/{bid}/tokens", headers=owner, json={"receipt_ref": "RCPT-0001"})
     assert r.status_code == 201 and r.json()["token"].startswith("TKN-")
 
 
@@ -277,7 +277,7 @@ async def test_review_with_a_till_code_is_confirmed(client, ops):
     _, staff, _ = await _staff(client, None, ops, "rvcs")
     _, reviewer, _ = await _business(client, "rvcr")
     bid = await _active_branch(client, owner, staff)
-    token = (await client.post(f"/api/trust/branches/{bid}/tokens", headers=owner)).json()["token"]
+    token = (await client.post(f"/api/trust/branches/{bid}/tokens", headers=owner, json={"receipt_ref": "RCPT-0001"})).json()["token"]
     r = await client.post(f"/api/trust/branches/{bid}/reviews", headers=reviewer,
                           json={"rating": 5, "transaction_token": token.lower()})
     assert r.status_code == 201, r.text
@@ -292,7 +292,7 @@ async def test_a_till_code_works_only_once(client, ops):
     _, r1, _ = await _business(client, "once1")
     _, r2, _ = await _business(client, "once2")
     bid = await _active_branch(client, owner, staff)
-    token = (await client.post(f"/api/trust/branches/{bid}/tokens", headers=owner)).json()["token"]
+    token = (await client.post(f"/api/trust/branches/{bid}/tokens", headers=owner, json={"receipt_ref": "RCPT-0001"})).json()["token"]
     assert (await client.post(f"/api/trust/branches/{bid}/reviews", headers=r1,
                               json={"rating": 4, "transaction_token": token})).status_code == 201
     r = await client.post(f"/api/trust/branches/{bid}/reviews", headers=r2,
@@ -307,7 +307,7 @@ async def test_a_till_code_is_refused_at_another_branch(client, ops):
     _, reviewer, _ = await _business(client, "xbr")
     a = await _active_branch(client, owner, staff, name="Branch A")
     b = await _active_branch(client, owner, staff, name="Branch B")
-    token = (await client.post(f"/api/trust/branches/{a}/tokens", headers=owner)).json()["token"]
+    token = (await client.post(f"/api/trust/branches/{a}/tokens", headers=owner, json={"receipt_ref": "RCPT-0001"})).json()["token"]
     r = await client.post(f"/api/trust/branches/{b}/reviews", headers=reviewer,
                           json={"rating": 3, "transaction_token": token})
     assert r.status_code == 422 and "does not match this branch" in r.json()["detail"]
@@ -318,7 +318,7 @@ async def test_an_expired_till_code_is_refused(client, ops):
     _, staff, _ = await _staff(client, None, ops, "exps")
     _, reviewer, _ = await _business(client, "expr")
     bid = await _active_branch(client, owner, staff)
-    token = (await client.post(f"/api/trust/branches/{bid}/tokens", headers=owner)).json()["token"]
+    token = (await client.post(f"/api/trust/branches/{bid}/tokens", headers=owner, json={"receipt_ref": "RCPT-0001"})).json()["token"]
     async with async_session() as db:
         await db.execute(update(TransactionToken).where(TransactionToken.token_hash == svc.hash_token(token))
                          .values(expires_at=datetime.utcnow() - timedelta(minutes=1)))
@@ -332,7 +332,7 @@ async def test_two_simultaneous_uses_of_one_code_let_exactly_one_through(client,
     _, owner, _ = await _business(client, "race")
     _, staff, _ = await _staff(client, None, ops, "racestaff")
     bid = await _active_branch(client, owner, staff)
-    token = (await client.post(f"/api/trust/branches/{bid}/tokens", headers=owner)).json()["token"]
+    token = (await client.post(f"/api/trust/branches/{bid}/tokens", headers=owner, json={"receipt_ref": "RCPT-0001"})).json()["token"]
     racers = [await _business(client, f"racer{i}") for i in range(2)]
     results = await asyncio.gather(*[
         client.post(f"/api/trust/branches/{bid}/reviews", headers=h, json={"rating": 5, "transaction_token": token})

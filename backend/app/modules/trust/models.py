@@ -70,6 +70,23 @@ class BranchVerification(Base):
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
 
+class ReviewIdentity(Base):
+    """A customer's device identity for reviews. No login. Only a hash of the device key is stored.
+
+    Lets a customer build a review history over time without a full account.
+    """
+    __tablename__ = "review_identities"
+    __table_args__ = (
+        CheckConstraint(_in("status", ("active", "blocked")), name="ck_review_identity_status"),
+    )
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    key_hash = Column(String(64), nullable=False, unique=True)
+    display_name = Column(String(40), nullable=True)
+    status = Column(String(12), nullable=False, default="active", server_default="active")
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
 class TransactionToken(Base):
     """A one-time code a branch shows at the till. Only its hash is stored."""
     __tablename__ = "transaction_tokens"
@@ -80,6 +97,7 @@ class TransactionToken(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     branch_id = Column(UUID(as_uuid=True), ForeignKey("business_branches.id", ondelete="CASCADE"), nullable=False)
     token_hash = Column(String(64), nullable=False, unique=True)
+    receipt_ref = Column(String(40), nullable=True)  # the shop's sale or receipt reference
     issued_by_vendor_id = Column(UUID(as_uuid=True), ForeignKey("vendors.id", ondelete="SET NULL"), nullable=True)
     expires_at = Column(DateTime, nullable=False)
     consumed_at = Column(DateTime, nullable=True)
@@ -92,24 +110,33 @@ class BusinessReview(Base):
     __tablename__ = "business_reviews"
     __table_args__ = (
         CheckConstraint("rating BETWEEN 1 AND 5", name="ck_business_review_rating"),
+        CheckConstraint("service_rating IS NULL OR service_rating BETWEEN 1 AND 5", name="ck_business_review_service"),
+        CheckConstraint("product_rating IS NULL OR product_rating BETWEEN 1 AND 5", name="ck_business_review_product"),
+        CheckConstraint("(reviewer_vendor_id IS NULL) <> (review_identity_id IS NULL)", name="ck_business_review_one_reviewer"),
         CheckConstraint(_in("status", ("published", "hidden_pending_review", "removed")),
                         name="ck_business_review_status"),
         CheckConstraint(_in("evidence_tier", ("confirmed_token", "unverified")),
                         name="ck_business_review_tier"),
         CheckConstraint("evidence_weight >= 0 AND evidence_weight <= 1", name="ck_business_review_weight"),
-        # One current review per person per branch.
-        Index("uq_business_review_current", "branch_id", "reviewer_vendor_id", unique=True,
-              postgresql_where=text("is_current")),
+        # One current review per business reviewer, and per customer identity, per branch.
+        Index("uq_business_review_current_vendor", "branch_id", "reviewer_vendor_id", unique=True,
+              postgresql_where=text("is_current AND reviewer_vendor_id IS NOT NULL")),
+        Index("uq_business_review_current_customer", "branch_id", "review_identity_id", unique=True,
+              postgresql_where=text("is_current AND review_identity_id IS NOT NULL")),
     )
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     branch_id = Column(UUID(as_uuid=True), ForeignKey("business_branches.id", ondelete="CASCADE"),
                        nullable=False, index=True)
     reviewer_vendor_id = Column(UUID(as_uuid=True), ForeignKey("vendors.id", ondelete="CASCADE"),
-                                nullable=False, index=True)
+                                nullable=True, index=True)
+    review_identity_id = Column(UUID(as_uuid=True), ForeignKey("review_identities.id", ondelete="CASCADE"),
+                                nullable=True, index=True)
     token_id = Column(UUID(as_uuid=True), ForeignKey("transaction_tokens.id", ondelete="SET NULL"), nullable=True)
     stage = Column(String(10), nullable=False, default="quick", server_default="quick")
-    rating = Column(SmallInteger, nullable=False)
+    rating = Column(SmallInteger, nullable=False)  # overall experience
+    service_rating = Column(SmallInteger, nullable=True)
+    product_rating = Column(SmallInteger, nullable=True)
     comment = Column(Text, nullable=True)
     evidence_tier = Column(String(24), nullable=False)
     evidence_weight = Column(Numeric(3, 2), nullable=False)
@@ -157,4 +184,35 @@ class PointsEntry(Base):
     reason_key = Column(String(60), nullable=False)
     reference_type = Column(String(30), nullable=False)
     reference_id = Column(UUID(as_uuid=True), nullable=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
+class ReviewFlag(Base):
+    """Append-only. Why a review was held back from the public rating."""
+    __tablename__ = "review_flags"
+    __table_args__ = (
+        Index("ix_review_flags_review", "review_id"),
+    )
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    review_id = Column(UUID(as_uuid=True), ForeignKey("business_reviews.id", ondelete="CASCADE"), nullable=False)
+    reason_key = Column(String(40), nullable=False)
+    detail = Column(Text, nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
+class ReviewModeration(Base):
+    """Append-only. Every staff decision on a held review."""
+    __tablename__ = "review_moderations"
+    __table_args__ = (
+        CheckConstraint(_in("action", ("publish", "remove")), name="ck_review_moderation_action"),
+        CheckConstraint("length(reason) >= 10", name="ck_review_moderation_reason"),
+        Index("ix_review_moderations_review", "review_id"),
+    )
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    review_id = Column(UUID(as_uuid=True), ForeignKey("business_reviews.id", ondelete="CASCADE"), nullable=False)
+    staff_vendor_id = Column(UUID(as_uuid=True), ForeignKey("vendors.id", ondelete="SET NULL"), nullable=True)
+    action = Column(String(12), nullable=False)
+    reason = Column(Text, nullable=False)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
