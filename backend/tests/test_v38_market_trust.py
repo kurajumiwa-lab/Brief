@@ -174,6 +174,7 @@ async def test_nearby_search_respects_radius_and_only_shows_active(client, ops):
     r = await client.get("/api/trust/public/branches", params={"lat": -0.09, "lng": 34.77, "radius_m": 3000})
     ids = [b["id"] for b in r.json()["branches"]]
     assert near in ids and far not in ids
+    assert all("reputation" in b for b in r.json()["branches"])
     assert all(b["status"] == "active" for b in r.json()["branches"])
 
 
@@ -422,12 +423,15 @@ async def test_points_page_says_they_are_not_money(client):
     assert "not money" in body["note"].lower()
 
 
-async def test_services_list_is_empty_until_confirmed(client):
+async def test_services_list_offers_only_listed_help(client):
     _, h, _ = await _business(client, "svcs")
     assert (await client.get("/api/trust/services")).status_code == 401  # signed-in only
     r = await client.get("/api/trust/services", headers=h)
     assert r.status_code == 200
-    assert r.json()["services"] == []
+    keys = {s["service_key"] for s in r.json()["services"]}
+    assert keys == {"booking_setup", "directory_listing"}
+    # No service may sell a trust rating or a ranking.
+    assert not any(w in s["title"].lower() for s in r.json()["services"] for w in ("rating", "rank", "badge", "verif"))
 
 
 async def test_redeem_with_no_listed_service_is_refused(client):

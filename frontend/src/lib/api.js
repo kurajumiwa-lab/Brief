@@ -950,3 +950,19 @@ export const parksAPI = {
 };
 
 export default api;
+
+// ── MarketTrust: shops, till codes, reviews, points (Kenya · Ethiopia · Uganda) ──
+// Points are not money. Public reads need no login; everything else does.
+export const trustAPI = {
+  branches: (params) => api.get("/trust/public/branches", { params: noEmpty(params) }),
+  branch: (id) => api.get(`/trust/public/branches/${id}`),
+  reviews: (id) => api.get(`/trust/public/branches/${id}/reviews`),
+  mine: () => api.get("/trust/branches/mine"),
+  addBranch: (data) => api.post("/trust/branches", data),
+  issueToken: (id) => api.post(`/trust/branches/${id}/tokens`),
+  review: (id, data) => api.post(`/trust/branches/${id}/reviews`, data),
+  points: () => api.get("/trust/points"),
+  services: () => api.get("/trust/services"),
+  redeem: (data, idempotencyKey) =>
+    api.post("/trust/points/redeem", data, { headers: { "Idempotency-Key": idempotencyKey } }),
+};

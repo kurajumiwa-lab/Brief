@@ -64,9 +64,21 @@ REP_METHOD = "rep-v1"
 REP_M = 5          # confidence parameter: reviews of pull toward the baseline
 REP_C = 3.5        # category baseline (single category until categories are set)
 
-# Redeemable services. Empty until the services are confirmed.
-# Shape: {"service_key": {"title": str, "points_cost": int, "countries": ["KE", ...]}}
-REDEEMABLE_SERVICES: dict = {}
+# Redeemable services: real help Brief already gives, delivered by the Brief team.
+# Chosen so points can never buy a trust rating or a ranking. Costs are multiples of
+# the 20 points one review earns. Shape: {"service_key": {"title", "points_cost", "countries"}}
+REDEEMABLE_SERVICES: dict = {
+    "booking_setup": {
+        "title": "Booking page set-up help from the Brief team",
+        "points_cost": 40,  # two reviews
+        "countries": ["KE", "ET", "UG"],
+    },
+    "directory_listing": {
+        "title": "One seminar or course listed in the Brief directory",
+        "points_cost": 100,  # five reviews
+        "countries": ["KE", "ET", "UG"],
+    },
+}
 
 
 # ── helpers ───────────────────────────────────────────────────────────────────

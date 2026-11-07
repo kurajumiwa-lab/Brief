@@ -98,7 +98,10 @@ async def public_branches(
         rows = await svc.public_branches(db, country=country, lat=lat, lng=lng, radius_m=radius_m, limit=limit)
     except svc.TrustError as exc:
         _fail(exc)
-    return {"branches": [_branch_out(b) for b in rows]}
+    out = []
+    for b in rows:
+        out.append({**_branch_out(b), "reputation": await svc.branch_reputation(db, b.id)})
+    return {"branches": out}
 
 
 @public.get("/branches/{branch_id}")
