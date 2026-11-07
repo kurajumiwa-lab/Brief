@@ -348,3 +348,15 @@ async def test_customer_routes_do_not_expose_identity_or_money(client, ops):
     await client.post(f"/api/trust/customer/branches/{bid}/reviews", headers=cust(), json=review_body(code))
     for row in await _public_reviews(client, bid):
         assert "review_identity_id" not in row and "key_hash" not in row and "device" not in str(row).lower()
+
+
+async def test_a_shop_reviewing_itself_right_after_issuing_a_code_is_held(client, ops):
+    """The owner issues a code (the normal till flow) and uses it at once from an anonymous device.
+    The code is used within seconds, so the review is held and never enters the public rating.
+    Limit: an owner who waits before using the code is not caught by this rule alone."""
+    owner, _, bid = await _shop(client, ops, "cn_self")
+    code = await _code(client, owner, bid, receipt="RCPT-SELF", backdate=False)
+    r = await client.post(f"/api/trust/customer/branches/{bid}/reviews", headers=cust(), json=review_body(code, 5, 5, 5))
+    assert r.status_code == 201, r.text
+    assert await _public_reviews(client, bid) == []
+    assert (await _reputation(client, bid))["review_count"] == 0

@@ -119,7 +119,6 @@ export default function TrustMePage() {
         <p className="text-xs text-ink-3">Your points</p>
         <p className="text-2xl font-semibold tabular-nums text-ink-1">{points.balance_points}</p>
         <p className="text-xs text-ink-3">{POINTS_NOTE}</p>
-        <p className="text-xs text-ink-3">You earn 20 points for each rating you publish on a checked shop.</p>
       </Card>
 
       {points.entries?.length > 0 && (
