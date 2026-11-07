@@ -53,7 +53,7 @@ END;
 $$;
 """)
 
-TRUST_APPEND_ONLY_TABLES = ("branch_verifications", "audit_events", "points_ledger")
+TRUST_APPEND_ONLY_TABLES = ("branch_verifications", "audit_events", "points_ledger", "review_flags", "review_moderations")
 
 
 def trust_append_only_drop(table: str):
@@ -68,14 +68,15 @@ CREATE TRIGGER trg_{table}_append_only
 """)
 
 
-def trust_guard_statements() -> list:
-    """Every statement needed to install the MarketTrust guards, in order.
+def trust_guard_statements(tables=None) -> list:
+    """Statements that install the MarketTrust append-only guards, in order.
 
-    Used by `ensure_guardrails` (dev and tests) and by alembic 0037 (production),
-    so the two paths cannot drift apart.
+    `tables` defaults to every guarded table. Migrations pass only the tables they
+    create, so an older migration never touches a table that does not exist yet.
+    Used by `ensure_guardrails` (dev and tests) and by the alembic migrations.
     """
     out = [TRUST_APPEND_ONLY_FUNCTION]
-    for table in TRUST_APPEND_ONLY_TABLES:
+    for table in (tables or TRUST_APPEND_ONLY_TABLES):
         out.append(trust_append_only_drop(table))
         out.append(trust_append_only_create(table))
     return out

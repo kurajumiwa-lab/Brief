@@ -22,6 +22,11 @@ import LogisticsOrderPage from "@/pages/logistics/LogisticsOrderPage";
 import CalendarPage from "@/pages/calendar/CalendarPage";
 import BookPage from "@/pages/calendar/BookPage";
 import OffersBrowsePage from "@/pages/offers/OffersBrowsePage";
+import TrustBrowsePage from "@/pages/trust/TrustBrowsePage";
+import TrustBranchPage from "@/pages/trust/TrustBranchPage";
+import TrustMePage from "@/pages/trust/TrustMePage";
+import TrustStaffPage from "@/pages/trust/TrustStaffPage";
+import TrustMyReviewsPage from "@/pages/trust/TrustMyReviewsPage";
 import LearnPage from "@/pages/learn/LearnPage";
 import LearnDetailPage from "@/pages/learn/LearnDetailPage";
 import LearnNewPage from "@/pages/learn/LearnNewPage";
@@ -172,6 +177,11 @@ function AppRoutes() {
       <Route path="/storefront" element={<BusinessDeskPage />} />
       {/* Open to everyone, no account: browse offers, the knowledge directory and free templates. */}
       <Route path="/offers" element={<OffersBrowsePage />} />
+      {/* MarketTrust: checked shops in Kenya, Ethiopia and Uganda. Open to everyone; rating needs sign-in. */}
+      <Route path="/trust" element={<TrustBrowsePage />} />
+      <Route path="/trust/branches/:id" element={<TrustBranchPage />} />
+      {/* A customer's own review history on this device. No account needed. */}
+      <Route path="/trust/my-reviews" element={<TrustMyReviewsPage />} />
       <Route path="/learn" element={<LearnPage />} />
       <Route path="/learn/:id" element={<LearnDetailPage />} />
       <Route path="/templates" element={<BlueprintsPage />} />
@@ -260,6 +270,10 @@ function AppRoutes() {
 
           {/* ── Your business ─────────────────────────────────────────── */}
           <Route path="/me" element={<MePage />} />
+          {/* MarketTrust, signed in: my shops, till codes and points. Linked from /trust. */}
+          <Route path="/trust/me" element={<TrustMePage />} />
+          {/* MarketTrust check desk: Brief staff approve or reject shops. The API refuses everyone else. */}
+          <Route path="/trust/staff" element={<TrustStaffPage />} />
           {/* Brief is the legacy name for the Me workspace; keep old links alive. */}
           <Route path="/brief" element={<Navigate to="/me" replace />} />
           <Route path="/profile" element={<Navigate to="/me" replace />} />

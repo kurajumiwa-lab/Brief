@@ -12,10 +12,11 @@ Signed in (a business account):
     POST /api/trust/branches/{id}/tokens            owner: issue a one-time code for the till
     POST /api/trust/branches/{id}/reviews           rate a branch; optional `transaction_token`
     GET  /api/trust/points                          my points balance and history (not money)
-    GET  /api/trust/services                        services redeemable for points (may be empty)
+    GET  /api/trust/services                        services redeemable for points (empty until approved)
     POST /api/trust/points/redeem                   exchange points for a service (Idempotency-Key)
 
 Brief staff only:
+    GET  /api/trust/admin/branches?status=pending   shops waiting for a check (or active)
     POST /api/trust/admin/branches/{id}/verifications
 """
 
@@ -28,6 +29,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models.vendor import Vendor
+from app.modules.trust import catalogue
 from app.modules.trust import service as svc
 from app.routes.auth import get_current_vendor
 from app.routes.governance import require_governance_ops
@@ -44,6 +46,27 @@ class BranchIn(BaseModel):
     address_text: str = Field(..., min_length=5, max_length=300)
     latitude: Optional[float] = Field(None, ge=-90, le=90)
     longitude: Optional[float] = Field(None, ge=-180, le=180)
+
+
+class IssueTokenIn(BaseModel):
+    receipt_ref: str = Field(..., min_length=3, max_length=40)
+
+
+class CustomerReviewIn(BaseModel):
+    transaction_code: str = Field(..., min_length=4, max_length=40)
+    service_rating: int = Field(..., ge=1, le=5)
+    product_rating: int = Field(..., ge=1, le=5)
+    overall_rating: int = Field(..., ge=1, le=5)
+    comment: Optional[str] = Field(None, max_length=500)
+
+
+class ProfileIn(BaseModel):
+    display_name: Optional[str] = Field(None, max_length=40)
+
+
+class ModerationIn(BaseModel):
+    action: str = Field(..., max_length=12)
+    reason: str = Field(..., max_length=500)
 
 
 class ReviewIn(BaseModel):
@@ -76,10 +99,13 @@ def _branch_out(b) -> dict:
     }
 
 
-def _review_out(r) -> dict:
+def _review_out(r, names: dict | None = None) -> dict:
+    name = (names or {}).get(str(r.review_identity_id)) if r.review_identity_id else None
     return {
-        "id": str(r.id), "rating": r.rating, "evidence_tier": r.evidence_tier,
-        "stage": r.stage, "created_at": r.created_at.isoformat(),
+        "id": str(r.id), "overall": r.rating, "service": r.service_rating, "product": r.product_rating,
+        "evidence_tier": r.evidence_tier, "comment": r.comment,
+        "reviewer": name or ("Verified customer" if r.review_identity_id else "Business"),
+        "created_at": r.created_at.isoformat(),
     }
 
 
@@ -98,7 +124,10 @@ async def public_branches(
         rows = await svc.public_branches(db, country=country, lat=lat, lng=lng, radius_m=radius_m, limit=limit)
     except svc.TrustError as exc:
         _fail(exc)
-    return {"branches": [_branch_out(b) for b in rows]}
+    out = []
+    for b in rows:
+        out.append({**_branch_out(b), "reputation": await svc.branch_reputation(db, b.id)})
+    return {"branches": out}
 
 
 @public.get("/branches/{branch_id}")
@@ -122,7 +151,8 @@ async def public_branch_reviews(branch_id: uuid.UUID, verified_only: bool = Fals
     if branch.status != "active":
         raise HTTPException(404, "That branch is not public.")
     rows = await svc.branch_reviews(db, branch.id, verified_only=verified_only)
-    return {"reviews": [_review_out(r) for r in rows]}
+    names = await svc.display_names(db, rows)
+    return {"reviews": [_review_out(r, names) for r in rows]}
 
 
 @public.get("/businesses/{vendor_id}/reputation")
@@ -151,10 +181,10 @@ async def my_branches(vendor: Vendor = Depends(get_current_vendor), db: AsyncSes
 
 
 @router.post("/branches/{branch_id}/tokens", status_code=201)
-async def issue_token(branch_id: uuid.UUID, vendor: Vendor = Depends(get_current_vendor),
+async def issue_token(branch_id: uuid.UUID, body: IssueTokenIn, vendor: Vendor = Depends(get_current_vendor),
                       db: AsyncSession = Depends(get_db)):
     try:
-        token, expires = await svc.issue_token(db, vendor, branch_id)
+        token, expires = await svc.issue_token(db, vendor, branch_id, body.receipt_ref)
     except svc.TrustError as exc:
         await db.rollback()
         _fail(exc)
@@ -183,8 +213,9 @@ async def points(vendor: Vendor = Depends(get_current_vendor), db: AsyncSession 
 
 @router.get("/services")
 async def services(country: Optional[str] = Query(None, min_length=2, max_length=2)):
-    return {"services": svc.services_for(country.upper() if country else None),
-            "note": "Services appear here once they are confirmed. Nothing is charged for any Brief feature."}
+    return {"approved": catalogue.CATALOGUE_APPROVED,
+            "services": svc.services_for(country.upper() if country else None),
+            "note": "Points are rewards, not money. Services appear here once the Brief team has approved the list."}
 
 
 @router.post("/points/redeem")
@@ -200,7 +231,34 @@ async def redeem(body: RedeemIn, idempotency_key: str = Header(..., alias="Idemp
     return {**result, "note": NO_MONEY_NOTE}
 
 
+@router.get("/admin/reviews/flagged")
+async def staff_flagged_reviews(staff: Vendor = Depends(require_governance_ops("admin")),
+                                db: AsyncSession = Depends(get_db)):
+    return {"reviews": await svc.flagged_reviews(db)}
+
+
+@router.post("/admin/reviews/{review_id}/moderation", status_code=201)
+async def staff_moderate_review(review_id: uuid.UUID, body: ModerationIn,
+                                staff: Vendor = Depends(require_governance_ops("admin")),
+                                db: AsyncSession = Depends(get_db)):
+    try:
+        review = await svc.moderate_review(db, staff, review_id, action=body.action, reason=body.reason)
+    except svc.TrustError as exc:
+        await db.rollback()
+        _fail(exc)
+    await db.commit()
+    return {"id": str(review.id), "status": review.status}
+
+
 # ── staff ─────────────────────────────────────────────────────────────────────
+
+@router.get("/admin/branches")
+async def staff_branches(status: str = Query("pending", pattern="^(pending|active)$"),
+                         staff: Vendor = Depends(require_governance_ops("admin")),
+                         db: AsyncSession = Depends(get_db)):
+    rows = await svc.branches_by_status(db, status)
+    return {"branches": [_branch_out(b) for b in rows]}
+
 
 @router.post("/admin/branches/{branch_id}/verifications", status_code=201)
 async def verify_branch(branch_id: uuid.UUID, body: VerificationIn,
@@ -215,4 +273,54 @@ async def verify_branch(branch_id: uuid.UUID, body: VerificationIn,
     await db.commit()
     return _branch_out(branch)
 
+
+# ── customers: no account. A device key identifies the reviewer; a till code proves the sale. ──
+
+customer = APIRouter()
+CUSTOMER_KEY = Header(..., alias="X-Customer-Key", min_length=16, max_length=200)
+
+
+@customer.post("/branches/{branch_id}/reviews", status_code=201)
+async def customer_submit_review(branch_id: uuid.UUID, body: CustomerReviewIn,
+                                 x_customer_key: str = CUSTOMER_KEY, db: AsyncSession = Depends(get_db)):
+    try:
+        identity = await svc.identity_for_key(db, x_customer_key)
+        review, reasons = await svc.customer_review(
+            db, identity, branch_id, token=body.transaction_code, service=body.service_rating,
+            product=body.product_rating, overall=body.overall_rating, comment=body.comment)
+    except svc.TrustError as exc:
+        await db.rollback()
+        _fail(exc)
+    await db.commit()
+    held = bool(reasons)
+    return {
+        "id": str(review.id),
+        "status": review.status,
+        "evidence_tier": review.evidence_tier,
+        "message": ("Thanks. Your review is being checked before it is published. You will see it in your history."
+                    if held else "Thanks. Your review is published."),
+    }
+
+
+@customer.get("/reviews")
+async def customer_my_reviews(x_customer_key: str = CUSTOMER_KEY, db: AsyncSession = Depends(get_db)):
+    try:
+        identity = await svc.identity_for_key(db, x_customer_key)
+    except svc.TrustError as exc:
+        await db.rollback()
+        _fail(exc)
+    await db.commit()
+    return {"display_name": identity.display_name, "reviews": await svc.customer_history(db, identity)}
+
+
+@customer.put("/profile")
+async def customer_profile(body: ProfileIn, x_customer_key: str = CUSTOMER_KEY, db: AsyncSession = Depends(get_db)):
+    try:
+        identity = await svc.identity_for_key(db, x_customer_key)
+        await svc.set_display_name(db, identity, body.display_name)
+    except svc.TrustError as exc:
+        await db.rollback()
+        _fail(exc)
+    await db.commit()
+    return {"display_name": identity.display_name}
 

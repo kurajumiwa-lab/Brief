@@ -311,6 +311,8 @@ app.include_router(statuses_router, prefix="/api/statuses", tags=["Statuses"])
 from app.modules.trust.router import router as trust_router, public as trust_public  # noqa: E402
 app.include_router(trust_public, prefix="/api/trust/public", tags=["MarketTrust (public)"])
 app.include_router(trust_router, prefix="/api/trust", tags=["MarketTrust"])
+from app.modules.trust.router import customer as trust_customer  # noqa: E402
+app.include_router(trust_customer, prefix="/api/trust/customer", tags=["MarketTrust (customers)"])
 
 from app.modules.knowledge.router import router as knowledge_router  # noqa: E402
 app.include_router(knowledge_router, prefix="/api/knowledge", tags=["Knowledge directory"])

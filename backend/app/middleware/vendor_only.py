@@ -19,7 +19,9 @@ OPEN_PREFIXES = ("/api/auth/", "/api/health", "/api/metrics", "/api/payments/web
                  # Caesar's front door: a participant joins the conversation
                  # without being a vendor, so there is no token to present yet.
                  # Every other /api/social/* route still requires one.
-                 "/api/social/accounts")
+                 "/api/social/accounts",
+                 # Customer reviews: no login. Each route checks its own device key and till code.
+                 "/api/trust/customer")
 
 
 # Read-only public browsing (no account): the open offer list, the knowledge

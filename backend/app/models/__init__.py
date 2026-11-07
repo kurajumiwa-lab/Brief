@@ -124,4 +124,5 @@ from app.modules.blueprints.models import BlueprintStart, BlueprintStepDone  # n
 from app.modules.statuses.models import BusinessFollow, BusinessStatus, StatusView  # noqa: F401
 from app.modules.trust.models import (  # noqa: F401
     TrustBranch, BranchVerification, TransactionToken, BusinessReview, AuditEvent, PointsEntry,
+    ReviewIdentity, ReviewFlag, ReviewModeration,
 )

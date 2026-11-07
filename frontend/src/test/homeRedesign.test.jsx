@@ -8,6 +8,7 @@ import { shouldShowDailyWelcome, WELCOME_KEY, WELCOME_INTERVAL_MS } from "@/comp
 import { useTradeOverviewStore } from "@/stores/tradeOverviewStore";
 import { vendorAPI, routineAPI, ordersAPI } from "@/lib/api";
 import ExplorePage from "@/pages/explore/ExplorePage";
+import { useHomeFeedStore } from "@/stores/homeFeedStore";
 
 vi.mock("@/lib/api", async (importOriginal) => ({
   ...(await importOriginal()),
@@ -17,6 +18,18 @@ vi.mock("@/lib/api", async (importOriginal) => ({
 }));
 
 const auth = { vendor: null };
+// Home now renders the storefront (chips, hero row, ten shelf skeletons) on every
+// render. In jsdom that takes a few seconds per test, so this file gets a longer
+// per-test budget. The shelf loaders are stubbed so no real network calls run.
+vi.setConfig({ testTimeout: 20000 });
+
+// The storefront loads every shelf on mount. These tests are about the header,
+// action centre and welcome popup, so the shelf loaders are stubbed here rather
+// than letting real API calls run inside the timing budget.
+beforeEach(() => {
+  useHomeFeedStore.setState({ loadFeed: () => {} });
+});
+
 vi.mock("@/stores/authStore", () => ({ useAuthStore: (sel) => sel({ vendor: auth.vendor }) }));
 
 const stock = { mine: [], movements: [], mineLoaded: true, fetchMine: vi.fn() };

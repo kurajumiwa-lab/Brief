@@ -3,6 +3,7 @@ import { useSetupProgress } from "@/components/onboarding/useSetupProgress";
 import HomeHeader from "@/components/home/HomeHeader";
 import ActionCentre from "@/components/home/ActionCentre";
 import ActivityList from "@/components/home/ActivityList";
+import HomeStorefront from "@/components/home/HomeStorefront";
 import DiscoveryLink from "@/components/home/DiscoveryLink";
 import DailyWelcome from "@/components/home/DailyWelcome";
 import CategoryRequest from "@/components/home/CategoryRequest";
@@ -13,14 +14,17 @@ import { CATEGORY_REQUIREMENTS, pendingCategoryRequest } from "@/config/category
 /**
  * HOME — for doing. Discovery is for finding.
  *
- * Four sections, in this order, and nothing else:
+ * Five sections, in this order, and nothing else:
  *
  *   1  header         who this is, the shop's setup count (2/6), the status
  *                     shelf of businesses you follow, and the radar counts
  *   2  action centre  the next one or two things that need doing; "View all"
  *                     expands the rest in place; hidden when nothing is pending
- *   3  activity       the three latest trades; hidden when there are none
- *   4  discovery      one line to Discovery, which owns offers, suppliers and
+ *   3  storefront     category chips, a hero row and the discovery shelves.
+ *                     It always has something real to show (chips and the
+ *                     Brief Trust door), so Home never looks blank
+ *   4  activity       the three latest trades; hidden when there are none
+ *   5  discovery      one line to Discovery, which owns offers, suppliers and
  *                     product browsing
  *
  * Two popups may appear over Home, never both:
@@ -61,6 +65,7 @@ export default function HomeHub({ rules = CATEGORY_REQUIREMENTS }) {
         <RadarStrip />
       </div>
       <ActionCentre progress={progress} />
+      <HomeStorefront />
       <ActivityList />
       <DiscoveryLink />
 

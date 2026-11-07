@@ -143,7 +143,7 @@ def upgrade() -> None:
     op.create_index("ix_points_ledger_vendor", "points_ledger", ["vendor_id"])
 
     # The same guard statements the dev path installs (app.db_triggers).
-    for stmt in trust_guard_statements():
+    for stmt in trust_guard_statements(("branch_verifications", "audit_events", "points_ledger")):
         op.execute(stmt)
 
 
