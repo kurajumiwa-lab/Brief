@@ -10,7 +10,7 @@ Rules that matter, in one place:
   · every accepted review earns the same points, whatever the star rating;
   · points are not money. The platform holds no funds and points have no cash
     value. The only use is an exchange for services listed in
-    `REDEEMABLE_SERVICES`, which is empty until services are confirmed;
+    the catalogue in `catalogue.py`, which stays empty until it is approved;
   · every trust action writes an audit event in the same transaction.
 """
 
@@ -25,6 +25,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.vendor import Vendor
+from app.modules.trust import catalogue
 from app.modules.trust.models import (
     COUNTRY_CODES, AuditEvent, BusinessReview, BranchVerification, PointsEntry, TransactionToken, TrustBranch,
 )
@@ -64,21 +65,6 @@ REP_METHOD = "rep-v1"
 REP_M = 5          # confidence parameter: reviews of pull toward the baseline
 REP_C = 3.5        # category baseline (single category until categories are set)
 
-# Redeemable services: real help Brief already gives, delivered by the Brief team.
-# Chosen so points can never buy a trust rating or a ranking. Costs are multiples of
-# the 20 points one review earns. Shape: {"service_key": {"title", "points_cost", "countries"}}
-REDEEMABLE_SERVICES: dict = {
-    "booking_setup": {
-        "title": "Booking page set-up help from the Brief team",
-        "points_cost": 40,  # two reviews
-        "countries": ["KE", "ET", "UG"],
-    },
-    "directory_listing": {
-        "title": "One seminar or course listed in the Brief directory",
-        "points_cost": 100,  # five reviews
-        "countries": ["KE", "ET", "UG"],
-    },
-}
 
 
 # ── helpers ───────────────────────────────────────────────────────────────────
@@ -153,6 +139,12 @@ async def get_branch(db: AsyncSession, branch_id: uuid.UUID) -> TrustBranch:
     if branch is None or branch.status == "removed":
         raise TrustError("That branch was not found.", status=404)
     return branch
+
+
+async def branches_by_status(db: AsyncSession, status: str) -> list[TrustBranch]:
+    rows = await db.execute(select(TrustBranch).where(TrustBranch.status == status)
+                            .order_by(TrustBranch.created_at).limit(200))
+    return list(rows.scalars().all())
 
 
 async def my_branches(db: AsyncSession, owner: Vendor) -> list[TrustBranch]:
@@ -375,7 +367,9 @@ async def points_summary(db: AsyncSession, vendor: Vendor) -> dict:
 
 def services_for(country: Optional[str] = None) -> list[dict]:
     out = []
-    for key, svc in REDEEMABLE_SERVICES.items():
+    if not catalogue.CATALOGUE_APPROVED:
+        return []
+    for key, svc in catalogue.SERVICES.items():
         if country and country not in svc.get("countries", []):
             continue
         out.append({"service_key": key, "title": svc["title"], "points_cost": svc["points_cost"],
@@ -389,7 +383,9 @@ async def redeem(db: AsyncSession, vendor: Vendor, *, service_key: str, country:
     if not idempotency_key or len(idempotency_key) < 8:
         raise TrustError("A redemption needs an Idempotency-Key header of at least 8 characters.", status=400)
     country = require_country(country)
-    svc = REDEEMABLE_SERVICES.get(service_key)
+    if not catalogue.CATALOGUE_APPROVED:
+        raise TrustError("Points cannot be exchanged yet. The service list is still being agreed.", status=409)
+    svc = catalogue.SERVICES.get(service_key)
     if svc is None:
         raise TrustError("That service is not available for points yet.", status=404)
     if country not in svc.get("countries", []):

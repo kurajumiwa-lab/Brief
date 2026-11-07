@@ -12,10 +12,11 @@ Signed in (a business account):
     POST /api/trust/branches/{id}/tokens            owner: issue a one-time code for the till
     POST /api/trust/branches/{id}/reviews           rate a branch; optional `transaction_token`
     GET  /api/trust/points                          my points balance and history (not money)
-    GET  /api/trust/services                        services redeemable for points (may be empty)
+    GET  /api/trust/services                        services redeemable for points (empty until approved)
     POST /api/trust/points/redeem                   exchange points for a service (Idempotency-Key)
 
 Brief staff only:
+    GET  /api/trust/admin/branches?status=pending   shops waiting for a check (or active)
     POST /api/trust/admin/branches/{id}/verifications
 """
 
@@ -28,6 +29,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models.vendor import Vendor
+from app.modules.trust import catalogue
 from app.modules.trust import service as svc
 from app.routes.auth import get_current_vendor
 from app.routes.governance import require_governance_ops
@@ -186,8 +188,9 @@ async def points(vendor: Vendor = Depends(get_current_vendor), db: AsyncSession 
 
 @router.get("/services")
 async def services(country: Optional[str] = Query(None, min_length=2, max_length=2)):
-    return {"services": svc.services_for(country.upper() if country else None),
-            "note": "Services appear here once they are confirmed. Nothing is charged for any Brief feature."}
+    return {"approved": catalogue.CATALOGUE_APPROVED,
+            "services": svc.services_for(country.upper() if country else None),
+            "note": "Points are rewards, not money. Services appear here once the Brief team has approved the list."}
 
 
 @router.post("/points/redeem")
@@ -204,6 +207,14 @@ async def redeem(body: RedeemIn, idempotency_key: str = Header(..., alias="Idemp
 
 
 # ── staff ─────────────────────────────────────────────────────────────────────
+
+@router.get("/admin/branches")
+async def staff_branches(status: str = Query("pending", pattern="^(pending|active)$"),
+                         staff: Vendor = Depends(require_governance_ops("admin")),
+                         db: AsyncSession = Depends(get_db)):
+    rows = await svc.branches_by_status(db, status)
+    return {"branches": [_branch_out(b) for b in rows]}
+
 
 @router.post("/admin/branches/{branch_id}/verifications", status_code=201)
 async def verify_branch(branch_id: uuid.UUID, body: VerificationIn,

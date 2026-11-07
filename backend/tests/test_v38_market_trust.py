@@ -21,6 +21,7 @@ import pytest
 from sqlalchemy import update
 
 from app.database import async_session
+from app.modules.trust import catalogue
 from app.modules.trust import service as svc
 from app.modules.trust.models import AuditEvent, BusinessReview, PointsEntry, TransactionToken
 from tests.test_v35_offers import PASSWORD, _register  # noqa: F401 (helper reuse)
@@ -423,22 +424,47 @@ async def test_points_page_says_they_are_not_money(client):
     assert "not money" in body["note"].lower()
 
 
-async def test_services_list_offers_only_listed_help(client):
+async def test_services_list_is_empty_until_the_catalogue_is_approved(client):
     _, h, _ = await _business(client, "svcs")
     assert (await client.get("/api/trust/services")).status_code == 401  # signed-in only
     r = await client.get("/api/trust/services", headers=h)
     assert r.status_code == 200
-    keys = {s["service_key"] for s in r.json()["services"]}
-    assert keys == {"booking_setup", "directory_listing"}
-    # No service may sell a trust rating or a ranking.
-    assert not any(w in s["title"].lower() for s in r.json()["services"] for w in ("rating", "rank", "badge", "verif"))
+    assert r.json()["services"] == []
+    assert r.json()["approved"] is False
+
+
+async def test_services_stay_hidden_while_unapproved_even_if_listed(client, monkeypatch):
+    monkeypatch.setitem(catalogue.SERVICES, "booking_setup", {"title": "Booking help", "points_cost": 40, "countries": ["KE"]})
+    _, h, _ = await _business(client, "svcun")
+    r = await client.get("/api/trust/services", headers=h)
+    assert r.json()["services"] == []
+
+
+async def test_redeem_is_refused_until_the_catalogue_is_approved(client, monkeypatch):
+    monkeypatch.setitem(catalogue.SERVICES, "booking_setup", {"title": "Booking help", "points_cost": 1, "countries": ["KE"]})
+    _, h, _ = await _business(client, "svcno")
+    r = await client.post("/api/trust/points/redeem", headers={**h, "Idempotency-Key": "notyet-0001"},
+                          json={"service_key": "booking_setup", "country": "KE"})
+    assert r.status_code == 409
+    assert "still being agreed" in r.json()["detail"]
+
+
+async def test_catalogue_ships_empty(client):
+    assert catalogue.SERVICES == {}
+    assert catalogue.CATALOGUE_APPROVED is False
+
+
+async def test_points_cannot_be_sent_to_someone_else(client):
+    from app.main import app
+    paths = [getattr(r, "path", "") for r in app.routes]
+    assert not any(("transfer" in p or "send" in p or "gift" in p) for p in paths if "trust" in p)
 
 
 async def test_redeem_with_no_listed_service_is_refused(client):
     _, h, _ = await _business(client, "redn")
     r = await client.post("/api/trust/points/redeem", headers={**h, "Idempotency-Key": "abcdefgh1"},
                           json={"service_key": "anything", "country": "KE"})
-    assert r.status_code == 404
+    assert r.status_code == 409  # catalogue not approved, so nothing can be exchanged
 
 
 async def test_redeem_needs_an_idempotency_key(client):
@@ -448,7 +474,8 @@ async def test_redeem_needs_an_idempotency_key(client):
 
 
 async def test_redeem_spends_points_once_per_key(client, ops, monkeypatch):
-    monkeypatch.setitem(svc.REDEEMABLE_SERVICES, "listing_week", {
+    monkeypatch.setattr(catalogue, "CATALOGUE_APPROVED", True)
+    monkeypatch.setitem(catalogue.SERVICES, "listing_week", {
         "title": "One week listing", "points_cost": 20, "countries": ["KE", "UG"]})
     _, owner, _ = await _business(client, "rdmo")
     _, staff, _ = await _staff(client, None, ops, "rdms")
@@ -466,7 +493,8 @@ async def test_redeem_spends_points_once_per_key(client, ops, monkeypatch):
 
 
 async def test_redeem_cannot_overspend(client, monkeypatch):
-    monkeypatch.setitem(svc.REDEEMABLE_SERVICES, "big", {"title": "Big", "points_cost": 500, "countries": ["KE"]})
+    monkeypatch.setattr(catalogue, "CATALOGUE_APPROVED", True)
+    monkeypatch.setitem(catalogue.SERVICES, "big", {"title": "Big", "points_cost": 500, "countries": ["KE"]})
     _, h, _ = await _business(client, "rdmx")
     r = await client.post("/api/trust/points/redeem", headers={**h, "Idempotency-Key": "over-0001"},
                           json={"service_key": "big", "country": "KE"})
@@ -475,7 +503,8 @@ async def test_redeem_cannot_overspend(client, monkeypatch):
 
 
 async def test_redeem_refuses_a_country_the_service_is_not_offered_in(client, monkeypatch):
-    monkeypatch.setitem(svc.REDEEMABLE_SERVICES, "kenya_only", {"title": "K", "points_cost": 1, "countries": ["KE"]})
+    monkeypatch.setattr(catalogue, "CATALOGUE_APPROVED", True)
+    monkeypatch.setitem(catalogue.SERVICES, "kenya_only", {"title": "K", "points_cost": 1, "countries": ["KE"]})
     _, h, _ = await _business(client, "rdmc")
     r = await client.post("/api/trust/points/redeem", headers={**h, "Idempotency-Key": "country-01"},
                           json={"service_key": "kenya_only", "country": "ET"})
@@ -485,7 +514,7 @@ async def test_redeem_refuses_a_country_the_service_is_not_offered_in(client, mo
 async def test_no_money_routes_exist_under_trust(client):
     from app.main import app
     paths = [getattr(r, "path", "") for r in app.routes if getattr(r, "path", "").startswith("/api/trust")]
-    banned = ("withdraw", "payout", "wallet", "cash", "balance", "deposit", "loan")
+    banned = ("withdraw", "payout", "wallet", "cash", "balance", "deposit", "loan", "transfer", "send", "gift")
     for p in paths:
         assert not any(word in p.lower() for word in banned), p
 
@@ -542,6 +571,18 @@ async def test_public_reads_need_no_login(client, ops):
     assert (await client.get("/api/trust/public/branches")).status_code == 200
     assert (await client.get(f"/api/trust/public/branches/{bid}")).status_code == 200
     assert (await client.get(f"/api/trust/public/branches/{bid}/reviews")).status_code == 200
+
+
+async def test_staff_list_of_pending_shops(client, ops):
+    _, owner, _ = await _business(client, "stq")
+    _, staff, _ = await _staff(client, None, ops, "stqs")
+    _, other, _ = await _business(client, "stqo")
+    waiting = await _branch(client, owner, name="Waiting for check")
+    r = await client.get("/api/trust/admin/branches", headers=staff)
+    assert r.status_code == 200
+    assert waiting in [b["id"] for b in r.json()["branches"]]
+    assert (await client.get("/api/trust/admin/branches", headers=other)).status_code == 403
+    assert (await client.get("/api/trust/admin/branches")).status_code == 401
 
 
 async def test_writes_always_need_a_signed_in_business(client):
