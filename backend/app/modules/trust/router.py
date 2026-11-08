@@ -9,6 +9,7 @@ Public (no login, GET only):
 Signed in (a business account):
     POST /api/trust/branches                        add a branch (pending until verified)
     GET  /api/trust/branches/mine                   my branches and their status
+    PUT  /api/trust/branches/{id}/delivery          owner: pick-up, and/or a rider the buyer knows
     POST /api/trust/branches/{id}/tokens            owner: issue a one-time code for the till
     POST /api/trust/branches/{id}/reviews           rate a branch; optional `transaction_token`
     GET  /api/trust/points                          my points balance and history (not money)
@@ -46,6 +47,13 @@ class BranchIn(BaseModel):
     address_text: str = Field(..., min_length=5, max_length=300)
     latitude: Optional[float] = Field(None, ge=-90, le=90)
     longitude: Optional[float] = Field(None, ge=-180, le=180)
+
+
+class DeliveryIn(BaseModel):
+    options: list[str] = Field(..., min_length=1, max_length=4)
+    area: Optional[str] = Field(None, max_length=120)
+    rider_name: Optional[str] = Field(None, max_length=60)
+    rider_phone: Optional[str] = Field(None, max_length=24)
 
 
 class IssueTokenIn(BaseModel):
@@ -96,6 +104,7 @@ def _branch_out(b) -> dict:
         "latitude": float(b.latitude) if b.latitude is not None else None,
         "longitude": float(b.longitude) if b.longitude is not None else None,
         "status": b.status, "verification_level": b.verification_level,
+        "delivery": svc.delivery_out(b),
     }
 
 
@@ -173,6 +182,19 @@ async def add_branch(body: BranchIn, vendor: Vendor = Depends(get_current_vendor
         _fail(exc)
     await db.commit()
     return {**_branch_out(branch), "detail": "Branch added. It becomes public after a storefront check."}
+
+
+@router.put("/branches/{branch_id}/delivery")
+async def set_delivery(branch_id: uuid.UUID, body: DeliveryIn, vendor: Vendor = Depends(get_current_vendor),
+                       db: AsyncSession = Depends(get_db)):
+    try:
+        branch = await svc.set_delivery(db, vendor, branch_id, options=body.options, area=body.area,
+                                        rider_name=body.rider_name, rider_phone=body.rider_phone)
+    except svc.TrustError as exc:
+        await db.rollback()
+        _fail(exc)
+    await db.commit()
+    return {**_branch_out(branch), "detail": "Delivery saved. Brief has not checked the rider."}
 
 
 @router.get("/branches/mine")

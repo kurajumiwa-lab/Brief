@@ -48,6 +48,13 @@ class TrustBranch(Base):
     longitude = Column(Numeric(9, 6), nullable=True)
     status = Column(String(12), nullable=False, default="pending", server_default="pending")
     verification_level = Column(SmallInteger, nullable=False, default=0, server_default="0")
+    # Delivery: pick-up is always offered. "known_rider" is a rider the buyer already knows.
+    # The fee is agreed between the buyer and the rider. Brief never sees or holds it.
+    delivery_options = Column(JSONB, nullable=False, default=lambda: ["pickup"],
+                              server_default=text("'[\"pickup\"]'::jsonb"))
+    delivery_area = Column(String(120), nullable=True)
+    rider_name = Column(String(60), nullable=True)
+    rider_phone = Column(String(20), nullable=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 

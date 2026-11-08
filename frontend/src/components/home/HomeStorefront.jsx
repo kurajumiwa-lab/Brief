@@ -5,6 +5,7 @@ import CuratedShelf from "./CuratedShelf";
 import { SHELVES } from "@/config/homeShelves";
 import { feedIsQuiet, useHomeFeedStore } from "@/stores/homeFeedStore";
 import { useAuthStore } from "@/stores/authStore";
+import { t, useLang } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 /**
@@ -25,7 +26,7 @@ import { cn } from "@/lib/utils";
  */
 
 const CHIPS = [
-  { label: "Checked shops", to: "/trust", tone: "brand" },
+  { labelKey: "home.trustChip", to: "/trust", tone: "brand" },
   { label: "Offers", to: "/offers" },
   { label: "Templates", to: "/templates" },
   { label: "Learn", to: "/learn" },
@@ -49,6 +50,7 @@ function heroFromShelves(shelves) {
 }
 
 export default function HomeStorefront({ className }) {
+  const lang = useLang();
   const shelves = useHomeFeedStore((s) => s.shelves);
   const loadFeed = useHomeFeedStore((s) => s.loadFeed);
   const resetFeed = useHomeFeedStore((s) => s.reset);
@@ -85,7 +87,7 @@ export default function HomeStorefront({ className }) {
                 )}
               >
                 {chip.tone === "brand" ? <BadgeCheck className="h-4 w-4" aria-hidden="true" /> : null}
-                {chip.label}
+                {chip.labelKey ? t(chip.labelKey, lang) : chip.label}
               </Link>
             </li>
           ))}
@@ -105,13 +107,13 @@ export default function HomeStorefront({ className }) {
               <BadgeCheck className="h-3.5 w-3.5" aria-hidden="true" /> Brief Trust
             </span>
             <span>
-              <span className="block text-xl font-semibold leading-tight">Shops you can check before you buy</span>
+              <span className="block text-xl font-semibold leading-tight">{t("home.trustTitle", lang)}</span>
               <span className="mt-1 block text-sm text-white/80">
-                Approved by Brief staff in Kenya, Ethiopia and Uganda. Reviews come from real till codes.
+                {t("home.trustBody", lang)}
               </span>
             </span>
             <span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold">
-              Open Brief Trust <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+              {t("home.trustCta", lang)} <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
             </span>
           </Link>
 

@@ -968,6 +968,7 @@ export const trustAPI = {
   mine: () => api.get("/trust/branches/mine"),
   addBranch: (data) => api.post("/trust/branches", data),
   issueToken: (id, data) => api.post(`/trust/branches/${id}/tokens`, data),
+  setDelivery: (id, data) => api.put(`/trust/branches/${id}/delivery`, data),
   review: (id, data) => api.post(`/trust/branches/${id}/reviews`, data),
   points: () => api.get("/trust/points"),
   services: () => api.get("/trust/services"),

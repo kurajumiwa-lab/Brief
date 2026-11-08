@@ -7,6 +7,8 @@ import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import { PageSpinner } from "@/components/ui/Spinner";
 import { trustAPI, apiError } from "@/lib/api";
+import { t, useLang } from "@/lib/i18n";
+import DeliverySettings from "./DeliverySettings";
 import { COUNTRIES, POINTS_NOTE, STATUS_LABEL, newIdempotencyKey, errorText } from "./trustCore";
 
 const ENTRY_LABEL = (reason) => (reason === "accepted_review" ? "Rating published" : "Exchanged for help");
@@ -19,6 +21,7 @@ const ENTRY_LABEL = (reason) => (reason === "accepted_review" ? "Rating publishe
 const EMPTY_FORM = { branch_name: "", country: "KE", address_text: "" };
 
 export default function TrustMePage() {
+  const lang = useLang();
   const [points, setPoints] = useState(null);
   const [services, setServices] = useState([]);
   const [approved, setApproved] = useState(false);
@@ -182,6 +185,7 @@ export default function TrustMePage() {
                 <span className="text-xs text-ink-3">{s.country_code}</span>
               </div>
               <p className="text-sm font-semibold text-ink-1">{s.branch_name}</p>
+              <DeliverySettings shop={s} onSaved={load} />
               {s.status === "active" && (
                 <>
                   <Input
@@ -210,6 +214,7 @@ export default function TrustMePage() {
 
       <Card padding="p-4" className="space-y-3">
         <h2 className="text-sm font-semibold text-ink-1">Add a shop</h2>
+        <p className="text-xs text-ink-3" data-testid="free-listing-note">{t("listing.free", lang)}</p>
         <form onSubmit={addShop} className="space-y-3">
           <Input
             label="Shop name"

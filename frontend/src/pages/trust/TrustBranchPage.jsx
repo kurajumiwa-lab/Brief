@@ -7,7 +7,8 @@ import Input from "@/components/ui/Input";
 import Textarea from "@/components/ui/Textarea";
 import { PageSpinner } from "@/components/ui/Spinner";
 import { trustAPI, apiError } from "@/lib/api";
-import { countryName, TIER_BADGE, POINTS_NOTE, errorText } from "./trustCore";
+import { t, useLang } from "@/lib/i18n";
+import { checkedByText, countryName, TIER_BADGE, POINTS_NOTE, errorText } from "./trustCore";
 
 /**
  * One checked shop: its rating breakdown and its reviews.
@@ -57,6 +58,7 @@ function ScoreBar({ label, value }) {
 }
 
 export default function TrustBranchPage() {
+  const lang = useLang();
   const { id } = useParams();
   const [data, setData] = useState(null);
   const [reviews, setReviews] = useState([]);
@@ -111,15 +113,28 @@ export default function TrustBranchPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-4 p-4 pb-16">
-      <Link to="/trust" className="text-xs font-medium text-brand-700 underline">All checked shops</Link>
+      <Link to="/trust" className="text-xs font-medium text-brand-700 underline">{t("shop.allShops", lang)}</Link>
 
       <Card padding="p-5" className="space-y-4 bg-gradient-to-br from-surface-0 to-brand-50">
         <div className="flex flex-wrap gap-2">
-          <Badge variant="brand">Checked by Brief</Badge>
+          <Badge variant="brand">{t("shop.checked", lang)}</Badge>
           <Badge variant="gray">{countryName(branch.country_code)}</Badge>
         </div>
         <h1 className="text-2xl font-semibold text-ink-1">{branch.branch_name}</h1>
         <p className="text-sm text-ink-3">{branch.address_text}</p>
+        <p className="text-sm text-ink-2" data-testid="checked-by-text">{checkedByText(branch.verification_level, lang)}</p>
+        {branch.delivery && (
+          <div className="space-y-1" data-testid="delivery-line">
+            <p className="text-sm text-ink-2">
+              {t("delivery.shopLine", lang)}: {t("delivery.shopPickup", lang)}
+              {branch.delivery.rider &&
+                ` · ${t("delivery.shopRider", lang).replace("{area}", branch.delivery.rider.area)}: ${branch.delivery.rider.name}, ${branch.delivery.rider.phone}`}
+            </p>
+            {branch.delivery.rider && (
+              <p className="text-xs text-ink-3">{t("delivery.notChecked", lang)} {t("delivery.feeNote", lang)}</p>
+            )}
+          </div>
+        )}
 
         <div className="flex items-end gap-3">
           <p className="text-4xl font-semibold tabular-nums text-ink-1">
@@ -144,9 +159,9 @@ export default function TrustBranchPage() {
       </Card>
 
       <Card padding="p-4" className="space-y-3">
-        <h2 className="text-sm font-semibold text-ink-1">Rate this shop</h2>
+        <h2 className="text-sm font-semibold text-ink-1">{t("shop.rateTitle", lang)}</h2>
         <p className="text-xs text-ink-3">
-          No account needed. Use the till code from your purchase. One review per purchase.
+          {t("shop.rateIntro", lang)}
         </p>
 
         {result && (
@@ -155,15 +170,15 @@ export default function TrustBranchPage() {
 
         <form onSubmit={submit} className="space-y-4">
           <Input
-            label="Till code from your receipt"
+            label={t("shop.tillLabel", lang)}
             placeholder="TKN-XXXX-XXXX-XXXX"
             value={code}
             onChange={(e) => setCode(e.target.value)}
-            hint="The shop shows this code after your purchase. It works once."
+            hint={t("shop.tillHint", lang)}
           />
-          <Stars label="Service" value={service} onChange={setService} />
-          <Stars label="Product quality" value={product} onChange={setProduct} />
-          <Stars label="Overall experience" value={overall} onChange={setOverall} />
+          <Stars label={t("shop.service", lang)} value={service} onChange={setService} />
+          <Stars label={t("shop.product", lang)} value={product} onChange={setProduct} />
+          <Stars label={t("shop.overall", lang)} value={overall} onChange={setOverall} />
           <Textarea
             label="Comment (optional)"
             value={comment}
@@ -172,7 +187,7 @@ export default function TrustBranchPage() {
             rows={3}
           />
           {formError && <p role="alert" className="text-sm text-red-600">{formError}</p>}
-          <Button type="submit" variant="primary" loading={sending}>Publish my review</Button>
+          <Button type="submit" variant="primary" loading={sending}>{t("shop.publish", lang)}</Button>
           <p className="text-xs text-ink-3">{POINTS_NOTE}</p>
         </form>
         <p className="text-xs text-ink-3">
