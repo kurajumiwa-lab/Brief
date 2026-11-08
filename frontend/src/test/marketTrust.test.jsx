@@ -3,12 +3,13 @@ import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { trustAPI } from "@/lib/api";
 import { getCustomerKey } from "@/lib/customerKey";
+import { t } from "@/lib/i18n";
 import TrustBrowsePage from "@/pages/trust/TrustBrowsePage";
 import TrustBranchPage from "@/pages/trust/TrustBranchPage";
 import TrustMePage from "@/pages/trust/TrustMePage";
 import TrustStaffPage from "@/pages/trust/TrustStaffPage";
 import TrustMyReviewsPage from "@/pages/trust/TrustMyReviewsPage";
-import { scoreText, POINTS_NOTE } from "@/pages/trust/trustCore";
+import { scoreText, POINTS_NOTE, FREE_LISTING_NOTE, checkedByText } from "@/pages/trust/trustCore";
 
 vi.mock("@/lib/api", async (importOriginal) => ({
   ...(await importOriginal()),
@@ -16,7 +17,7 @@ vi.mock("@/lib/api", async (importOriginal) => ({
     branches: vi.fn(), branch: vi.fn(), reviews: vi.fn(), customerReview: vi.fn(), customerReviews: vi.fn(),
     customerProfile: vi.fn(), mine: vi.fn(), addBranch: vi.fn(), issueToken: vi.fn(), review: vi.fn(),
     points: vi.fn(), services: vi.fn(), redeem: vi.fn(), pendingBranches: vi.fn(), verify: vi.fn(),
-    flaggedReviews: vi.fn(), moderateReview: vi.fn(),
+    flaggedReviews: vi.fn(), moderateReview: vi.fn(), setDelivery: vi.fn(),
   },
 }));
 
@@ -264,5 +265,136 @@ describe("check desk (staff)", () => {
     fireEvent.click(screen.getByRole("button", { name: "Publish" }));
     expect(await screen.findByText(/at least 10 characters/)).toBeInTheDocument();
     expect(trustAPI.moderateReview).not.toHaveBeenCalled();
+  });
+});
+
+describe("trust signals and free listing", () => {
+  it("describes how a shop was checked from its level", () => {
+    expect(checkedByText(3)).toBe("Checked by Brief staff: storefront photo or in-person visit.");
+    expect(checkedByText(2)).toBe("Checked by Brief staff: business papers or confirmation from other businesses.");
+  });
+
+  it("shows the check on the shop page", async () => {
+    trustAPI.branch.mockResolvedValue({ data: { branch: shop({ verification_level: 3 }), reputation: { score: null, review_count: 0 } } });
+    trustAPI.reviews.mockResolvedValue({ data: { reviews: [] } });
+    render(
+      <MemoryRouter initialEntries={["/trust/branches/b1"]}>
+        <Routes><Route path="/trust/branches/:id" element={<TrustBranchPage />} /></Routes>
+      </MemoryRouter>,
+    );
+    expect(await screen.findByTestId("checked-by-text")).toHaveTextContent(
+      "Checked by Brief staff: storefront photo or in-person visit.",
+    );
+  });
+
+  it("says listing is free on the add-shop form", async () => {
+    trustAPI.points.mockResolvedValue({ data: { balance_points: 0, note: POINTS_NOTE, entries: [] } });
+    trustAPI.services.mockResolvedValue({ data: { approved: false, services: [] } });
+    trustAPI.mine.mockResolvedValue({ data: { branches: [] } });
+    render(<MemoryRouter><TrustMePage /></MemoryRouter>);
+    expect(await screen.findByTestId("free-listing-note")).toHaveTextContent(FREE_LISTING_NOTE);
+    expect(FREE_LISTING_NOTE).toMatch(/free/);
+  });
+});
+
+describe("Kiswahili on the public trust pages", () => {
+  beforeEach(() => {
+    localStorage.removeItem("brief-lang");
+  });
+
+  it("starts in English and switches to Kiswahili, then remembers the choice", async () => {
+    trustAPI.branches.mockResolvedValue({ data: { branches: [] } });
+    const { unmount } = render(<MemoryRouter><TrustBrowsePage /></MemoryRouter>);
+    expect(await screen.findByText("Shops you can trust")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Kiswahili" }));
+    expect(await screen.findByText("Maduka unayoweza kuamini")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Kiswahili" })).toHaveAttribute("aria-pressed", "true");
+    unmount();
+    // a fresh visit on the same device opens in Kiswahili
+    render(<MemoryRouter><TrustBrowsePage /></MemoryRouter>);
+    expect(await screen.findByText("Maduka unayoweza kuamini")).toBeInTheDocument();
+    localStorage.removeItem("brief-lang");
+  });
+
+  it("falls back to English for any string without a Swahili version", () => {
+    expect(t("no.such.key", "sw")).toBe("no.such.key");
+    expect(t("shop.publish", "sw")).toBe("Chapisha ukaguzi wangu");
+    expect(t("shop.publish", "en")).toBe("Publish my review");
+  });
+
+  it("gives the shop check wording in Kiswahili", () => {
+    expect(checkedByText(3, "sw")).toBe("Wafanyakazi wa Brief wameliangalia: picha ya duka au ziara ya ana kwa ana.");
+    expect(checkedByText(3, "en")).toBe("Checked by Brief staff: storefront photo or in-person visit.");
+  });
+});
+
+describe("how a shop delivers", () => {
+  const rider = { area: "Kisii town", name: "Otieno", phone: "+254712345678" };
+
+  it("owner: pick-up is always on, and a rider is saved with area, name and number", async () => {
+    trustAPI.points.mockResolvedValue({ data: { balance_points: 0, note: POINTS_NOTE, entries: [] } });
+    trustAPI.services.mockResolvedValue({ data: { approved: false, services: [] } });
+    trustAPI.mine.mockResolvedValue({ data: { branches: [shop({ status: "pending", verification_level: 0,
+      delivery: { options: ["pickup"], rider: null } })] } });
+    trustAPI.setDelivery.mockResolvedValue({ data: { detail: "Delivery saved. Brief has not checked the rider." } });
+    render(<MemoryRouter><TrustMePage /></MemoryRouter>);
+    const pickup = await screen.findByRole("checkbox", { name: /Buyer collects at the shop/ });
+    expect(pickup).toBeChecked();
+    expect(pickup).toBeDisabled();
+    fireEvent.click(screen.getByTestId("known-rider-b1"));
+    fireEvent.change(screen.getByLabelText(/Where does this rider work/), { target: { value: "Kisii town" } });
+    fireEvent.change(screen.getByLabelText(/Rider's name/), { target: { value: "Otieno" } });
+    fireEvent.change(screen.getByLabelText(/Rider's phone number/), { target: { value: "0712 345 678" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save delivery" }));
+    await waitFor(() => expect(trustAPI.setDelivery).toHaveBeenCalledTimes(1));
+    expect(trustAPI.setDelivery).toHaveBeenCalledWith("b1", {
+      options: ["pickup", "known_rider"], area: "Kisii town", rider_name: "Otieno", rider_phone: "0712 345 678",
+    });
+    expect(await screen.findByText(/Brief has not checked the rider/)).toBeInTheDocument();
+  });
+
+  it("owner: pick-up only sends pick-up and no rider details", async () => {
+    trustAPI.points.mockResolvedValue({ data: { balance_points: 0, note: POINTS_NOTE, entries: [] } });
+    trustAPI.services.mockResolvedValue({ data: { approved: false, services: [] } });
+    trustAPI.mine.mockResolvedValue({ data: { branches: [shop({ delivery: { options: ["pickup", "known_rider"], rider } })] } });
+    trustAPI.setDelivery.mockResolvedValue({ data: { detail: "Delivery saved." } });
+    render(<MemoryRouter><TrustMePage /></MemoryRouter>);
+    const box = await screen.findByTestId("known-rider-b1");
+    expect(box).toBeChecked();
+    fireEvent.click(box);
+    fireEvent.click(screen.getByRole("button", { name: "Save delivery" }));
+    await waitFor(() => expect(trustAPI.setDelivery).toHaveBeenCalledWith("b1", { options: ["pickup"] }));
+  });
+
+  it("buyer: a shop with a known rider shows the rider, says Brief has not checked them, and says where the fee sits", async () => {
+    trustAPI.branch.mockResolvedValue({ data: { branch: shop({ delivery: { options: ["pickup", "known_rider"], rider,
+      fee_note: "", rider_checked_by_brief: false } }), reputation: noRep } });
+    trustAPI.reviews.mockResolvedValue({ data: { reviews: [] } });
+    render(<MemoryRouter initialEntries={["/trust/branches/b1"]}><Routes>
+      <Route path="/trust/branches/:id" element={<TrustBranchPage />} /></Routes></MemoryRouter>);
+    const line = await screen.findByTestId("delivery-line");
+    expect(line).toHaveTextContent("Delivery: Collect at the shop · Rider you know, in Kisii town: Otieno, +254712345678");
+    expect(line).toHaveTextContent("Brief has not checked this rider.");
+    expect(line).toHaveTextContent("The rider and the buyer agree the fee between them.");
+  });
+
+  it("buyer: a shop with pick-up only shows no rider", async () => {
+    trustAPI.branch.mockResolvedValue({ data: { branch: shop({ delivery: { options: ["pickup"], rider: null } }), reputation: noRep } });
+    trustAPI.reviews.mockResolvedValue({ data: { reviews: [] } });
+    render(<MemoryRouter initialEntries={["/trust/branches/b1"]}><Routes>
+      <Route path="/trust/branches/:id" element={<TrustBranchPage />} /></Routes></MemoryRouter>);
+    const line = await screen.findByTestId("delivery-line");
+    expect(line).toHaveTextContent("Delivery: Collect at the shop");
+    expect(line).not.toHaveTextContent("Brief has not checked");
+  });
+
+  it("in Kiswahili the buyer line is in Kiswahili", async () => {
+    localStorage.setItem("brief-lang", "sw");
+    trustAPI.branch.mockResolvedValue({ data: { branch: shop({ delivery: { options: ["pickup"], rider: null } }), reputation: noRep } });
+    trustAPI.reviews.mockResolvedValue({ data: { reviews: [] } });
+    render(<MemoryRouter initialEntries={["/trust/branches/b1"]}><Routes>
+      <Route path="/trust/branches/:id" element={<TrustBranchPage />} /></Routes></MemoryRouter>);
+    expect(await screen.findByTestId("delivery-line")).toHaveTextContent("Usafirishaji: Chukua dukani");
+    localStorage.removeItem("brief-lang");
   });
 });

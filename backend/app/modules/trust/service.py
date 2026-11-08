@@ -167,6 +167,81 @@ async def my_branches(db: AsyncSession, owner: Vendor) -> list[TrustBranch]:
     return list(rows.scalars().all())
 
 
+# ── delivery ──────────────────────────────────────────────────────────────────
+
+#: Pick-up is always available. A rider the buyer already knows is the only other option for now.
+DELIVERY_OPTIONS = ("pickup", "known_rider")
+#: Dialling prefix used to read a local number such as 0712 345 678 for each country.
+PHONE_PREFIX = {"KE": "254", "ET": "251", "UG": "256"}
+
+
+def normalise_phone(raw: str, country: str) -> str:
+    """Return +<country digits> for a Kenyan, Ethiopian or Ugandan mobile number, or refuse it."""
+    digits = "".join(ch for ch in (raw or "") if ch.isdigit())
+    prefix = PHONE_PREFIX[country]
+    if digits.startswith("0") and len(digits) == 10:
+        digits = prefix + digits[1:]
+    if not (digits.startswith(prefix) and 11 <= len(digits) <= 13):
+        raise TrustError(f"Enter the rider's phone number with the {country} code, or a local number.", status=422)
+    return "+" + digits
+
+
+def delivery_out(branch: TrustBranch) -> dict:
+    """What a buyer sees. The fee is never here: it is agreed between buyer and rider."""
+    options = list(branch.delivery_options or ["pickup"])
+    rider = "known_rider" in options
+    return {
+        "options": options,
+        "rider": {"area": branch.delivery_area, "name": branch.rider_name, "phone": branch.rider_phone}
+        if rider else None,
+        "fee_note": "The rider agrees the fee with you. Brief does not set or hold it.",
+        "rider_checked_by_brief": False,
+    }
+
+
+async def set_delivery(db: AsyncSession, owner: Vendor, branch_id: uuid.UUID, *, options: list[str],
+                       area: Optional[str], rider_name: Optional[str],
+                       rider_phone: Optional[str]) -> TrustBranch:
+    """Only the owner changes how a shop delivers. Every change is written to the audit log."""
+    branch = await get_branch(db, branch_id)
+    if branch.vendor_id != owner.id:
+        raise TrustError("Only the owner of this shop can change how it delivers.", status=403)
+    chosen = sorted(set(options or []))
+    if not chosen:
+        raise TrustError("Choose at least one way to deliver. Pick-up at the shop is always there.", status=422)
+    unknown = [o for o in chosen if o not in DELIVERY_OPTIONS]
+    if unknown:
+        raise TrustError("That delivery option is not offered on Brief.", status=422)
+    before = {"options": list(branch.delivery_options or ["pickup"]), "area": branch.delivery_area,
+              "rider_name": branch.rider_name, "rider_phone_last3": (branch.rider_phone or "")[-3:]}
+    # Pick-up is always kept, so a shop can always be found at its own door.
+    final = sorted(set(chosen) | {"pickup"})
+    if "known_rider" in final:
+        area = (area or "").strip()
+        rider_name = (rider_name or "").strip()
+        if not 3 <= len(area) <= 120:
+            raise TrustError("Say where the rider works, such as the town or estate (3 to 120 characters).", status=422)
+        if not 2 <= len(rider_name) <= 60:
+            raise TrustError("Enter the rider's name (2 to 60 characters).", status=422)
+        phone = normalise_phone(rider_phone or "", branch.country_code)
+        branch.delivery_options = final
+        branch.delivery_area = area
+        branch.rider_name = rider_name
+        branch.rider_phone = phone
+    else:
+        branch.delivery_options = final
+        branch.delivery_area = None
+        branch.rider_name = None
+        branch.rider_phone = None
+    branch.updated_at = now()
+    await db.flush()
+    await audit(db, owner, "delivery_updated", "business_branch", branch.id, branch.country_code,
+                {"before": before, "after": {"options": final, "area": branch.delivery_area,
+                                             "rider_name": branch.rider_name,
+                                             "rider_phone_last3": (branch.rider_phone or "")[-3:]}})
+    return branch
+
+
 async def public_branches(db: AsyncSession, *, country: Optional[str] = None, lat: Optional[float] = None,
                           lng: Optional[float] = None, radius_m: int = 5000, limit: int = 50) -> list[TrustBranch]:
     q = select(TrustBranch).where(TrustBranch.status == "active")

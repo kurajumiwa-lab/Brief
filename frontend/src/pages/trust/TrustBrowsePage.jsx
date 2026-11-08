@@ -4,6 +4,7 @@ import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import { PageSpinner } from "@/components/ui/Spinner";
 import { trustAPI, apiError } from "@/lib/api";
+import { LANGS, setLang, t, useLang } from "@/lib/i18n";
 import { COUNTRIES, countryName, scoreText, STATUS_LABEL } from "./trustCore";
 
 /**
@@ -11,6 +12,7 @@ import { COUNTRIES, countryName, scoreText, STATUS_LABEL } from "./trustCore";
  * Open to everyone. Scores come from reviews; a shop with no reviews says so.
  */
 export default function TrustBrowsePage() {
+  const lang = useLang();
   const [country, setCountry] = useState("");
   const [branches, setBranches] = useState(null);
   const [error, setError] = useState(null);
@@ -27,17 +29,32 @@ export default function TrustBrowsePage() {
   return (
     <div className="mx-auto max-w-5xl space-y-4 p-4 pb-16">
       <header className="space-y-1">
-        <h1 className="text-xl font-semibold text-ink-1">Shops you can trust</h1>
-        <p className="text-sm text-ink-3">
-          Real shops in Kenya, Ethiopia and Uganda. Brief checks each one before it appears here.
-        </p>
+        <div className="flex items-start justify-between gap-3">
+          <h1 className="text-xl font-semibold text-ink-1">{t("browse.title", lang)}</h1>
+          <div role="group" aria-label={t("browse.language", lang)} className="flex shrink-0 gap-1 text-xs">
+            {Object.entries(LANGS).map(([code, label]) => (
+              <button
+                key={code}
+                type="button"
+                aria-pressed={lang === code}
+                onClick={() => setLang(code)}
+                className={`min-h-[32px] rounded-full border px-3 ${
+                  lang === code ? "border-brand-600 bg-brand-50 font-semibold text-brand-700" : "border-edge-2 text-ink-2"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <p className="text-sm text-ink-3">{t("browse.intro", lang)}</p>
         <p className="text-xs text-ink-3">
-          <Link to="/trust/me" className="font-medium text-brand-700 underline">Add your shop or see your points</Link>
+          <Link to="/trust/me" className="font-medium text-brand-700 underline">{t("browse.listLink", lang)}</Link>
         </p>
       </header>
 
-      <div role="group" aria-label="Choose a country" className="flex flex-wrap gap-2">
-        {[{ code: "", name: "All" }, ...COUNTRIES].map((c) => (
+      <div role="group" aria-label={t("browse.chooseCountry", lang)} className="flex flex-wrap gap-2">
+        {[{ code: "", name: t("browse.all", lang) }, ...COUNTRIES].map((c) => (
           <button
             key={c.code || "all"}
             type="button"

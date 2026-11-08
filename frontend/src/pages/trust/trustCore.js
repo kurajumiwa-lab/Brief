@@ -1,3 +1,5 @@
+import { t } from "@/lib/i18n";
+
 /**
  * MarketTrust shared words and formatting. Plain language only: no jargon on screen.
  * Points are not money, and every screen that shows them must say so.
@@ -8,6 +10,21 @@ export const COUNTRIES = [
   { code: "ET", name: "Ethiopia", currency: "ETB" },
   { code: "UG", name: "Uganda", currency: "UGX" },
 ];
+
+/** Listing is free. Brief checks each shop before it goes public. Say this wherever a shop signs up. */
+export const FREE_LISTING_NOTE = t("listing.free", "en");
+
+/**
+ * What a public "Checked by Brief" badge means, from the level the shop was given on approval.
+ * An active shop always has level 2 or higher, because every approval uses a check method.
+ *   3 = storefront photo or in-person visit (METHOD_LEVEL in backend/app/modules/trust/service.py)
+ *   2 = business papers or confirmation from other businesses
+ */
+export function checkedByText(level, lang = "en") {
+  if (level >= 3) return t("shop.checkedByPhoto", lang);
+  if (level === 2) return t("shop.checkedByPapers", lang);
+  return t("shop.checkedByDefault", lang);
+}
 
 export const POINTS_NOTE = "Points are rewards, not money. They cannot be cashed out, withdrawn or sent to anyone.";
 
