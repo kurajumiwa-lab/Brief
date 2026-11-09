@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import BookPage from "@/pages/calendar/BookPage";
@@ -82,6 +82,9 @@ describe("BookPage", () => {
 describe("CalendarPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Pin "today" inside the mocked week (2–8 Nov 2026) so the test does not depend on the real date.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(2026, 10, 4, 12, 0, 0));
     scheduleAPI.week.mockResolvedValue({
       data: {
         start: "2026-11-02T00:00:00", end: "2026-11-09T00:00:00", conflicts: [],
@@ -89,6 +92,10 @@ describe("CalendarPage", () => {
           ends_at: "2026-11-04T10:00:00", status: "planned", location: null, editable: true }],
       },
     });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("shows the week, its plans, and the three tabs", async () => {
