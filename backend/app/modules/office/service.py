@@ -32,7 +32,8 @@ class OfficeError(Exception):
 
 
 def _now() -> datetime:
-    return datetime.utcnow()
+    """Timezone-aware UTC. Every stored timestamp is timestamptz."""
+    return datetime.now(timezone.utc)
 
 
 def hash_token(token: str) -> str:
@@ -50,10 +51,11 @@ def _text(value: Optional[str], low: int, high: int, what: str, *, required: boo
     return v
 
 
-def _naive_utc(dt: datetime) -> datetime:
+def _as_utc(dt: datetime) -> datetime:
+    """A naive datetime is taken as UTC (what the calendar page sends); an aware one is converted."""
     if dt.tzinfo is None:
-        return dt
-    return dt.astimezone(timezone.utc).replace(tzinfo=None)
+        return dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
 
 
 async def get_office(db: AsyncSession, office_id: uuid.UUID) -> Office:
@@ -210,7 +212,8 @@ async def accept_link(db: AsyncSession, token: str, display_name: str) -> dict:
         .where(OfficeMember.id == m.id, OfficeMember.invite_token_hash == h,
                OfficeMember.status == "invited", OfficeMember.vendor_id.is_(None),
                or_(OfficeMember.invite_expires_at.is_(None), OfficeMember.invite_expires_at >= now))
-        .values(display_name=name, status="active", responded_at=now, invite_token_hash=None)
+        .values(display_name=name, status="active", responded_at=now,
+                invite_token_hash=None, invite_expires_at=None)
         .returning(OfficeMember.office_id, OfficeMember.role)
     )
     row = res.first()
@@ -227,6 +230,7 @@ async def respond_invite(db: AsyncSession, vendor: Vendor, office_id: uuid.UUID,
         raise OfficeError("You have no pending invite to this office.", 404)
     m.status = "active" if accept else "removed"
     m.responded_at = _now()
+    m.invite_token_hash, m.invite_expires_at = None, None   # no credential survives an answer
     await db.flush()
     await audit(db, vendor, "invite_accepted" if accept else "invite_declined", "office", office_id, None, {})
     return {"office_id": str(office_id), "status": m.status}
@@ -239,13 +243,12 @@ async def remove_member(db: AsyncSession, actor: Vendor, office_id: uuid.UUID, m
     if m is None or m.office_id != office_id or m.status == "removed":
         raise OfficeError("That member was not found.", 404)
     if m.role == "owner":
-        owners = (await db.execute(select(OfficeMember).where(
-            OfficeMember.office_id == office_id, OfficeMember.role == "owner",
-            OfficeMember.status == "active"))).scalars().all()
-        if len(owners) <= 1:
-            raise OfficeError("An office must keep at least one owner.", 409)
+        # One active owner per office is a database rule. Ownership transfer is not built yet,
+        # so the owner row can't be removed at all.
+        raise OfficeError("The owner cannot be removed from their own office.", 409)
     m.status = "removed"
     m.responded_at = _now()
+    m.invite_token_hash, m.invite_expires_at = None, None   # a removed member keeps no credential
     await db.flush()
     await audit(db, actor, "member_removed", "office", office_id, None, {"role": m.role})
 
@@ -256,7 +259,7 @@ async def add_event(db: AsyncSession, actor: Vendor, office_id: uuid.UUID, *, ac
                     starts_at: datetime, ends_at: datetime, location_text: Optional[str]) -> OfficeEvent:
     await get_office(db, office_id)
     await require_active(db, office_id, actor, WRITE_ROLES)
-    s, e = _naive_utc(starts_at), _naive_utc(ends_at)
+    s, e = _as_utc(starts_at), _as_utc(ends_at)
     if e <= s:
         raise OfficeError("The event must end after it starts.", 422)
     ev = OfficeEvent(office_id=office_id, activity=_text(activity, 2, 80, "the activity"),
@@ -283,7 +286,7 @@ def ics_for(office: Office, events: list[OfficeEvent]) -> str:
         return (s or "").replace("\\", "\\\\").replace(";", "\\;").replace(",", "\\,").replace("\n", "\\n")
 
     def stamp(dt: datetime) -> str:
-        return dt.strftime("%Y%m%dT%H%M%SZ")
+        return _as_utc(dt).strftime("%Y%m%dT%H%M%SZ")
 
     lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Brief//Home office//EN", "CALSCALE:GREGORIAN"]
     for ev in events:

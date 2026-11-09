@@ -12,13 +12,14 @@ What these prove:
 """
 
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
-from sqlalchemy import select, update
+from sqlalchemy import select, text, update
+from sqlalchemy.exc import IntegrityError
 
 from app.database import async_session
-from app.modules.office.models import OfficeMember
+from app.modules.office.models import OfficeEvent, OfficeMember
 from app.modules.office.service import hash_token
 from tests.test_v35_offers import _register  # noqa: F401 (helper reuse)
 
@@ -181,7 +182,7 @@ async def test_a_wrong_or_expired_link_is_refused(client):
                                json={"role": "partner", "function_label": "rider"})).json()["token"]
     async with async_session() as db:
         await db.execute(update(OfficeMember).where(OfficeMember.invite_token_hash == hash_token(token))
-                         .values(invite_expires_at=datetime.utcnow() - timedelta(minutes=1)))
+                         .values(invite_expires_at=datetime.now(timezone.utc) - timedelta(minutes=1)))
         await db.commit()
     assert (await client.post("/api/office/links/accept", json={"token": token, "display_name": "Late"})).status_code == 410
 
@@ -244,3 +245,147 @@ async def test_only_the_exact_office_routes_are_open_without_sign_in(client):
     assert (await client.post("/api/office/links/other", json={})).status_code == 401
     # the public read is GET only
     assert (await client.post(f"/api/office/public/offices/{oid}", json={})).status_code == 401
+
+
+# ── integrity (review D1–D9): enforced by the database, not only by the service ──
+
+async def _owner_row(oid):
+    async with async_session() as db:
+        rows = (await db.execute(select(OfficeMember).where(
+            OfficeMember.office_id == uuid.UUID(oid), OfficeMember.role == "owner"))).scalars().all()
+        return rows
+
+
+async def test_an_office_is_created_with_its_owner_as_the_one_active_owner(client):
+    _, owner, vid = await _register(client, "ownerrow")
+    oid = await _office(client, owner)
+    rows = await _owner_row(oid)
+    assert len(rows) == 1 and rows[0].status == "active" and str(rows[0].vendor_id) == vid
+
+
+async def test_the_owner_cannot_be_removed_and_a_second_owner_is_refused_by_the_database(client):
+    _, owner, _ = await _register(client, "ownerlock")
+    oid = await _office(client, owner)
+    owner_member = (await _owner_row(oid))[0]
+    r = await client.delete(f"/api/office/offices/{oid}/members/{owner_member.id}", headers=owner)
+    assert r.status_code == 409
+    async with async_session() as db:
+        db.add(OfficeMember(office_id=uuid.UUID(oid), display_name="Second", role="owner", status="active",
+                            created_at=datetime.now(timezone.utc)))
+        with pytest.raises(IntegrityError):
+            await db.flush()
+        await db.rollback()
+
+
+async def test_a_member_has_exactly_one_identity_or_is_a_pending_or_revoked_link(client):
+    _, owner, owner_vid = await _register(client, "ident")
+    oid = uuid.UUID(await _office(client, owner))
+    bad_rows = [
+        # both identities at once
+        dict(vendor_id=uuid.UUID(owner_vid), display_name="x", status="active"),
+        # no identity and active (nobody is a member)
+        dict(vendor_id=None, display_name=None, status="active"),
+        # a credential on an active member
+        dict(vendor_id=None, display_name="Ann", status="active",
+             invite_token_hash="a" * 64, invite_expires_at=datetime.now(timezone.utc)),
+        # blank display name
+        dict(vendor_id=None, display_name="   ", status="active"),
+        # owner must be a registered account
+        dict(vendor_id=None, display_name="Boss", role="owner", status="active"),
+    ]
+    for extra in bad_rows:
+        async with async_session() as db:
+            db.add(OfficeMember(office_id=oid, role=extra.pop("role", "staff"), created_at=datetime.now(timezone.utc),
+                                **extra))
+            with pytest.raises(IntegrityError):
+                await db.flush()
+            await db.rollback()
+
+
+async def test_an_invite_credential_needs_a_pending_status_and_an_expiry(client):
+    _, owner, _ = await _register(client, "credshape")
+    oid = uuid.UUID(await _office(client, owner))
+    async with async_session() as db:
+        db.add(OfficeMember(office_id=oid, role="staff", status="invited", invite_token_hash="b" * 64,
+                            created_at=datetime.now(timezone.utc)))            # no expiry
+        with pytest.raises(IntegrityError):
+            await db.flush()
+        await db.rollback()
+
+
+async def test_accepting_a_link_clears_its_credential_and_expiry(client):
+    _, owner, _ = await _register(client, "clearacc")
+    oid = await _office(client, owner)
+    token = (await client.post(f"/api/office/offices/{oid}/invites/link", headers=owner,
+                               json={"role": "member", "function_label": "Home visits"})).json()["token"]
+    assert (await client.post("/api/office/links/accept",
+                              json={"token": token, "display_name": "Wanjiru"})).status_code == 201
+    async with async_session() as db:
+        m = (await db.execute(select(OfficeMember).where(
+            OfficeMember.office_id == uuid.UUID(oid), OfficeMember.display_name == "Wanjiru"))).scalar_one()
+        assert m.status == "active" and m.invite_token_hash is None and m.invite_expires_at is None
+
+
+async def test_removing_a_pending_link_revokes_it_and_it_can_no_longer_be_used(client):
+    _, owner, _ = await _register(client, "revoke")
+    oid = await _office(client, owner)
+    token = (await client.post(f"/api/office/offices/{oid}/invites/link", headers=owner,
+                               json={"role": "member", "function_label": "Delivery"})).json()["token"]
+    async with async_session() as db:
+        pending = (await db.execute(select(OfficeMember).where(
+            OfficeMember.office_id == uuid.UUID(oid), OfficeMember.invite_token_hash == hash_token(token)))).scalar_one()
+        pending_id = str(pending.id)
+    assert (await client.delete(f"/api/office/offices/{oid}/members/{pending_id}", headers=owner)).status_code == 204
+    async with async_session() as db:
+        m = (await db.get(OfficeMember, uuid.UUID(pending_id)))
+        assert m.status == "removed" and m.invite_token_hash is None and m.invite_expires_at is None
+    r = await client.post("/api/office/links/accept", json={"token": token, "display_name": "Too late"})
+    assert r.status_code == 404
+
+
+async def test_text_fields_cannot_be_blank_in_the_database(client):
+    _, owner, _ = await _register(client, "blanktext")
+    oid = uuid.UUID(await _office(client, owner))
+    async with async_session() as db:
+        db.add(OfficeEvent(office_id=oid, activity="   ", title="Visits", starts_at=datetime(2026, 11, 14, 9),
+                           ends_at=datetime(2026, 11, 14, 10), created_at=datetime.now(timezone.utc)))
+        with pytest.raises(IntegrityError):
+            await db.flush()
+        await db.rollback()
+
+
+async def test_timestamps_are_timezone_aware_in_the_database(client):
+    _, owner, _ = await _register(client, "tzcols")
+    await _office(client, owner)
+    async with async_session() as db:
+        rows = (await db.execute(text(
+            "SELECT table_name, column_name, data_type FROM information_schema.columns "
+            "WHERE table_name IN ('offices','office_members','office_events') "
+            "AND data_type LIKE 'timestamp%'"))).all()
+    assert rows and all(r.data_type == "timestamp with time zone" for r in rows)
+
+
+async def test_an_offset_time_is_exported_as_the_same_instant_in_utc(client):
+    _, owner, _ = await _register(client, "tzics")
+    oid = await _office(client, owner)
+    ev = {"activity": "Haircut", "title": "Morning slot", "location_text": None,
+          "starts_at": "2026-11-14T12:00:00+03:00", "ends_at": "2026-11-14T13:00:00+03:00"}
+    r = await client.post(f"/api/office/offices/{oid}/events", headers=owner, json=ev)
+    assert r.status_code == 201, r.text
+    assert r.json()["starts_at"].startswith("2026-11-14T09:00:00")  # 12:00 +03:00 is 09:00 UTC
+    ics = (await client.get(f"/api/office/offices/{oid}/calendar.ics", headers=owner)).text
+    assert "DTSTART:20261114T090000Z" in ics and "DTEND:20261114T100000Z" in ics
+
+
+async def test_the_database_has_the_integrity_rules_under_their_names(client):
+    """The ORM tables carry the same named rules as migration 0040 (the migration itself is tested separately)."""
+    async with async_session() as db:
+        names = {r[0] for r in (await db.execute(text(
+            "SELECT conname FROM pg_constraint WHERE conrelid IN ('office_members'::regclass, 'offices'::regclass,"
+            " 'office_events'::regclass)"))).all()}
+        idx = {r[0] for r in (await db.execute(text(
+            "SELECT indexname FROM pg_indexes WHERE tablename IN ('office_members','offices','office_events')"))).all()}
+    for n in ("ck_office_members_identity_present", "ck_office_members_owner_is_account",
+              "ck_office_members_no_stale_credentials", "ck_offices_text_nonblank", "ck_office_events_text_nonblank"):
+        assert n in names, n
+    assert "uq_office_one_active_owner" in idx
