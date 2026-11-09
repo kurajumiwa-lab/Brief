@@ -204,6 +204,7 @@ export const SECTION_GROUPS = [
       { to: "/membership", label: "Membership", icon: UserRound },
       { to: "/logistics", label: "Group orders", icon: Truck },
       { to: "/calendar", label: "Calendar", icon: CalendarDays },
+      { to: "/office", label: "Home office", icon: Building2 },
       { to: "/today", label: "Today", icon: ListChecks },
       { to: "/learn", label: "Learn", icon: UserRound },
       { to: "/templates", label: "Free templates", icon: FileCheck },
