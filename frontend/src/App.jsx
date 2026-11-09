@@ -27,6 +27,8 @@ import TrustBranchPage from "@/pages/trust/TrustBranchPage";
 import TrustMePage from "@/pages/trust/TrustMePage";
 import TrustStaffPage from "@/pages/trust/TrustStaffPage";
 import TrustMyReviewsPage from "@/pages/trust/TrustMyReviewsPage";
+import OfficeJoinPage from "@/pages/office/OfficeJoinPage";
+import OfficePage from "@/pages/office/OfficePage";
 import LearnPage from "@/pages/learn/LearnPage";
 import LearnDetailPage from "@/pages/learn/LearnDetailPage";
 import LearnNewPage from "@/pages/learn/LearnNewPage";
@@ -182,6 +184,8 @@ function AppRoutes() {
       <Route path="/trust/branches/:id" element={<TrustBranchPage />} />
       {/* A customer's own review history on this device. No account needed. */}
       <Route path="/trust/my-reviews" element={<TrustMyReviewsPage />} />
+      {/* Home office: a single-use invite link works without an account. */}
+      <Route path="/office/join/:token" element={<OfficeJoinPage />} />
       <Route path="/learn" element={<LearnPage />} />
       <Route path="/learn/:id" element={<LearnDetailPage />} />
       <Route path="/templates" element={<BlueprintsPage />} />
@@ -219,6 +223,7 @@ function AppRoutes() {
           <Route path="/logistics/:id" element={<LogisticsOrderPage />} />
           {/* Calendar: my week, appointments and a booking page for clients */}
           <Route path="/calendar" element={<CalendarPage />} />
+          <Route path="/office" element={<OfficePage />} />
           <Route path="/learn/new" element={<LearnNewPage />} />
           <Route path="/today" element={<TodayPage />} />
           <Route path="/book/:vendorId" element={<BookPage />} />

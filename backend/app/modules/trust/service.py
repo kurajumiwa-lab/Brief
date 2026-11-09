@@ -187,12 +187,16 @@ def normalise_phone(raw: str, country: str) -> str:
 
 
 def delivery_out(branch: TrustBranch) -> dict:
-    """What a buyer sees. The fee is never here: it is agreed between buyer and rider."""
+    """What a buyer sees. The fee is never here: it is agreed between buyer and rider.
+
+    A rider's personal number is never in this public payload. There is no rider consent
+    flag yet, so no public contact is possible until one exists (next milestone).
+    """
     options = list(branch.delivery_options or ["pickup"])
     rider = "known_rider" in options
     return {
         "options": options,
-        "rider": {"area": branch.delivery_area, "name": branch.rider_name, "phone": branch.rider_phone}
+        "rider": {"area": branch.delivery_area, "name": branch.rider_name, "phone": None}
         if rider else None,
         "fee_note": "The rider agrees the fee with you. Brief does not set or hold it.",
         "rider_checked_by_brief": False,

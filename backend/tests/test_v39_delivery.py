@@ -64,7 +64,9 @@ async def test_owner_saves_a_known_rider_and_the_buyer_sees_it_on_an_active_shop
     assert "not checked" in r.json()["detail"].lower()
     pub = (await client.get(f"/api/trust/public/branches/{bid}")).json()["branch"]["delivery"]
     assert set(pub["options"]) == {"pickup", "known_rider"}
-    assert pub["rider"] == {"area": "Kisii town, Nyanchwa", "name": "Otieno", "phone": "+254712345678"}
+    # the rider's personal number is never public: no consent flag exists yet
+    assert pub["rider"] == {"area": "Kisii town, Nyanchwa", "name": "Otieno", "phone": None}
+    assert "254712345678" not in str(pub)
     assert pub["rider_checked_by_brief"] is False
     text = str(pub).lower()
     assert "fee" in pub["fee_note"].lower() and "fee_kes" not in text and "price" not in text

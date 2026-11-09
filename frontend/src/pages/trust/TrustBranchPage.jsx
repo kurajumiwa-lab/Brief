@@ -128,7 +128,7 @@ export default function TrustBranchPage() {
             <p className="text-sm text-ink-2">
               {t("delivery.shopLine", lang)}: {t("delivery.shopPickup", lang)}
               {branch.delivery.rider &&
-                ` · ${t("delivery.shopRider", lang).replace("{area}", branch.delivery.rider.area)}: ${branch.delivery.rider.name}, ${branch.delivery.rider.phone}`}
+                ` · ${t("delivery.shopRider", lang).replace("{area}", branch.delivery.rider.area)}: ${branch.delivery.rider.name}`}
             </p>
             {branch.delivery.rider && (
               <p className="text-xs text-ink-3">{t("delivery.notChecked", lang)} {t("delivery.feeNote", lang)}</p>

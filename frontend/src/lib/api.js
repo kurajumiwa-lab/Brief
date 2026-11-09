@@ -979,3 +979,19 @@ export const trustAPI = {
   flaggedReviews: () => api.get("/trust/admin/reviews/flagged"),
   moderateReview: (id, data) => api.post(`/trust/admin/reviews/${id}/moderation`, data),
 };
+
+// ── Home office: a solo profile first, then team members by link or invite ──
+// Nobody is added without agreeing. Links are single-use and expire in seven days.
+export const officeAPI = {
+  mine: () => api.get("/office/offices/mine"),
+  create: (body) => api.post("/office/offices", body),
+  detail: (id) => api.get(`/office/offices/${id}`),
+  inviteAccount: (id, body) => api.post(`/office/offices/${id}/invites/account`, body),
+  inviteLink: (id, body) => api.post(`/office/offices/${id}/invites/link`, body),
+  respond: (id, accept) => api.post(`/office/offices/${id}/invites/respond`, { accept }),
+  removeMember: (id, memberId) => api.delete(`/office/offices/${id}/members/${memberId}`),
+  addEvent: (id, body) => api.post(`/office/offices/${id}/events`, body),
+  calendar: (id) => api.get(`/office/offices/${id}/calendar.ics`, { responseType: "blob" }),
+  publicProfile: (id) => api.get(`/office/public/offices/${id}`),
+  acceptLink: (body) => api.post("/office/links/accept", body),
+};

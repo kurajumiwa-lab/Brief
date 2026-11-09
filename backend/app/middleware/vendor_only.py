@@ -22,6 +22,8 @@ OPEN_PREFIXES = ("/api/auth/", "/api/health", "/api/metrics", "/api/payments/web
                  "/api/social/accounts",
                  # Customer reviews: no login. Each route checks its own device key and till code.
                  "/api/trust/customer")
+# Home office: a single-use invite link is the proof, so the person needs no account. Only
+# the exact POST in OFFICE_OPEN_POST is open; every other /api/office route needs a signed-in member.
 
 
 # Read-only public browsing (no account): the open offer list, the knowledge
@@ -29,15 +31,18 @@ OPEN_PREFIXES = ("/api/auth/", "/api/health", "/api/metrics", "/api/payments/web
 # under these prefixes that is personal or changes data still depends on
 # `get_current_vendor`, so it answers 401 without a token at the route level too.
 PUBLIC_READ_PREFIXES = ("/api/offers/public", "/api/knowledge/sectors", "/api/knowledge/listings",
-                        "/api/blueprints", "/api/trust/public")
+                        "/api/blueprints", "/api/trust/public", "/api/office/public/")
+
+OFFICE_OPEN_POST = ("/api/office/links/accept",)
 
 
 class VendorOnlyMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         path = request.url.path
         public_read = request.method == "GET" and path.startswith(PUBLIC_READ_PREFIXES)
+        office_link = request.method == "POST" and path in OFFICE_OPEN_POST
         if path.startswith("/api/") and not path.startswith(OPEN_PREFIXES) and not public_read \
-                and request.method != "OPTIONS":
+                and not office_link and request.method != "OPTIONS":
             auth = request.headers.get("authorization", "")
             # WebSocket upgrades authenticate with ?token= inside the handler.
             is_ws = request.headers.get("upgrade", "").lower() == "websocket"

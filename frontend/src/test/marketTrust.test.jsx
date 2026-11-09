@@ -373,7 +373,8 @@ describe("how a shop delivers", () => {
     render(<MemoryRouter initialEntries={["/trust/branches/b1"]}><Routes>
       <Route path="/trust/branches/:id" element={<TrustBranchPage />} /></Routes></MemoryRouter>);
     const line = await screen.findByTestId("delivery-line");
-    expect(line).toHaveTextContent("Delivery: Collect at the shop · Rider you know, in Kisii town: Otieno, +254712345678");
+    expect(line).toHaveTextContent("Delivery: Collect at the shop · Rider you know, in Kisii town: Otieno");
+    expect(line.textContent).not.toMatch(/254712345678/);
     expect(line).toHaveTextContent("Brief has not checked this rider.");
     expect(line).toHaveTextContent("The rider and the buyer agree the fee between them.");
   });
