@@ -263,7 +263,7 @@ def stock_out(i: StockItem, v: Vendor) -> StockItemOut:
         id=str(i.id),
         vendor_id=str(v.id),
         vendor_handle=_text(v.vendor_handle),
-        vendor_business=_text(v.business_name, "A vendor"),
+        vendor_business=_text(v.business_name, "A business"),
         name=_text(i.name, "Stock item"),
         sku=i.sku,
         category=i.category,

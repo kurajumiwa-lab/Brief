@@ -94,7 +94,7 @@ async def market_news(
             "data": {
                 "name": it.name,
                 "is_new": is_new,
-                "vendor": v.business_name if v else "A vendor",
+                "vendor": v.business_name if v else "A business",
                 "vendor_handle": v.vendor_handle if v else None,
                 "price": display,
                 "price_is": price_is,

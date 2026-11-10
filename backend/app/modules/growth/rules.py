@@ -83,7 +83,7 @@ PLAN_CATALOG: dict[str, PlanSpec] = {
         name="Growth",
         price_kes_monthly=299,
         price_kes_annual=None,  # annual billing not offered yet
-        audience="Vendors who want analytics to grow their trade",
+        audience="Businesses who want analytics to grow their trade",
         max_seats=1,
         max_watches=25,
         included_claim_reviews_per_quarter=0,
@@ -101,7 +101,7 @@ PLAN_CATALOG: dict[str, PlanSpec] = {
         name="Business Pro",
         price_kes_monthly=699,
         price_kes_annual=None,  # annual billing not offered yet
-        audience="Vendors who run a team and need broadcast tools",
+        audience="Businesses who run a team and need broadcast tools",
         max_seats=3,
         max_watches=50,
         included_claim_reviews_per_quarter=2,
@@ -221,7 +221,7 @@ HARD_CODED_RULES: tuple[dict, ...] = (
         "title": "Server-side entitlement checks for seats, watches and features",
         "rule": (
             "Seat invitations and standing RequestWatch limits are enforced on the server against "
-            "the vendor's active plan entitlements."
+            "the business's active plan entitlements."
         ),
         "enforced_in": "app/modules/growth/service.py · app/modules/trade/service.py",
     },

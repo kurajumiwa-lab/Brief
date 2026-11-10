@@ -363,4 +363,4 @@ async def group_creates_vendor_list(
                     vendor_list_id=vlist.id, created_by=vendor.id, participant_count=0)
     db.add(room)
     await db.commit()
-    return {"message": f"Vendor list '{vlist.name}' created by group", "list_id": str(vlist.id)}
+    return {"message": f"Business list '{vlist.name}' created by group", "list_id": str(vlist.id)}

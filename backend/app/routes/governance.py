@@ -756,7 +756,7 @@ async def record_realized_revenue(data: RevenueInput, staff: Vendor = Depends(re
 async def record_verified_benefit_event(data: BenefitEventInput, staff: Vendor = Depends(require_governance_ops("admin", "clerk")), db: AsyncSession = Depends(get_db)):
     recipient = await db.get(Vendor, data.vendor_id)
     if not recipient:
-        raise HTTPException(404, "Vendor not found")
+        raise HTTPException(404, "Business not found")
     event_at = _utc_naive(data.event_at)
     if event_at > datetime.utcnow() + timedelta(minutes=5):
         raise HTTPException(400, "Evidence date cannot be in the future")

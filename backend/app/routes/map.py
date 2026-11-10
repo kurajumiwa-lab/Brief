@@ -390,7 +390,7 @@ async def vendor_detail(
     stock list is a Stock Room screen, not a bottom sheet."""
     subject = await db.get(Vendor, vendor_id)
     if not subject:
-        raise HTTPException(404, "Vendor not found")
+        raise HTTPException(404, "Business not found")
     row = (await db.execute(text("""
         SELECT count(*) FILTER (WHERE visible_to_network)                        AS lines,
                count(*) FILTER (WHERE visible_to_network AND quantity_available > 0) AS in_stock,

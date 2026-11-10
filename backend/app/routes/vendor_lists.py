@@ -128,7 +128,7 @@ async def create_vendor_list(
     await db.execute(chat_room_participants.insert().values(room_id=room.id, vendor_id=vendor.id))
     await db.commit()
     return {
-        "message": f"Vendor list '{vlist.name}' created",
+        "message": f"Business list '{vlist.name}' created",
         "list_id": str(vlist.id),
         "max_vendors": vlist.max_vendors,
         "chat_room_id": str(room.id),
@@ -208,7 +208,7 @@ async def list_members(
     """Members of a list. Pending registrations are visible only to whoever runs it."""
     vlist = await db.get(VendorList, list_id)
     if not vlist:
-        raise HTTPException(404, "Vendor list not found")
+        raise HTTPException(404, "Business list not found")
     manager = await _can_manage(db, vendor, vlist)
     query = (
         select(VendorListMembership, Vendor)
@@ -237,11 +237,11 @@ async def register_for_vendor_list(
     """Register to join a vendor list"""
     vlist = await db.get(VendorList, list_id, with_for_update=True)
     if not vlist:
-        raise HTTPException(404, "Vendor list not found")
+        raise HTTPException(404, "Business list not found")
     if not vlist.is_open:
-        raise HTTPException(400, "This vendor list is not accepting new vendors")
+        raise HTTPException(400, "This business list is not accepting new businesses")
     if vlist.member_count >= vlist.max_vendors:
-        raise HTTPException(400, "Vendor list is full")
+        raise HTTPException(400, "Business list is full")
 
     existing = (await db.execute(select(VendorListMembership).where(
         VendorListMembership.vendor_id == vendor.id, VendorListMembership.vendor_list_id == list_id,
@@ -253,7 +253,7 @@ async def register_for_vendor_list(
     criteria = vlist.entry_criteria or {}
     wanted = [c.lower() for c in criteria.get("business_categories", [])]
     if wanted and not ({c.lower() for c in (vendor.business_categories or [])} & set(wanted)):
-        raise HTTPException(400, f"This list is for vendors in: {', '.join(criteria['business_categories'])}")
+        raise HTTPException(400, f"This list is for businesses in: {', '.join(criteria['business_categories'])}")
 
     status = "pending" if vlist.requires_approval else "approved"
     if existing:
@@ -305,11 +305,11 @@ async def approve_vendor(
     """Patron (or creating-group admin) approves a vendor's registration"""
     vlist = await db.get(VendorList, list_id, with_for_update=True)
     if not vlist:
-        raise HTTPException(404, "Vendor list not found")
+        raise HTTPException(404, "Business list not found")
     if not await _can_manage(db, vendor, vlist):
         raise HTTPException(403, "Only the patron can approve vendors")
     if vlist.member_count >= vlist.max_vendors:
-        raise HTTPException(400, "Vendor list is full")
+        raise HTTPException(400, "Business list is full")
 
     membership = (await db.execute(select(VendorListMembership).where(
         VendorListMembership.vendor_id == vendor_id, VendorListMembership.vendor_list_id == list_id,
@@ -336,7 +336,7 @@ async def approve_vendor(
             select(ChatRoom.id).where(ChatRoom.vendor_list_id == vlist.id))).scalar()},
     )
     await db.commit()
-    return {"message": "Vendor approved"}
+    return {"message": "Business approved"}
 
 
 @router.post("/{list_id}/reject/{vendor_id}")
@@ -348,7 +348,7 @@ async def reject_vendor(
 ):
     vlist = await db.get(VendorList, list_id, with_for_update=True)
     if not vlist:
-        raise HTTPException(404, "Vendor list not found")
+        raise HTTPException(404, "Business list not found")
     if not await _can_manage(db, vendor, vlist):
         raise HTTPException(403, "Only the patron can decide registrations")
     membership = (await db.execute(select(VendorListMembership).where(
@@ -379,7 +379,7 @@ async def toggle_list_open(
 ):
     vlist = await db.get(VendorList, list_id)
     if not vlist:
-        raise HTTPException(404, "Vendor list not found")
+        raise HTTPException(404, "Business list not found")
     if not await _can_manage(db, vendor, vlist):
         raise HTTPException(403, "Only the patron can open or close a list")
     vlist.is_open = is_open

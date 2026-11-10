@@ -267,14 +267,14 @@ async def discover(
         # 5. graph — people your people know, or shared rooms
         if c.id in ctx["second_degree"]:
             factors["graph"] = WEIGHTS["graph"]
-            reasons.append("trades with vendors you already trade with")
+            reasons.append("trades with businesses you already trade with")
         elif c.id in shared_groups or c.id in shared_lists:
             factors["graph"] = WEIGHTS["graph"] * 0.7
             where = []
             if c.id in shared_groups:
                 where.append("a group")
             if c.id in shared_lists:
-                where.append("a vendor list")
+                where.append("a business list")
             reasons.append(f"you share {' and '.join(where)}")
         else:
             factors["graph"] = 0.0
@@ -288,7 +288,7 @@ async def discover(
         factors["reputation"] = round(
             WEIGHTS["reputation"] * min(1.0, 0.45 * score_part + 0.35 * reliability + verified + patron), 1)
         if patron:
-            reasons.append("runs a vendor list (patron)")
+            reasons.append("runs a business list (patron)")
         elif c.is_verified:
             reasons.append("verified business")
 

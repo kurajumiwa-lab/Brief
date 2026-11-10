@@ -519,7 +519,7 @@ async def upsert_supplier_moq(
     zone = await db.get(MarketZone, data.zone_id)
     product = await db.get(LockProduct, data.product_id)
     if supplier is None:
-        raise HTTPException(404, "Supplier vendor not found")
+        raise HTTPException(404, "Supplier business not found")
     if not zone or not zone.is_active or not product or not product.is_active:
         raise HTTPException(404, "Choose an active zone and product")
     offer = (await db.execute(select(SupplierMOQ).where(

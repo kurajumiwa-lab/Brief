@@ -102,7 +102,7 @@ async def analytics_counterparty(
         select(Vendor).where(Vendor.vendor_handle == handle.lstrip("@").lower())
     )).scalars().first()
     if not other:
-        raise HTTPException(404, "Vendor not found")
+        raise HTTPException(404, "Business not found")
     if other.id == vendor.id:
         raise HTTPException(400, "That's you")
     return await analytics_service.counterparty_detail(db, vendor, other, days)

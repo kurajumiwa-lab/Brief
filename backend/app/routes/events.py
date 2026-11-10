@@ -104,7 +104,7 @@ async def create_event(
     if vendor_list_id:
         vlist = await db.get(VendorList, vendor_list_id)
         if not vlist:
-            raise HTTPException(404, "Vendor list not found")
+            raise HTTPException(404, "Business list not found")
         from app.routes.vendor_lists import _can_manage
         if not await _can_manage(db, vendor, vlist):
             raise HTTPException(403, "Only whoever runs that list can host an event for it")
@@ -260,7 +260,7 @@ async def register_for_event(
     req = event.vendor_requirements or {}
     wanted = [c.lower() for c in req.get("categories", [])]
     if wanted and not ({c.lower() for c in (vendor.business_categories or [])} & set(wanted)):
-        raise HTTPException(400, f"This event is for vendors in: {', '.join(req['categories'])}")
+        raise HTTPException(400, f"This event is for businesses in: {', '.join(req['categories'])}")
 
     db.add(EventRegistration(event_id=event_id, vendor_id=vendor.id))
     event.registered_count += 1

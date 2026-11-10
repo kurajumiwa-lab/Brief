@@ -295,7 +295,7 @@ async def market_payload(db: AsyncSession, zone: MarketZone, viewer: Optional[Ve
         "categories": categories,
         # The four doors, each only offered when there is something behind it.
         "explore": [
-            {"key": "goods", "label": "Goods", "blurb": "Products vendors sell",
+            {"key": "goods", "label": "Goods", "blurb": "Products businesses sell",
              "available": activity.get("listings", 0) > 0,
              "count": activity.get("listings", 0)},
             {"key": "people", "label": "People", "blurb": "Find local vendors",

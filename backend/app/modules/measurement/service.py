@@ -34,7 +34,7 @@ BENCHMARK_MIN_VENDORS_PER_CELL = 5  # k-anonymity: no cell describes fewer than 
 BENCHMARK_MIN_WINDOW_DAYS = 30
 
 DEFINITIONS = {
-    "registered": "Vendor rows that have not been closed through the data-rights workflow.",
+    "registered": "Business rows that have not been closed through the data-rights workflow.",
     "activated": (
         "Registered vendors with at least one owned record: a stock item, a request, "
         "an offer, a stock movement, or a payment intent. Created is not activated; "
@@ -50,7 +50,7 @@ DEFINITIONS = {
         "Pending intents are excluded: they have not finished yet and counting them "
         "as failures would punish a vendor for the PSP's queue."
     ),
-    "active_last_7_days": "Vendors with any of the activity records above in the last 7 days.",
+    "active_last_7_days": "Businesses with any of the activity records above in the last 7 days.",
 }
 
 ACTIVITY_SOURCES = (
