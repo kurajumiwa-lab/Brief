@@ -28,13 +28,19 @@ import {
  */
 export const PRIMARY_NAV = [
   { to: "/", label: "Home", icon: Home, end: true },
-  { to: "/explore", label: "Discover", icon: Compass, area: "explore" },
-  // `action` marks the one visually prominent tab. It is deliberately
-  // restrained — a filled pill, not a floating button competing with content.
-  { to: "/create", label: "Create", icon: Plus, action: true },
+  { to: "/explore", label: "Local network", icon: Compass, area: "explore" },
+  { to: "/mall", label: "Mall", icon: Store, area: "mall" },
   { to: "/activity", label: "Connect", icon: Bell, area: "activity", badge: "activity" },
   { to: "/me", label: "My World", icon: UserRound, area: "me" },
 ];
+
+/**
+ * Create is not a tab. Publishing is still one tap away: a header action on
+ * every screen and the first item of the drawer. It stays a separate export so
+ * the five tabs describe destinations, and the one publishing door is named
+ * once, here.
+ */
+export const CREATE_NAV = { to: "/create", label: "Create", icon: Plus };
 
 /** Explore: every discovery surface, old and new. */
 export const EXPLORE_NAV = [
@@ -140,6 +146,9 @@ const ACTIVITY_ROOTS = [
 // `/portfolio` and `/studio` were retired in v2.16: the showcase now lives on
 // the shop front and the price list on the Business Desk, so both URLs redirect
 // to /me rather than holding a destination of their own.
+/** The Mall is a curated directory of verified, staff-approved businesses. */
+const MALL_ROOTS = ["/mall"];
+
 const ME_ROOTS = [
   "/me", "/stock", "/analytics", "/pos", "/brief", "/passport", "/growth", "/billing",
   "/enterprise", "/governance", "/ops", "/membership",
@@ -151,6 +160,8 @@ export const isExplorePath = (pathname = "") => inArea(pathname, EXPLORE_ROOTS);
 
 export const isActivityPath = (pathname = "") => inArea(pathname, ACTIVITY_ROOTS);
 
+export const isMallPath = (pathname = "") => inArea(pathname, MALL_ROOTS);
+
 /** Kept under their v3 names so nothing importing them breaks. */
 export const isBrowsePath = isExplorePath;
 export const isWorkPath = isActivityPath;
@@ -161,6 +172,7 @@ export const isMePath = (pathname = "", vendorHandle = "") =>
 export const isPrimaryActive = (item, pathname, vendorHandle) => {
   if (item.area === "explore") return isExplorePath(pathname);
   if (item.area === "activity") return isActivityPath(pathname);
+  if (item.area === "mall") return isMallPath(pathname);
   if (item.area === "me") return isMePath(pathname, vendorHandle);
   if (item.end) return pathname === item.to;
   return pathname === item.to || pathname.startsWith(`${item.to}/`);
@@ -179,6 +191,12 @@ export const isPrimaryActive = (item, pathname, vendorHandle) => {
  * not a dashboard: no counters, no cards, no calls to action.
  */
 export const SECTION_GROUPS = [
+  {
+    title: "Start",
+    items: [
+      { to: "/create", label: "Create something new", icon: Plus },
+    ],
+  },
   {
     title: "Community & network",
     items: [
@@ -211,7 +229,7 @@ export const SECTION_GROUPS = [
       { to: "/payments", label: "Receipts", icon: Receipt },
       { to: "/tools", label: "Rentals & logistics", icon: Truck },
       { to: "/tasks", label: "Tasks", icon: ListChecks },
-      { to: "/lists", label: "Vendor lists", icon: List },
+      { to: "/lists", label: "Business lists", icon: List },
       { to: "/locks", label: "Market Locks", icon: ShoppingCart },
       { to: "/pos", label: "POS Bridge", icon: Terminal },
     ],

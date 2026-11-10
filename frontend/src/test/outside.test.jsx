@@ -172,14 +172,15 @@ const renderAt = (path, element) =>
 describe("Outside navigation", () => {
   it("presents the five Outside destinations with one prominent create action", async () => {
     const { PRIMARY_NAV } = await import("@/config/navigation");
-    expect(PRIMARY_NAV.map((i) => i.label)).toEqual(["Home", "Discover", "Create", "Connect", "My World"]);
-    expect(PRIMARY_NAV.filter((i) => i.action).map((i) => i.to)).toEqual(["/create"]);
+    expect(PRIMARY_NAV.map((i) => i.label)).toEqual(["Home", "Local network", "Mall", "Connect", "My World"]);
+    // Create is no longer a tab (P1). It is the header action, CREATE_NAV.
+    expect(PRIMARY_NAV.filter((i) => i.action)).toHaveLength(0);
     expect(new Set(PRIMARY_NAV.map((i) => i.to)).size).toBe(5);
   });
 
   it("keeps every v3 URL resolving to the tab that absorbed it", async () => {
     const { PRIMARY_NAV, isPrimaryActive } = await import("@/config/navigation");
-    const discover = PRIMARY_NAV.find((i) => i.label === "Discover");
+    const discover = PRIMARY_NAV.find((i) => i.label === "Local network");
     const connect = PRIMARY_NAV.find((i) => i.label === "Connect");
     const mine = PRIMARY_NAV.find((i) => i.label === "My World");
 
@@ -209,12 +210,12 @@ describe("Outside navigation", () => {
       ["collection", "community", "event", "listing", "opportunity", "post"]);
   });
 
-  it("renders a bottom tab bar whose create tab is the prominent one", async () => {
+  it("renders a bottom tab bar of five destinations, with Mall as its own tab", async () => {
     const MobileTabBar = (await import("@/components/layout/MobileTabBar")).default;
     renderAt("/", <MobileTabBar />);
-    expect(screen.getByTestId("tab-create")).toBeInTheDocument();
+    expect(screen.queryByTestId("tab-create")).not.toBeInTheDocument();
     expect(screen.getByRole("navigation", { name: /primary mobile/i })).toBeInTheDocument();
-    for (const label of ["home", "explore", "activity", "me"]) {
+    for (const label of ["home", "explore", "mall", "activity", "me"]) {
       expect(screen.getByTestId(`tab-${label}`)).toBeInTheDocument();
     }
   });

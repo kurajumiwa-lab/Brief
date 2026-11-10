@@ -50,6 +50,8 @@ const BrowsePage = lazy(() => import("@/pages/browse/BrowsePage"));
 // needs those kilobytes back, making it lazy is a one-line change and the
 // Suspense fallback in Shell already handles it.
 const ExplorePage = lazy(() => import("@/pages/explore/ExplorePage"));
+// The Mall (P1): verified businesses only. See pages/mall/Mall.jsx.
+const MallPage = lazy(() => import("@/pages/mall/Mall"));
 const CommunityPage = lazy(() => import("@/pages/community/CommunityPage"));
 const ParksPage = lazy(() =>
   import("@/pages/parks/ParksPage").then((m) => ({ default: m.ParksPage }))
@@ -233,6 +235,7 @@ function AppRoutes() {
               Work and Inbox. Every older URL below still resolves and still
               highlights the right tab (see config/navigation.js areas). */}
           <Route path="/explore" element={<ExplorePage />} />
+          <Route path="/mall" element={<MallPage />} />
           <Route path="/community" element={<CommunityPage />} />
           <Route path="/parks" element={<ParksPage />} />
           <Route path="/parks/:slug" element={<ParkDetailPage />} />

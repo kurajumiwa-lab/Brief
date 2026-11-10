@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
-import { Menu, Search, X } from "lucide-react";
+import { Menu, Plus, Search, X } from "lucide-react";
 import Logo from "./Logo";
 import GlobalSearch from "./GlobalSearch";
 import AccountMenu from "./AccountMenu";
 import NotificationBell from "@/components/notifications/NotificationBell";
-import { BROWSE_NAV, isBrowsePath, isPrimaryActive, PRIMARY_NAV } from "@/config/navigation";
+import { BROWSE_NAV, CREATE_NAV, isBrowsePath, isPrimaryActive, PRIMARY_NAV } from "@/config/navigation";
 import { useStockStore, needsMyAction } from "@/stores/stockStore";
 import { useChatStore } from "@/stores/chatStore";
 import { useAuthStore } from "@/stores/authStore";
@@ -84,6 +84,16 @@ export default function AppHeader() {
           </nav>
 
           <div className="flex items-center gap-1 ml-auto lg:ml-2">
+            {/* Publishing is one tap on every screen. Create is not a tab, so it lives here. */}
+            <NavLink
+              to={CREATE_NAV.to}
+              aria-label={CREATE_NAV.label}
+              data-testid="header-create"
+              className="inline-flex items-center gap-1.5 px-2.5 py-2 rounded-xl bg-brand-700 text-white text-xs font-semibold hover:bg-brand-800 transition-colors focus-visible:ring-2 focus-visible:ring-brand-500"
+            >
+              <Plus size={15} strokeWidth={2.4} aria-hidden="true" />
+              <span className="hidden lg:inline">{CREATE_NAV.label}</span>
+            </NavLink>
             {!isHome && (
               <button
                 type="button"

@@ -9,12 +9,11 @@ import { cn } from "@/lib/utils";
 /**
  * The five Outside destinations, sized for the thumb zone.
  *
- *   Home · Explore · Create · Activity · Profile
+ *   Home · Local network · Mall · Connect · My World
  *
- * Create sits in the middle and is the one visually distinct item — a filled
- * pill rather than a floating button. It is prominent because publishing is
- * the thing that makes a discovery network work, and restrained because a
- * floating action button competes with the content it is supposed to serve.
+ * Create is no longer a tab. It is a header action on every screen (see
+ * AppHeader), so the bar holds five destinations. The `action` branch below is
+ * kept for any future prominent tab and is not used by PRIMARY_NAV today.
  *
  * Badges are only shown where they mean work is waiting: Activity carries
  * unread notifications plus conversations that moved today. A count that
