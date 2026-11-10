@@ -733,7 +733,7 @@ describe("Drawer navigation", () => {
     useAuthStore.setState({ token: "tok", vendor: ME, ready: true, loading: false });
     mountDrawer();
 
-    for (const label of ["Home", "Discover", "Create", "Connect", "My World"]) {
+    for (const label of ["Home", "Local network", "Mall", "Connect", "My World"]) {
       expect(screen.queryByRole("link", { name: label })).not.toBeInTheDocument();
     }
   });

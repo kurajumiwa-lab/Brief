@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  BROWSE_NAV, CREATE_TYPES, EXPLORE_NAV, PRIMARY_NAV, SEARCH_SCOPES, SECTION_GROUPS,
+  BROWSE_NAV, CREATE_NAV, CREATE_TYPES, EXPLORE_NAV, PRIMARY_NAV, SEARCH_SCOPES, SECTION_GROUPS,
   isActivityPath, isExplorePath, isPrimaryActive,
 } from "@/config/navigation";
 import { NAV_BRIEF } from "@/components/layout/Sidebar";
@@ -22,20 +22,28 @@ describe("Outside navigation map", () => {
     expect(NAV_BRIEF.map(({ to }) => to)).toEqual(["/tasks", "/analytics", "/pos"]);
   });
 
-  it("defines five Outside destinations with exactly one prominent create action", () => {
+  it("defines five primary destinations, with Create as a header action rather than a tab", () => {
+    // P1: Home, Local network, Mall, Connect, My World. Create moved out of the
+    // tab bar; it is still one tap away through CREATE_NAV (header and drawer).
     expect(PRIMARY_NAV.map(({ label }) => label))
-      .toEqual(["Home", "Discover", "Create", "Connect", "My World"]);
+      .toEqual(["Home", "Local network", "Mall", "Connect", "My World"]);
     expect(new Set(PRIMARY_NAV.map(({ to }) => to)).size).toBe(5);
-    // Create is the one visually distinct tab, and it is a tab — not a
-    // floating button competing with the content it exists to serve.
-    expect(PRIMARY_NAV.filter(({ action }) => action).map(({ to }) => to)).toEqual(["/create"]);
-    expect(PRIMARY_NAV.filter(({ action }) => action)).toHaveLength(1);
-    // Every tab has a short label and an icon. (lucide icons are forwardRef
-    // objects, not functions — so assert presence, not callable-ness.)
+    expect(PRIMARY_NAV.filter(({ action }) => action)).toHaveLength(0);
+    expect(CREATE_NAV.to).toBe("/create");
+    expect(CREATE_NAV.label).toBe("Create");
+    // Every tab has a short label and an icon. "Local network" is the longest
+    // at 13 characters; the limit is 14 so the name stays whole on a phone.
     for (const item of PRIMARY_NAV) {
-      expect(item.label.length).toBeLessThanOrEqual(8);
+      expect(item.label.length).toBeLessThanOrEqual(14);
       expect(item.icon).toBeTruthy();
     }
+  });
+
+  it("keeps the Mall tab on its own area, separate from Local network", () => {
+    const mall = PRIMARY_NAV.find(({ label }) => label === "Mall");
+    expect(isPrimaryActive(mall, "/mall")).toBe(true);
+    expect(isPrimaryActive(mall, "/explore")).toBe(false);
+    expect(isPrimaryActive(PRIMARY_NAV[1], "/mall")).toBe(false);
   });
 
   it("publishes all six content types from the single creation entry point", () => {
@@ -121,7 +129,7 @@ describe("Outside navigation map", () => {
 
     // The three groups exist, in the order a person looks for them.
     expect(SECTION_GROUPS.map((group) => group.title)).toEqual([
-      "Community & network", "Workspace tools", "Administration",
+      "Start", "Community & network", "Workspace tools", "Administration",
     ]);
     // And the routes the drawer has always carried are still reachable.
     expect(secondary.map(({ to }) => to)).toEqual(expect.arrayContaining(["/groups", "/events", "/ops"]));
