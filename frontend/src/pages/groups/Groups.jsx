@@ -83,8 +83,8 @@ export default function Groups() {
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h2 className="text-xl font-semibold text-ink-1 tracking-tight">Vendor Groups</h2>
-          <p className="text-xs text-ink-4">Niche, regional, trade and sourcing collectives. Every group gets a chat room; admins can spin up vendor lists.</p>
+          <h2 className="text-xl font-semibold text-ink-1 tracking-tight">Business Groups</h2>
+          <p className="text-xs text-ink-4">Niche, regional, trade and sourcing collectives. Every group gets a chat room; admins can spin up business lists.</p>
         </div>
         <Button size="sm" icon={Plus} onClick={() => setCreating(true)}>
           New group

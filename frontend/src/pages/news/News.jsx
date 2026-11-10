@@ -190,7 +190,7 @@ function GroupCard({ it, open, onToggle, onOpen }) {
     <CardShell open={open} onToggle={onToggle} onOpenLink={onOpen}
       expanded={
         <div className="space-y-1 pt-2">
-          <Meta k="open to" v={d.requires_approval ? "by approval" : "any vendor"} />
+          <Meta k="open to" v={d.requires_approval ? "by approval" : "any business"} />
           {d.tags?.length > 0 && <Meta k="tags" v={d.tags.join(", ")} />}
           {d.description && <p className="text-2xs text-ink-4 pt-1">{d.description}</p>}
         </div>
@@ -205,7 +205,7 @@ function GroupCard({ it, open, onToggle, onOpen }) {
           <FreshDot fresh={it.fresh} />{d.name}
         </p>
         <p className="text-2xs text-ink-4 mt-0.5 truncate">
-          {[d.group_type, d.category, d.region].filter(Boolean).join(" · ") || "vendor group"}
+          {[d.group_type, d.category, d.region].filter(Boolean).join(" · ") || "business group"}
         </p>
       </div>
     </CardShell>
@@ -310,7 +310,7 @@ export default function News() {
         <EmptyState
           icon={Newspaper}
           title={filter === "all" ? "No new lines in the last 7 days" : `No ${filter} lines in the window`}
-          description="Lines appear when vendors restate stock, movements happen, events open, groups form or a flash lock goes open."
+          description="Lines appear when businesses restate stock, movements happen, events open, groups form or a flash lock goes open."
         />
       ) : (
         <div className="space-y-2">

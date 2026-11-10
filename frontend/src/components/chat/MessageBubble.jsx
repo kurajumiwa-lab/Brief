@@ -42,7 +42,7 @@ export default function MessageBubble({ message: m, mine, showHeader = true }) {
     chatIdentity,
     location: "messages",
     senderBusiness: m.sender_business || (mine ? vendor?.business_name : m.sender_handle),
-    senderHandle: m.sender_handle || (mine ? vendor?.vendor_handle : "vendor"),
+    senderHandle: m.sender_handle || (mine ? vendor?.vendor_handle : "business"),
     senderName: mine
       ? chatIdentity?.sender_name || vendor?.business_name
       : m.sender_name || m.sender_business || m.sender_handle,

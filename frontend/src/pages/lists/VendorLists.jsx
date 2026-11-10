@@ -52,7 +52,7 @@ export default function VendorLists() {
   }, [tab, category, region, fetchLists, fetchMine]);
 
   const onBecomePatron = async () => {
-    if (!(await confirm({ title: "Become a patron?", message: "Patrons run vendor lists and organise events. You start on the Starter tier: 1 list, up to 20 vendors.", confirmLabel: "Become a patron" }))) return;
+    if (!(await confirm({ title: "Become a patron?", message: "Patrons run business lists and organise events. You start on the Starter tier: 1 list, up to 20 businesses.", confirmLabel: "Become a patron" }))) return;
     try {
       const res = await becomePatron();
       toast.success(res?.message || "You're a patron now");
@@ -77,7 +77,7 @@ export default function VendorLists() {
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h2 className="text-xl font-semibold text-ink-1 tracking-tight">Vendor Lists</h2>
+          <h2 className="text-xl font-semibold text-ink-1 tracking-tight">Business Lists</h2>
           <p className="text-xs text-ink-4">Curated rosters run by patrons — market days, supplier panels, sourcing pools. Register to get in; patrons vet the list.</p>
         </div>
         {isPatron ? (
@@ -132,7 +132,7 @@ export default function VendorLists() {
         </div>
       )}
 
-      <Modal open={creating} onClose={() => setCreating(false)} title="Create a vendor list" description="Vendors register; you approve. Add entry criteria to let the API pre-screen them.">
+      <Modal open={creating} onClose={() => setCreating(false)} title="Create a business list" description="Businesses register; you approve. Add entry criteria to let the API pre-screen them.">
         <VendorListForm onDone={() => setCreating(false)} onCancel={() => setCreating(false)} maxVendorsCap={patron?.max_vendors_per_list} />
       </Modal>
       <ManageDrawer list={managing} onClose={() => setManaging(null)} />

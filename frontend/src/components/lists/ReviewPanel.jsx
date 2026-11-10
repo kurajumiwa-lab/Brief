@@ -168,7 +168,7 @@ export default function ReviewsDrawer({ list, onClose }) {
             <p className="text-xs text-ink-4 rounded-lg bg-surface-2 px-3 py-2">
               {data?.my_status === "approved"
                 ? "You've already reviewed this list — edit your review below."
-                : "Only vendors approved onto the list can review it. Register, then tell the network how it went."}
+                : "Only businesses approved onto the list can review it. Register, then tell the network how it went."}
             </p>
           )}
 

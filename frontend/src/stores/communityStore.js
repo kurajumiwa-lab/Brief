@@ -21,7 +21,7 @@ import { failureReason, socialAPI } from "@/lib/api";
  *      paint is undone — a pressed button that did not reach the database is
  *      worse than a button that never pressed.
  *
- * Deliberately absent: any notion of "my vendor account". Participation is an
+ * Deliberately absent: any notion of "my business account". Participation is an
  * account of its own (`social_accounts`), which may or may not have a business
  * behind it. The UI reads `linked_to_vendor` only to explain, never to allow.
  */

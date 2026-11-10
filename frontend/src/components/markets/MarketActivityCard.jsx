@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 /**
  * ONE MARKET, AS A PLACE WHERE BUSINESS HAPPENS.
  *
- * The card this replaces said "0 registered vendors" and nothing else, which is
+ * The card this replaces said "0 registered businesses" and nothing else, which is
  * the same thing a phone book says about a shop that closed. Three rules here:
  *
  *  · **Activity is the headline.** "12 traders selling now" comes first;

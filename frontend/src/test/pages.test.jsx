@@ -181,7 +181,7 @@ describe("Me workspace", () => {
     expect(screen.getByRole("link", { name: /analytics/i })).toHaveAttribute("href", "/analytics");
     expect(screen.getByRole("link", { name: /pos bridge/i })).toHaveAttribute("href", "/pos");
     expect(screen.getByRole("link", { name: /^tasks\b/i })).toHaveAttribute("href", "/tasks");
-    expect(screen.getByRole("link", { name: /vendor lists/i })).toHaveAttribute("href", "/lists");
+    expect(screen.getByRole("link", { name: /business lists/i })).toHaveAttribute("href", "/lists");
     expect(screen.getByRole("link", { name: /market locks/i })).toHaveAttribute("href", "/locks");
     expect(screen.getByRole("link", { name: /our network/i })).toHaveAttribute("href", "/governance");
     expect(screen.getByRole("link", { name: /surfaces/i })).toHaveAttribute("href", "/feed");

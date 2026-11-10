@@ -157,7 +157,7 @@ const MarketMap = forwardRef(function MarketMap(
       });
       marker.on("click", () => handlers.current.onCluster?.(c));
       marker.bindTooltip(
-        `${c.count} ${c.kind === "vendors" ? "vendors" : c.kind === "markets" ? "markets" : c.network === false ? "external places" : "places"}`,
+        `${c.count} ${c.kind === "vendors" ? "businesses" : c.kind === "markets" ? "markets" : c.network === false ? "external places" : "places"}`,
         { direction: "top", offset: [0, -6] },
       );
       layer.addLayer(marker);

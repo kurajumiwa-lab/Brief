@@ -129,7 +129,7 @@ export default function MarketLocks() {
             <ShoppingBasket size={19} className="text-brand-600 dark:text-brand-400" />
             <h1 className="text-xl font-semibold tracking-tight text-ink-1">Market Locks</h1>
           </div>
-          <p className="mt-1 text-xs text-ink-4">Pool tomorrow's wholesale demand with vendors in your named market zone.</p>
+          <p className="mt-1 text-xs text-ink-4">Pool tomorrow's wholesale demand with businesses in your named market zone.</p>
         </div>
         <Button size="sm" variant="secondary" icon={RefreshCw} loading={refreshing} onClick={() => refresh(true)}>Refresh</Button>
       </header>

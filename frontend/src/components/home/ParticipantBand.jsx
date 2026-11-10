@@ -34,9 +34,9 @@ const PARTICIPANTS = [
   },
   {
     icon: Home,
-    kind: "Consumer + potential vendor",
+    kind: "Consumer + potential business",
     title: "A household",
-    body: "Finds plumbers, technicians and products. Can also open a vendor front to offer a service, rent equipment or sell surplus.",
+    body: "Finds plumbers, technicians and products. Can also open a business front to offer a service, rent equipment or sell surplus.",
     to: "/explore",
   },
   {

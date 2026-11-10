@@ -140,7 +140,7 @@ function ActionCenter({ search, onSearch, onPost, goType, refreshKey }) {
         <ContextLink to="/map" icon={MapIcon}>Map view</ContextLink>
         <ContextLink to="/markets" icon={MapPin}>Markets</ContextLink>
         <ContextLink to="/network" icon={Network}>Suppliers</ContextLink>
-        <ContextLink to="/lists" icon={List}>Vendor lists</ContextLink>
+        <ContextLink to="/lists" icon={List}>Business lists</ContextLink>
         <ContextLink to="/locks" icon={ShoppingBasket}>Market locks</ContextLink>
         <ContextLink to="/nearby" icon={Globe}>Around you</ContextLink>
         <ContextLink to="/news" icon={Newspaper}>Market news</ContextLink>
@@ -339,7 +339,7 @@ function GoodsResults({ search, onSearch }) {
         {filtersOpen && (
           <div className="grid gap-3 sm:grid-cols-3 p-4 rounded-2xl border border-edge-1 bg-surface-1 animate-slide-down">
             <Select label="Provenance" value={quality} onChange={(e) => setParam({ quality: e.target.value })}
-              options={QUALITY_FILTERS} hint="Filters on the quality ladder the vendor has actually reached" />
+              options={QUALITY_FILTERS} hint="Filters on the quality ladder the business has actually reached" />
             <Select label="Availability" value={inStock ? "in" : "all"}
               onChange={(e) => setParam({ stock: e.target.value === "in" ? "" : "all" })}
               options={[
@@ -408,7 +408,7 @@ function GoodsResults({ search, onSearch }) {
           title={search || activeFilters ? "Nothing matches those filters" : "No network stock yet"}
           description={
             search || activeFilters
-              ? "Widen the search, drop a filter, or include sold-out lines — vendors restate prices through the day."
+              ? "Widen the search, drop a filter, or include sold-out lines — businesses restate prices through the day."
               : "Nobody is showing stock you can source right now. Post a request and let suppliers come to you."
           }
           action={

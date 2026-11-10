@@ -33,7 +33,7 @@ export default function ProductCard({ item, onSource }) {
         </div>
         {item.quality && item.quality !== "unverified" && (
           <span className="absolute right-2 top-2">
-            <Badge variant="blue" size="xs" title="Provenance declared or verified by this vendor">
+            <Badge variant="blue" size="xs" title="Provenance declared or verified by this business">
               <BadgeCheck size={10} aria-hidden="true" />
               {item.quality === "lab_certified" ? "Lab" : item.quality === "patron_verified" ? "Verified" : "Declared"}
             </Badge>

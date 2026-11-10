@@ -143,7 +143,7 @@ describe("every participant trades both ways", () => {
     }
     // The schema's own kinds, in the words a person uses.
     expect(band).toHaveTextContent(/institution/i);
-    expect(band).toHaveTextContent(/consumer \+ potential vendor/i);
+    expect(band).toHaveTextContent(/consumer \+ potential business/i);
   });
 
   it("says the account kind decides the record, not the permission", () => {

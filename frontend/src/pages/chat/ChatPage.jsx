@@ -271,7 +271,7 @@ function NewTopicModal({ open, onClose, onCreate, onCreated }) {
     }
   };
   return (
-    <Modal open={open} onClose={onClose} title="Start a niche topic" description="Open to every vendor on the network." size="sm">
+    <Modal open={open} onClose={onClose} title="Start a niche topic" description="Open to every business on the network." size="sm">
       <form onSubmit={submit} className="space-y-3">
         <Input label="Room name" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Import regulations" autoFocus />
         <Input label="Topic" required value={form.topic} onChange={(e) => setForm({ ...form, topic: e.target.value })} placeholder="KEBS, KRA and clearing agents for small importers" />

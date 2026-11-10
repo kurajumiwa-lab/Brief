@@ -73,7 +73,7 @@ export default function WorkPage() {
         <WorkLink to="/events" icon={CalendarDays} label="Events"
           sub="Trade days and registrations" />
         <WorkLink to="/lists" icon={ClipboardList} label="Saved partners"
-          sub="Trusted vendors and lists" />
+          sub="Trusted businesses and lists" />
       </nav>
 
       {/* ── my requests: the loop this tab owns ────────────────────────── */}

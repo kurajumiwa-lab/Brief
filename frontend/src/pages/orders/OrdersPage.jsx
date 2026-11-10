@@ -146,7 +146,7 @@ export default function OrdersPage() {
           description={
             onlyActionable
               ? "Every open order is with the other side. They will land back here when it is your turn."
-              : "A movement is created when you source from a vendor, or when they source from you. Find something worth having and the loop starts."
+              : "A movement is created when you source from a business, or when they source from you. Find something worth having and the loop starts."
           }
           action={
             onlyActionable ? (

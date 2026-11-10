@@ -162,12 +162,12 @@ export default function HomeHero({ className }) {
         >
           <span className="min-w-0">
             <span className="block text-xs font-bold text-white">
-              {hasFront ? "Your vendor front is your shop" : "Have a business or skill?"}
+              {hasFront ? "Your shop front is your business" : "Have a business or skill?"}
             </span>
             <span className="mt-0.5 block text-micro leading-snug text-white/90">
               {hasFront
                 ? "Photos, categories and a sentence about what you do — the three things a buyer checks."
-                : "Create your digital vendor identity and connect with clients."}
+                : "Create your digital business identity and connect with clients."}
             </span>
           </span>
           <span className="inline-flex shrink-0 items-center gap-1 text-micro font-bold text-white">

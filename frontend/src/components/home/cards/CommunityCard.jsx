@@ -4,7 +4,7 @@ import CardShell, { CardBody, CardPoster, CardTitle, CardMeta, CardVendor } from
 import { num } from "@/lib/formatters";
 
 /**
- * COMMUNITY CARD — a public group, or an open curated vendor list.
+ * COMMUNITY CARD — a public group, or an open curated business list.
  *
  * Groups and lists are where a merchant's next suppliers actually come from, so
  * they get a shelf instead of a nav item nobody opens. Membership counts and
@@ -21,16 +21,16 @@ export default function CommunityCard({ item }) {
   return (
     <CardShell
       to={item.to}
-      label={`${item.title} — ${isList ? "vendor list" : "group"} with ${item.members} ${item.members === 1 ? "member" : "members"}. Open ${isList ? "vendor lists" : "groups"}`}
+      label={`${item.title} — ${isList ? "business list" : "group"} with ${item.members} ${item.members === 1 ? "member" : "members"}. Open ${isList ? "business lists" : "groups"}`}
     >
       <CardPoster
         icon={Icon}
-        label={isList ? "Vendor list" : GROUP_TYPE_LABELS[item.groupType] || "Group"}
+        label={isList ? "Business list" : GROUP_TYPE_LABELS[item.groupType] || "Group"}
         tone={isList ? "orchid" : "brand"}
         corner={
           <>
             <span className="absolute left-2 top-2">
-              <Badge variant={isList ? "purple" : "brand"} size="xs">{isList ? "Vendor list" : "Group"}</Badge>
+              <Badge variant={isList ? "purple" : "brand"} size="xs">{isList ? "Business list" : "Group"}</Badge>
             </span>
             {item.requiresApproval && (
               <span className="absolute right-2 top-2">

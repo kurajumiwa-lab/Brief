@@ -77,8 +77,8 @@ export const MESSAGE_TYPES = [
 // backend/app/models/stock.py · QualityStatus (v2.1)
 export const QUALITY_STATUSES = [
   { value: "unverified", label: "Unverified", variant: "gray", hint: "No provenance on file" },
-  { value: "self_declared", label: "Self-declared", variant: "blue", hint: "Batch and origin declared by the vendor" },
-  { value: "patron_verified", label: "Patron-verified", variant: "purple", hint: "Checked by the patron of a list this vendor is on" },
+  { value: "self_declared", label: "Self-declared", variant: "blue", hint: "Batch and origin declared by the business" },
+  { value: "patron_verified", label: "Patron-verified", variant: "purple", hint: "Checked by the patron of a list this business is on" },
   { value: "lab_certified", label: "Lab-certified", variant: "brand", hint: "Certificate / spec sheet attached" },
 ];
 

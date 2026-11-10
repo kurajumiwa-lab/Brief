@@ -57,7 +57,7 @@ export default function Network() {
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-3">
         <div>
           <h2 className="text-xl font-semibold text-ink-1 tracking-tight">Suppliers</h2>
-          <p className="text-xs text-ink-4">Connect with the vendors you trade with. Connections make your stock — and theirs — easier to find.</p>
+          <p className="text-xs text-ink-4">Connect with the businesses you trade with. Connections make your stock — and theirs — easier to find.</p>
         </div>
         {stats && (
           <div className="flex items-center gap-4 text-xs text-ink-4">
@@ -88,7 +88,7 @@ export default function Network() {
           {loading && others.length === 0 ? (
             <PageSpinner />
           ) : others.length === 0 ? (
-            <EmptyState icon={Users} title="No vendors match" description="Loosen the filters — or invite the vendors you already trade with." />
+            <EmptyState icon={Users} title="No businesses match" description="Loosen the filters — or invite the businesses you already trade with." />
           ) : (
             <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-3">
               {others.map((v) => (
@@ -103,7 +103,7 @@ export default function Network() {
 
       {tab === "connections" &&
         (connections.length === 0 ? (
-          <EmptyState icon={Link2} title="No connections yet" description="Connect with vendors from Discover. The pair score between you grows with every completed movement." />
+          <EmptyState icon={Link2} title="No connections yet" description="Connect with businesses from Discover. The pair score between you grows with every completed movement." />
         ) : (
           <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-3">
             {connections.map((c) => (

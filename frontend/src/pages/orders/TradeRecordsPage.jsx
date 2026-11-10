@@ -110,7 +110,7 @@ export default function TradeRecordsPage() {
       {error && page && <p role="alert" className="text-2xs text-red-700 dark:text-red-400">{error} — showing your last loaded view. <button type="button" className="underline" onClick={load}>Retry</button></p>}
       {error && !page ? <ErrorState title="Records unavailable" description={error} onRetry={load} /> : loading && !page ? <SkeletonRows count={3} /> : page?.items?.length === 0 ? (
         <EmptyState icon={BookOpen} tone="brand" title={q ? "No trades match your search" : "Your trade record starts with one handover"}
-          description={q ? "Try an item, SKU or supplier handle from a different order." : "Find stock from a vendor you already trade with, then confirm the handover. Your record will appear here."}
+          description={q ? "Try an item, SKU or supplier handle from a different order." : "Find stock from a business you already trade with, then confirm the handover. Your record will appear here."}
           action={q ? <Button size="sm" variant="secondary" onClick={() => { setText(""); setQ(""); setCursors([null]); setPageIndex(0); setPage(null); }}>Clear search</Button>
             : <Link to="/browse?type=goods"><Button size="sm">Find stock</Button></Link>} />
       ) : page?.items?.length > 0 ? (

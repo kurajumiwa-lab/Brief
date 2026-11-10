@@ -74,7 +74,7 @@ export default function BookingPanel() {
 
   const host = (b) => b.host_handle === me?.vendor_handle;
   const act = async (booking, status, note) => {
-    if (status === "cancelled" && !(await confirm({ title: "Cancel this booking?", message: "The dates are freed for other vendors immediately.", confirmLabel: "Cancel booking", danger: true }))) return;
+    if (status === "cancelled" && !(await confirm({ title: "Cancel this booking?", message: "The dates are freed for other businesses immediately.", confirmLabel: "Cancel booking", danger: true }))) return;
     try {
       const { data } = await toolAPI.setBookingStatus(booking.id, status, note);
       toast.success(data.message || `Booking ${status}`);

@@ -147,7 +147,7 @@ export const SHELVES = [
     group: "discovery",
     card: "product",
     title: "Fresh on the network",
-    subtitle: "Restated by other vendors — most available first",
+    subtitle: "Restated by other businesses — most available first",
     seeAll: { to: "/browse?type=goods", label: "See all stock" },
     limit: 12,
     async load() {
@@ -172,7 +172,7 @@ export const SHELVES = [
           moq: row.min_order_quantity ?? row.minimum_order_quantity ?? null,
           quality: row.quality_status || "unverified",
           fulfilment: row.vendor_fulfillment_rate,
-          vendorName: row.vendor_business || row.vendor_business_name || (row.vendor_handle ? `@${row.vendor_handle}` : "A vendor"),
+          vendorName: row.vendor_business || row.vendor_business_name || (row.vendor_handle ? `@${row.vendor_handle}` : "A business"),
           updatedAt: row.updated_at || null,
           raw: row,
         }));
@@ -194,7 +194,7 @@ export const SHELVES = [
         id: String(offer.key),
         kind: "service",
         to: `/storefront?offer=${encodeURIComponent(offer.key)}`,
-        owner: null, // the platform's own catalogue — not a vendor's shelf, so nothing to exclude
+        owner: null, // the platform's own catalogue — not a business's shelf, so nothing to exclude
         title: text(offer.name),
         line: offer.line,
         priceMin: offer.price_min_kes ?? null,
@@ -213,8 +213,8 @@ export const SHELVES = [
     group: "discovery",
     card: "person",
     title: "People to work with",
-    subtitle: "Fundis, casual workers, specialists and vendors in the network",
-    seeAll: { to: "/network", label: "See all vendors" },
+    subtitle: "Fundis, casual workers, specialists and businesses in the network",
+    seeAll: { to: "/network", label: "See all businesses" },
     limit: 12,
     async load() {
       // Preferred: vendors the network can evidence a reason to meet. If the
@@ -277,7 +277,7 @@ export const SHELVES = [
           deposit: money(tool.deposit_required),
           timesBooked: tool.times_booked ?? 0,
           rating: tool.avg_rating ?? null,
-          vendorName: tool.vendor_business || (tool.vendor_handle ? `@${tool.vendor_handle}` : "A vendor"),
+          vendorName: tool.vendor_business || (tool.vendor_handle ? `@${tool.vendor_handle}` : "A business"),
         }));
     },
   },
@@ -378,7 +378,7 @@ export const SHELVES = [
     key: "community",
     group: "more",
     card: "community",
-    title: "Groups and vendor lists",
+    title: "Groups and business lists",
     subtitle: "Public groups and open lists you can register on",
     seeAll: { to: "/groups", label: "See all groups" },
     limit: 12,
@@ -417,7 +417,7 @@ export const SHELVES = [
           subtype: "list",
           to: "/lists",
           owner: { id: null, handle: list.patron_handle, name: list.patron_business },
-          title: text(list.name) || "Vendor list",
+          title: text(list.name) || "Business list",
           description: text(list.description),
           category: list.category || null,
           region: list.region || null,
@@ -438,7 +438,7 @@ export const SHELVES = [
     group: "more",
     card: "market",
     title: "Markets in the network",
-    subtitle: "Where vendors already trade — mapped places and registered members",
+    subtitle: "Where businesses already trade — mapped places and registered members",
     seeAll: { to: "/markets", label: "See all markets" },
     limit: 12,
     async load() {
@@ -453,7 +453,7 @@ export const SHELVES = [
         city: market.city || null,
         country: market.country || null,
         // GET /api/markets returns `member_count`; `members` was the old guess,
-        // which is why every market card read "0 registered vendors" while the
+        // which is why every market card read "0 registered businesses" while the
         // market had members.
         members: Number(market.member_count ?? market.members ?? 0) || 0,
         // The directory list does not count mapped places (only the market's own
@@ -475,7 +475,7 @@ export const SHELVES = [
     group: "more",
     card: "notice",
     title: "Byway Notice Board",
-    subtitle: "AI-assisted promotions, announcements, and opportunities from vendors",
+    subtitle: "AI-assisted promotions, announcements, and opportunities from businesses",
     seeAll: { to: "/notices", label: "See all notices" },
     limit: 12,
     async load() {

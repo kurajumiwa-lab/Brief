@@ -45,12 +45,12 @@ export default function VendorListForm({ onDone, onCancel, onSubmit, maxVendorsC
 
   return (
     <form onSubmit={submit} className="space-y-4">
-      <Input label="List name" required value={form.name} onChange={set("name")} placeholder="Nairobi Fresh Produce Vendors" />
+      <Input label="List name" required value={form.name} onChange={set("name")} placeholder="Nairobi Fresh Produce Businesses" />
       <Textarea label="Description" value={form.description} onChange={set("description")} rows={2} placeholder="Who should register and what they get" />
       <div className="grid sm:grid-cols-3 gap-3">
         <Input label="Category" value={form.category} onChange={set("category")} placeholder="vegetables" />
         <Input label="Region" value={form.region} onChange={set("region")} placeholder="Nairobi" />
-        <Input label="Max vendors" type="number" min="1" max={maxVendorsCap || undefined} value={form.max_vendors} onChange={set("max_vendors")} placeholder={maxVendorsCap ? `≤ ${maxVendorsCap}` : "unlimited"} />
+        <Input label="Max businesses" type="number" min="1" max={maxVendorsCap || undefined} value={form.max_vendors} onChange={set("max_vendors")} placeholder={maxVendorsCap ? `≤ ${maxVendorsCap}` : "unlimited"} />
       </div>
       <div>
         <p className="text-xs font-medium text-ink-3 mb-1.5">Entry criteria (optional)</p>
@@ -59,7 +59,7 @@ export default function VendorListForm({ onDone, onCancel, onSubmit, maxVendorsC
           <Input type="number" min="0" step="any" value={form.criteria_min_score} onChange={set("criteria_min_score")} placeholder="minimum network score" />
         </div>
       </div>
-      <Check checked={form.requires_approval} onChange={set("requires_approval")} label="Approve registrations manually" hint="Otherwise vendors join instantly" />
+      <Check checked={form.requires_approval} onChange={set("requires_approval")} label="Approve registrations manually" hint="Otherwise businesses join instantly" />
       <div className="flex justify-end gap-2 pt-1">
         {onCancel && (
           <Button variant="ghost" onClick={onCancel}>

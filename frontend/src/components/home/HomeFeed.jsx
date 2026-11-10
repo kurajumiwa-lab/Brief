@@ -159,7 +159,7 @@ function QuietNetworkPanel({ onRefresh }) {
       to: "/browse?request=1",
       icon: ClipboardCheck,
       title: "Post a request",
-      body: "Say what you need and the vendors who match it see it first.",
+      body: "Say what you need and the businesses who match it see it first.",
     },
     {
       to: "/storefront",
@@ -171,7 +171,7 @@ function QuietNetworkPanel({ onRefresh }) {
       to: "/network",
       icon: Compass,
       title: "Find businesses",
-      body: "The vendors already registered around you, with what they trade.",
+      body: "The businesses already registered around you, with what they trade.",
     },
   ];
 
