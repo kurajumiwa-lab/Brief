@@ -302,7 +302,7 @@ export default function StockRoom() {
             (networkLoading && network.length === 0 ? (
               <PageSpinner />
             ) : network.length === 0 ? (
-              <EmptyState icon={Globe} title="No network stock here" description="Nobody is showing stock for this search yet. Connect with more vendors — visible stock from the whole network appears here." />
+              <EmptyState icon={Globe} title="No network stock here" description="Nobody is showing stock for this search yet. Connect with more businesses — visible stock from the whole network appears here." />
             ) : (
               <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-3">
                 {network.map((item) => (
@@ -330,7 +330,7 @@ export default function StockRoom() {
             )}
           </div>
           {movements.length === 0 ? (
-            <EmptyState icon={ArrowLeftRight} title="No movements yet" description="A movement is created when you source from a vendor or they source from you. Supplier confirms → ships, buyer receives — only received movements score." />
+            <EmptyState icon={ArrowLeftRight} title="No movements yet" description="A movement is created when you source from a business or they source from you. Supplier confirms → ships, buyer receives — only received movements score." />
           ) : (
             <div className="space-y-2">
               {[...movements].sort((a, b) => Number(needsMyAction(b)) - Number(needsMyAction(a))).map((m) => (

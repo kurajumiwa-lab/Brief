@@ -181,7 +181,7 @@ export default function StockCard({
           </div>
           <div className="absolute top-2.5 right-2.5 flex gap-1">
             {item.source === "pos_sync" && (
-              <Badge variant="blue" size="xs" title="Live from this vendor's till">
+              <Badge variant="blue" size="xs" title="Live from this business's till">
                 <Plug size={10} aria-hidden="true" /> Live
               </Badge>
             )}

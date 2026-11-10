@@ -42,7 +42,7 @@ const QUICK_ACTIONS = [
   },
   {
     title: "Find suppliers",
-    description: "Discover and contact vendors",
+    description: "Discover and contact businesses",
     to: () => "/network",
     icon: Users,
   },
@@ -126,7 +126,7 @@ const DESTINATIONS = [
     group: "Work & sourcing",
   },
   {
-    title: "Vendor lists",
+    title: "Business lists",
     description: "Curated supplier directories and patron tools.",
     to: () => "/lists",
     icon: List,

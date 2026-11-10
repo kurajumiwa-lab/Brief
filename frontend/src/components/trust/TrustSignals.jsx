@@ -64,7 +64,7 @@ export function FulfilmentChip({ rate, size = "xs", className }) {
   const r = Number(rate);
   const tone = r >= 90 ? "brand" : r >= 70 ? "blue" : r >= 50 ? "amber" : "red";
   return (
-    <Badge variant={tone} size={size} className={className} title="Share of confirmed movements this vendor delivered">
+    <Badge variant={tone} size={size} className={className} title="Share of confirmed movements this business delivered">
       <Gauge size={11} aria-hidden="true" />
       {r.toFixed(0)}% fulfilled
     </Badge>
@@ -136,7 +136,7 @@ export function TrustRow({ vendor = {}, size = "xs", className, showLevel = true
         </Badge>
       )}
       {vendor.has_pos_connected && (
-        <Badge variant="gray" size={size} title="Stock syncs live from this vendor's till">
+        <Badge variant="gray" size={size} title="Stock syncs live from this business's till">
           <Plug size={11} aria-hidden="true" />
           Live stock
         </Badge>

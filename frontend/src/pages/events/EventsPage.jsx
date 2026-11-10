@@ -92,7 +92,7 @@ export default function EventsPage() {
     }
   };
   const onStatus = async (ev, status) => {
-    if (status === "cancelled" && !(await confirm({ title: `Cancel ${ev.title}?`, message: "Registered vendors will see it as cancelled.", confirmLabel: "Cancel event", danger: true }))) return;
+    if (status === "cancelled" && !(await confirm({ title: `Cancel ${ev.title}?`, message: "Registered businesses will see it as cancelled.", confirmLabel: "Cancel event", danger: true }))) return;
     try {
       await setStatus(ev, status);
       toast.success(`Event ${status}`);
@@ -108,7 +108,7 @@ export default function EventsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-semibold text-ink-1 tracking-tight">Events</h2>
-          <p className="text-xs text-ink-4">Sourcing trips, market days, trade fairs and workshops — organised by patrons and groups, attended by vendors.</p>
+          <p className="text-xs text-ink-4">Sourcing trips, market days, trade fairs and workshops — organised by patrons and groups, attended by businesses.</p>
         </div>
         <Button size="sm" icon={Plus} onClick={() => setCreating(true)}>
           New event
@@ -216,7 +216,7 @@ export default function EventsPage() {
         </div>
       )}
 
-      <Modal open={creating} onClose={() => setCreating(false)} title="Organise an event" description="Optionally restrict registration to one of your groups or vendor lists.">
+      <Modal open={creating} onClose={() => setCreating(false)} title="Organise an event" description="Optionally restrict registration to one of your groups or business lists.">
         <EventForm groups={groups.filter((g) => g.my_role === "admin")} lists={lists.filter((l) => l.i_run_it)} onDone={() => setCreating(false)} onCancel={() => setCreating(false)} />
       </Modal>
       <EventDrawer event={open} onClose={() => setOpen(null)} organiser={open?.organizer === me?.vendor_handle} onStatus={onStatus} onPatch={(patch) => setFetched((f) => (f && f.id === open?.id ? { ...f, ...patch } : f))} />

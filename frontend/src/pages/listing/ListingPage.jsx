@@ -291,7 +291,7 @@ export default function ListingPage() {
           <div className="rounded-2xl border border-edge-1 bg-surface-0 shadow-sm overflow-hidden">
             <div className="p-5 border-b border-edge-1">
               <p className="text-micro uppercase tracking-[0.1em] font-bold text-ink-4">
-                {item.unit_price != null ? "Vendor's stated price" : "No price stated"}
+                {item.unit_price != null ? "Business's stated price" : "No price stated"}
               </p>
               <p className="mt-1 flex items-baseline gap-1.5">
                 <span className="text-3xl font-bold text-ink-1 tabular-nums">

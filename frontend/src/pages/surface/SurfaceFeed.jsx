@@ -25,7 +25,7 @@ const KIND_META = {
   event: { icon: CalendarDays, tint: "text-brand-600 dark:text-brand-400", label: "Event coming up" },
   market: { icon: MapPin, tint: "text-purple-600 dark:text-purple-400", label: "Market heat" },
   place: { icon: Building2, tint: "text-blue-600 dark:text-blue-400", label: "Place near you" },
-  vendor: { icon: Store, tint: "text-brand-600 dark:text-brand-400", label: "Vendor near you" },
+  vendor: { icon: Store, tint: "text-brand-600 dark:text-brand-400", label: "Business near you" },
   index: { icon: Sigma, tint: "text-accent-600 dark:text-accent-400", label: "Price index" },
 };
 
@@ -155,7 +155,7 @@ function MetaLines({ kind, d }) {
       return <div className="min-w-0 flex-1">
         <p className="text-base font-semibold text-ink-1 capitalize truncate">{d.category}</p>
         <p className="text-2xs text-ink-4 mt-1">KES {num(d.min)}–{num(d.max)} across {num(d.n)} stated prices</p>
-        <p className="text-2xs text-ink-4 mt-0.5">no vendor identity · median, not an average of averages</p>
+        <p className="text-2xs text-ink-4 mt-0.5">no business identity · median, not an average of averages</p>
       </div>;
     default:
       return null;
@@ -249,7 +249,7 @@ export default function SurfaceFeed() {
       {cards.length === 0 ? (
         <div className="px-4 py-10">
           <EmptyState icon={Package} title="Nothing on the surface yet"
-            description="The feed fills as vendors state prices, clients post call-ups, stock moves and markets register members." />
+            description="The feed fills as businesses state prices, clients post call-ups, stock moves and markets register members." />
         </div>
       ) : (
         cards.map((c) => <FeedCard key={c.id} c={c} onGo={onGo} />)

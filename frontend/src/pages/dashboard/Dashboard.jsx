@@ -79,7 +79,7 @@ function NumberPopup({ which, onClose, data }) {
         <>
           <div className="flex items-baseline gap-3">
             <DigitalNumber value={num(connections.length)} tone="blue" size="3xl" />
-            <span className="text-xs text-ink-4">vendors connected to you</span>
+            <span className="text-xs text-ink-4">businesses connected to you</span>
           </div>
           <ul className="mt-4 space-y-1.5">
             {connections.slice(0, 5).map((c) => (
@@ -142,7 +142,7 @@ function NumberPopup({ which, onClose, data }) {
   const titles = {
     score: { title: "Network score", description: "Your standing in the network" },
     fulfillment: { title: "Fulfilment", description: "How reliably you deliver" },
-    connections: { title: "Connections", description: "Vendors you're linked with" },
+    connections: { title: "Connections", description: "Businesses you're linked with" },
     shelf: { title: "On your shelf", description: "What you're offering" },
     vendors: { title: "Network pulse", description: "Everyone here trades" },
   };
@@ -288,13 +288,13 @@ export default function Dashboard() {
           />
         </ShelfItem>
         <ShelfItem index={2} className="w-44 sm:w-48">
-          <Stat label="Connections" value={num(connections.length)} icon={Users} tone="blue" hint="vendors linked with you" onClick={() => setPopup("connections")} />
+          <Stat label="Connections" value={num(connections.length)} icon={Users} tone="blue" hint="businesses linked with you" onClick={() => setPopup("connections")} />
         </ShelfItem>
         <ShelfItem index={3} className="w-44 sm:w-48">
           <Stat label="On your shelf" value={num(mine.length)} icon={Layers} hint={`${visible} visible to the network · ${num(vendor.total_stock_moved || 0)} units moved`} onClick={() => setPopup("shelf")} />
         </ShelfItem>
         <ShelfItem index={4} className="w-44 sm:w-48">
-          <Stat label="Vendors" value={num(stats?.vendors || 0)} icon={Radio} tone="amber" hint={`${num(stats?.connections || 0)} connections network-wide`} onClick={() => setPopup("vendors")} />
+          <Stat label="Businesses" value={num(stats?.vendors || 0)} icon={Radio} tone="amber" hint={`${num(stats?.connections || 0)} connections network-wide`} onClick={() => setPopup("vendors")} />
         </ShelfItem>
       </Shelf>
 
@@ -328,9 +328,9 @@ export default function Dashboard() {
         />
       </Card>
 
-      {/* Vendors who complement you — another moving shelf */}
+      {/* Businesses who complement you — another moving shelf */}
       <Shelf
-        title="Vendors who complement you"
+        title="Businesses who complement you"
         sub="The network's matching for your profile"
         action={
           <Link to="/network" className="text-xs text-brand-600 dark:text-brand-400 hover:text-brand-600 dark:hover:text-brand-400 inline-flex items-center gap-1 transition-colors">

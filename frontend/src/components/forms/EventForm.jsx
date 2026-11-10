@@ -66,17 +66,17 @@ export default function EventForm({ onDone, onCancel, groups = [], lists = [] })
         <Input label="Location" value={form.location} onChange={set("location")} placeholder="Kinangop, Nyandarua" disabled={form.is_virtual} />
         <Input label="Starts" type="datetime-local" required value={form.start_date} onChange={set("start_date")} />
         <Input label="Ends" type="datetime-local" required value={form.end_date} onChange={set("end_date")} min={form.start_date || undefined} />
-        <Input label="Max vendors" type="number" min="1" value={form.max_vendors} onChange={set("max_vendors")} placeholder="50" />
+        <Input label="Max businesses" type="number" min="1" value={form.max_vendors} onChange={set("max_vendors")} placeholder="50" />
         <Input label="Entry fee" type="number" min="0" step="any" prefix="KES" value={form.entry_fee} onChange={set("entry_fee")} placeholder="0" />
       </div>
       <div className="grid sm:grid-cols-2 gap-3">
-        <Input label="Required categories" value={form.required_categories} onChange={set("required_categories")} placeholder="vegetables, fruit" hint="Only vendors trading these can register" />
-        <Input label="Other requirements" value={form.other_requirements} onChange={set("other_requirements")} placeholder="own transport, KRA PIN" hint="Shown to vendors, not enforced" />
+        <Input label="Required categories" value={form.required_categories} onChange={set("required_categories")} placeholder="vegetables, fruit" hint="Only businesses trading these can register" />
+        <Input label="Other requirements" value={form.other_requirements} onChange={set("other_requirements")} placeholder="own transport, KRA PIN" hint="Shown to businesses, not enforced" />
       </div>
       {(groups.length > 0 || lists.length > 0) && (
         <div className="grid sm:grid-cols-2 gap-3">
           {groups.length > 0 && <Select label="Limit to a group" value={form.group_id} onChange={set("group_id")} placeholder="Open to the network" options={groups.map((g) => ({ value: g.id, label: g.name }))} />}
-          {lists.length > 0 && <Select label="Limit to a vendor list" value={form.vendor_list_id} onChange={set("vendor_list_id")} placeholder="Any vendor" options={lists.map((l) => ({ value: l.id, label: l.name }))} />}
+          {lists.length > 0 && <Select label="Limit to a business list" value={form.vendor_list_id} onChange={set("vendor_list_id")} placeholder="Any business" options={lists.map((l) => ({ value: l.id, label: l.name }))} />}
         </div>
       )}
       <Check checked={form.is_virtual} onChange={set("is_virtual")} label="Virtual event" hint="No physical location" />

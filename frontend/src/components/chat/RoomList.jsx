@@ -13,7 +13,7 @@ const TYPE_META = {
   direct: { label: "Direct", icon: MessageCircle, order: 0 },
   deal: { label: "Deals", icon: HeartHandshake, order: 1 },
   group: { label: "Groups", icon: Users, order: 2 },
-  vendor_list: { label: "Vendor lists", icon: ListChecks, order: 3 },
+  vendor_list: { label: "Business lists", icon: ListChecks, order: 3 },
   niche: { label: "Topics", icon: Hash, order: 4 },
 };
 
@@ -97,7 +97,7 @@ export default function RoomList({ rooms = [], activeId, onSelect, onNewTopic, o
               description={
                 q.trim()
                   ? "Clear the search filter to see all conversations and open topics."
-                  : "Start a topic or message a vendor from their shop front."
+                  : "Start a topic or message a business from their shop front."
               }
               action={
                 q.trim() ? (

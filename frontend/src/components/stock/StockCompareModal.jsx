@@ -42,7 +42,7 @@ export default function StockCompareModal({ item, open, onClose, onSource }) {
   const cheapest = rows.reduce((best, r) => (price(r) != null && (best == null || price(r) < best) ? price(r) : best), null);
 
   return (
-    <Modal open={open} onClose={onClose} title={`Compare · ${item.name}`} description="Same category across the network, cheapest first. Reliability is the share of confirmed movements the vendor delivered." size="lg">
+    <Modal open={open} onClose={onClose} title={`Compare · ${item.name}`} description="Same category across the network, cheapest first. Reliability is the share of confirmed movements the business delivered." size="lg">
       {loading ? (
         <PageSpinner />
       ) : error ? (
@@ -52,7 +52,7 @@ export default function StockCompareModal({ item, open, onClose, onSource }) {
           <table className="w-full text-xs">
             <thead>
               <tr className="text-2xs text-ink-4 text-left border-b border-edge-1">
-                <th className="py-2 pl-1 font-medium">Item · vendor</th>
+                <th className="py-2 pl-1 font-medium">Item · business</th>
                 <th className="py-2 font-medium">Price</th>
                 <th className="py-2 font-medium">Available</th>
                 <th className="py-2 font-medium">Quality</th>

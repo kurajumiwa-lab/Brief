@@ -359,7 +359,7 @@ function FullForm({ item, onDone, onCancel }) {
           <Input type="number" min="0" step="any" value={form.wholesale_price} onChange={set("wholesale_price")} placeholder="wholesale" prefix="KES" />
           <Input type="number" min="0" step="any" value={form.unit_price} onChange={set("unit_price")} placeholder="unit price" prefix="KES" />
         </div>
-        <p className="text-2xs text-ink-4 mt-1">Vendors sourcing from you pay the unit price unless you agree otherwise in a deal.</p>
+        <p className="text-2xs text-ink-4 mt-1">Businesses sourcing from you pay the unit price unless you agree otherwise in a deal.</p>
       </div>
 
       <div className="grid sm:grid-cols-2 gap-3">
@@ -370,7 +370,7 @@ function FullForm({ item, onDone, onCancel }) {
       <label className="flex items-center gap-2.5 rounded-lg border border-edge-1 bg-surface-1 px-3 py-2.5 cursor-pointer">
         <input type="checkbox" checked={form.visible_to_network} onChange={set("visible_to_network")} className="accent-brand-500 w-4 h-4" />
         <span className="text-sm text-ink-2">Visible to the network</span>
-        <span className="ml-auto text-2xs text-ink-4">Other vendors can source it</span>
+        <span className="ml-auto text-2xs text-ink-4">Other businesses can source it</span>
       </label>
 
       <div className="flex items-center justify-end gap-2 pt-1">

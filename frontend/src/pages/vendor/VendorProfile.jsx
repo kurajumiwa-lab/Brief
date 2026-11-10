@@ -612,8 +612,8 @@ export default function VendorProfile() {
               title="Published products appear here"
               description={
                 own
-                  ? "Each listing shows a product name, photo, vendor-stated price, availability and a way to enquire. Items are private until you mark them visible with available stock."
-                  : "Each listing shows a product name, photo, vendor-stated price, availability and a way to enquire. Message them to ask what is currently in stock."
+                  ? "Each listing shows a product name, photo, business-stated price, availability and a way to enquire. Items are private until you mark them visible with available stock."
+                  : "Each listing shows a product name, photo, business-stated price, availability and a way to enquire. Message them to ask what is currently in stock."
               }
               action={
                 own ? (
@@ -679,7 +679,7 @@ export default function VendorProfile() {
           </div>
 
           <div className="rounded-2xl border border-edge-1 bg-surface-0 p-5">
-            <h2 className="text-sm font-bold text-ink-1">How this vendor performs</h2>
+            <h2 className="text-sm font-bold text-ink-1">How this business performs</h2>
             <p className="text-2xs text-ink-3 mt-0.5">
               Every figure is computed from completed movements. A dash means there is no sample yet — not a zero.
             </p>

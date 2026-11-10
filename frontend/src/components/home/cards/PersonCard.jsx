@@ -47,7 +47,7 @@ export default function PersonCard({ item }) {
           {item.patron && (
             <span
               className="rounded-full bg-accent-400/90 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-accent-950"
-              title="Runs a vendor list"
+              title="Runs a business list"
             >
               Patron
             </span>

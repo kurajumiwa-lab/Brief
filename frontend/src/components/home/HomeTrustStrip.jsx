@@ -12,7 +12,7 @@ import { BadgeCheck, FileCheck2, Scale, ShieldCheck } from "lucide-react";
  * now**, and each one is already stated somewhere in Brief:
  *
  *   · Verified businesses — `vendors.is_verified` and the verification routes.
- *   · Prices the vendor stated — prices are vendor-declared, never estimated.
+ *   · Prices the business stated — prices are vendor-declared, never estimated.
  *   · A record for every trade — the order/ledger model.
  *   · Money that never sits with us — non-custodial settlement.
  *
@@ -23,7 +23,7 @@ import { BadgeCheck, FileCheck2, Scale, ShieldCheck } from "lucide-react";
 
 const FACTS = [
   { icon: BadgeCheck, label: "Verified businesses" },
-  { icon: Scale, label: "Prices the vendor stated" },
+  { icon: Scale, label: "Prices the business stated" },
   { icon: FileCheck2, label: "A record for every trade" },
   { icon: ShieldCheck, label: "Payments stay yours" },
 ];

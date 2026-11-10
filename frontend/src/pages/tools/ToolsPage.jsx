@@ -105,7 +105,7 @@ export default function ToolsPage() {
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h2 className="text-xl font-semibold text-ink-1 tracking-tight">Vendor Tools &amp; Facilities</h2>
+          <h2 className="text-xl font-semibold text-ink-1 tracking-tight">Business Tools &amp; Facilities</h2>
           <p className="text-xs text-ink-3">
             Warehouse space, cold storage, transport, couriers, pop-up shops, and hotel sourcing across the vendor network.
           </p>
@@ -193,7 +193,7 @@ export default function ToolsPage() {
               icon={Truck}
               illustration="warehouse"
               title="No couriers registered"
-              description="Boda riders and delivery fleets register here so vendors can route movements through them."
+              description="Boda riders and delivery fleets register here so businesses can route movements through them."
               action={<Button size="sm" onClick={() => setCourier(true)}>Register as a courier</Button>}
             />
           ) : (
@@ -287,7 +287,7 @@ export default function ToolsPage() {
           setCourierOpen(false);
         }}
         title="Register a courier service"
-        description="Also listed under Tools → Couriers so vendors can find you."
+        description="Also listed under Tools → Couriers so businesses can find you."
         size="sm"
       >
         <CourierForm

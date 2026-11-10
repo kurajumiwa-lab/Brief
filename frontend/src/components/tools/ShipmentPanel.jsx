@@ -212,7 +212,7 @@ function ShipmentCard({ shipment: s, onChange }) {
               <span className="text-2xs text-ink-4 ml-1">rate the courier</span>
             </div>
             <div className="flex gap-2">
-              <Input value={review} onChange={(e) => setReview(e.target.value)} placeholder="A line for other vendors (optional)" wrapperClassName="flex-1" />
+              <Input value={review} onChange={(e) => setReview(e.target.value)} placeholder="A line for other businesses (optional)" wrapperClassName="flex-1" />
               <Button size="sm" loading={busy === "rate"} onClick={rate}>
                 Rate
               </Button>
@@ -270,7 +270,7 @@ export function BookShipmentModal({ courier, open, onClose, onDone }) {
   return (
     <Modal open={open} onClose={onClose} title={`Book ${courier.courier_name}`} description="The receiver and the courier are told; every status update lands in the bell.">
       <form onSubmit={submit} className="space-y-3">
-        <Select label="Receiver" required value={form.receiver_vendor_id} onChange={set("receiver_vendor_id")} placeholder={connections.length ? "Choose a connected vendor…" : "Connect with a vendor first"} options={connections.map((v) => ({ value: v.id, label: `${v.business_name} · @${v.vendor_handle}` }))} />
+        <Select label="Receiver" required value={form.receiver_vendor_id} onChange={set("receiver_vendor_id")} placeholder={connections.length ? "Choose a connected business…" : "Connect with a business first"} options={connections.map((v) => ({ value: v.id, label: `${v.business_name} · @${v.vendor_handle}` }))} />
         {movements.length > 0 && (
           <Select label="For a movement (optional)" value={form.movement_id} onChange={(e) => {
             const mv = movements.find((x) => x.id === e.target.value);

@@ -140,7 +140,7 @@ export default function MapSheet({ item, onClose, onFocus }) {
               )}
             </div>
             <p className="text-2xs text-ink-4 mt-0.5 truncate">
-              {kind === "vendors" && `@${item.handle || "vendor"} · ${(item.categories || []).slice(0, 3).join(" · ") || "categories not stated"}`}
+              {kind === "vendors" && `@${item.handle || "business"} · ${(item.categories || []).slice(0, 3).join(" · ") || "categories not stated"}`}
               {kind === "markets" && [item.city, item.country].filter(Boolean).join(", ")}
               {kind === "places" && categoryLabel(item.category || detail?.category)}
               {typeof distance === "number" && ` · ${distance} km away`}

@@ -43,8 +43,8 @@ const NOTICE_TYPES = [
 
 // Audience options
 const AUDIENCE_OPTIONS = [
-  { value: "all", label: "All vendors" },
-  { value: "local", label: "Local vendors only" },
+  { value: "all", label: "All businesses" },
+  { value: "local", label: "Local businesses only" },
   { value: "connected", label: "My connections" },
   { value: "category", label: "Specific category" },
 ];
@@ -95,7 +95,7 @@ function NoticeCard({ notice, onEdit, onDelete, onPreview }) {
           </button>
           <p className="text-2xs text-ink-4 mt-0.5">
             {NOTICE_TYPES.find(t => t.value === notice.type)?.label || titleCase(notice.type)} · 
-            by <span className="text-ink-3">{notice.organizer_business || notice.owner?.name || "A vendor"}</span>
+            by <span className="text-ink-3">{notice.organizer_business || notice.owner?.name || "A business"}</span>
           </p>
         </div>
         
@@ -780,7 +780,7 @@ export function useNoticeBoard() {
         {
           id: "2",
           title: "Business Consulting Services",
-          description: "Professional business consulting to help you grow your vendor business. Specializing in market expansion and efficiency.",
+          description: "Professional business consulting to help you grow your business. Specializing in market expansion and efficiency.",
           type: "service_offering",
           status: "published",
           organizer: "business_pro",
@@ -797,7 +797,7 @@ export function useNoticeBoard() {
         {
           id: "3",
           title: "Market Day - This Saturday",
-          description: "Join us for the monthly vendor market day. Great opportunity to network and showcase your products.",
+          description: "Join us for the monthly business market day. Great opportunity to network and showcase your products.",
           type: "event",
           status: "published",
           organizer: "market_org",

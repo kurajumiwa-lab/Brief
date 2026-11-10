@@ -96,8 +96,8 @@ export function resolveIdentityDisplay({
   const enabledInLocation = cfg.locations?.[location] !== false;
   const effectiveMode = enabledInLocation ? activeMode : "business_logo";
 
-  const business = senderBusiness || vendor?.business_name || senderHandle || "Vendor";
-  const handle = senderHandle || vendor?.vendor_handle || "vendor";
+  const business = senderBusiness || vendor?.business_name || senderHandle || "Business";
+  const handle = senderHandle || vendor?.vendor_handle || "business";
   const personal = senderName || cfg.sender_name || business;
   const role = senderRole || cfg.sender_role || "Owner";
   const resolvedAvatar = avatarUrl ?? cfg.avatar_url ?? "";
@@ -319,7 +319,7 @@ export default function ChatIdentityModal({ open, onClose }) {
                 >
                   <div className="pt-0.5">
                     <Avatar
-                      name={vendor?.business_name || "Vendor"}
+                      name={vendor?.business_name || "Business"}
                       personalName={form.sender_name || vendor?.business_name || "Me"}
                       businessName={vendor?.business_name || "Business"}
                       src={form.avatar_url || undefined}

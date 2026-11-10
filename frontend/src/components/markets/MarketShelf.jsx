@@ -26,9 +26,9 @@ const KINDS = [
     key: "goods",
     label: "Goods",
     icon: Package,
-    blurb: "Products vendors sell",
+    blurb: "Products businesses sell",
   },
-  { key: "people", label: "People", icon: Users, blurb: "Find local vendors" },
+  { key: "people", label: "People", icon: Users, blurb: "Find local businesses" },
   {
     key: "services",
     label: "Services",
