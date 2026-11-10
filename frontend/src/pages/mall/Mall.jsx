@@ -35,8 +35,9 @@ export default function Mall() {
           <Store size={20} aria-hidden="true" /> Mall
         </h2>
         <p className="text-xs text-ink-4 mt-1">
-          Verified businesses, checked by staff. Unverified businesses appear in{" "}
-          <span className="font-medium text-ink-3">Local network</span>, not here.
+          Showing businesses marked verified. Staff approval for the Mall is not yet enforced by the server,
+          so this list is a display view, not the final Mall rule. Unverified businesses stay in{" "}
+          <span className="font-medium text-ink-3">Local network</span>.
         </p>
       </div>
 
@@ -54,7 +55,7 @@ export default function Mall() {
         <EmptyState
           icon={Store}
           title="No verified businesses yet"
-          description="Businesses appear here once staff have verified them. Until then they are visible in Local network, marked as not verified."
+          description="Businesses marked verified appear here. Unverified businesses are visible in Local network, labelled as not verified."
         />
       ) : (
         <div className="grid gap-3 sm:grid-cols-2" data-testid="mall-list">
