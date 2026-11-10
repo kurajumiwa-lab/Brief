@@ -33,6 +33,8 @@ import LearnPage from "@/pages/learn/LearnPage";
 import LearnDetailPage from "@/pages/learn/LearnDetailPage";
 import LearnNewPage from "@/pages/learn/LearnNewPage";
 import TodayPage from "@/pages/today/TodayPage";
+import DeskPage from "@/pages/desk/DeskPage";
+import { DESK_ENABLED } from "@/config/flags";
 import BlueprintsPage from "@/pages/templates/BlueprintsPage";
 import BlueprintDetailPage from "@/pages/templates/BlueprintDetailPage";
 import ReceiptsPage from "@/pages/payments/ReceiptsPage";
@@ -228,6 +230,8 @@ function AppRoutes() {
           <Route path="/office" element={<OfficePage />} />
           <Route path="/learn/new" element={<LearnNewPage />} />
           <Route path="/today" element={<TodayPage />} />
+          {/* Flagged: off unless VITE_DESK_ENABLED=true. A false child is skipped by Routes. */}
+          {DESK_ENABLED && <Route path="/desk" element={<DeskPage />} />}
           <Route path="/book/:vendorId" element={<BookPage />} />
           <Route path="/payments" element={<ReceiptsPage />} />
           {/* ── Outside destinations (v4) ──────────────────────────────────

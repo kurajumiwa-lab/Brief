@@ -31,7 +31,9 @@ OPEN_PREFIXES = ("/api/auth/", "/api/health", "/api/metrics", "/api/payments/web
 # under these prefixes that is personal or changes data still depends on
 # `get_current_vendor`, so it answers 401 without a token at the route level too.
 PUBLIC_READ_PREFIXES = ("/api/offers/public", "/api/knowledge/sectors", "/api/knowledge/listings",
-                        "/api/blueprints", "/api/trust/public", "/api/office/public/")
+                        "/api/blueprints", "/api/trust/public", "/api/office/public/",
+                        # Offerings a person shows the network: visible rows only, GET only.
+                        "/api/offerings/of/")
 
 OFFICE_OPEN_POST = ("/api/office/links/accept",)
 
