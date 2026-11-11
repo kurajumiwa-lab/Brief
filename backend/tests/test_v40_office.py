@@ -52,12 +52,16 @@ def _event(hours_from=2, length=2):
 
 # ── one person can start ──────────────────────────────────────────────────────
 
-async def test_one_person_creates_a_home_office_and_it_is_public_at_once(client):
+async def test_one_person_creates_a_home_office_that_starts_private(client):
     handle, owner, vid = await _register(client, "solo")
     oid = await _office(client, owner)
+    # Rule 9: a new office is private until its owner opens it. Not even its existence leaks.
     r = await client.get(f"/api/office/public/offices/{oid}")
-    assert r.status_code == 200
-    body = r.json()
+    assert r.status_code == 404
+    # The owner opens it explicitly.
+    r = await client.patch(f"/api/office/offices/{oid}/visibility", headers=owner, json={"visibility": "public"})
+    assert r.status_code == 200 and r.json()["visibility"] == "public"
+    body = (await client.get(f"/api/office/public/offices/{oid}")).json()
     assert body["name"] == "Kevin Barber Shop" and body["area"] == "Kisii town, Nyanchwa"
     assert body["contact"] is None  # hidden unless the owner chose a way to be contacted
 
@@ -69,10 +73,67 @@ async def test_contact_is_shown_only_when_the_owner_chose_it(client):
         await db.execute(update(Vendor).where(Vendor.id == uuid.UUID(vid)).values(phone="+254712345678"))
         await db.commit()
     oid = await _office(client, owner, contact_mode="phone")
+    oid2 = await _office(client, owner, name="Second Desk", contact_mode="none")
+    for x in (oid, oid2):
+        assert (await client.patch(f"/api/office/offices/{x}/visibility", headers=owner,
+                                   json={"visibility": "public"})).status_code == 200
     body = (await client.get(f"/api/office/public/offices/{oid}")).json()
     assert body["contact"] == {"phone": "+254712345678"}
-    oid2 = await _office(client, owner, name="Second Desk", contact_mode="none")
     assert (await client.get(f"/api/office/public/offices/{oid2}")).json()["contact"] is None
+
+
+async def test_only_the_owner_can_change_visibility_and_editors_cannot(client):
+    handle, owner, vid = await _register(client, "visowner")
+    oid = await _office(client, owner)
+    ehandle, editor, _ = await _register(client, "viseditor")
+    await _join_account(client, owner, oid, editor, ehandle, "editor")
+    r = await client.patch(f"/api/office/offices/{oid}/visibility", headers=editor, json={"visibility": "public"})
+    assert r.status_code == 403
+    assert (await client.get(f"/api/office/public/offices/{oid}")).status_code == 404
+    stranger_handle, stranger, _ = await _register(client, "visstranger")
+    r = await client.patch(f"/api/office/offices/{oid}/visibility", headers=stranger, json={"visibility": "public"})
+    assert r.status_code == 403
+
+
+async def test_visibility_rejects_unknown_values_and_is_audited(client):
+    handle, owner, vid = await _register(client, "visaudit")
+    oid = await _office(client, owner)
+    r = await client.patch(f"/api/office/offices/{oid}/visibility", headers=owner, json={"visibility": "everyone"})
+    assert r.status_code == 422
+    await client.patch(f"/api/office/offices/{oid}/visibility", headers=owner, json={"visibility": "public"})
+    await client.patch(f"/api/office/offices/{oid}/visibility", headers=owner, json={"visibility": "private"})
+    assert (await client.get(f"/api/office/public/offices/{oid}")).status_code == 404
+    from sqlalchemy import text as _t
+    async with async_session() as db:
+        rows = (await db.execute(_t(
+            "SELECT 1 FROM audit_events WHERE entity_id = :e AND action = 'office_visibility_changed'"),
+            {"e": uuid.UUID(oid)})).all()
+    assert len(rows) == 2
+
+
+async def test_signup_gives_every_person_one_private_home_office(client):
+    handle, owner, vid = await _register(client, "homeonly")
+    r = await client.get("/api/office/offices/mine", headers=owner)
+    assert r.status_code == 200
+    offices = r.json()["offices"]
+    assert len(offices) == 1 and offices[0]["my_role"] == "owner"
+    assert offices[0]["visibility"] == "private"
+    oid = offices[0]["id"]
+    assert (await client.get(f"/api/office/public/offices/{oid}")).status_code == 404
+
+
+async def test_ensure_home_office_is_idempotent(client):
+    from app.models.vendor import Vendor
+    from app.modules.office.models import Office
+    from app.modules.office.service import ensure_home_office
+    from sqlalchemy import select as _s
+    handle, owner, vid = await _register(client, "idem")
+    async with async_session() as db:
+        v = await db.get(Vendor, uuid.UUID(vid))
+        assert await ensure_home_office(db, v) is None
+        await db.commit()
+        n = len((await db.execute(_s(Office).where(Office.owner_vendor_id == v.id))).scalars().all())
+    assert n == 1
 
 
 async def test_office_creation_writes_an_audit_event(client):
@@ -389,3 +450,16 @@ async def test_the_database_has_the_integrity_rules_under_their_names(client):
               "ck_office_members_no_stale_credentials", "ck_offices_text_nonblank", "ck_office_events_text_nonblank"):
         assert n in names, n
     assert "uq_office_one_active_owner" in idx
+
+
+async def test_signup_never_copies_the_exact_address_into_the_office(client):
+    from app.models.vendor import Vendor
+    handle, owner, vid = await _register(client, "addr")
+    async with async_session() as db:
+        await db.execute(update(Vendor).where(Vendor.id == uuid.UUID(vid))
+                         .values(physical_location="Plot 12, Kisumu Road, Kisumu"))
+        await db.commit()
+    r = await client.get("/api/office/offices/mine", headers=owner)
+    office = r.json()["offices"][0]
+    assert "Plot 12" not in office["area"]
+    assert office["area"] == "Not set yet"

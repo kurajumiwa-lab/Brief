@@ -106,6 +106,49 @@ async def create_office(db: AsyncSession, owner: Vendor, *, name: str, nature: s
     return office
 
 
+VISIBILITIES = ("private", "public")
+
+
+async def set_visibility(db: AsyncSession, actor: Vendor, office_id: uuid.UUID, visibility: str) -> Office:
+    """Open or close an office's public front door. Owner only; always audited."""
+    if visibility not in VISIBILITIES:
+        raise OfficeError("Visibility must be private or public.", 422)
+    office = await get_office(db, office_id)
+    await require_active(db, office_id, actor, ("owner",))
+    before = office.visibility
+    office.visibility = visibility
+    office.updated_at = _now()
+    await db.flush()
+    await audit(db, actor, "office_visibility_changed", "office", office.id, None,
+                {"from": before, "to": visibility})
+    return office
+
+
+async def ensure_home_office(db: AsyncSession, vendor: Vendor) -> Optional[Office]:
+    """Rule 3: every person gets a private home office. Created once, never duplicated.
+
+    Uses the same creation path as an office made by hand, so the owner membership and the
+    audit event are identical. If the person already owns an active office, nothing is added.
+    Name and area fall back to safe placeholders, which are private until the owner edits them.
+    """
+    existing = (await db.execute(
+        select(Office.id).join(OfficeMember, OfficeMember.office_id == Office.id).where(
+            OfficeMember.vendor_id == vendor.id, OfficeMember.role == "owner",
+            OfficeMember.status == "active", Office.status == "active",
+        ).limit(1)
+    )).first()
+    if existing:
+        return None
+    name = (vendor.business_name or "").strip()[:120]
+    if len(name) < 2:
+        name = "Home office"
+    # Never copy physical_location: it may be an exact address, and the office area is public
+    # once the owner opens it. The owner sets a general area deliberately.
+    area = "Not set yet"
+    return await create_office(db, vendor, name=name, nature="Personal", area=area,
+                               hours_text=None, contact_mode="none")
+
+
 async def my_offices(db: AsyncSession, vendor: Vendor) -> list[dict]:
     rows = (await db.execute(
         select(Office, OfficeMember.role).join(OfficeMember, OfficeMember.office_id == Office.id)
@@ -117,11 +160,15 @@ async def my_offices(db: AsyncSession, vendor: Vendor) -> list[dict]:
 
 def office_summary(o: Office, role: Optional[str] = None) -> dict:
     return {"id": str(o.id), "name": o.name, "nature": o.nature, "area": o.area,
-            "hours_text": o.hours_text, "contact_mode": o.contact_mode, "my_role": role}
+            "hours_text": o.hours_text, "contact_mode": o.contact_mode, "my_role": role,
+            "visibility": o.visibility}
 
 
 async def public_office(db: AsyncSession, office_id: uuid.UUID) -> dict:
     office = await get_office(db, office_id)
+    if office.visibility != "public":
+        # A private office is indistinguishable from a missing one: no name, no area, no hint.
+        raise OfficeError("That office was not found.", 404)
     contact = None
     if office.contact_mode != "none":
         owner = await db.get(Vendor, office.owner_vendor_id)
