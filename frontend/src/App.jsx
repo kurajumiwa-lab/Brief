@@ -34,7 +34,8 @@ import LearnDetailPage from "@/pages/learn/LearnDetailPage";
 import LearnNewPage from "@/pages/learn/LearnNewPage";
 import TodayPage from "@/pages/today/TodayPage";
 import DeskPage from "@/pages/desk/DeskPage";
-import { DESK_ENABLED, NEARBY_DOORS_ENABLED } from "@/config/flags";
+import MailPage from "@/pages/mail/MailPage";
+import { DESK_ENABLED, MAIL_ENABLED, NEARBY_DOORS_ENABLED } from "@/config/flags";
 import FrontDoorsPage from "@/pages/nearby/FrontDoorsPage";
 import BlueprintsPage from "@/pages/templates/BlueprintsPage";
 import BlueprintDetailPage from "@/pages/templates/BlueprintDetailPage";
@@ -233,6 +234,8 @@ function AppRoutes() {
           <Route path="/today" element={<TodayPage />} />
           {/* Flagged: off unless VITE_DESK_ENABLED=true. A false child is skipped by Routes. */}
           {DESK_ENABLED && <Route path="/desk" element={<DeskPage />} />}
+          {/* Flagged: off unless VITE_MAIL_ENABLED=true. */}
+          {MAIL_ENABLED && <Route path="/mail" element={<MailPage />} />}
           {/* Flagged: off unless VITE_NEARBY_DOORS_ENABLED=true. */}
           {NEARBY_DOORS_ENABLED && <Route path="/doors" element={<FrontDoorsPage />} />}
           <Route path="/book/:vendorId" element={<BookPage />} />

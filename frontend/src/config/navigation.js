@@ -5,7 +5,7 @@ import {
   Sparkles, Receipt, ShoppingBag, ShoppingCart, List, ListChecks, Inbox, ScanLine,
   Mail, Search, ClipboardCheck,
 } from "lucide-react";
-import { DESK_ENABLED, FIVE_TAB_NAV_ENABLED } from "@/config/flags";
+import { DESK_ENABLED, FIVE_TAB_NAV_ENABLED, MAIL_ENABLED } from "@/config/flags";
 
 /**
  * THE FIVE DESTINATIONS — three activities, one anchor and one door (v2.18).
@@ -50,7 +50,11 @@ export const PRIMARY_NAV = [
 export const PRIMARY_NAV_FIVE = [
   { to: DESK_ENABLED ? "/desk" : "/", label: "Desk", icon: ClipboardCheck, end: DESK_ENABLED ? false : true, area: "desk" },
   { to: "/explore", label: "Nearby", icon: Compass, area: "nearby" },
-  { to: "/activity", label: "Mail", icon: Mail, area: "activity", badge: "activity" },
+  // Mail is conversations (/mail when MAIL_ENABLED, else Connect). It carries no badge: the
+  // Connect count is notifications, and there is no unread-message count to show.
+  MAIL_ENABLED
+    ? { to: "/mail", label: "Mail", icon: Mail, area: "mail" }
+    : { to: "/activity", label: "Mail", icon: Mail, area: "activity", badge: "activity" },
   { to: "/search", label: "Search", icon: Search, area: "search" },
   { to: "/me", label: "Me", icon: UserRound, area: "me" },
 ];
@@ -186,6 +190,8 @@ export const isActivityPath = (pathname = "") => inArea(pathname, ACTIVITY_ROOTS
 
 export const isMallPath = (pathname = "") => inArea(pathname, MALL_ROOTS);
 
+export const isMailPath = (pathname = "") => inArea(pathname, ["/mail", "/chat"]);
+
 /** Kept under their v3 names so nothing importing them breaks. */
 export const isBrowsePath = isExplorePath;
 export const isWorkPath = isActivityPath;
@@ -202,6 +208,8 @@ export const isPrimaryActive = (item, pathname, vendorHandle) => {
   if (item.area === "search") return isSearchPath(pathname);
   if (item.area === "explore") return isExplorePath(pathname);
   if (item.area === "activity") return isActivityPath(pathname);
+  // Mail lights for /mail and the chat threads it opens. Off the flag it is Connect, so it lights for /activity.
+  if (item.area === "mail") return isMailPath(pathname) || (!MAIL_ENABLED && isActivityPath(pathname));
   if (item.area === "mall") return isMallPath(pathname);
   if (item.area === "me") return isMePath(pathname, vendorHandle);
   if (item.end) return pathname === item.to;
