@@ -279,6 +279,8 @@ app.include_router(orders_routes, prefix="/api/orders", tags=["Order Transaction
 app.include_router(map_routes.router, prefix="/api/map", tags=["Map"])
 app.include_router(nearby_routes.router, prefix="/api/nearby", tags=["Nearby (B2C)"])
 app.include_router(onboarding_routes.router, prefix="/api/onboarding", tags=["Onboarding"])
+from app.modules.workers import router as workers_routes  # noqa: E402
+app.include_router(workers_routes.router, prefix="/api/workers", tags=["Workers"])
 app.include_router(notifications.router, prefix="/api/notifications", tags=["Notifications"])
 app.include_router(files.router, prefix="/api/files", tags=["Files"])
 app.include_router(verification.router, prefix="/api/stock", tags=["Stock Verification"])

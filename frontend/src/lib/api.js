@@ -794,11 +794,31 @@ export const briefAPI = {
 };
 
 // ── Offerings: what a person can be asked for (read-only aggregate) ─────────
+/** Workers (Phase 4). Access is enforced by the backend: managers assign, workers act on their own. */
+export const workersAPI = {
+  /** My open work across the offices I belong to. */
+  mine: (params) => api.get("/workers/mine", params ? { params } : undefined),
+  /** All of one office's work. Owners and editors only. */
+  assignments: (officeId, params) => api.get(`/workers/offices/${officeId}/assignments`, params ? { params } : undefined),
+  assign: (officeId, body) => api.post(`/workers/offices/${officeId}/assignments`, body),
+  start: (id) => api.post(`/workers/assignments/${id}/start`),
+  complete: (id) => api.post(`/workers/assignments/${id}/complete`),
+  cancel: (id) => api.post(`/workers/assignments/${id}/cancel`),
+  reassign: (id, assigneeHandle) => api.post(`/workers/assignments/${id}/reassign`, { assignee_handle: assigneeHandle }),
+  history: (id) => api.get(`/workers/assignments/${id}/history`),
+};
+
 export const offeringsAPI = {
   /** My offerings, including hidden and unavailable ones. */
-  mine: () => api.get("/offerings/mine"),
+  mine: (params) => api.get("/offerings/mine", params ? { params } : undefined),
   /** What a person shows the network. Public; visible rows only. */
   of: (handle) => api.get(`/offerings/of/${encodeURIComponent(handle)}`),
+  /** Create goods, a service or a tool. No business profile needed. */
+  create: (body) => api.post("/offerings", body),
+  /** Edit my offering. Only the fields you send change. */
+  update: (kind, id, body) => api.patch(`/offerings/${kind}/${id}`, body),
+  /** pause | resume | archive. Archive cannot be undone. */
+  setStatus: (kind, id, action) => api.post(`/offerings/${kind}/${id}/status`, { action }),
 };
 
 // ── Receipts: a vendor's own payment attempts (v2.15, Track 1) ─────────────
