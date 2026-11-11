@@ -3,7 +3,7 @@ from datetime import datetime
 from enum import Enum as PyEnum
 
 from sqlalchemy import (
-    Boolean, Column, DateTime, Enum, Float, ForeignKey, Integer, String, Text
+    Boolean, CheckConstraint, Column, DateTime, Enum, Float, ForeignKey, Integer, String, Text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import relationship
@@ -34,6 +34,10 @@ class ToolListing(Base):
     - Equipment rental
     """
     __tablename__ = "tool_listings"
+    __table_args__ = (
+        CheckConstraint("price_mode IN ('fixed', 'negotiable', 'ask_me')", name="ck_tool_listings_price_mode"),
+        CheckConstraint("service_radius_km IS NULL OR (service_radius_km > 0 AND service_radius_km <= 500)", name="ck_tool_listings_radius"),
+    )
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     vendor_id = Column(UUID(as_uuid=True), ForeignKey('vendors.id'), nullable=False)  # Who's offering
@@ -53,6 +57,9 @@ class ToolListing(Base):
 
     # Availability
     is_available = Column(Boolean, default=True, nullable=False)
+    price_mode = Column(String(12), nullable=False, default="fixed", server_default="fixed")  # fixed | negotiable | ask_me
+    archived_at = Column(DateTime, nullable=True)  # set = archived (kept, hidden from lists)
+    service_radius_km = Column(Integer, nullable=True)  # how far the offer reaches, 1..500
     available_from = Column(DateTime)
     available_until = Column(DateTime)
     capacity = Column(JSONB, default=dict)

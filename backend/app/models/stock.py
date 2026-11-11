@@ -3,7 +3,7 @@ from datetime import datetime
 from enum import Enum as PyEnum
 
 from sqlalchemy import (
-    Boolean, Column, DateTime, Enum, Float, ForeignKey, Index, Integer, String, Text
+    Boolean, CheckConstraint, Column, DateTime, Enum, Float, ForeignKey, Index, Integer, String, Text
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import relationship
@@ -53,6 +53,7 @@ class StockItem(Base):
     __tablename__ = "stock_items"
     __table_args__ = (
         Index("ix_stock_items_vendor_pos_item", "vendor_id", "pos_item_id"),
+        CheckConstraint("price_mode IN ('fixed', 'negotiable', 'ask_me')", name="ck_stock_items_price_mode"),
         Index("ix_stock_items_vendor_sku", "vendor_id", "sku"),
     )
 
@@ -87,6 +88,8 @@ class StockItem(Base):
 
     # Visibility in network
     visible_to_network = Column(Boolean, default=True, nullable=False)
+    price_mode = Column(String(12), nullable=False, default="fixed", server_default="fixed")  # fixed | negotiable | ask_me
+    archived_at = Column(DateTime, nullable=True)  # set = archived (kept, hidden from lists)
     visible_to_groups = Column(JSONB, default=list)  # Specific group IDs
 
     # Quality verification (v2.1 §3.1)

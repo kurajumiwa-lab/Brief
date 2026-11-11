@@ -796,9 +796,15 @@ export const briefAPI = {
 // ── Offerings: what a person can be asked for (read-only aggregate) ─────────
 export const offeringsAPI = {
   /** My offerings, including hidden and unavailable ones. */
-  mine: () => api.get("/offerings/mine"),
+  mine: (params) => api.get("/offerings/mine", params ? { params } : undefined),
   /** What a person shows the network. Public; visible rows only. */
   of: (handle) => api.get(`/offerings/of/${encodeURIComponent(handle)}`),
+  /** Create goods, a service or a tool. No business profile needed. */
+  create: (body) => api.post("/offerings", body),
+  /** Edit my offering. Only the fields you send change. */
+  update: (kind, id, body) => api.patch(`/offerings/${kind}/${id}`, body),
+  /** pause | resume | archive. Archive cannot be undone. */
+  setStatus: (kind, id, action) => api.post(`/offerings/${kind}/${id}/status`, { action }),
 };
 
 // ── Receipts: a vendor's own payment attempts (v2.15, Track 1) ─────────────

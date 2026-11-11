@@ -4,19 +4,32 @@ import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { PageSpinner } from "@/components/ui/Spinner";
 import EmptyState from "@/components/ui/EmptyState";
+import { toast } from "@/components/ui/Toast";
+import OfferingForm from "@/components/desk/OfferingForm";
 import { offeringsAPI, apiError } from "@/lib/api";
 
 const KIND_LABEL = { goods: "Goods", service: "Services", tool: "Tools and rentals" };
 const KIND_ORDER = ["goods", "service", "tool"];
+const STATUS_LABEL = { paused: "Paused", archived: "Archived" };
+
+function priceText(item) {
+  if (item.price_mode === "ask_me") return "Ask me for the price";
+  if (item.price == null) return "Price on request";
+  const amount = `KES ${Math.round(item.price).toLocaleString()}${item.price_unit ? ` ${item.price_unit.replace(/_/g, " ")}` : ""}`;
+  return item.price_mode === "negotiable" ? `${amount} (negotiable)` : amount;
+}
 
 /**
- * MY DESK (flagged, see config/flags.js). What I offer, in one list, with links to
- * the parts that already exist: the morning brief and the home office. Read-only here;
- * each item is changed where it already lives.
+ * MY DESK (flagged). What I offer, with the full lifecycle: add, edit, pause, resume, archive.
+ * Every change goes to the backend, which checks that I own the offering. Pausing and
+ * resuming switch the same flags the rest of the app already reads.
  */
 export default function DeskPage() {
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
+  const [showArchived, setShowArchived] = useState(false);
+  const [editing, setEditing] = useState(null); // null | "new" | offering item
+  const [busy, setBusy] = useState("");
 
   const load = useCallback(async () => {
     setError("");
@@ -30,7 +43,26 @@ export default function DeskPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  if (error) {
+  const act = async (item, action) => {
+    setBusy(`${item.kind}-${item.id}`);
+    try {
+      await offeringsAPI.setStatus(item.kind, item.id, action);
+      toast.success(action === "pause" ? "Paused" : action === "resume" ? "Back on your desk" : "Archived");
+      await load();
+    } catch (e) {
+      toast.error(apiError(e, "Couldn't change that. Try again."));
+    } finally {
+      setBusy("");
+    }
+  };
+
+  const archive = (item) => {
+    if (window.confirm(`Archive “${item.title}”? It will be hidden. You can still see it with “Show archived”.`)) {
+      act(item, "archive");
+    }
+  };
+
+  if (error && !data) {
     return (
       <div className="space-y-4 p-4">
         <h1 className="text-xl font-extrabold text-ink-1">My desk</h1>
@@ -50,10 +82,26 @@ export default function DeskPage() {
 
   return (
     <div className="space-y-5 p-4">
-      <header>
-        <h1 className="text-xl font-extrabold tracking-tight text-ink-1">My desk</h1>
-        <p className="text-sm text-ink-2">Everything you offer, in one place.</p>
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-extrabold tracking-tight text-ink-1">My desk</h1>
+          <p className="text-sm text-ink-2">Everything you offer, in one place.</p>
+        </div>
+        {editing === null && <Button onClick={() => setEditing("new")}>Add an offering</Button>}
       </header>
+
+      {editing !== null && (
+        <Card className="p-4">
+          <h2 className="mb-3 text-base font-bold text-ink-1">
+            {editing === "new" ? "Add an offering" : `Edit “${editing.title}”`}
+          </h2>
+          <OfferingForm
+            offering={editing === "new" ? null : editing}
+            onCancel={() => setEditing(null)}
+            onSaved={async () => { setEditing(null); await load(); }}
+          />
+        </Card>
+      )}
 
       <div className="grid gap-3 sm:grid-cols-2">
         <Link to="/brief" className="block rounded-xl p-4 hover:bg-surface-2">
@@ -66,11 +114,28 @@ export default function DeskPage() {
         </Link>
       </div>
 
+      <label className="flex items-center gap-2 text-sm text-ink-2">
+        <input type="checkbox" checked={showArchived}
+          onChange={async (e) => {
+            setShowArchived(e.target.checked);
+            try {
+              const { data: body } = await offeringsAPI.mine({ include_archived: e.target.checked });
+              setData(body);
+            } catch (err) { toast.error(apiError(err, "Couldn't load. Try again.")); }
+          }} />
+        Show archived
+      </label>
+
       {total === 0 ? (
         <EmptyState
           title="Nothing offered yet"
           description="Add goods, a service or a tool and it will appear here."
-          action={<Link to="/stock" className="text-sm font-semibold text-brand-600">Add to your stock</Link>}
+          action={
+            <div className="flex flex-col items-center gap-2">
+              <Button onClick={() => setEditing("new")}>Add your first offering</Button>
+              <Link to="/stock" className="text-sm font-semibold text-brand-600">Add to your stock</Link>
+            </div>
+          }
         />
       ) : (
         groups.filter((g) => g.items.length > 0).map((g) => (
@@ -79,22 +144,47 @@ export default function DeskPage() {
               {g.label} ({g.items.length})
             </h2>
             <ul className="space-y-2">
-              {g.items.map((item) => (
-                <li key={`${item.kind}-${item.id}`}>
-                  <Card className="flex items-center justify-between gap-3 p-3">
-                    <div className="min-w-0">
-                      <p className="truncate font-semibold text-ink-1">{item.title}</p>
-                      <p className="text-xs text-ink-2">
-                        {item.category ? `${item.category.replace(/_/g, " ")} · ` : ""}
-                        {item.price != null ? `KES ${Math.round(item.price).toLocaleString()}${item.price_unit ? ` ${item.price_unit.replace(/_/g, " ")}` : ""}` : "Price on request"}
-                      </p>
-                    </div>
-                    <span className={`shrink-0 text-xs font-semibold ${item.available ? "text-tech-700" : "text-ink-2"}`}>
-                      {item.available ? "Available" : "Not offered"}
-                    </span>
-                  </Card>
-                </li>
-              ))}
+              {g.items.map((item) => {
+                const key = `${item.kind}-${item.id}`;
+                const archived = item.status === "archived";
+                return (
+                  <li key={key}>
+                    <Card className="flex flex-wrap items-center justify-between gap-3 p-3">
+                      <div className="min-w-0">
+                        <p className="truncate font-semibold text-ink-1">
+                          {item.title}
+                          {STATUS_LABEL[item.status] && (
+                            <span className="ml-2 rounded-full bg-surface-2 px-2 py-0.5 text-2xs font-semibold text-ink-2">
+                              {STATUS_LABEL[item.status]}
+                            </span>
+                          )}
+                        </p>
+                        <p className="text-xs text-ink-2">
+                          {item.category ? `${item.category.replace(/_/g, " ")} · ` : ""}
+                          {priceText(item)}
+                          {item.service_radius_km ? ` · within ${item.service_radius_km} km` : ""}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 flex-wrap items-center gap-2">
+                        <span className={`text-xs font-semibold ${item.available ? "text-tech-700" : "text-ink-2"}`}>
+                          {item.available ? "Available" : "Not offered"}
+                        </span>
+                        {!archived && (
+                          <>
+                            <Button size="sm" variant="ghost" onClick={() => setEditing(item)}>Edit</Button>
+                            {item.status === "active" ? (
+                              <Button size="sm" variant="ghost" disabled={busy === key} onClick={() => act(item, "pause")}>Pause</Button>
+                            ) : (
+                              <Button size="sm" variant="ghost" disabled={busy === key} onClick={() => act(item, "resume")}>Resume</Button>
+                            )}
+                            <Button size="sm" variant="ghost" disabled={busy === key} onClick={() => archive(item)}>Archive</Button>
+                          </>
+                        )}
+                      </div>
+                    </Card>
+                  </li>
+                );
+              })}
             </ul>
           </section>
         ))

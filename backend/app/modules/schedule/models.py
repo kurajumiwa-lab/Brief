@@ -15,9 +15,9 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import (
-    Boolean, CheckConstraint, Column, DateTime, ForeignKey, Index, Integer, String, Text
+    Boolean, CheckConstraint, Column, DateTime, ForeignKey, Index, Integer, String, Text, text,
 )
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import relationship
 
 from app.database import Base
@@ -54,6 +54,8 @@ class ScheduleEntry(Base):
 class BookableService(Base):
     __tablename__ = "booking_services"
     __table_args__ = (
+        CheckConstraint("price_mode IN ('fixed', 'negotiable', 'ask_me')", name="ck_booking_services_price_mode"),
+        CheckConstraint("service_radius_km IS NULL OR (service_radius_km > 0 AND service_radius_km <= 500)", name="ck_booking_services_radius"),
         CheckConstraint("duration_minutes > 0 AND duration_minutes <= 480", name="ck_booking_services_duration"),
         CheckConstraint("buffer_minutes >= 0 AND buffer_minutes <= 120", name="ck_booking_services_buffer"),
         CheckConstraint("price_kes IS NULL OR price_kes >= 0", name="ck_booking_services_price"),
@@ -67,6 +69,10 @@ class BookableService(Base):
     buffer_minutes = Column(Integer, nullable=False, default=0)
     price_kes = Column(Integer)  # shown to clients only; no payment is taken here
     is_active = Column(Boolean, nullable=False, default=True)
+    price_mode = Column(String(12), nullable=False, default="fixed", server_default="fixed")  # fixed | negotiable | ask_me
+    archived_at = Column(DateTime, nullable=True)  # set = archived (kept, hidden from lists)
+    service_radius_km = Column(Integer, nullable=True)  # how far the offer reaches, 1..500
+    images = Column(JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb"))
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
 
