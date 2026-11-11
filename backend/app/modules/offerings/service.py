@@ -102,3 +102,53 @@ async def mine(db: AsyncSession, vendor) -> dict:
 async def public_for(db: AsyncSession, vendor) -> dict:
     """Only what the network may see. Never includes hidden or unavailable-by-flag rows."""
     return await _collect(db, vendor.id, public=True)
+
+
+async def public_summary(db: AsyncSession, vendor_ids: list) -> dict:
+    """Batch view for many people at once: {vendor_id: {"counts": {...}, "titles": [...]}}.
+
+    Three queries in total, whatever the number of people, so a nearby list does not
+    fire one query per row. Only network-visible / active / available rows count.
+    Titles are capped at three per person, to keep the list short.
+    """
+    out: dict = {vid: {"counts": {"goods": 0, "service": 0, "tool": 0}, "titles": []} for vid in vendor_ids}
+    if not vendor_ids:
+        return out
+
+    def add(vid, kind, title):
+        row = out.get(vid)
+        if row is None:
+            return
+        row["counts"][kind] += 1
+        if len(row["titles"]) < 3:
+            row["titles"].append(title)
+
+    goods = (await db.execute(
+        select(StockItem.vendor_id, StockItem.name).where(
+            StockItem.vendor_id.in_(vendor_ids),
+            StockItem.visible_to_network.is_(True),
+            StockItem.quantity_available > 0,
+        ).order_by(StockItem.name)
+    )).all()
+    for vid, name in goods:
+        add(vid, "goods", name)
+
+    services = (await db.execute(
+        select(BookableService.vendor_id, BookableService.name).where(
+            BookableService.vendor_id.in_(vendor_ids),
+            BookableService.is_active.is_(True),
+        ).order_by(BookableService.name)
+    )).all()
+    for vid, name in services:
+        add(vid, "service", name)
+
+    tools = (await db.execute(
+        select(ToolListing.vendor_id, ToolListing.title).where(
+            ToolListing.vendor_id.in_(vendor_ids),
+            ToolListing.is_available.is_(True),
+        ).order_by(ToolListing.title)
+    )).all()
+    for vid, title in tools:
+        add(vid, "tool", title)
+
+    return out

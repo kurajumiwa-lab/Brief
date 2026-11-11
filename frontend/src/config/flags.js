@@ -6,3 +6,9 @@
  * and the home office). Set VITE_DESK_ENABLED=true to turn it on.
  */
 export const DESK_ENABLED = import.meta.env?.VITE_DESK_ENABLED === "true";
+
+/**
+ * NEARBY_DOORS_ENABLED: "Open front doors" at /doors, the nearby people who currently
+ * offer something to the network. Set VITE_NEARBY_DOORS_ENABLED=true to turn it on.
+ */
+export const NEARBY_DOORS_ENABLED = import.meta.env?.VITE_NEARBY_DOORS_ENABLED === "true";
