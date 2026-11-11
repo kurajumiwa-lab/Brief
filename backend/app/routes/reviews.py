@@ -94,7 +94,7 @@ async def list_reviews(
     """Reviews of a list, with the rating distribution and your own review."""
     vlist = await db.get(VendorList, list_id)
     if not vlist:
-        raise HTTPException(404, "Vendor list not found")
+        raise HTTPException(404, "Business list not found")
 
     order = {
         "recent": VendorListReview.created_at.desc(),
@@ -140,7 +140,7 @@ async def list_rating(
 ):
     vlist = await db.get(VendorList, list_id)
     if not vlist:
-        raise HTTPException(404, "Vendor list not found")
+        raise HTTPException(404, "Business list not found")
     return {"list_id": str(vlist.id), "avg_rating": vlist.avg_rating, "review_count": vlist.review_count}
 
 
@@ -154,7 +154,7 @@ async def write_review(
     """Only an approved member of the list may review it."""
     vlist = await db.get(VendorList, list_id)
     if not vlist:
-        raise HTTPException(404, "Vendor list not found")
+        raise HTTPException(404, "Business list not found")
 
     membership = await _membership(db, list_id, vendor.id)
     if not membership or membership.status != "approved":

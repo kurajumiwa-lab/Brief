@@ -224,7 +224,7 @@ def test_missing_text_fields_get_a_readable_default():
     row = stock_out(_Item(name=None, unit_of_measure=None), _Vendor(business_name=None))
     assert row.name == "Stock item"
     assert row.unit_of_measure == "units"
-    assert row.vendor_business == "A vendor"
+    assert row.vendor_business == "A business"
 
 
 def test_dates_render_whether_they_are_dates_or_strings():

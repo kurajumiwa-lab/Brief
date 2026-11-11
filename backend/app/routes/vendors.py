@@ -427,7 +427,7 @@ async def vendor_performance(
 
     target = (await db.execute(select(Vendor).where(Vendor.vendor_handle == handle.lstrip("@").lower()))).scalars().first()
     if not target:
-        raise HTTPException(404, "Vendor not found")
+        raise HTTPException(404, "Business not found")
     perf = (await db.execute(select(VendorPerformance).where(VendorPerformance.vendor_id == target.id))).scalar_one_or_none()
     return {"vendor_handle": target.vendor_handle, "fulfillment_rate": stock_engine.fulfillment_rate(target),
             **performance_service.to_dict(perf)}
@@ -441,7 +441,7 @@ async def vendor_by_handle(
 ):
     target = (await db.execute(select(Vendor).where(Vendor.vendor_handle == handle.lstrip("@").lower()))).scalars().first()
     if not target:
-        raise HTTPException(404, "Vendor not found")
+        raise HTTPException(404, "Business not found")
     out = vendor_out(target, connected=await vendor_network.are_connected(db, vendor.id, target.id))
     out.reliability_score = await _reliability(db, target.id)
     profile = (await db.execute(select(VendorProfile).where(VendorProfile.vendor_id == target.id))).scalars().first()
@@ -473,7 +473,7 @@ async def connect_with_vendor(
         raise HTTPException(400, "You are already your own best customer")
     target = await db.get(Vendor, target_vendor_id)
     if not target:
-        raise HTTPException(404, "Vendor not found")
+        raise HTTPException(404, "Business not found")
     if await vendor_network.are_connected(db, vendor.id, target_vendor_id):
         raise HTTPException(400, "Already connected")
 

@@ -193,7 +193,7 @@ async def surface_feed(
             {
                 "name": it.name, "price": price, "price_label": label,
                 "currency": MONEY,
-                "vendor": v.business_name if v else "A vendor",
+                "vendor": v.business_name if v else "A business",
                 "quantity_available": it.quantity_available,
                 "unit_of_measure": it.unit_of_measure,
                 "category": it.category,

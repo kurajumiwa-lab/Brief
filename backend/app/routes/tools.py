@@ -309,7 +309,7 @@ async def book_shipment(
         raise HTTPException(400, "receiver_vendor_id is not a UUID")
     receiver = await db.get(Vendor, receiver_id)
     if not receiver:
-        raise HTTPException(404, "Receiving vendor not found")
+        raise HTTPException(404, "Receiving business not found")
     if receiver.id == vendor.id:
         raise HTTPException(400, "Ship to another vendor")
     movement_id = None

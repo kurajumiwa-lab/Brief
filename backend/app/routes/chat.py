@@ -319,7 +319,7 @@ async def open_direct_room(
         raise HTTPException(400, "That is you")
     other = await db.get(Vendor, vendor_id)
     if not other:
-        raise HTTPException(404, "Vendor not found")
+        raise HTTPException(404, "Business not found")
 
     p = chat_room_participants
     mine = select(p.c.room_id).where(p.c.vendor_id == vendor.id)
