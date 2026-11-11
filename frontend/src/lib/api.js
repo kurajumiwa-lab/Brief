@@ -794,6 +794,20 @@ export const briefAPI = {
 };
 
 // ── Offerings: what a person can be asked for (read-only aggregate) ─────────
+/** Workers (Phase 4). Access is enforced by the backend: managers assign, workers act on their own. */
+export const workersAPI = {
+  /** My open work across the offices I belong to. */
+  mine: (params) => api.get("/workers/mine", params ? { params } : undefined),
+  /** All of one office's work. Owners and editors only. */
+  assignments: (officeId, params) => api.get(`/workers/offices/${officeId}/assignments`, params ? { params } : undefined),
+  assign: (officeId, body) => api.post(`/workers/offices/${officeId}/assignments`, body),
+  start: (id) => api.post(`/workers/assignments/${id}/start`),
+  complete: (id) => api.post(`/workers/assignments/${id}/complete`),
+  cancel: (id) => api.post(`/workers/assignments/${id}/cancel`),
+  reassign: (id, assigneeHandle) => api.post(`/workers/assignments/${id}/reassign`, { assignee_handle: assigneeHandle }),
+  history: (id) => api.get(`/workers/assignments/${id}/history`),
+};
+
 export const offeringsAPI = {
   /** My offerings, including hidden and unavailable ones. */
   mine: (params) => api.get("/offerings/mine", params ? { params } : undefined),

@@ -6,6 +6,8 @@ import { offeringsAPI } from "@/lib/api";
 
 vi.mock("@/lib/api", () => ({
   offeringsAPI: { mine: vi.fn(), of: vi.fn() },
+  workersAPI: { mine: vi.fn(() => Promise.resolve({ data: { items: [] } })), assignments: vi.fn(), assign: vi.fn(), start: vi.fn(), complete: vi.fn(), cancel: vi.fn(), reassign: vi.fn(), history: vi.fn() },
+  officeAPI: { mine: vi.fn(() => Promise.resolve({ data: { offices: [] } })) },
   apiError: (_error, fallback) => fallback,
 }));
 

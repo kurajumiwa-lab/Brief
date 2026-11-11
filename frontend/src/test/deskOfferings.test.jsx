@@ -7,6 +7,8 @@ import { offeringsAPI } from "@/lib/api";
 
 vi.mock("@/lib/api", () => ({
   offeringsAPI: { mine: vi.fn(), of: vi.fn(), create: vi.fn(), update: vi.fn(), setStatus: vi.fn() },
+  workersAPI: { mine: vi.fn(() => Promise.resolve({ data: { items: [] } })), assignments: vi.fn(() => Promise.resolve({ data: { items: [] } })), assign: vi.fn(), start: vi.fn(), complete: vi.fn(), cancel: vi.fn(), reassign: vi.fn() },
+  officeAPI: { mine: vi.fn(() => Promise.resolve({ data: { offices: [] } })) },
   apiError: (_e, fallback) => fallback,
 }));
 vi.mock("@/components/ui/Toast", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));

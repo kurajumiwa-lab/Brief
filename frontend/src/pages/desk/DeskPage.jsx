@@ -6,6 +6,7 @@ import { PageSpinner } from "@/components/ui/Spinner";
 import EmptyState from "@/components/ui/EmptyState";
 import { toast } from "@/components/ui/Toast";
 import OfferingForm from "@/components/desk/OfferingForm";
+import { AssignedToMe, ManageWork } from "@/components/desk/WorkersPanel";
 import { offeringsAPI, apiError } from "@/lib/api";
 
 const KIND_LABEL = { goods: "Goods", service: "Services", tool: "Tools and rentals" };
@@ -113,6 +114,9 @@ export default function DeskPage() {
           <p className="text-sm text-ink-2">Your team, your events and your calendar.</p>
         </Link>
       </div>
+
+      <AssignedToMe />
+      <ManageWork />
 
       <label className="flex items-center gap-2 text-sm text-ink-2">
         <input type="checkbox" checked={showArchived}
