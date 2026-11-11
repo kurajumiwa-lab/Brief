@@ -65,3 +65,28 @@ describe("five-tab navigation (flagged, Phase 2)", () => {
     }
   });
 });
+
+describe("Mail tab (flagged, consolidated Mail)", () => {
+  it("with the five tabs on but Mail off, Mail still goes to Connect and keeps its badge", async () => {
+    const nav = await load({ VITE_FIVE_TAB_NAV_ENABLED: "true" });
+    const mail = nav.PRIMARY_TABS.find((t) => t.label === "Mail");
+    expect(mail.to).toBe("/activity");
+    expect(mail.badge).toBe("activity");
+  });
+
+  it("with Mail on, the tab goes to /mail with no notification badge", async () => {
+    const nav = await load({ VITE_FIVE_TAB_NAV_ENABLED: "true", VITE_MAIL_ENABLED: "true" });
+    const mail = nav.PRIMARY_TABS.find((t) => t.label === "Mail");
+    expect(mail.to).toBe("/mail");
+    expect(mail.badge).toBeUndefined();
+  });
+
+  it("with Mail on, the tab lights for /mail and chat threads, not for the bell", async () => {
+    const nav = await load({ VITE_FIVE_TAB_NAV_ENABLED: "true", VITE_MAIL_ENABLED: "true" });
+    const active = (p) => nav.PRIMARY_TABS.filter((t) => nav.isPrimaryActive(t, p, "someone")).map((t) => t.label);
+    expect(active("/mail")).toEqual(["Mail"]);
+    expect(active("/chat")).toEqual(["Mail"]);
+    expect(active("/chat/x")).toEqual(["Mail"]);
+    expect(active("/activity")).toEqual([]);
+  });
+});

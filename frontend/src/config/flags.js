@@ -26,3 +26,11 @@ export const ONBOARDING_ACTIVITIES_ENABLED = import.meta.env?.VITE_ONBOARDING_AC
  * VITE_FIVE_TAB_NAV_ENABLED=true to turn it on. Routes do not change either way.
  */
 export const FIVE_TAB_NAV_ENABLED = import.meta.env?.VITE_FIVE_TAB_NAV_ENABLED === "true";
+
+/**
+ * MAIL_ENABLED: the consolidated "Mail" screen at /mail — every conversation I have joined
+ * (direct, deals, groups, business lists, topics) in one list, each opening the existing chat
+ * thread. Conversations only; the bell (Connect) stays for notifications.
+ * Set VITE_MAIL_ENABLED=true to turn it on. Off, the Mail tab keeps pointing at Connect.
+ */
+export const MAIL_ENABLED = import.meta.env?.VITE_MAIL_ENABLED === "true";
