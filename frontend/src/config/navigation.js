@@ -5,7 +5,7 @@ import {
   Sparkles, Receipt, ShoppingBag, ShoppingCart, List, ListChecks, Inbox, ScanLine,
   Mail, Search, ClipboardCheck,
 } from "lucide-react";
-import { DESK_ENABLED, FIVE_TAB_NAV_ENABLED, MAIL_ENABLED } from "@/config/flags";
+import { BRIEF_LANDING_ENABLED, DESK_ENABLED, FIVE_TAB_NAV_ENABLED, MAIL_ENABLED } from "@/config/flags";
 
 /**
  * THE FIVE DESTINATIONS — three activities, one anchor and one door (v2.18).
@@ -29,7 +29,8 @@ import { DESK_ENABLED, FIVE_TAB_NAV_ENABLED, MAIL_ENABLED } from "@/config/flags
  * See `docs/outside/01-route-map.md`.
  */
 export const PRIMARY_NAV = [
-  { to: "/", label: "Home", icon: Home, end: true },
+  // With the Morning Brief as the landing page, "/" is the Brief; the Home hub is /home.
+  { to: BRIEF_LANDING_ENABLED ? "/home" : "/", label: "Home", icon: Home, end: true },
   { to: "/explore", label: "Local network", icon: Compass, area: "explore" },
   { to: "/mall", label: "Mall", icon: Store, area: "mall" },
   { to: "/activity", label: "Connect", icon: Bell, area: "activity", badge: "activity" },
