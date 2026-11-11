@@ -4,6 +4,7 @@ import Input from "@/components/ui/Input";
 import Textarea from "@/components/ui/Textarea";
 import Select from "@/components/ui/Select";
 import { toast } from "@/components/ui/Toast";
+import { SERVICE_PROFILES_ENABLED } from "@/config/flags";
 import { offeringsAPI, apiError } from "@/lib/api";
 import {
   KINDS, PRICE_MODES, TOOL_CATEGORIES, buildPayload, emptyForm, formFromOffering, validateOffering,
@@ -50,7 +51,8 @@ export default function OfferingForm({ offering, onSaved, onCancel }) {
       {!editing && (
         <Select label="What is it?" value={chosenKind} onChange={(e) => setChosenKind(e.target.value)} options={KINDS} />
       )}
-      <Input label="Name" value={form.title} onChange={set("title")} error={errors.title} required />
+      <Input label={SERVICE_PROFILES_ENABLED && k === "service" ? "Service name" : "Name"} value={form.title}
+        onChange={set("title")} error={errors.title} required />
       <Textarea label="Description" value={form.description} onChange={set("description")} rows={3} error={errors.description} />
 
       {k === "tool" && (
@@ -68,7 +70,9 @@ export default function OfferingForm({ offering, onSaved, onCancel }) {
         <div className="grid gap-3 sm:grid-cols-2">
           <Input label={form.price_mode === "fixed" ? "Price (KES)" : "Starting price (KES, optional)"}
             type="number" min="0" inputMode="decimal" value={form.price} onChange={set("price")} error={errors.price} />
-          <Input label="Per (optional)" placeholder="e.g. bunch, visit, day" value={form.price_unit} onChange={set("price_unit")} />
+          <Input label="Per (optional)"
+            placeholder={SERVICE_PROFILES_ENABLED && k === "service" ? "e.g. visit, hour, shift" : "e.g. bunch, visit, day"}
+            value={form.price_unit} onChange={set("price_unit")} />
         </div>
       )}
 

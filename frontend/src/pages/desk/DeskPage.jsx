@@ -6,6 +6,7 @@ import { PageSpinner } from "@/components/ui/Spinner";
 import EmptyState from "@/components/ui/EmptyState";
 import { toast } from "@/components/ui/Toast";
 import OfferingForm from "@/components/desk/OfferingForm";
+import { SERVICE_PROFILES_ENABLED } from "@/config/flags";
 import { AssignedToMe, ManageWork } from "@/components/desk/WorkersPanel";
 import { offeringsAPI, apiError } from "@/lib/api";
 
@@ -137,7 +138,9 @@ export default function DeskPage() {
           action={
             <div className="flex flex-col items-center gap-2">
               <Button onClick={() => setEditing("new")}>Add your first offering</Button>
-              <Link to="/stock" className="text-sm font-semibold text-brand-600">Add to your stock</Link>
+              <Link to="/stock" className="text-sm font-semibold text-brand-600">
+                {SERVICE_PROFILES_ENABLED ? "Add goods to your stock" : "Add to your stock"}
+              </Link>
             </div>
           }
         />
