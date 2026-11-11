@@ -475,6 +475,9 @@ export const nearbyAPI = {
   list: (params) => api.get("/nearby", { params: noEmpty(params) }),
   /** Open front doors: nearby people who currently offer something. No phone numbers. */
   frontDoors: (params) => api.get("/nearby/front-doors", { params: noEmpty(params) }),
+  /** Whether my own door is listed to nearby people. Off until I turn it on. */
+  frontDoorSetting: () => api.get("/nearby/front-door"),
+  setFrontDoorSetting: (visible) => api.put("/nearby/front-door", { front_door_visible: visible }),
 };
 
 // ── Map (v2.7) — viewport queries, never the whole directory ───────────────
@@ -719,6 +722,12 @@ export const marketDataAPI = {
   summary: () => api.get("/market-data/summary"),
   observations: (params) => api.get("/market-data/observations", { params }),
   claim: (virtualId) => api.post(`/market-data/presences/${encodeURIComponent(virtualId)}/claim`),
+};
+
+// ── Network search (Phase 6) — permission-aware, server-side ───────────────
+export const searchAPI = {
+  /** Products and suppliers I can see, matched on the server. Blocked and suspended vendors are never returned. */
+  network: (params) => api.get("/search/network", { params: noEmpty(params) }),
 };
 
 // ── Outside (v4) — location-aware discovery ────────────────────────────────

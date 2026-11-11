@@ -15,6 +15,55 @@ const FILTERS = [
 const OFFER_LABEL = { goods: "goods", service: "services", tool: "tools" };
 
 /**
+ * Whether my own door is listed. Off by default: nobody's location is shown until they
+ * choose it. Turning it off hides the door from everyone at once.
+ */
+function MyDoorSetting() {
+  const [visible, setVisible] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let live = true;
+    nearbyAPI.frontDoorSetting()
+      .then(({ data }) => live && setVisible(!!data.front_door_visible))
+      .catch(() => live && setError("Could not load your door setting."));
+    return () => { live = false; };
+  }, []);
+
+  const toggle = async () => {
+    if (visible === null || saving) return;
+    const next = !visible;
+    setSaving(true);
+    setError("");
+    try {
+      const { data } = await nearbyAPI.setFrontDoorSetting(next);
+      setVisible(!!data.front_door_visible);
+    } catch (e) {
+      setError(apiError(e, "Could not change your door setting."));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Card className="flex flex-wrap items-center justify-between gap-3 p-3">
+      <div className="min-w-0">
+        <p className="text-sm font-semibold text-ink-1">Show my door to nearby people</p>
+        <p className="text-xs text-ink-3">
+          {visible ? "Listed while you offer something." : "Off. Your door is not listed."}
+        </p>
+        {error && <p role="alert" className="text-xs text-ink-2">{error}</p>}
+      </div>
+      <Button size="sm" variant={visible ? "secondary" : "primary"} disabled={visible === null || saving}
+        aria-pressed={visible === true} onClick={toggle}>
+        {visible ? "Hide my door" : "Show my door"}
+      </Button>
+    </Card>
+  );
+}
+
+/**
  * OPEN FRONT DOORS (flagged, see config/flags.js). People near you who are offering
  * something right now. Distance is shown as measured, never rounded up into a bigger
  * radius. No phone numbers here: a person's own profile carries their contact details.
@@ -47,6 +96,8 @@ export default function FrontDoorsPage() {
         <h1 className="text-xl font-extrabold tracking-tight text-ink-1">Open front doors</h1>
         <p className="text-sm text-ink-2">People near you who are offering something right now.</p>
       </header>
+
+      <MyDoorSetting />
 
       <div role="group" aria-label="Filter by what is offered" className="flex flex-wrap gap-2">
         {FILTERS.map((f) => (

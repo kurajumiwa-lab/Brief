@@ -34,3 +34,17 @@ export const FIVE_TAB_NAV_ENABLED = import.meta.env?.VITE_FIVE_TAB_NAV_ENABLED =
  * Set VITE_MAIL_ENABLED=true to turn it on. Off, the Mail tab keeps pointing at Connect.
  */
 export const MAIL_ENABLED = import.meta.env?.VITE_MAIL_ENABLED === "true";
+
+/**
+ * CIRCLES_TRUSTED_ENABLED: on Me, a Circles panel (follow or unfollow the circles on the
+ * existing social endpoints) and an "add trusted contact by handle" form (the existing
+ * saved-relationships endpoint). Set VITE_CIRCLES_TRUSTED_ENABLED=true to turn it on.
+ */
+export const CIRCLES_TRUSTED_ENABLED = import.meta.env?.VITE_CIRCLES_TRUSTED_ENABLED === "true";
+
+/**
+ * BRIEF_LANDING_ENABLED: the Morning Brief is the default landing page at "/" (after sign-in
+ * too). Off, "/" is Home as before. Home stays reachable at /home either way.
+ * Set VITE_BRIEF_LANDING_ENABLED=true to turn it on.
+ */
+export const BRIEF_LANDING_ENABLED = import.meta.env?.VITE_BRIEF_LANDING_ENABLED === "true";

@@ -200,7 +200,7 @@ async def _events(db, viewer, pair, limit, now):
     q = (
         select(Event, Vendor)
         .join(Vendor, Vendor.id == Event.organizer_id)
-        .where(Event.status.in_(["upcoming", "active"]))
+        .where(Event.status.in_(["upcoming", "active"]), Vendor.fraud_suspended_at.is_(None))
         .order_by(Event.created_at.desc())
         .limit(limit)
     )

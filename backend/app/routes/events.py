@@ -12,6 +12,7 @@ from app.models.events import Event, EventRegistration
 from app.models.groups import GroupMembership
 from app.models.vendor import Vendor
 from app.models.vendor_list import VendorList, VendorListMembership
+from app.modules.outside.feed import blocked_author_ids
 from app.models.notification import NotificationType
 from app.routes.auth import get_current_vendor
 from app.services import patron_service
@@ -145,8 +146,13 @@ async def browse_events(
     query = (
         select(Event, Vendor)
         .join(Vendor, Event.organizer_id == Vendor.id)
-        .where(Event.status.in_(["upcoming", "active"]))
+        .where(Event.status.in_(["upcoming", "active"]), Vendor.fraud_suspended_at.is_(None))
     )
+    # Permission: events from organizers I have blocked are not offered in discovery.
+    # A direct link to one still opens, the same as a blocked person's profile.
+    blocked = [UUID(v) for v in (await blocked_author_ids(db, vendor)) if v]
+    if blocked:
+        query = query.where(Event.organizer_id.not_in(blocked))
     if not include_past:
         query = query.where(Event.end_date >= datetime.utcnow())
     if event_type:

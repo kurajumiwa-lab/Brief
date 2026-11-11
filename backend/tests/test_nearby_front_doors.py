@@ -37,7 +37,8 @@ async def _register(client, handle):
 
 async def _place(vid, lat, lng, phone=None):
     async with async_session() as db:
-        values = {"geo_lat": lat, "geo_lng": lng}
+        # Doors are opt-in (Phase 8). These fixtures are visible doors, so they opt in.
+        values = {"geo_lat": lat, "geo_lng": lng, "front_door_visible": True}
         if phone is not None:
             values["phone"] = phone
         await db.execute(update(Vendor).where(Vendor.id == uuid.UUID(vid)).values(**values))

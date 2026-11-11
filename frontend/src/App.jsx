@@ -35,7 +35,7 @@ import LearnNewPage from "@/pages/learn/LearnNewPage";
 import TodayPage from "@/pages/today/TodayPage";
 import DeskPage from "@/pages/desk/DeskPage";
 import MailPage from "@/pages/mail/MailPage";
-import { DESK_ENABLED, MAIL_ENABLED, NEARBY_DOORS_ENABLED } from "@/config/flags";
+import { BRIEF_LANDING_ENABLED, DESK_ENABLED, MAIL_ENABLED, NEARBY_DOORS_ENABLED } from "@/config/flags";
 import FrontDoorsPage from "@/pages/nearby/FrontDoorsPage";
 import BlueprintsPage from "@/pages/templates/BlueprintsPage";
 import BlueprintDetailPage from "@/pages/templates/BlueprintDetailPage";
@@ -217,7 +217,9 @@ function AppRoutes() {
               /markets, /news are views of the same results); work routes
               (/orders, /tasks, /locks, /tools) under Work; business routes
               under /me. Nothing was deleted — only duplicated navigation. */}
-          <Route path="/" element={<HomeHub />} />
+          {/* Phase 10: the Morning Brief is the landing page when flagged; Home stays at /home. */}
+          <Route path="/" element={BRIEF_LANDING_ENABLED ? <MorningBriefPage /> : <HomeHub />} />
+          <Route path="/home" element={<HomeHub />} />
           {/* v2.15 — the read-only brief, and the trust/data-rights surface */}
           <Route path="/brief" element={<MorningBriefPage />} />
           <Route path="/legal" element={<LegalPage />} />

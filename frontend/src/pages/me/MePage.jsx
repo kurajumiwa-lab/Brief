@@ -15,6 +15,9 @@ import { toast } from "@/components/ui/Toast";
 import { VENDOR_ROLES } from "@/config/constants";
 import { apiError } from "@/lib/api";
 import { ledgerAPI } from "@/lib/ledgerApi";
+import { CIRCLES_TRUSTED_ENABLED } from "@/config/flags";
+import CirclesPanel from "@/components/circles/CirclesPanel";
+import AddTrustedContact from "@/components/relationships/AddTrustedContact";
 import { ACCOUNT_KINDS, TEMPLATE_LABELS } from "@/lib/inference";
 import { useAuthStore } from "@/stores/authStore";
 import { useStockStore } from "@/stores/stockStore";
@@ -642,6 +645,10 @@ export default function MePage() {
             </div>
           )}
         </section>
+
+        {/* Flagged (Phase 7): add a trusted contact by handle, and follow circles. */}
+        {CIRCLES_TRUSTED_ENABLED && <AddTrustedContact onSaved={loadLedger} />}
+        {CIRCLES_TRUSTED_ENABLED && <CirclesPanel />}
       </div>
 
       {/* ── Phase 2: Home Storefront Controls ───────────────────────────── */}
