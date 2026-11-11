@@ -254,7 +254,7 @@ async def register_for_event(
             VendorListMembership.vendor_id == vendor.id, VendorListMembership.status == "approved",
         ))).first()
         if not ok and event.organizer_id != vendor.id:
-            raise HTTPException(403, "This event is for vendors on its list")
+            raise HTTPException(403, "This event is for businesses on its list")
     if event.group_id:
         ok = (await db.execute(select(GroupMembership.id).where(
             GroupMembership.group_id == event.group_id, GroupMembership.vendor_id == vendor.id,
@@ -335,7 +335,7 @@ async def _check_in(db: AsyncSession, event: Event, vendor_id: UUID) -> EventReg
         EventRegistration.event_id == event.id, EventRegistration.vendor_id == vendor_id,
     ))).scalar_one_or_none()
     if not reg:
-        raise HTTPException(404, "No registration for that vendor")
+        raise HTTPException(404, "No registration for that business")
     if reg.status != "attended":
         reg.status = "attended"
         reg.checked_in_at = datetime.utcnow()

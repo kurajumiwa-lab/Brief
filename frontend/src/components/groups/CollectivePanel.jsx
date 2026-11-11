@@ -207,7 +207,7 @@ function RequestRow({ request: r, onChange, compact }) {
           <div className="text-right">
             <span className="block text-micro uppercase tracking-wider font-bold text-ink-4">Participants</span>
             <span className="font-bold text-ink-1 tabular-nums">
-              {r.pledge_count} vendor{r.pledge_count === 1 ? "" : "s"}
+              {r.pledge_count} business{r.pledge_count === 1 ? "" : "es"}
             </span>
           </div>
         </div>

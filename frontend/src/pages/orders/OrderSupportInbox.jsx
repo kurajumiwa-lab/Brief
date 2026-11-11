@@ -93,7 +93,7 @@ export default function OrderSupportInbox() {
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
                     <p className="text-xs font-bold text-ink-1">{order.stock_name || "Marketplace order"} · {order.quantity} {order.unit_of_measure}</p>
-                    <p className="mt-0.5 text-micro text-ink-4">Order {entry.movement_id} · reported by @{entry.opened_by?.handle || "vendor"} · {dateTime(entry.created_at)}</p>
+                    <p className="mt-0.5 text-micro text-ink-4">Order {entry.movement_id} · reported by @{entry.opened_by?.handle || "business"} · {dateTime(entry.created_at)}</p>
                   </div>
                   <div className="flex items-center gap-2"><Badge size="xs" variant={entry.status === "in_review" ? "amber" : "blue"}>{titleCase(entry.status.replaceAll("_", " "))}</Badge><Badge size="xs" variant="gray">{titleCase(entry.category.replaceAll("_", " "))}</Badge></div>
                 </div>

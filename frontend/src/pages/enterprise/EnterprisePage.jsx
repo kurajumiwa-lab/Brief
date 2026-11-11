@@ -200,7 +200,7 @@ export default function EnterprisePage() {
                   <h3 className="text-sm font-bold text-ink-1 flex items-center gap-2"><Users size={15} /> Member register</h3>
                   {canField && (
                     <form onSubmit={(e) => { e.preventDefault(); act(() => enterpriseAPI.addMember(selectedId, memberForm), "Member added").then(() => setMemberForm({ vendor_handle: "", role: "member" })); }} className="flex flex-wrap gap-2">
-                      <div className="flex-1 min-w-36"><Input label="Vendor @handle" required value={memberForm.vendor_handle} onChange={(e) => setMemberForm({ ...memberForm, vendor_handle: e.target.value })} placeholder="mama_mboga" /></div>
+                      <div className="flex-1 min-w-36"><Input label="Business @handle" required value={memberForm.vendor_handle} onChange={(e) => setMemberForm({ ...memberForm, vendor_handle: e.target.value })} placeholder="mama_mboga" /></div>
                       <Select label="Role" value={memberForm.role} onChange={(e) => setMemberForm({ ...memberForm, role: e.target.value })}
                         options={[{ value: "member", label: "Member" }, { value: "field_officer", label: "Field officer" }, { value: "viewer", label: "Viewer" }, ...(canManage ? [{ value: "admin", label: "Admin" }] : [])]} />
                       <div className="flex items-end"><Button type="submit" size="sm" icon={UserPlus} loading={busy}>Add</Button></div>

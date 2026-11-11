@@ -177,7 +177,7 @@ async def register_vendor(data: VendorRegister, db: AsyncSession = Depends(get_d
         select(Vendor).where((Vendor.email == email) | (Vendor.vendor_handle == handle))
     )).scalar_one_or_none()
     if existing:
-        raise HTTPException(400, "Email or handle already registered in vendor network")
+        raise HTTPException(400, "Email or handle already registered in the business network")
 
     vendor = Vendor(
         business_name=name,

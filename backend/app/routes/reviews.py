@@ -158,7 +158,7 @@ async def write_review(
 
     membership = await _membership(db, list_id, vendor.id)
     if not membership or membership.status != "approved":
-        raise HTTPException(403, "Only vendors on the list can review it")
+        raise HTTPException(403, "Only businesses on the list can review it")
 
     existing = (await db.execute(select(VendorListReview).where(
         VendorListReview.vendor_list_id == list_id,

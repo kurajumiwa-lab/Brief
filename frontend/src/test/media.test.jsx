@@ -297,7 +297,7 @@ describe("market card", () => {
 
   it("states the member count and stays silent about places it was not given", () => {
     render(<MemoryRouter><MarketCard item={market()} /></MemoryRouter>);
-    expect(screen.getAllByText(/12 registered vendors/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/12 registered businesses/).length).toBeGreaterThan(0);
     expect(screen.queryByText(/mapped place/)).toBeNull();
   });
 

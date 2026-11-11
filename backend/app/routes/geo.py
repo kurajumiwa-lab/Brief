@@ -167,7 +167,7 @@ async def claim_place(place_id: UUID, vendor: Vendor = Depends(get_current_vendo
     if not place:
         raise HTTPException(404, "Place not found")
     if place.status == "claimed" and place.claimed_by_vendor_id != vendor.id:
-        raise HTTPException(409, "Already claimed by another vendor")
+        raise HTTPException(409, "Already claimed by another business")
     if place.status == "claimed":
         return {"place": _place_out(place, vendor), "changed": False}
 

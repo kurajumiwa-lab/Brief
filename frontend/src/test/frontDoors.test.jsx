@@ -5,7 +5,7 @@ import FrontDoorsPage from "@/pages/nearby/FrontDoorsPage";
 import { nearbyAPI } from "@/lib/api";
 
 vi.mock("@/lib/api", () => ({
-  nearbyAPI: { frontDoors: vi.fn(), list: vi.fn() },
+  nearbyAPI: { frontDoors: vi.fn(), list: vi.fn(), frontDoorSetting: vi.fn(), setFrontDoorSetting: vi.fn() },
   apiError: (_error, fallback) => fallback,
 }));
 
@@ -20,7 +20,11 @@ const payload = (over = {}) => ({
 const renderPage = () => render(<MemoryRouter><FrontDoorsPage /></MemoryRouter>);
 
 describe("Open front doors", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // The page also loads the viewer's own door setting (added with Phase 8).
+    nearbyAPI.frontDoorSetting.mockResolvedValue({ data: { front_door_visible: false } });
+  });
 
   it("lists nearby people with what they offer, linked to their profile", async () => {
     nearbyAPI.frontDoors.mockResolvedValue({ data: payload() });

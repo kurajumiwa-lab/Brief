@@ -149,7 +149,7 @@ export default function ChatPage() {
                   </Badge>
                 </div>
                 <p className="text-2xs text-ink-4 truncate">
-                  {activeRoom.topic || `${activeRoom.participant_count} vendors`}
+                  {activeRoom.topic || `${activeRoom.participant_count} businesses`}
                   {activeRoom.topic_tags?.length ? ` · ${activeRoom.topic_tags.map((t) => `#${t}`).join(" ")}` : ""}
                   {chatIdentity?.locations?.message_header !== false && (
                     <span className="hidden sm:inline text-ink-3">

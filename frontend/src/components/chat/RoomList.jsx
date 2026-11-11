@@ -174,7 +174,7 @@ export default function RoomList({ rooms = [], activeId, onSelect, onNewTopic, o
                         )}
                       </div>
                       <div className="text-2xs text-ink-4 truncate">
-                        {r.topic || `${r.participant_count} vendor${r.participant_count === 1 ? "" : "s"}`} · {r.message_count} msg
+                        {r.topic || `${r.participant_count} ${r.participant_count === 1 ? "business" : "businesses"}`} · {r.message_count} msg
                       </div>
                     </div>
                   </button>

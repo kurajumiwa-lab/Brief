@@ -229,7 +229,7 @@ export function requirementChips(req) {
   if (!req || typeof req !== "object") return [];
   return Object.entries(req).flatMap(([k, v]) => {
     const vals = Array.isArray(v) ? v : [v];
-    return vals.filter((x) => x !== null && x !== "" && x !== undefined).map((x) => (k === "categories" ? `${x} vendors` : k === "other" ? String(x) : `${titleCase(k)}: ${x}`));
+    return vals.filter((x) => x !== null && x !== "" && x !== undefined).map((x) => (k === "categories" ? `${x} businesses` : k === "other" ? String(x) : `${titleCase(k)}: ${x}`));
   });
 }
 
