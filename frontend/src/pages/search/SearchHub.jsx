@@ -5,7 +5,7 @@ import { Search, Package, Store, MapPin, Newspaper, Building2 } from "lucide-rea
 import SearchInput from "@/components/ui/SearchInput";
 import EmptyState from "@/components/ui/EmptyState";
 import { PageSpinner } from "@/components/ui/Spinner";
-import { stockAPI, vendorAPI, marketsAPI, newsAPI, mapAPI, apiError } from "@/lib/api";
+import { stockAPI, vendorAPI, marketsAPI, newsAPI, mapAPI, searchAPI, apiError } from "@/lib/api";
 import { num, relativeTime } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 
@@ -83,16 +83,39 @@ export default function SearchHub() {
     return () => { live = false; clearTimeout(t); };
   }, [tab, q]);
 
+  // Products and suppliers with a term: the server searches what this viewer may see
+  // (no blocked or suspended vendors). Two characters minimum; debounced like Places.
+  const [remote, setRemote] = useState({ term: "", products: [], suppliers: [], failed: false });
+  useEffect(() => {
+    if (tab !== "products" && tab !== "suppliers") return undefined;
+    const term = q.trim();
+    if (term.length < 2) {
+      setRemote((prev) => (prev.term || prev.failed
+        ? { term: "", products: [], suppliers: [], failed: false } : prev));
+      return undefined;
+    }
+    let live = true;
+    const t = setTimeout(() => {
+      searchAPI.network({ q: term, limit: 50 })
+        .then((r) => live && setRemote({ term, products: r.data.products || [], suppliers: r.data.suppliers || [], failed: false }))
+        .catch(() => live && setRemote({ term, products: [], suppliers: [], failed: true }));
+    }, 250);
+    return () => { live = false; clearTimeout(t); };
+  }, [tab, q]);
+
   const query = q.trim().toLowerCase();
+  const searching = query.length >= 2 && (tab === "products" || tab === "suppliers");
 
   const results = useMemo(() => {
     const inText = (haystack) => !query || haystack.toLowerCase().includes(query);
     switch (tab) {
       case "products":
+        if (searching) return remote.products;
         return (lists.products || [])
           .filter((it) => inText(`${it.name} ${it.category || ""} ${it.subcategory || ""} ${it.vendor_business || ""}`))
           .slice(0, 50);
       case "suppliers":
+        if (searching) return remote.suppliers;
         return (lists.suppliers || [])
           .filter((v) => inText(`${v.business_name} ${v.vendor_handle} ${(v.business_categories || []).join(" ")} ${v.physical_location || ""}`))
           .slice(0, 50);
@@ -110,9 +133,9 @@ export default function SearchHub() {
       default:
         return [];
     }
-  }, [tab, query, lists]);
+  }, [tab, query, lists, remote, searching]);
 
-  const loaded = Array.isArray(lists[tab]);
+  const loaded = searching ? remote.term === q.trim() : Array.isArray(lists[tab]);
 
   if (error && !loaded) return <EmptyState icon={Search} title="Search is down" description={error} />;
 
@@ -142,7 +165,9 @@ export default function SearchHub() {
           icon={Search}
           title={tab === "places" && query.length < 2 ? "Type to search the directory" : query ? "Nothing matches" : "Nothing here yet"}
           description={
-            tab === "places" && query.length < 2
+            searching && remote.failed
+              ? "Search could not reach the network. Try again in a moment."
+              : tab === "places" && query.length < 2
               ? "The place directory is searched on the server — two letters is enough."
               : query ? "Try fewer words, or another tab." : "This list fills as real rows are written."
           }

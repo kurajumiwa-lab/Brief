@@ -721,6 +721,12 @@ export const marketDataAPI = {
   claim: (virtualId) => api.post(`/market-data/presences/${encodeURIComponent(virtualId)}/claim`),
 };
 
+// ── Network search (Phase 6) — permission-aware, server-side ───────────────
+export const searchAPI = {
+  /** Products and suppliers I can see, matched on the server. Blocked and suspended vendors are never returned. */
+  network: (params) => api.get("/search/network", { params: noEmpty(params) }),
+};
+
 // ── Outside (v4) — location-aware discovery ────────────────────────────────
 // One feed, one search, one creation endpoint. Every call reads records the
 // other modules already own; Outside adds no parallel inventory of its own.
