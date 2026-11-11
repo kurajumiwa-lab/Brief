@@ -788,6 +788,14 @@ export const briefAPI = {
   morning: () => api.get("/brief/morning"),
 };
 
+// ── Offerings: what a person can be asked for (read-only aggregate) ─────────
+export const offeringsAPI = {
+  /** My offerings, including hidden and unavailable ones. */
+  mine: () => api.get("/offerings/mine"),
+  /** What a person shows the network. Public; visible rows only. */
+  of: (handle) => api.get(`/offerings/of/${encodeURIComponent(handle)}`),
+};
+
 // ── Receipts: a vendor's own payment attempts (v2.15, Track 1) ─────────────
 // Read-only. Money state comes from the PSP's verified callback, never from this
 // call; a receipt number exists only once the provider confirmed it.

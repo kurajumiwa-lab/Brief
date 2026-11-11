@@ -291,6 +291,9 @@ app.include_router(route_planner.router, prefix="/api/tools", tags=["Courier Rou
 app.include_router(ops_routes.router, prefix="/api", tags=["Ops"])
 # v2.15 — Morning Brief: deterministic, read-only, vendor-scoped
 app.include_router(brief_routes.router, prefix="/api/brief", tags=["Morning Brief"])
+from app.modules.offerings.router import router as offerings_router, public as offerings_public  # noqa: E402
+app.include_router(offerings_router, prefix="/api/offerings", tags=["Offerings"])
+app.include_router(offerings_public, prefix="/api/offerings", tags=["Offerings"])
 app.include_router(billing_routes.router, prefix="/api/billing", tags=["Subscription Billing"])
 from app.modules.entitlements.router import router as entitlements_router  # noqa: E402
 app.include_router(entitlements_router, prefix="/api/entitlements", tags=["Entitlements"])
