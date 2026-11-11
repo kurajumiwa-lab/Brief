@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { PRIMARY_NAV, isPrimaryActive } from "@/config/navigation";
+import { PRIMARY_TABS, isPrimaryActive } from "@/config/navigation";
 import { useStockStore, needsMyAction } from "@/stores/stockStore";
 import { useChatStore } from "@/stores/chatStore";
 import { useAuthStore } from "@/stores/authStore";
@@ -43,7 +43,7 @@ export default function MobileTabBar() {
       className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-surface-0 border-t border-edge-1 shadow-md pb-safe"
     >
       <ul className="flex items-stretch">
-        {PRIMARY_NAV.map((item) => {
+        {PRIMARY_TABS.map((item) => {
           const Icon = item.icon;
           const active = isPrimaryActive(item, pathname, vendor?.vendor_handle);
           const count = item.badge ? counts[item.badge] : 0;

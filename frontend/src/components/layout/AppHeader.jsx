@@ -5,7 +5,7 @@ import Logo from "./Logo";
 import GlobalSearch from "./GlobalSearch";
 import AccountMenu from "./AccountMenu";
 import NotificationBell from "@/components/notifications/NotificationBell";
-import { BROWSE_NAV, CREATE_NAV, isBrowsePath, isPrimaryActive, PRIMARY_NAV } from "@/config/navigation";
+import { BROWSE_NAV, CREATE_NAV, isBrowsePath, isPrimaryActive, PRIMARY_TABS } from "@/config/navigation";
 import { useStockStore, needsMyAction } from "@/stores/stockStore";
 import { useChatStore } from "@/stores/chatStore";
 import { useAuthStore } from "@/stores/authStore";
@@ -51,7 +51,7 @@ export default function AppHeader() {
           <div className="flex-1 md:hidden" />
 
           <nav aria-label="Primary" className="hidden lg:flex items-center gap-0.5 ml-auto">
-            {PRIMARY_NAV.map((item) => {
+            {PRIMARY_TABS.map((item) => {
               const Icon = item.icon;
               return (
                 <NavLink
