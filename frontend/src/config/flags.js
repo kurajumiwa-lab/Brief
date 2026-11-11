@@ -41,3 +41,10 @@ export const MAIL_ENABLED = import.meta.env?.VITE_MAIL_ENABLED === "true";
  * saved-relationships endpoint). Set VITE_CIRCLES_TRUSTED_ENABLED=true to turn it on.
  */
 export const CIRCLES_TRUSTED_ENABLED = import.meta.env?.VITE_CIRCLES_TRUSTED_ENABLED === "true";
+
+/**
+ * BRIEF_LANDING_ENABLED: the Morning Brief is the default landing page at "/" (after sign-in
+ * too). Off, "/" is Home as before. Home stays reachable at /home either way.
+ * Set VITE_BRIEF_LANDING_ENABLED=true to turn it on.
+ */
+export const BRIEF_LANDING_ENABLED = import.meta.env?.VITE_BRIEF_LANDING_ENABLED === "true";
