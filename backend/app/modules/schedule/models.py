@@ -70,6 +70,11 @@ class BookableService(Base):
     price_kes = Column(Integer)  # shown to clients only; no payment is taken here
     is_active = Column(Boolean, nullable=False, default=True)
     price_mode = Column(String(12), nullable=False, default="fixed", server_default="fixed")  # fixed | negotiable | ask_me
+    # Phase 1 (service providers): where the service is given, and what the price is per.
+    delivery_clinic = Column(Boolean, nullable=False, default=True, server_default=text("true"))
+    delivery_home = Column(Boolean, nullable=False, default=False, server_default=text("false"))
+    delivery_remote = Column(Boolean, nullable=False, default=False, server_default=text("false"))
+    price_unit = Column(String(30), nullable=True)  # visit | hour | shift | ...; NULL = not stated
     archived_at = Column(DateTime, nullable=True)  # set = archived (kept, hidden from lists)
     service_radius_km = Column(Integer, nullable=True)  # how far the offer reaches, 1..500
     images = Column(JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb"))

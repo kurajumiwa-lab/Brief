@@ -77,9 +77,14 @@ def _item(kind: str, r) -> dict:
         radius, photos = None, list(r.images or [])
         quantity = r.quantity_available or 0
     elif kind == "service":
+        # price_unit is stated by the provider when set. Services created before Phase 1 have
+        # none, and keep the "per visit" wording they always showed.
         base = {"title": r.name, "category": None, "price": r.price_kes,
-                "price_unit": "per visit" if r.price_kes is not None else None,
-                "available": bool(r.is_active)}
+                "price_unit": r.price_unit or ("per visit" if r.price_kes is not None else None),
+                "available": bool(r.is_active),
+                "delivery_modes": [m for m, on in (("clinic", r.delivery_clinic),
+                                                   ("home", r.delivery_home),
+                                                   ("remote", r.delivery_remote)) if on]}
         radius, photos = r.service_radius_km, list(r.images or [])
         quantity = None
     else:
@@ -287,6 +292,7 @@ async def create(db: AsyncSession, vendor: Vendor, kind: str, data: dict):
             description=desc, duration_minutes=duration,
             price_kes=int(round(price)) if price is not None else None,
             is_active=True, price_mode=mode, service_radius_km=radius, images=photos,
+            price_unit=_text(data.get("price_unit"), 1, 30, "a price unit", required=False),
         )
     else:
         cat = data.get("category")
@@ -323,7 +329,8 @@ async def owned(db: AsyncSession, vendor: Vendor, kind: str, offering_id: str):
 
 EDITABLE = {
     "goods": {"title", "description", "category", "price", "price_unit", "price_mode", "photos", "quantity"},
-    "service": {"title", "description", "price", "price_mode", "photos", "service_radius_km", "duration_minutes"},
+    "service": {"title", "description", "price", "price_unit", "price_mode", "photos", "service_radius_km",
+                "duration_minutes"},
     "tool": {"title", "description", "category", "price", "price_unit", "price_mode", "photos", "service_radius_km"},
 }
 
@@ -380,6 +387,8 @@ async def update(db: AsyncSession, vendor: Vendor, kind: str, offering_id: str, 
             if not isinstance(d, int) or isinstance(d, bool) or not (1 <= d <= 480):
                 raise OfferingError("Duration must be 1–480 minutes.", 422)
             row.duration_minutes = d
+        if "price_unit" in patch:
+            row.price_unit = _text(patch["price_unit"], 1, 30, "a price unit", required=False)
     else:
         row.price_per_unit = price
         if "category" in patch:
