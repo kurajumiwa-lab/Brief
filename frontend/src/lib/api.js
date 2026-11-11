@@ -1002,6 +1002,7 @@ export const officeAPI = {
   removeMember: (id, memberId) => api.delete(`/office/offices/${id}/members/${memberId}`),
   addEvent: (id, body) => api.post(`/office/offices/${id}/events`, body),
   calendar: (id) => api.get(`/office/offices/${id}/calendar.ics`, { responseType: "blob" }),
+  setVisibility: (id, visibility) => api.patch(`/office/offices/${id}/visibility`, { visibility }),
   publicProfile: (id) => api.get(`/office/public/offices/${id}`),
   acceptLink: (body) => api.post("/office/links/accept", body),
 };

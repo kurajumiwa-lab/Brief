@@ -196,6 +196,9 @@ async def register_vendor(data: VendorRegister, db: AsyncSession = Depends(get_d
     await db.flush()
 
     db.add(VendorProfile(vendor_id=vendor.id, primary_goods=list(data.business_categories)))
+    # Rule 3: every person has a private home office from the start (never public by default).
+    from app.modules.office.service import ensure_home_office
+    await ensure_home_office(db, vendor)
     await db.commit()
     return _token_for(vendor)
 

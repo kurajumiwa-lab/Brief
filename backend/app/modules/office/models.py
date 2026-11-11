@@ -35,6 +35,7 @@ class Office(Base):
     __table_args__ = (
         CheckConstraint(_in("contact_mode", CONTACT_MODES), name="ck_offices_contact_mode"),
         CheckConstraint(_in("status", ("active", "archived")), name="ck_offices_status"),
+        CheckConstraint(_in("visibility", ("private", "public")), name="ck_offices_visibility"),
         CheckConstraint(
             f"{_nonblank('name')} AND {_nonblank('nature')} AND {_nonblank('area')} "
             f"AND (hours_text IS NULL OR {_nonblank('hours_text')})",
@@ -51,6 +52,8 @@ class Office(Base):
     hours_text = Column(String(200), nullable=True)
     contact_mode = Column(String(8), nullable=False, default="none", server_default="none")
     status = Column(String(12), nullable=False, default="active", server_default="active")
+    # Rule 9: private until the owner chooses otherwise. Mirrors migration 0041.
+    visibility = Column(String(12), nullable=False, default="private", server_default="private")
     created_at = Column(TS, nullable=False, default=datetime.utcnow)
     updated_at = Column(TS, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 

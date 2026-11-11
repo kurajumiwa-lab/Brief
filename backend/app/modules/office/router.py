@@ -94,6 +94,27 @@ async def create(body: OfficeIn, vendor: Vendor = Depends(get_current_vendor), d
     return svc.office_summary(office, "owner")
 
 
+class VisibilityIn(BaseModel):
+    visibility: str = Field(..., pattern="^(private|public)$")
+
+
+@router.patch("/offices/{office_id}/visibility")
+async def set_visibility(
+    office_id: uuid.UUID,
+    body: VisibilityIn,
+    vendor: Vendor = Depends(get_current_vendor),
+    db: AsyncSession = Depends(get_db),
+):
+    """Owner opens (public) or closes (private) the office's public front door."""
+    try:
+        office = await svc.set_visibility(db, vendor, office_id, body.visibility)
+        await db.commit()
+    except svc.OfficeError as exc:
+        await db.rollback()
+        _fail(exc)
+    return {"id": str(office.id), "visibility": office.visibility}
+
+
 @router.get("/offices/mine")
 async def mine(vendor: Vendor = Depends(get_current_vendor), db: AsyncSession = Depends(get_db)):
     return {"offices": await svc.my_offices(db, vendor)}
