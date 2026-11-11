@@ -32,6 +32,7 @@ from app.models.public_place import PublicPlace
 from app.models.vendor import Vendor
 from app.routes.auth import get_current_vendor
 from app.services import taxonomy
+from app.services.geo_box import radius_box
 
 router = APIRouter()
 
@@ -93,9 +94,11 @@ async def front_doors(
         center_lat, center_lng, anchor = vendor.geo_lat, vendor.geo_lng, "you"
 
     # Only doors their owners have chosen to show (Phase 8). Off by default.
+    min_lat, max_lat, min_lng, max_lng = radius_box(center_lat, center_lng, radius_km)
     vres = await db.execute(select(Vendor).where(
         Vendor.geo_lat.is_not(None), Vendor.id != vendor.id, Vendor.front_door_visible.is_(True),
         Vendor.fraud_suspended_at.is_(None),
+        Vendor.geo_lat.between(min_lat, max_lat), Vendor.geo_lng.between(min_lng, max_lng),
     ))
     near = []
     for v in vres.scalars().all():
@@ -179,7 +182,12 @@ async def nearby(
     businesses = []
 
     # Members (registered vendors with a location).
-    vres = await db.execute(select(Vendor).where(Vendor.geo_lat.is_not(None)))
+    # Bounding box first (indexed on geo_lat, geo_lng), exact distance on what is left.
+    min_lat, max_lat, min_lng, max_lng = radius_box(center_lat, center_lng, radius_km)
+    vres = await db.execute(select(Vendor).where(
+        Vendor.geo_lat.is_not(None),
+        Vendor.geo_lat.between(min_lat, max_lat), Vendor.geo_lng.between(min_lng, max_lng),
+    ))
     for v in vres.scalars().all():
         d = _dist_km(center_lat, center_lng, v.geo_lat, v.geo_lng)
         if d is None or d > radius_km:
@@ -202,14 +210,13 @@ async def nearby(
     # Open-data places (OSM businesses within the radius). Pre-filtered with a
     # rough bounding box in SQL so we don't load the whole place table as the
     # OSM ingest grows; the exact haversine filter runs on the (smaller) box.
-    lat_span = radius_km / 111.0
-    lng_span = radius_km / max(111.0 * math.cos(math.radians(center_lat or 0.0)), 1.0)
+    min_lat, max_lat, min_lng, max_lng = radius_box(center_lat, center_lng, radius_km)
     pres = await db.execute(
         select(PublicPlace).where(
             PublicPlace.status.in_(["active", "claimed"]),
             PublicPlace.lat.is_not(None),
-            PublicPlace.lat.between(center_lat - lat_span, center_lat + lat_span),
-            PublicPlace.lng.between(center_lng - lng_span, center_lng + lng_span),
+            PublicPlace.lat.between(min_lat, max_lat),
+            PublicPlace.lng.between(min_lng, max_lng),
         )
     )
     for p in pres.scalars().all():
