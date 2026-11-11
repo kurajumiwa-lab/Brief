@@ -48,3 +48,11 @@ export const CIRCLES_TRUSTED_ENABLED = import.meta.env?.VITE_CIRCLES_TRUSTED_ENA
  * Set VITE_BRIEF_LANDING_ENABLED=true to turn it on.
  */
 export const BRIEF_LANDING_ENABLED = import.meta.env?.VITE_BRIEF_LANDING_ENABLED === "true";
+
+/**
+ * SERVICE_PROFILES_ENABLED: service-aware wording on the Desk (visits, hours, shifts instead
+ * of stock words for services; the empty state says it links to goods stock). Copy only; no
+ * data or route changes. Off keeps the existing wording.
+ * Set VITE_SERVICE_PROFILES_ENABLED=true to turn it on.
+ */
+export const SERVICE_PROFILES_ENABLED = import.meta.env?.VITE_SERVICE_PROFILES_ENABLED === "true";
