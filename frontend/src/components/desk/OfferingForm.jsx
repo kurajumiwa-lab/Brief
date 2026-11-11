@@ -5,6 +5,7 @@ import Textarea from "@/components/ui/Textarea";
 import Select from "@/components/ui/Select";
 import { toast } from "@/components/ui/Toast";
 import { SERVICE_PROFILES_ENABLED } from "@/config/flags";
+import OpeningHours from "@/components/schedule/OpeningHours";
 import { offeringsAPI, apiError } from "@/lib/api";
 import {
   KINDS, PRICE_MODES, TOOL_CATEGORIES, buildPayload, emptyForm, formFromOffering, validateOffering,
@@ -87,6 +88,9 @@ export default function OfferingForm({ offering, onSaved, onCancel }) {
       {k !== "goods" && (
         <Input label="Service radius (km, optional)" type="number" min="1" max="500" value={form.service_radius_km}
           onChange={set("service_radius_km")} error={errors.service_radius_km} hint="How far you will go for this." />
+      )}
+      {SERVICE_PROFILES_ENABLED && k === "service" && (
+        <OpeningHours note="These hours cover all of your services, not only this one." />
       )}
 
       <Textarea label="Photo links (optional)" rows={3} value={form.photos} onChange={set("photos")} error={errors.photos}
