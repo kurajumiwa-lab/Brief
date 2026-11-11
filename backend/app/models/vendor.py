@@ -72,6 +72,8 @@ class Vendor(Base):
     market_zone_changed_at = Column(DateTime, nullable=True)
     geo_lat = Column(Float)
     geo_lng = Column(Float)
+    # Phase 8: opt-in. A vendor's door is listed to nearby people only when they choose it.
+    front_door_visible = Column(Boolean, nullable=False, default=False, server_default="false")
 
     # Finance preference (v2.6 halal-trade brief): 'halal_sharia' vendors are
     # gated out of interest-bearing products (Riba).

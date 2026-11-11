@@ -22,6 +22,7 @@ from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
+from pydantic import BaseModel, StrictBool
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -41,6 +42,28 @@ def _dist_km(lat1, lng1, lat2, lng2):
     dlat, dlng = math.radians(lat2 - lat1), math.radians(lng2 - lng1)
     a = math.sin(dlat / 2) ** 2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlng / 2) ** 2
     return 6371 * 2 * math.asin(math.sqrt(a))
+
+
+class FrontDoorSettingIn(BaseModel):
+    front_door_visible: StrictBool
+
+
+@router.get("/front-door")
+async def get_front_door_setting(vendor: Vendor = Depends(get_current_vendor)):
+    """Whether my door is listed to nearby people. Off until I turn it on."""
+    return {"front_door_visible": bool(vendor.front_door_visible)}
+
+
+@router.put("/front-door")
+async def set_front_door_setting(
+    body: FrontDoorSettingIn,
+    vendor: Vendor = Depends(get_current_vendor),
+    db: AsyncSession = Depends(get_db),
+):
+    """Choose whether my door is listed nearby. Only my own row changes; nothing else is written."""
+    vendor.front_door_visible = bool(body.front_door_visible)
+    await db.commit()
+    return {"front_door_visible": bool(vendor.front_door_visible)}
 
 
 @router.get("/front-doors")
@@ -69,7 +92,11 @@ async def front_doors(
                     "total": 0, "front_doors": [], "generated_at": datetime.utcnow().isoformat()}
         center_lat, center_lng, anchor = vendor.geo_lat, vendor.geo_lng, "you"
 
-    vres = await db.execute(select(Vendor).where(Vendor.geo_lat.is_not(None), Vendor.id != vendor.id))
+    # Only doors their owners have chosen to show (Phase 8). Off by default.
+    vres = await db.execute(select(Vendor).where(
+        Vendor.geo_lat.is_not(None), Vendor.id != vendor.id, Vendor.front_door_visible.is_(True),
+        Vendor.fraud_suspended_at.is_(None),
+    ))
     near = []
     for v in vres.scalars().all():
         d = _dist_km(center_lat, center_lng, v.geo_lat, v.geo_lng)
