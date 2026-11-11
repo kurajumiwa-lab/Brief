@@ -43,6 +43,71 @@ def _dist_km(lat1, lng1, lat2, lng2):
     return 6371 * 2 * math.asin(math.sqrt(a))
 
 
+@router.get("/front-doors")
+async def front_doors(
+    lat: Optional[float] = None,
+    lng: Optional[float] = None,
+    radius_km: float = Query(3, ge=0.5, le=50),
+    kind: Optional[str] = Query(None, pattern="^(goods|service|tool)$"),
+    limit: int = Query(40, ge=1, le=100),
+    vendor: Vendor = Depends(get_current_vendor),
+    db: AsyncSession = Depends(get_db),
+):
+    """Open front doors: people nearby who currently offer something to the network.
+
+    A front door is a registered member with a location, who has at least one
+    network-visible offering (goods in stock, an active service or an available tool).
+    Read-only and honest: no phone numbers, no scores, no padding. Your own door is
+    never listed. With no point and no location of your own, it says so and returns nothing.
+    """
+    from app.modules.offerings import service as offerings
+
+    center_lat, center_lng, anchor = lat, lng, "point"
+    if center_lat is None or center_lng is None:
+        if vendor.geo_lat is None or vendor.geo_lng is None:
+            return {"anchor": None, "reason": "no_location", "radius_km": radius_km,
+                    "total": 0, "front_doors": [], "generated_at": datetime.utcnow().isoformat()}
+        center_lat, center_lng, anchor = vendor.geo_lat, vendor.geo_lng, "you"
+
+    vres = await db.execute(select(Vendor).where(Vendor.geo_lat.is_not(None), Vendor.id != vendor.id))
+    near = []
+    for v in vres.scalars().all():
+        d = _dist_km(center_lat, center_lng, v.geo_lat, v.geo_lng)
+        if d is None or d > radius_km:
+            continue
+        near.append((v, d))
+
+    summary = await offerings.public_summary(db, [v.id for v, _ in near])
+    doors = []
+    for v, d in near:
+        s = summary.get(v.id)
+        total = sum(s["counts"].values()) if s else 0
+        if total == 0:
+            continue
+        if kind and s["counts"][kind] == 0:
+            continue
+        doors.append({
+            "id": str(v.id),
+            "name": v.business_name,
+            "handle": v.vendor_handle,
+            "distance_km": round(d, 2),
+            "offers": {k: n for k, n in s["counts"].items() if n},
+            "titles": s["titles"],
+            "lat": v.geo_lat,
+            "lng": v.geo_lng,
+        })
+
+    doors.sort(key=lambda x: x["distance_km"])
+    return {
+        "anchor": anchor,
+        "reason": None,
+        "radius_km": radius_km,
+        "total": len(doors),
+        "front_doors": doors[:limit],
+        "generated_at": datetime.utcnow().isoformat(),
+    }
+
+
 @router.get("")
 async def nearby(
     lat: Optional[float] = None,

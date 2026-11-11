@@ -470,6 +470,8 @@ export const onboardingAPI = {
 // ── Nearby (B2C) — businesses & professionals around a point ───────────────
 export const nearbyAPI = {
   list: (params) => api.get("/nearby", { params: noEmpty(params) }),
+  /** Open front doors: nearby people who currently offer something. No phone numbers. */
+  frontDoors: (params) => api.get("/nearby/front-doors", { params: noEmpty(params) }),
 };
 
 // ── Map (v2.7) — viewport queries, never the whole directory ───────────────
