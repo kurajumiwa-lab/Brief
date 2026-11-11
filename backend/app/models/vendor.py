@@ -126,9 +126,17 @@ class Vendor(Base):
 
 class VendorProfile(Base):
     __tablename__ = "vendor_profiles"
+    __table_args__ = (
+        CheckConstraint("onboarding_state IN ('pending', 'done', 'skipped')",
+                        name="ck_vendor_profiles_onboarding_state"),
+    )
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     vendor_id = Column(UUID(as_uuid=True), ForeignKey('vendors.id'), unique=True, nullable=False)
+
+    # Onboarding (migration 0042): what the person does, and whether they finished or skipped.
+    activities = Column(JSONB, nullable=False, default=list, server_default=sa_text("'[]'::jsonb"))
+    onboarding_state = Column(String(12), nullable=False, default="pending", server_default="pending")
 
     # What they typically deal in
     primary_goods = Column(JSONB, default=list)  # What they usually stock

@@ -12,3 +12,10 @@ export const DESK_ENABLED = import.meta.env?.VITE_DESK_ENABLED === "true";
  * offer something to the network. Set VITE_NEARBY_DOORS_ENABLED=true to turn it on.
  */
 export const NEARBY_DOORS_ENABLED = import.meta.env?.VITE_NEARBY_DOORS_ENABLED === "true";
+
+/**
+ * ONBOARDING_ACTIVITIES_ENABLED: the "What do you do?" card on Home. A person picks what
+ * they do (several at once), or skips it and finishes later. Set
+ * VITE_ONBOARDING_ACTIVITIES_ENABLED=true to turn it on.
+ */
+export const ONBOARDING_ACTIVITIES_ENABLED = import.meta.env?.VITE_ONBOARDING_ACTIVITIES_ENABLED === "true";

@@ -18,7 +18,8 @@ from datetime import datetime
 from typing import Optional
 from math import asin, cos, radians, sin, sqrt
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -28,10 +29,45 @@ from app.models.public_place import PublicPlace
 from app.models.stock import StockItem
 from app.models.tools import ToolListing
 from app.models.events import Event
-from app.models.vendor import Vendor, vendor_connections
+from app.models.vendor import Vendor, VendorProfile, vendor_connections
 from app.routes.auth import get_current_vendor
 
 router = APIRouter()
+
+# ── "What do you do?" (Phase 1). Multi-select; a person can pick several. Keys are stored;
+# labels are for display only. Nothing here creates a business or makes anything public.
+ACTIVITY_OPTIONS = [
+    {"key": "run_business", "label": "Run a business"},
+    {"key": "professional_services", "label": "Offer professional services"},
+    {"key": "work_for_someone", "label": "Work for someone"},
+    {"key": "organize_group", "label": "Organize a group"},
+    {"key": "organize_events", "label": "Organize events"},
+    {"key": "seeking_services_or_opportunities", "label": "Looking for services or opportunities"},
+    {"key": "discover_organize_information", "label": "Discover and organize information"},
+]
+ACTIVITY_KEYS = {o["key"] for o in ACTIVITY_OPTIONS}
+
+
+class ActivitiesIn(BaseModel):
+    activities: list[str] = Field(..., min_length=1, max_length=len(ACTIVITY_OPTIONS))
+
+
+async def _profile(db: AsyncSession, vendor: Vendor) -> VendorProfile:
+    """The one profile row per account (created on first use if an older account lacks it)."""
+    prof = (await db.execute(
+        select(VendorProfile).where(VendorProfile.vendor_id == vendor.id)
+    )).scalar_one_or_none()
+    if prof is None:
+        prof = VendorProfile(vendor_id=vendor.id, primary_goods=[], activities=[],
+                             onboarding_state="pending")
+        db.add(prof)
+        await db.flush()
+    return prof
+
+
+def _activities_out(prof: VendorProfile) -> dict:
+    return {"state": prof.onboarding_state, "activities": list(prof.activities or []),
+            "options": ACTIVITY_OPTIONS}
 
 RADAR_RADIUS_KM = 3.0
 
@@ -50,6 +86,38 @@ def _masked(phone: Optional[str]) -> Optional[str]:
     if len(p) <= 6:
         return p[:2] + "•••"
     return p[:5] + "•" * (len(p) - 7) + p[-2:]
+
+
+@router.get("/activities")
+async def get_activities(vendor: Vendor = Depends(get_current_vendor), db: AsyncSession = Depends(get_db)):
+    prof = await _profile(db, vendor)
+    await db.commit()
+    return _activities_out(prof)
+
+
+@router.put("/activities")
+async def save_activities(body: ActivitiesIn, vendor: Vendor = Depends(get_current_vendor),
+                          db: AsyncSession = Depends(get_db)):
+    """Save what the person does. Any unknown key is refused; duplicates are dropped."""
+    unknown = [k for k in body.activities if k not in ACTIVITY_KEYS]
+    if unknown:
+        raise HTTPException(422, f"Unknown activity: {unknown[0]}")
+    chosen = list(dict.fromkeys(body.activities))
+    prof = await _profile(db, vendor)
+    prof.activities = chosen
+    prof.onboarding_state = "done"
+    await db.commit()
+    return _activities_out(prof)
+
+
+@router.post("/activities/skip")
+async def skip_activities(vendor: Vendor = Depends(get_current_vendor), db: AsyncSession = Depends(get_db)):
+    """Skip for now. Never overwrites an answer already given; finishing later is always allowed."""
+    prof = await _profile(db, vendor)
+    if prof.onboarding_state != "done":
+        prof.onboarding_state = "skipped"
+    await db.commit()
+    return _activities_out(prof)
 
 
 @router.get("")

@@ -5,6 +5,8 @@ import CuratedShelf from "./CuratedShelf";
 import ReferralBanner from "./ReferralBanner";
 import DiscoveryShortcuts from "./DiscoveryShortcuts";
 import LocationPrompt from "./LocationPrompt";
+import WhatDoYouDo from "@/components/onboarding/WhatDoYouDo";
+import { ONBOARDING_ACTIVITIES_ENABLED } from "@/config/flags";
 import LocationBar from "@/components/outside/LocationBar";
 import CollapsedMyShop from "./CollapsedMyShop";
 import BusinessPulseSimplified from "./BusinessPulseSimplified";
@@ -77,6 +79,7 @@ export default function HomeFeed({ onSource, className }) {
 
   return (
     <div className={cn("space-y-6 sm:space-y-7", className)}>
+      {ONBOARDING_ACTIVITIES_ENABLED && <WhatDoYouDo />}
       <LocationPrompt />
       <LocationBar />
       <DiscoveryShortcuts />

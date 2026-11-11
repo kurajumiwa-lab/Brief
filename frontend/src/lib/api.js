@@ -465,6 +465,9 @@ export const newsAPI = {
 // ── Onboarding — your shop page + your market radar ────────────────────────
 export const onboardingAPI = {
   get: () => api.get("/onboarding"),
+  getActivities: () => api.get("/onboarding/activities"),
+  saveActivities: (activities) => api.put("/onboarding/activities", { activities }),
+  skipActivities: () => api.post("/onboarding/activities/skip"),
 };
 
 // ── Nearby (B2C) — businesses & professionals around a point ───────────────

@@ -9,3 +9,11 @@ describe("feature flags default off", () => {
     expect(DESK_ENABLED).toBe(false);
   });
 });
+
+import { ONBOARDING_ACTIVITIES_ENABLED } from "@/config/flags";
+
+describe("onboarding activities flag", () => {
+  it("'What do you do?' is off unless VITE_ONBOARDING_ACTIVITIES_ENABLED=true", () => {
+    expect(ONBOARDING_ACTIVITIES_ENABLED).toBe(false);
+  });
+});
