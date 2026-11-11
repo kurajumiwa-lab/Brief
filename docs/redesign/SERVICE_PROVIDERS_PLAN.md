@@ -1,6 +1,16 @@
 # Service providers: gap analysis and phased plan
 
-Status: **plan only. No code changed.** Branch `arena/5a64c270-brief`, based on `main` at `e9e19b7`.
+Status: **Owner decisions D1 to D5 recorded below. Phase 0 implemented behind `VITE_SERVICE_PROFILES_ENABLED`. Phases 1 and later not started.** Branch `arena/5a64c270-brief`, based on `main` at `e9e19b7`.
+
+## 0. Owner decisions (recorded)
+
+- **D1:** backfill `booking_services`: `delivery_clinic = true`, `delivery_home = false`, `delivery_remote = false`, `price_unit = NULL`. New columns nullable.
+- **D2:** approved. A provider with 0 goods but at least one published `booking_service` and active `availability_rules` appears on Nearby and front doors. Implementation is Phase 3, not yet started.
+- **D3:** a self-declared licence shows as "Self-declared Licence". Only an operator verification through `/api/ops/*` shows "Verified Credential". Verification stays separate from visibility. Still to confirm: the legal review noted in section 4.
+- **D4:** domains framed as work and services: Healthcare & Care, Trades & Technical, Personal Care & Beauty, Logistics & Delivery, Market & Retail Support. Banner copy changes are approved in principle. Exact wording is still to be reviewed.
+- **D5:** "Vendor World" stays the public name. A user's space is called their workspace or home office inside it.
+
+Phase 0 (copy only, flagged) as built: the offering form labels a service "Service name" and its unit placeholder reads "visit, hour, shift". The Desk empty-state link reads "Add goods to your stock". Flag off keeps the old wording.
 
 Problem: the app was built for goods and labour shifts. A registered nurse, electrician, tutor, or barber fits neither. The request asks for service modes, operating hours, pre-service presence, licence or credential support, and flexible units (per visit, per hour, per shift, quote).
 
