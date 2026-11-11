@@ -184,7 +184,7 @@ export default function Analytics() {
                         <span className={cn(p.delta_pct > 0 ? "text-red-600 dark:text-red-400" : p.delta_pct < 0 ? "text-brand-600 dark:text-brand-400" : "text-ink-4")}>
                           {p.delta_pct > 0 ? "+" : ""}{p.delta_pct}%
                         </span>
-                        <span>network {currency(p.network_avg_price)} · {p.network_vendors} vendor{p.network_vendors === 1 ? "" : "s"}</span>
+                        <span>network {currency(p.network_avg_price)} · {p.network_vendors} business{p.network_vendors === 1 ? "" : "es"}</span>
                       </div>
                       {p.price_hint && <p className="text-2xs text-ink-4">{p.price_hint}</p>}
                     </div>

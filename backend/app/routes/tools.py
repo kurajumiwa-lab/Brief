@@ -311,7 +311,7 @@ async def book_shipment(
     if not receiver:
         raise HTTPException(404, "Receiving business not found")
     if receiver.id == vendor.id:
-        raise HTTPException(400, "Ship to another vendor")
+        raise HTTPException(400, "Ship to another business")
     movement_id = None
     if data.movement_id:
         try:

@@ -12,7 +12,7 @@ export default function MarketCard({ item }) {
   return (
     <CardShell
       to={item.to}
-      label={`${item.title}${item.city ? `, ${item.city}` : ""} — ${item.members} registered vendors. Open the market`}
+      label={`${item.title}${item.city ? `, ${item.city}` : ""} — ${item.members} registered businesses. Open the market`}
     >
       <CardPoster
         icon={MapPin}
@@ -28,7 +28,7 @@ export default function MarketCard({ item }) {
       <CardBody>
         <CardTitle>{item.title}</CardTitle>
         <CardMeta>{[item.city, item.country].filter(Boolean).join(" · ") || "Location not stated"}</CardMeta>
-        <CardMeta>{num(item.members)} registered vendor{item.members === 1 ? "" : "s"}</CardMeta>
+        <CardMeta>{num(item.members)} registered business{item.members === 1 ? "" : "es"}</CardMeta>
         {/* Only when the payload carries a count. The directory list does not,
             and "0 mapped places" would be a number we were never given. */}
         {item.places != null && (

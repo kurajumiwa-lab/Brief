@@ -307,7 +307,7 @@ async def approve_vendor(
     if not vlist:
         raise HTTPException(404, "Business list not found")
     if not await _can_manage(db, vendor, vlist):
-        raise HTTPException(403, "Only the patron can approve vendors")
+        raise HTTPException(403, "Only the patron can approve businesses")
     if vlist.member_count >= vlist.max_vendors:
         raise HTTPException(400, "Business list is full")
 

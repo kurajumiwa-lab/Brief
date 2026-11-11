@@ -251,7 +251,7 @@ export default function StockRoom() {
                     <div className="min-w-0">
                       <p className="font-bold text-ink-1">Step 3 — Test discovery</p>
                       <p className="mt-0.5 leading-snug">
-                        Note: Home's <em>Fresh on the network</em> only shows other vendors' stock. Search in Browse to verify your listing's eligibility.
+                        Note: Home's <em>Fresh on the network</em> only shows other businesses' stock. Search in Browse to verify your listing's eligibility.
                       </p>
                       <Link
                         to="/browse?type=goods"

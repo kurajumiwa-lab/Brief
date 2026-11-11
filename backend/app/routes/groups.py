@@ -277,7 +277,7 @@ async def approve_member(
         GroupMembership.vendor_id == vendor_id, GroupMembership.group_id == group_id,
     ))).scalar_one_or_none()
     if not membership:
-        raise HTTPException(404, "No request from that vendor")
+        raise HTTPException(404, "No request from that business")
     if membership.is_active:
         return {"message": "Already a member"}
     membership.is_active = True
@@ -343,7 +343,7 @@ async def group_creates_vendor_list(
         GroupMembership.role.in_(["admin", "moderator"]), GroupMembership.is_active.is_(True),
     ))
     if not result.scalar_one_or_none():
-        raise HTTPException(403, "Must be group admin to create vendor lists")
+        raise HTTPException(403, "Must be group admin to create business lists")
 
     from app.routes.vendor_lists import slugify as list_slug, unique_slug
     vlist = VendorList(

@@ -586,7 +586,7 @@ async def invite_squad(squad_id: UUID, body: SquadInvite, vendor: Vendor = Depen
         raise HTTPException(409, "Squads hold 10 — the best team size for splitting work")
     target = (await db.execute(select(Vendor).where(Vendor.vendor_handle == body.handle.strip().lstrip("@")))).scalars().first()
     if not target:
-        raise HTTPException(404, f"No vendor with handle @{body.handle.strip().lstrip('@')}")
+        raise HTTPException(404, f"No business with handle @{body.handle.strip().lstrip('@')}")
     if target.id == vendor.id:
         raise HTTPException(400, "You're already in your own squad")
     exists = (await db.execute(

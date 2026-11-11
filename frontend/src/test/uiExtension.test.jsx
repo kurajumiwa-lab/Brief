@@ -199,7 +199,7 @@ describe("Amazon-style Marketplace Cards & Progressive Disclosure", () => {
     );
 
     expect(await screen.findByText(/25 \/ 50 pledged/i)).toBeInTheDocument();
-    expect(screen.getByText(/2 vendors/i)).toBeInTheDocument();
+    expect(screen.getByText(/2 businesses/i)).toBeInTheDocument();
 
     // Open Details progressive disclosure
     fireEvent.click(screen.getByRole("button", { name: /Details/i }));

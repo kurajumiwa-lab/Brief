@@ -567,7 +567,7 @@ async def patron_verify_stock(
     if not vendor.is_patron:
         raise HTTPException(403, "Only patrons verify stock")
     if not await _patron_can_verify(db, vendor, item):
-        raise HTTPException(403, "You can only verify stock of vendors approved onto your lists")
+        raise HTTPException(403, "You can only verify stock of businesses approved onto your lists")
     item.quality_status = QualityStatus.PATRON_VERIFIED
     item.verified_by_vendor_id = vendor.id
     item.verified_at = datetime.utcnow()
