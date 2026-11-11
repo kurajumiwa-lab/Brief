@@ -3,7 +3,9 @@ import {
   Truck, MapPin, Users, Wrench, CalendarDays, Terminal, UserRound, Building2,
   Plus, Bell, MessagesSquare, ShieldCheck, Layers3, BarChart3, FileCheck,
   Sparkles, Receipt, ShoppingBag, ShoppingCart, List, ListChecks, Inbox, ScanLine,
+  Mail, Search, ClipboardCheck,
 } from "lucide-react";
+import { DESK_ENABLED, FIVE_TAB_NAV_ENABLED } from "@/config/flags";
 
 /**
  * THE FIVE DESTINATIONS — three activities, one anchor and one door (v2.18).
@@ -33,6 +35,28 @@ export const PRIMARY_NAV = [
   { to: "/activity", label: "Connect", icon: Bell, area: "activity", badge: "activity" },
   { to: "/me", label: "My World", icon: UserRound, area: "me" },
 ];
+
+/**
+ * FIVE TABS, FLAGGED (Phase 2). Desk, Nearby, Mail, Search, Me.
+ *
+ * Every tab points at an existing screen; no route is added or renamed:
+ *   Desk    /desk when DESK_ENABLED, otherwise Home (/), so the tab is never dead
+ *   Nearby  /explore (the local-network screen)
+ *   Mail    /activity (Connect, renamed in the UI only)
+ *   Search  /search
+ *   Me      /me
+ * Mall is not a tab in this shape. It stays reachable from the drawer.
+ */
+export const PRIMARY_NAV_FIVE = [
+  { to: DESK_ENABLED ? "/desk" : "/", label: "Desk", icon: ClipboardCheck, end: DESK_ENABLED ? false : true, area: "desk" },
+  { to: "/explore", label: "Nearby", icon: Compass, area: "nearby" },
+  { to: "/activity", label: "Mail", icon: Mail, area: "activity", badge: "activity" },
+  { to: "/search", label: "Search", icon: Search, area: "search" },
+  { to: "/me", label: "Me", icon: UserRound, area: "me" },
+];
+
+/** The tabs the app shows right now. Off the flag, this is exactly PRIMARY_NAV. */
+export const PRIMARY_TABS = FIVE_TAB_NAV_ENABLED ? PRIMARY_NAV_FIVE : PRIMARY_NAV;
 
 /**
  * Create is not a tab. Publishing is still one tap away: a header action on
@@ -169,7 +193,13 @@ export const isWorkPath = isActivityPath;
 export const isMePath = (pathname = "", vendorHandle = "") =>
   inArea(pathname, ME_ROOTS) || (vendorHandle && pathname === `/@${vendorHandle}`);
 
+const SEARCH_ROOTS = ["/search"];
+const isSearchPath = (pathname = "") => inArea(pathname, SEARCH_ROOTS);
+
 export const isPrimaryActive = (item, pathname, vendorHandle) => {
+  // Nearby and Search share the explore roots. Search wins for /search so the two tabs never both light up.
+  if (item.area === "nearby") return isExplorePath(pathname) && !isSearchPath(pathname);
+  if (item.area === "search") return isSearchPath(pathname);
   if (item.area === "explore") return isExplorePath(pathname);
   if (item.area === "activity") return isActivityPath(pathname);
   if (item.area === "mall") return isMallPath(pathname);
@@ -200,6 +230,7 @@ export const SECTION_GROUPS = [
   {
     title: "Community & network",
     items: [
+      ...(FIVE_TAB_NAV_ENABLED ? [{ to: "/mall", label: "Mall", icon: Store }] : []),
       { to: "/groups", label: "Groups & collectives", icon: Users },
       { to: "/events", label: "Events", icon: CalendarDays },
       { to: "/markets", label: "Markets", icon: MapPin },
