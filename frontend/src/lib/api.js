@@ -1039,6 +1039,19 @@ export const officeAPI = {
   acceptLink: (body) => api.post("/office/links/accept", body),
 };
 
+/** Fluid Teams (Phase 7): partner teams and the noticeboard. Behind FLUID_TEAMS_ENABLED on the backend. */
+export const teamsAPI = {
+  listPartners: (officeId) => api.get(`/office/partners/offices/${officeId}`),
+  invitePartner: (officeId, partnerOfficeId) =>
+    api.post("/office/partners/invites", { office_id: officeId, partner_office_id: partnerOfficeId }),
+  answerPartner: (linkId, accept) => api.post(`/office/partners/${linkId}/answer`, { accept }),
+  endPartner: (linkId) => api.delete(`/office/partners/${linkId}`),
+  notices: (officeId) => api.get(`/office/notices/offices/${officeId}`),
+  postNotice: (officeId, body) => api.post(`/office/notices/offices/${officeId}`, body),
+  editNotice: (officeId, noticeId, body) => api.patch(`/office/notices/offices/${officeId}/${noticeId}`, body),
+  deleteNotice: (officeId, noticeId) => api.delete(`/office/notices/offices/${officeId}/${noticeId}`),
+};
+
 /** Licences and credentials (Phase 4). Behind CREDENTIALS_ENABLED on the backend. */
 export const credentialsAPI = {
   mine: () => api.get("/credentials"),

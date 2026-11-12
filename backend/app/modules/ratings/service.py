@@ -6,8 +6,9 @@ Rules (see models.py for the record shape):
   * A supplier records failed or fraud, only about a trade that went wrong, and only about
     the client. It never records a star rating.
   * One rating per party per trade. A rating is final: nothing edits or deletes it here.
-  * With POST_TRADE_RATING_GATE_ENABLED on, a done trade is FINAL only when it has a rating.
-    Final is a separate fact from the trade's status, so no status is ever changed here.
+  * With POST_TRADE_RATING_GATE_ENABLED on, a done trade is FINAL when it has a rating, or when
+    its 14-day rating window closed unrated (see finalise_stranded_trades). Final is a separate
+    fact from the trade's status, so no status is ever changed here.
 """
 
 import re
@@ -24,7 +25,12 @@ from app.models.vendor import Vendor
 from app.modules.office.models import Office, OfficeMember, OfficePartner
 from app.modules.schedule.models import Appointment
 from app.modules.ratings import scoring
-from app.modules.ratings.models import OUTCOMES, SUBJECT_KINDS, PostTradeRating
+from app.config import settings
+from app.modules.ratings.models import OUTCOMES, SUBJECT_KINDS, PostTradeRating, TradeFinalisation
+
+# A trade may be rated for this long after it is done. Then its window closes: no rating can be
+# added, and if none was added the trade is recorded as final with no rating.
+RATING_WINDOW = timedelta(days=14)
 
 # A trade is done (a client may rate it as completed) in these states.
 DONE_STATES = {"appointment": ("completed",), "movement": ("received",)}
@@ -141,6 +147,9 @@ async def record_rating(
         if subj["status"] not in FAILABLE_STATES[subject_kind]:
             raise HTTPException(409, "This trade has not reached a point that can be recorded as failed")
 
+    if await _window_closed(db, subject_kind, subject_id):
+        raise HTTPException(409, "The rating window for this trade has closed")
+
     taken = (await db.execute(select(PostTradeRating.id).where(
         PostTradeRating.subject_kind == subject_kind,
         PostTradeRating.subject_id == subject_id,
@@ -167,12 +176,53 @@ async def record_rating(
     return row
 
 
-async def is_final(db: AsyncSession, subject_kind: str, subject_id: uuid.UUID) -> bool:
-    """A trade is final once any party's rating is recorded."""
+async def _window_closed(db: AsyncSession, subject_kind: str, subject_id: uuid.UUID) -> bool:
     return bool((await db.execute(select(exists().where(
+        TradeFinalisation.subject_kind == subject_kind,
+        TradeFinalisation.subject_id == subject_id,
+    )))).scalar())
+
+
+async def is_final(db: AsyncSession, subject_kind: str, subject_id: uuid.UUID) -> bool:
+    """A trade is final once a party has rated it, or its rating window has closed unrated."""
+    rated = (await db.execute(select(exists().where(
         PostTradeRating.subject_kind == subject_kind,
         PostTradeRating.subject_id == subject_id,
-    )))).scalar())
+    )))).scalar()
+    return bool(rated) or await _window_closed(db, subject_kind, subject_id)
+
+
+async def finalise_stranded_trades(db: AsyncSession, now: Optional[datetime] = None) -> int:
+    """Close the rating window of done trades that passed the window with no rating.
+
+    Off unless POST_TRADE_RATING_GATE_ENABLED is on. Writes only trade_finalisations rows. It
+    changes no trade status, no completed count, and no rank. Returns how many were closed.
+    """
+    if not settings.POST_TRADE_RATING_GATE_ENABLED:
+        return 0
+    cutoff = (now or datetime.utcnow()) - RATING_WINDOW
+    closed = 0
+    for kind, model, done_status, done_at in (
+        ("appointment", Appointment, "completed", Appointment.ends_at),
+        ("movement", StockMovement, "received", StockMovement.completed_at),
+    ):
+        rated = select(PostTradeRating.id).where(
+            PostTradeRating.subject_kind == kind, PostTradeRating.subject_id == model.id)
+        final = select(TradeFinalisation.id).where(
+            TradeFinalisation.subject_kind == kind, TradeFinalisation.subject_id == model.id)
+        due = (await db.execute(select(model.id).where(
+            model.status == done_status,
+            done_at.is_not(None),
+            done_at < cutoff,
+            ~rated.exists(),
+            ~final.exists(),
+        ))).scalars().all()
+        for sid in due:
+            db.add(TradeFinalisation(subject_kind=kind, subject_id=sid, finalised_at=datetime.utcnow(),
+                                     reason="window_expired"))
+            closed += 1
+    await db.commit()
+    return closed
 
 
 async def status_for(db: AsyncSession, viewer: Vendor, subject_kind: str, subject_id: uuid.UUID) -> dict:
@@ -193,11 +243,12 @@ async def status_for(db: AsyncSession, viewer: Vendor, subject_kind: str, subjec
     mine = [r for r in rows if r.rater_role == role]
 
     blocked = await conflict(db, viewer, subj["supplier"], subj["client"])
+    closed = await _window_closed(db, subject_kind, subject_id)
     if role == "client":
-        can_rate = (not mine) and not blocked and subj["status"] in DONE_STATES[subject_kind]
+        can_rate = (not mine) and not blocked and not closed and subj["status"] in DONE_STATES[subject_kind]
         rate_as = "client" if can_rate else None
     else:
-        can_rate = (not mine) and not blocked and subj["status"] in FAILABLE_STATES[subject_kind]
+        can_rate = (not mine) and not blocked and not closed and subj["status"] in FAILABLE_STATES[subject_kind]
         rate_as = "supplier" if can_rate else None
 
     return {
@@ -205,7 +256,8 @@ async def status_for(db: AsyncSession, viewer: Vendor, subject_kind: str, subjec
         "subject_id": str(subject_id),
         "trade_status": subj["status"],
         "my_role": role,
-        "final": bool(rows),
+        "final": bool(rows) or closed,
+        "window_closed": closed,
         "rated_by_me": bool(mine),
         "can_rate_as": rate_as,
         "blocked_reason": blocked,

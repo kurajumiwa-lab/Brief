@@ -1,7 +1,7 @@
 # Phase 7 status and PR map
 
 Owner review (2026-11) asked for one record that maps mandate items to GitHub PRs. This is it.
-Update it in the same PR that changes a state. Last checked against `main` at `abf3f79`.
+Update it in the same PR that changes a state. Last updated on branch `arena/8b6aabc6-brief`, based on `main` at `abf3f79`. Not yet merged.
 
 ## PR map
 
@@ -29,6 +29,8 @@ All three default to off. Nothing new is live.
 
 - `0049_post_trade_ratings`: in `main`, not yet run on staging or production.
 - `0050_office_partners`: in `main`, not yet run on staging or production.
+- `0051_trade_finalisations`: on this branch. Adds the closed-window record for unrated trades.
+- `0052_office_notices`: on this branch. Adds the home office noticeboard.
 
 ## What is in `main`
 
@@ -46,8 +48,11 @@ button on the professional card, Work copy mapping.
 - Sample floor: a supplier's rating moves rank only after 3 ratings from different clients
   (`scoring.MIN_RATINGS_FOR_RANK`). Below that, the count shows and the average is withheld.
 - Repeat clients: a client counts once per supplier in the 90-day window, using their latest rating.
-- Stranded trades: policy is ranking only. An unrated trade never blocks anything and never lowers a
-  profile's completed count. No auto-finalise is built.
+- Rating window: 14 days from completion. After that, no rating can be added. A trade that passed
+  the window unrated is recorded as final (`trade_finalisations`). Nothing else changes: its status,
+  its completed count and its rank stay as they were. The job is `ratings_housekeeping` in the ops
+  workflows. It does nothing while `POST_TRADE_RATING_GATE_ENABLED` is off, and nothing schedules
+  it automatically yet.
 - Walk-in bookings (no client account) cannot be rated. They count as completed, but add no exposure.
 - Privacy line on the rating prompt (Kenya Data Protection Act 2019).
 
@@ -57,16 +62,29 @@ button on the professional card, Work copy mapping.
 - Routes under `/api/office/partners`, 404 while the flag is off: invite, answer, end, list.
 - Only an active owner of an office can invite, answer or end a link. An office cannot partner with
   itself. A pair of offices has at most one link.
+- Partner-team panel on the Office page (frontend), shown only when `VITE_FLUID_TEAMS_ENABLED=true`.
+  An owner invites by typing the other office's ID. The other owner accepts or declines.
+
+**Team features (Fluid Teams, flagged):**
+- Noticeboard (`/api/office/notices`, frontend panel on the Office page): members read; owners and
+  editors post, edit and delete; authors may edit their own posts on the server.
+- Work event coordination: already in place (office calendar and events).
+
+## Decided and removed
+
+- **`UserLink` anti-gaming block:** dropped by owner decision. The team and shared-contact blocks
+  cover the same risk. There is no `UserLink` model.
+- **Stranded trades:** the ranking-only policy was replaced by the 14-day window above, by owner
+  decision.
 
 ## Not built
 
-- **Stranded-trade auto-finalise after 14 days:** not built. The recorded policy is ranking only.
-  Needs an owner decision before any change.
-- **`UserLink` anti-gaming block:** not built. There is no `UserLink` model in the repo.
-- **`home_office_workers`:** no spec in the repo. The existing invite flow (accounts and single-use
-  links) covers adding people to a home office.
-- **Partner-team screens:** backend only. No frontend yet.
+- **Work hours booking and management** (`home_office_workers`): the owner named it, but no spec
+  for what it books or manages. Existing pieces: office hours as text, and work assignments.
+- **Marketing strategies and opportunities** (`home_office_workers`): no spec.
 - **Nearby:** only front doors are reordered. `/api/nearby` keeps its "not ranked" behaviour.
+- **Scheduling the rating-window job:** the job exists as an ops workflow. Something must run it
+  daily. Not set up here.
 
 ## Not verified yet
 
@@ -74,8 +92,8 @@ button on the professional card, Work copy mapping.
   or browser was used to view the splash.
 - **Book Service walkthrough:** not run end to end on a real account.
 - **Nurse walkthrough:** not run. Service profiles and front doors are off by default.
-- **Partner backend:** no tests were written or run for #105, at the owner's request. Only a syntax
-  compile ran.
+- **Partner backend, noticeboard, and rating window:** no tests were written or run, at the owner's
+  request. Syntax compiles ran on the backend. The frontend build passed.
 
 ## Open items
 
@@ -83,6 +101,7 @@ button on the professional card, Work copy mapping.
   retention limits, and access and correction rights. Needs to happen before any flag is turned on.
   Your earlier order put legal review before Fluid Teams. #105 was built ahead of it.
 - **Retention:** no retention period is set, and no purge job exists. The prompt does not claim one.
+  Noticeboard posts are kept until deleted.
 - **Access and correction:** no request path is built. The prompt says nothing about it.
 - **Privacy notice wording:** the prompt's notice is a minimum. Final wording goes to legal review.
 - **Maturity gates (PR 104 in the mandate):** not started. It is a pricing decision. It waits for

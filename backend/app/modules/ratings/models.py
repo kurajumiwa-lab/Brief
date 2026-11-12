@@ -41,3 +41,22 @@ class PostTradeRating(Base):
     stars = Column(SmallInteger, nullable=True)
     note = Column(Text, nullable=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
+class TradeFinalisation(Base):
+    """A trade whose rating window closed with no rating. Written only by the housekeeping job.
+
+    Final is a fact about the rating window, not a trade status. Nothing here changes the trade,
+    its completed count, or its ranking. Mirrors migration 0051_trade_finalisations.
+    """
+    __tablename__ = "trade_finalisations"
+    __table_args__ = (
+        CheckConstraint(f"subject_kind IN {SUBJECT_KINDS}", name="ck_trade_finalisations_kind"),
+        Index("uq_trade_finalisations_subject", "subject_kind", "subject_id", unique=True),
+    )
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    subject_kind = Column(String(16), nullable=False)
+    subject_id = Column(UUID(as_uuid=True), nullable=False)
+    finalised_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    reason = Column(String(24), nullable=False, default="window_expired")
