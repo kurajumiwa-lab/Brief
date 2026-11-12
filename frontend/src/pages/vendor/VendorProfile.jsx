@@ -29,8 +29,9 @@ import SourceDialog from "@/components/stock/SourceDialog";
 import { Check } from "@/components/forms/GroupForm";
 import { useAuthStore } from "@/stores/authStore";
 import { useChatStore } from "@/stores/chatStore";
-import { vendorAPI, stockAPI, passportAPI, credentialsAPI, apiError } from "@/lib/api";
-import { CREDENTIALS_ENABLED } from "@/config/flags";
+import { vendorAPI, stockAPI, passportAPI, credentialsAPI, professionalAPI, apiError } from "@/lib/api";
+import { CREDENTIALS_ENABLED, PROFESSIONAL_PROFILE_ENABLED } from "@/config/flags";
+import ProfessionalCard from "@/components/professional/ProfessionalCard";
 import CredentialBadge from "@/components/credentials/CredentialBadge";
 import { describeFailure } from "@/lib/failure";
 import { readGalleryPhoto } from "@/lib/images";
@@ -77,6 +78,7 @@ export default function VendorProfile() {
   const [profile, setProfile] = useState(null);
   const [perf, setPerf] = useState(null);
   const [credentials, setCredentials] = useState([]);
+  const [proCard, setProCard] = useState(null);
   const [error, setError] = useState(null);   // describeFailure(...) — see @/lib/failure
   const [editing, setEditing] = useState(false);
   const [sourcing, setSourcing] = useState(null);
@@ -98,6 +100,7 @@ export default function VendorProfile() {
     setStock([]);
     setOwnShelf([]);
     setCredentials([]);
+    setProCard(null);
     (async () => {
       try {
         const [{ data: v }, { data: items }] = await Promise.all([
@@ -115,6 +118,12 @@ export default function VendorProfile() {
           ?.then(({ data }) => alive && setPerf(data))
           ?.catch(() => {});
         // Phase 4, flagged. Public credentials only (self_declared or verified). Off by default.
+        // Phase 5, flagged. Built from real rows only. Off by default.
+        if (PROFESSIONAL_PROFILE_ENABLED) {
+          professionalAPI?.card?.(handle)
+            ?.then(({ data }) => alive && setProCard(data))
+            ?.catch(() => {});
+        }
         if (CREDENTIALS_ENABLED) {
           credentialsAPI?.forMember?.(handle)
             ?.then(({ data }) => alive && setCredentials(Array.isArray(data?.credentials) ? data.credentials : []))
@@ -724,6 +733,7 @@ export default function VendorProfile() {
 
       {tab === "about" && (
         <>
+          {PROFESSIONAL_PROFILE_ENABLED && <ProfessionalCard card={proCard} />}
           {credentials.length > 0 && (
             <section aria-labelledby="credentials-heading" className="rounded-2xl border border-edge-1 bg-surface-0 p-5 space-y-3">
               <h2 id="credentials-heading" className="text-sm font-bold text-ink-1">Licences and credentials</h2>

@@ -1049,3 +1049,8 @@ export const credentialsAPI = {
   verify: (id) => api.post(`/ops/credentials/${id}/verify`),
   reject: (id, reason) => api.post(`/ops/credentials/${id}/reject`, { reason }),
 };
+
+/** Professional profile card (Phase 5). Behind PROFESSIONAL_PROFILE_ENABLED on the backend. */
+export const professionalAPI = {
+  card: (handle) => api.get(`/professional/${handle}`),
+};
