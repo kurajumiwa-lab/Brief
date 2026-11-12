@@ -32,6 +32,7 @@ describe("PostTradeRatingPrompt", () => {
 
     const submit = await screen.findByRole("button", { name: /submit rating/i });
     expect(submit).toBeDisabled();
+    expect(screen.getByText(/used to show how reliable a business is/i)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("radio", { name: "4 stars" }));
     fireEvent.click(submit);
 

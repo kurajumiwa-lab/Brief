@@ -10,6 +10,11 @@ recorded about the client, so it never lowers a supplier's score here.
 from typing import Optional
 
 RECENT_DAYS = 90
+# A rating moves rank only once a supplier has this many ratings from different clients. One
+# friend's five-star rating must not lift a front door. Three independent trades is the smallest
+# sample where an average says more than one person's experience. A starting value, to revisit
+# with real data.
+MIN_RATINGS_FOR_RANK = 3
 RANK_COMPLETENESS_WEIGHT = 0.6
 RANK_DISTANCE_WEIGHT = 0.4
 
@@ -17,7 +22,7 @@ RANK_DISTANCE_WEIGHT = 0.4
 def rating_part(rated: int, avg_stars: Optional[float]) -> float:
     """0..1. Needs real recent star ratings. Quality is the average stars; confidence grows with
     the count and reaches full weight at five ratings."""
-    if rated <= 0 or avg_stars is None:
+    if rated < MIN_RATINGS_FOR_RANK or avg_stars is None:
         return 0.0
     confidence = min(rated, 5) / 5
     quality = max(0.0, min(avg_stars, 5.0)) / 5

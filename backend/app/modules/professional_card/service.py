@@ -7,13 +7,11 @@ screen says there are no completed bookings yet.
 
 import uuid
 
-from sqlalchemy import exists, func, select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import settings
 from app.models.vendor import Vendor
 from app.modules.credentials import service as credentials
-from app.modules.ratings.models import PostTradeRating
 from app.modules.schedule.domains import SERVICE_DOMAIN_LABELS
 from app.modules.schedule.models import Appointment, AvailabilityRule, BookableService
 
@@ -54,17 +52,13 @@ async def card_for_vendor(db: AsyncSession, vendor_id: uuid.UUID) -> dict:
         hours.setdefault(WEEKDAYS[r.weekday], []).append(f"{_hhmm(r.start_minute)}–{_hhmm(r.end_minute)}")
     hours_out = [{"day": d, "windows": hours[d]} for d in WEEKDAYS if d in hours]
 
-    completed_q = select(func.count()).select_from(Appointment).where(
-        Appointment.vendor_id == vendor_id, Appointment.status == "completed",
-    )
-    # Phase 7, PR 102. With the rating gate on, a completed booking counts only once it is final
-    # (its post-trade rating is recorded). Off by default: the count is unchanged.
-    if settings.POST_TRADE_RATING_GATE_ENABLED:
-        completed_q = completed_q.where(exists().where(
-            PostTradeRating.subject_kind == "appointment",
-            PostTradeRating.subject_id == Appointment.id,
-        ))
-    completed = (await db.execute(completed_q)).scalar_one()
+    # Every completed booking counts, rated or not. Ratings feed exposure (ranking) only; they never
+    # change this count, so an unrated trade cannot make a profile look smaller.
+    completed = (await db.execute(
+        select(func.count()).select_from(Appointment).where(
+            Appointment.vendor_id == vendor_id, Appointment.status == "completed",
+        )
+    )).scalar_one()
 
     creds = await credentials.public_for_handle_vendor(db, vendor_id)
 

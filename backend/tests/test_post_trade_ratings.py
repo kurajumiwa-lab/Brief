@@ -10,10 +10,15 @@ import uuid
 from datetime import datetime, timedelta
 
 import pytest
+from sqlalchemy import update
+
 from app.config import settings
 from app.database import async_session
 from app.models.stock import StockItem, StockMovement
+from app.models.vendor import Vendor
+from app.modules.professional_card import service as card_service
 from app.modules.ratings import scoring
+from app.modules.ratings import service as ratings_service
 from app.modules.schedule.models import Appointment, AvailabilityRule, BookableService
 from tests.test_nearby_front_doors import HERE, NEAR, _doors, _offer, _place, _register
 
@@ -208,3 +213,77 @@ async def test_front_doors_order_by_data_only_when_flag_on(client, monkeypatch):
     by_id = {d["id"]: d for d in on_body["front_doors"]}
     assert by_id[rich]["data_completeness"] > by_id[bare]["data_completeness"]
     assert by_id[bare]["distance_km"] < by_id[rich]["distance_km"]  # distance still shown truthfully
+
+
+# ---- Conditions for merge (review of PR 103) ---------------------------------------------
+
+async def test_a_business_cannot_rate_its_own_booking(client, gate_on):
+    sup, hs = await _register(client, "ptr_self9")
+    own = await _appointment(sup, sup, "completed")          # supplier is also the client
+    r = await _post(client, hs, subject_kind="appointment", subject_id=own, outcome="completed", stars=5)
+    assert r.status_code == 403
+    s = await client.get("/api/post-trade-ratings/status", headers=hs,
+                         params={"subject_kind": "appointment", "subject_id": own})
+    assert s.json()["can_rate_as"] is None
+    assert "own booking" in s.json()["blocked_reason"]
+
+
+async def test_nobody_rates_a_trade_with_a_business_sharing_their_number(client, gate_on):
+    sup, _ = await _register(client, "ptr_sup10")
+    cli, hc = await _register(client, "ptr_cli10")
+    async with async_session() as db:
+        await db.execute(update(Vendor).where(Vendor.id == uuid.UUID(sup)).values(phone="+254 712 345 678"))
+        await db.execute(update(Vendor).where(Vendor.id == uuid.UUID(cli)).values(phone="0712345678"))
+        await db.commit()
+    appt = await _appointment(sup, cli, "completed")
+    r = await _post(client, hc, subject_kind="appointment", subject_id=appt, outcome="completed", stars=5)
+    assert r.status_code == 403
+    assert "contact number" in r.json()["detail"]
+
+
+def test_a_rating_moves_rank_only_after_three_clients():
+    assert scoring.rating_part(1, 5.0) == 0.0
+    assert scoring.rating_part(2, 5.0) == 0.0
+    assert scoring.rating_part(3, 5.0) > 0.0
+
+
+async def test_supplier_average_withheld_below_the_floor_and_counts_distinct_clients(client, gate_on):
+    sup, _ = await _register(client, "ptr_sup11")
+    clients = [await _register(client, f"ptr_c11_{i}") for i in range(3)]
+
+    # Two clients: the count shows, the average does not.
+    for cid, h in clients[:2]:
+        appt = await _appointment(sup, cid, "completed")
+        assert (await _post(client, h, subject_kind="appointment", subject_id=appt,
+                            outcome="completed", stars=5)).status_code == 201
+    async with async_session() as db:
+        st = await ratings_service.supplier_stats(db, [uuid.UUID(sup)])
+    assert st[uuid.UUID(sup)] == {"rated": 2, "avg_stars": None}
+
+    # The same client rating again on a second trade does not add a second voice.
+    cid, h = clients[0]
+    again = await _appointment(sup, cid, "completed")
+    assert (await _post(client, h, subject_kind="appointment", subject_id=again,
+                        outcome="completed", stars=1)).status_code == 201
+    async with async_session() as db:
+        st = await ratings_service.supplier_stats(db, [uuid.UUID(sup)])
+    assert st[uuid.UUID(sup)]["rated"] == 2
+
+    # A third distinct client reaches the floor and the average appears.
+    cid, h = clients[2]
+    appt = await _appointment(sup, cid, "completed")
+    assert (await _post(client, h, subject_kind="appointment", subject_id=appt,
+                        outcome="completed", stars=4)).status_code == 201
+    async with async_session() as db:
+        st = await ratings_service.supplier_stats(db, [uuid.UUID(sup)])
+    assert st[uuid.UUID(sup)]["rated"] == 3
+    assert st[uuid.UUID(sup)]["avg_stars"] == round((1 + 5 + 4) / 3, 2)  # latest per client: 1, 5, 4
+
+
+async def test_unrated_trades_never_change_the_completed_count(client, gate_on):
+    sup, _ = await _register(client, "ptr_sup12")
+    cli, _ = await _register(client, "ptr_cli12")
+    await _appointment(sup, cli, "completed")                 # completed, no rating at all
+    async with async_session() as db:
+        card = await card_service.card_for_vendor(db, uuid.UUID(sup))
+    assert card["completed_appointments"] >= 1                 # counted, rated or not

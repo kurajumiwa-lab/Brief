@@ -10,6 +10,7 @@ Rules (see models.py for the record shape):
     Final is a separate fact from the trade's status, so no status is ever changed here.
 """
 
+import re
 import uuid
 from datetime import datetime, timedelta
 from typing import Optional
@@ -45,6 +46,30 @@ async def _subject(db: AsyncSession, kind: str, sid: uuid.UUID) -> dict:
     return {"supplier": row.from_vendor_id, "client": row.to_vendor_id, "status": row.status}
 
 
+def _digits(phone: Optional[str]) -> str:
+    return re.sub(r"\D", "", phone or "")[-9:]
+
+
+async def conflict(db: AsyncSession, rater: Vendor, supplier_id, client_id) -> Optional[str]:
+    """Why this party may not rate this trade, or None.
+
+    1. A business cannot rate its own booking (supplier and client are the same office).
+    2. Nobody rates a trade with a business that shares their contact number. That is the one
+       reliable signal here that two accounts belong to one person.
+    Team membership (an office and its partners) is checked once PR 103 creates office_partners.
+    """
+    if client_id is not None and supplier_id == client_id:
+        return "A business cannot rate its own booking."
+    other_id = client_id if rater.id == supplier_id else supplier_id
+    if other_id is None:
+        return None
+    other = await db.get(Vendor, other_id)
+    mine, theirs = _digits(rater.phone), _digits(other.phone if other else None)
+    if mine and theirs and mine == theirs:
+        return "You cannot rate a trade with a business that shares your contact number."
+    return None
+
+
 def _validate_kind_outcome(kind: str, outcome: str) -> None:
     if kind not in SUBJECT_KINDS:
         raise HTTPException(422, "subject_kind must be appointment or movement")
@@ -72,6 +97,10 @@ async def record_rating(
     else:
         # Not a party to this trade. Say the same thing as a missing trade, so none is revealed.
         raise HTTPException(404, "Trade not found")
+
+    blocked = await conflict(db, rater, subj["supplier"], subj["client"])
+    if blocked:
+        raise HTTPException(403, blocked)
 
     if role == "client":
         if outcome != "completed" or stars is None:
@@ -135,11 +164,12 @@ async def status_for(db: AsyncSession, viewer: Vendor, subject_kind: str, subjec
     ))).scalars().all()
     mine = [r for r in rows if r.rater_role == role]
 
+    blocked = await conflict(db, viewer, subj["supplier"], subj["client"])
     if role == "client":
-        can_rate = (not mine) and subj["status"] in DONE_STATES[subject_kind]
+        can_rate = (not mine) and not blocked and subj["status"] in DONE_STATES[subject_kind]
         rate_as = "client" if can_rate else None
     else:
-        can_rate = (not mine) and subj["status"] in FAILABLE_STATES[subject_kind]
+        can_rate = (not mine) and not blocked and subj["status"] in FAILABLE_STATES[subject_kind]
         rate_as = "supplier" if can_rate else None
 
     return {
@@ -150,6 +180,7 @@ async def status_for(db: AsyncSession, viewer: Vendor, subject_kind: str, subjec
         "final": bool(rows),
         "rated_by_me": bool(mine),
         "can_rate_as": rate_as,
+        "blocked_reason": blocked,
         "ratings": [
             {"rater_role": r.rater_role, "outcome": r.outcome, "stars": r.stars,
              "note": r.note, "created_at": r.created_at.isoformat()}
@@ -159,23 +190,35 @@ async def status_for(db: AsyncSession, viewer: Vendor, subject_kind: str, subjec
 
 
 async def supplier_stats(db: AsyncSession, supplier_ids: list, days: int = scoring.RECENT_DAYS) -> dict:
-    """Recent client star ratings per supplier: {vendor_id: {"rated": n, "avg_stars": x or None}}."""
+    """Recent client star ratings per supplier: {vendor_id: {"rated": n, "avg_stars": x or None}}.
+
+    Anti-gaming: a client counts once per supplier in the window, using their latest rating, so
+    repeat bookings with one client cannot stack the average. `rated` counts distinct clients.
+    `avg_stars` is shown only once the sample reaches scoring.MIN_RATINGS_FOR_RANK; below that,
+    the count is shown and the average is withheld.
+    """
     ids = [i for i in supplier_ids if i is not None]
     out = {i: {"rated": 0, "avg_stars": None} for i in ids}
     if not ids:
         return out
     since = datetime.utcnow() - timedelta(days=days)
-    rows = (await db.execute(select(PostTradeRating.supplier_vendor_id, PostTradeRating.stars).where(
+    rows = (await db.execute(select(
+        PostTradeRating.supplier_vendor_id, PostTradeRating.client_vendor_id, PostTradeRating.stars,
+    ).where(
         PostTradeRating.supplier_vendor_id.in_(ids),
         PostTradeRating.rater_role == "client",
         PostTradeRating.outcome == "completed",
         PostTradeRating.stars.is_not(None),
         PostTradeRating.created_at >= since,
-    ))).all()
+    ).order_by(PostTradeRating.created_at.desc()))).all()
+    latest: dict = {}
+    for vid, cid, stars in rows:
+        latest.setdefault((vid, cid), int(stars))   # newest first: keep one per (supplier, client)
     totals: dict = {}
-    for vid, stars in rows:
+    for (vid, _cid), stars in latest.items():
         n, s = totals.get(vid, (0, 0))
-        totals[vid] = (n + 1, s + int(stars))
+        totals[vid] = (n + 1, s + stars)
     for vid, (n, s) in totals.items():
-        out[vid] = {"rated": n, "avg_stars": round(s / n, 2)}
+        avg = round(s / n, 2) if n >= scoring.MIN_RATINGS_FOR_RANK else None
+        out[vid] = {"rated": n, "avg_stars": avg}
     return out

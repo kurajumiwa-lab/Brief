@@ -6,6 +6,19 @@ import { POST_TRADE_RATING_GATE_ENABLED } from "@/config/flags";
 import { postTradeRatingAPI, apiError } from "@/lib/api";
 
 /**
+ * Notice shown with every rating prompt (Phase 7, PR 102). Wording on retention and on access or
+ * correction requests is under legal review; this states only what the platform does today.
+ */
+function PrivacyNote() {
+  return (
+    <p className="text-2xs text-ink-3">
+      Your rating is used to show how reliable a business is to other businesses on the platform.
+      It does not move money.
+    </p>
+  );
+}
+
+/**
  * Rate one finished trade (Phase 7, PR 102). A client rates the supplier 1 to 5 stars. A supplier
  * records only a failed or fraudulent trade, about the client. Ratings measure exposure to the
  * market; they move no money. Renders nothing while the gate is off or when there is nothing to do.
@@ -68,7 +81,7 @@ export default function PostTradeRatingPrompt({ kind, subjectId }) {
             </button>
           ))}
         </div>
-        <p className="text-2xs text-ink-3">Your rating is final and shows how reliable this supplier is to the market.</p>
+        <PrivacyNote />
         <Button size="sm" variant="primary" disabled={!stars || busy} onClick={submit}>Submit rating</Button>
       </div>
     );
@@ -98,6 +111,7 @@ export default function PostTradeRatingPrompt({ kind, subjectId }) {
           onChange={(e) => setNote(e.target.value)}
         />
       </label>
+      <PrivacyNote />
       <Button size="sm" variant="outline" disabled={busy} onClick={submit}>Record outcome</Button>
     </div>
   );
