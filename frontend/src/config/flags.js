@@ -77,3 +77,10 @@ export const SERVICE_PROFILES_ENABLED = import.meta.env?.VITE_SERVICE_PROFILES_E
  * measure exposure to the market and move no money. Set VITE_POST_TRADE_RATING_GATE_ENABLED=true.
  */
 export const POST_TRADE_RATING_GATE_ENABLED = import.meta.env?.VITE_POST_TRADE_RATING_GATE_ENABLED === "true";
+
+/**
+ * Fluid Teams (Phase 7, PR 3 and PR 4): partner teams and the home office noticeboard. Set
+ * VITE_FLUID_TEAMS_ENABLED=true to show them. Matches FLUID_TEAMS_ENABLED on the backend, which is
+ * off by default.
+ */
+export const FLUID_TEAMS_ENABLED = import.meta.env?.VITE_FLUID_TEAMS_ENABLED === "true";

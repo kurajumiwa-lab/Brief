@@ -119,6 +119,14 @@ SUPPORTED_WORKFLOWS: list[dict[str, Any]] = [
         "fields": [],
     },
     {
+        "workflow_type": "ratings_housekeeping",
+        "label": "Close Expired Rating Windows",
+        "endpoint": "ratings.finalise_stranded_trades",
+        "category": "Trade",
+        "description": "Closes the 14-day rating window of done trades that were not rated. Does nothing while POST_TRADE_RATING_GATE_ENABLED is off.",
+        "fields": [],
+    },
+    {
         "workflow_type": "pos_sync_all",
         "label": "POS Bridge Inventory Sync",
         "endpoint": "pos_sync.run_sync",
@@ -289,6 +297,11 @@ async def _execute_workflow(
                 f"Expired {expired_intents} stale intents · {chama_defaults} chama defaults · "
                 f"{murabaha_defaults} murabaha defaults · {reconciled} reconciled."
             )
+        elif workflow_type == "ratings_housekeeping":
+            from app.modules.ratings import service as ratings_service
+            closed = await ratings_service.finalise_stranded_trades(db)
+            record["status"] = "succeeded"
+            record["result_summary"] = f"Closed {closed} expired rating windows."
         elif workflow_type == "stock_housekeeping":
             holds = await stock_engine.expire_stale_holds(db)
             reminders = await notification_service.send_event_reminders(db)

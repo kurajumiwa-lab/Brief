@@ -152,3 +152,25 @@ class OfficePartner(Base):
     created_at = Column(TS, nullable=False, default=datetime.utcnow)
     responded_at = Column(TS, nullable=True)
     updated_at = Column(TS, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class OfficeNotice(Base):
+    """A noticeboard post for one home office. Members read it; owners and editors post and edit.
+
+    An author may also edit or delete their own post. Mirrors migration 0052_office_notices.
+    """
+    __tablename__ = "office_notices"
+    __table_args__ = (
+        CheckConstraint(_nonblank("title"), name="ck_office_notices_title_nonblank"),
+        CheckConstraint(_nonblank("body"), name="ck_office_notices_body_nonblank"),
+        Index("ix_office_notices_office_created", "office_id", "created_at"),
+    )
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    office_id = Column(UUID(as_uuid=True), ForeignKey("offices.id", ondelete="CASCADE"), nullable=False)
+    author_vendor_id = Column(UUID(as_uuid=True), ForeignKey("vendors.id", ondelete="SET NULL"), nullable=True)
+    title = Column(String(120), nullable=False)
+    body = Column(String(4000), nullable=False)
+    created_at = Column(TS, nullable=False, default=datetime.utcnow)
+    updated_at = Column(TS, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    edited_at = Column(TS, nullable=True)

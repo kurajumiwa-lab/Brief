@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { officeAPI, apiError } from "@/lib/api";
+import { FLUID_TEAMS_ENABLED } from "@/config/flags";
+import { NoticeBoard, PartnerPanel } from "@/components/office/TeamsPanels";
 
 const ROLE_LABELS = {
   editor: "Editor (can invite and add events)",
@@ -126,6 +128,13 @@ export default function OfficePage() {
 
           {detail.my_role === "owner" && (
             <InviteForms detail={detail} onRun={run} />
+          )}
+
+          {FLUID_TEAMS_ENABLED && (
+            <>
+              <PartnerPanel detail={detail} onRun={run} />
+              <NoticeBoard detail={detail} onRun={run} />
+            </>
           )}
 
           <div>
