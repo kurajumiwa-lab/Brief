@@ -12,7 +12,7 @@ import { join, relative } from "node:path";
  * Reviewed exceptions, each deliberate:
  *  - pages/governance/OurNetwork.jsx: governance and voting terms. Needs a
  *    reviewer before any wording change (it carries eligibility rules).
- *  - config/brand.js and the "Vendor World" line in config/constants.js: a
+ *  - config/brand.js and the "Home Office" line in config/constants.js: a
  *    brand name. Renaming a brand is an owner decision.
  */
 
@@ -54,7 +54,7 @@ describe("P2 business copy", () => {
       const lines = readFileSync(file, "utf8").split("\n");
       lines.forEach((line, i) => {
         if (/^\s*import\s/.test(line)) return;
-        if (rel === "config/constants.js" && /Vendor World/.test(line)) return;
+        if (rel === "config/constants.js" && /Home Office/.test(line)) return;
         for (const text of copyStrings(line)) {
           if (text && isCopy(text)) offenders.push(`${rel}:${i + 1}: ${text.trim()}`);
         }

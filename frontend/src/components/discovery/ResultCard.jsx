@@ -46,7 +46,7 @@ export default function ResultCard({ kind, item, onAction, onInspect, className 
     : { label: "Unavailable", variant: "gray" };
 
   const priceLine = isJob
-    ? `Pays KSh ${num(item.pay_kes)}${item.task_type ? ` · ${item.task_type}` : " / shift"}`
+    ? `Pays KSh ${num(item.pay_kes)}${item.task_type ? ` · ${item.task_type}` : " / session"}`
     : isVendor
     ? (item.business_categories || []).slice(0, 3).join(" · ") || "Business"
     : `${item.price_per_unit != null ? `KSh ${num(item.price_per_unit)} ${UNIT_LABELS[item.price_unit] || ""}` : "Ask for a rate"}` +
@@ -146,7 +146,7 @@ export default function ResultCard({ kind, item, onAction, onInspect, className 
           {item.terms && <p className="text-micro text-ink-4">Terms: {item.terms}</p>}
           {isJob && (
             <p className="text-micro text-ink-4">
-              Verified 2-party OTP completion proof required at shift finish.
+              Verified 2-party OTP completion proof required at work finish.
             </p>
           )}
         </div>

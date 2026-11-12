@@ -443,7 +443,7 @@ describe("Ops console", () => {
 
     // Fix pay_kes, validate via dry_run, then start job
     fireEvent.change(payInput, { target: { value: "600" } });
-    const titleInput = screen.getByLabelText(/Shift title/i);
+    const titleInput = screen.getByLabelText(/Work title/i);
     fireEvent.change(titleInput, { target: { value: "Morning Market Grading Shift" } });
     fireEvent.click(screen.getByRole("button", { name: /Validate & Review/i }));
     await waitFor(() =>

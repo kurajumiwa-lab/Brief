@@ -34,13 +34,13 @@ const pct = (n) => (n === null || n === undefined ? "—" : `${n}%`);
 const DEFAULT_WORKFLOWS = [
   {
     workflow_type: "squad_job_call",
-    label: "Marketplace Shift / Squad Call-Up",
+    label: "Service Work / Squad Call-Up",
     endpoint: "POST /api/squad/job-calls",
     category: "Marketplace Dispatch",
     description:
-      "Posts a verified temporary shift call-up to the Hustle League board with minimum-wage and tier validation.",
+      "Posts a verified temporary work call-up to the Hustle League board with minimum-wage and tier validation.",
     fields: [
-      { name: "title", label: "Shift title", type: "text", required: true, default: "Offload & grade morning crates" },
+      { name: "title", label: "Work title", type: "text", required: true, default: "Offload & grade morning crates" },
       {
         name: "skill",
         label: "Skill category",
@@ -301,13 +301,13 @@ export default function Ops() {
     if (selectedWorkflowType === "squad_job_call") {
       const title = String(jobParams.title || "").trim();
       if (title.length < 3) {
-        return "Shift title must be at least 3 characters.";
+        return "Work title must be at least 3 characters.";
       }
       const skill = String(jobParams.skill || "mover").toLowerCase();
       const floor = SKILL_MIN_WAGE_KES[skill] || 250;
       const pay = Number(jobParams.pay_kes || 0);
       if (!Number.isFinite(pay) || pay < floor) {
-        return `Minimum wage guard: '${skill}' shifts require at least KES ${floor}.`;
+        return `Minimum wage guard: '${skill}' work requires at least KES ${floor}.`;
       }
       const hours = Number(jobParams.expires_in_hours || 24);
       if (hours < 1 || hours > 168) {
@@ -390,12 +390,12 @@ export default function Ops() {
           id: call.id || `job-${Date.now()}`,
           name: call.title || params.title,
           workflow_type: "squad_job_call",
-          workflow_label: "Marketplace Shift / Squad Call-Up",
+          workflow_label: "Service Work / Squad Call-Up",
           created_by: "ops_admin",
           status: "queued",
           params,
           created_at: new Date().toISOString(),
-          result_summary: `Shift call-up posted (KES ${params.pay_kes} · ${params.skill}). Awaiting worker acceptance.`,
+          result_summary: `Service call-up posted (KES ${params.pay_kes} · ${params.skill}). Awaiting worker acceptance.`,
         };
       } else {
         createdJob = {
