@@ -1,13 +1,29 @@
 # Service providers: gap analysis and phased plan
 
-Status: **Owner decisions D1 to D5 recorded below. Phase 0 implemented behind `VITE_SERVICE_PROFILES_ENABLED` (PR #92). Phase 1 built on the same branch: migration `0046_service_delivery_units`, delivery modes and price unit on `booking_services`. Phases 2 and later not started.** Branch `arena/5a64c270-brief`, based on `main` at `e9e19b7`.
+Status: **Phases 0 through 6 are complete and merged into `main`.** Each phase is its own PR. Every change is behind a flag or is additive, and each phase's status is in the table below. Phase 4 credentials are OFF by default until the legal review (D3) is complete.
+
+## Current status (as of the last update)
+
+| Phase | What it covers | PR | State | Flag and default |
+|---|---|---|---|---|
+| 0 | Service-aware copy on the Desk | #92 | merged | `VITE_SERVICE_PROFILES_ENABLED`, off |
+| 1 | Delivery modes and price unit (migration 0046) | #93 | merged | additive, no flag |
+| 2 | Opening hours in the service form | #94 | merged | flagged, off |
+| 3 | Services with hours count toward front doors | #95 | merged | `SERVICE_PROFILES_ENABLED`, off |
+| 4 | Licences and credentials (migration 0047) | #96, #97 | merged | `CREDENTIALS_ENABLED` backend and `VITE_CREDENTIALS_ENABLED`, **off** until legal review (D3) |
+| 5 | Professional profile card | #97, #99 | merged | card: `PROFESSIONAL_PROFILE_ENABLED` backend and `VITE_PROFESSIONAL_PROFILE_ENABLED`, on; enhanced layout: `VITE_SERVICE_PROFILES_ENABLED`, off |
+| 6 | Service domains (migration 0048) and approved copy | #98 | merged | domain selector: `VITE_SERVICE_PROFILES_ENABLED`, off; API accepts domain either way |
+
+Test approval: `backend/tests/test_credentials.py` is approved and in the suite. Phases 5 and 6 added no test files.
+
+Copy decisions: the section title is "Local Work & Services". Secondary labels for "Shifts" or "Gigs" use "Service Bookings" (see the note under D4). Remaining "shift" wording in the temporary-jobs flow is not yet changed.
 
 ## 0. Owner decisions (recorded)
 
 - **D1:** backfill `booking_services`: `delivery_clinic = true`, `delivery_home = false`, `delivery_remote = false`, `price_unit = NULL`. New columns nullable.
-- **D2:** approved. A provider with 0 goods but at least one published `booking_service` and active `availability_rules` appears on Nearby and front doors. Implementation is Phase 3, not yet started.
-- **D3:** a self-declared licence shows as "Self-declared Licence". Only an operator verification through `/api/ops/*` shows "Verified Credential". Verification stays separate from visibility. Still to confirm: the legal review noted in section 4.
-- **D4:** domains framed as work and services: Healthcare & Care, Trades & Technical, Personal Care & Beauty, Logistics & Delivery, Market & Retail Support. Banner copy changes are approved in principle. Exact wording is still to be reviewed.
+- **D2:** approved. A provider with 0 goods but at least one published `booking_service` and active `availability_rules` appears on Nearby and front doors. Implemented in Phase 3 (PR #95), behind `SERVICE_PROFILES_ENABLED`.
+- **D3:** a self-declared licence shows as "Self-declared Licence". Only an operator verification through `/api/ops/*` shows "Verified Credential". Verification stays separate from visibility. Legal review still open (section 4). Until it is complete, the credentials feature is OFF by default.
+- **D4:** domains framed as work and services: Healthcare & Care, Trades & Technical, Personal Care & Beauty, Logistics & Delivery, Market & Retail Support. Banner copy: "Local Work & Services" is the title (applied in Phase 6). Secondary labels for "Shifts" or "Gigs" use "Service Bookings". "Verified" is not used in new labels, because in this plan it means only the credential status from Phase 4, not any gig or shift check.
 - **D5:** "Vendor World" stays the public name. A user's space is called their workspace or home office inside it.
 
 Phase 0 (copy only, flagged) as built: the offering form labels a service "Service name" and its unit placeholder reads "visit, hour, shift". The Desk empty-state link reads "Add goods to your stock". Flag off keeps the old wording.
