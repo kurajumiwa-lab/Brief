@@ -39,7 +39,7 @@ The mandate's numbers do not match GitHub's. Use this table, not the mandate, fo
 - **One rating per party per trade.** Ratings cannot be edited or deleted through the API.
 - **Self-rating blocked:** a business cannot rate its own booking.
 - **Shared contact blocked:** nobody rates a trade with a business that shares their contact number. This is the one signal used to catch two accounts run by one person.
-- **Team membership:** a rating is blocked when the rater and the other party are both active members of the same active office (owner included). Partner teams (`office_partners`, Fluid Teams) are not built yet and will extend this check.
+- **Team membership:** a rating is blocked when the rater and the other party are both active members of the same active office (owner included). Partner teams (`office_partners`, Fluid Teams, behind `FLUID_TEAMS_ENABLED`) extend the check: members of partnered offices cannot rate each other.
 - **Sample floor:** a supplier's rating moves rank only after 3 ratings from different clients (`scoring.MIN_RATINGS_FOR_RANK`). Below that, the count shows and the average is withheld. Three is a starting value, to revisit with real data.
 - **Repeat clients:** a client counts once per supplier in the 90-day window, using their latest rating. Repeat bookings cannot stack the average.
 - **Stranded trades (policy chosen): ranking only.** An unrated trade never blocks anything and never lowers a profile's completed count. A rating only adds exposure. The professional card counts every completed booking.

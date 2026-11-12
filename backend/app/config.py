@@ -133,6 +133,9 @@ class Settings(BaseSettings):
     # stock movement becomes FINAL only once its post-trade rating is recorded. Ratings measure
     # exposure to the market; they never move money and never change a trade's status.
     POST_TRADE_RATING_GATE_ENABLED: bool = False
+    # Fluid Teams (Phase 7, PR 3): partner teams between two home offices. OFF by default. While off,
+    # the /api/office/partners routes return 404 and no partner link can be made.
+    FLUID_TEAMS_ENABLED: bool = False
     # Data-based discovery (Phase 7, PR 102). OFF by default. On: front doors and supplier lists are
     # ordered by real data completeness and recent post-trade ratings. Distances stay true.
     DATA_DISCOVERY_RANKING_ENABLED: bool = False

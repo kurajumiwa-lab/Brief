@@ -124,3 +124,31 @@ class OfficeEvent(Base):
     location_text = Column(String(200), nullable=True)
     created_by_vendor_id = Column(UUID(as_uuid=True), ForeignKey("vendors.id", ondelete="SET NULL"), nullable=True)
     created_at = Column(TS, nullable=False, default=datetime.utcnow)
+
+
+PARTNER_STATUSES = ("invited", "active", "declined", "removed")
+
+
+class OfficePartner(Base):
+    """A partner team: one office invites another office to work with it. Two home offices only.
+
+    The inviting office's owner sends the invite; the other office's owner accepts or declines.
+    Either owner may end an active link. Mirrors migration 0050_office_partners.
+    """
+    __tablename__ = "office_partners"
+    __table_args__ = (
+        CheckConstraint(_in("status", PARTNER_STATUSES), name="ck_office_partners_status"),
+        CheckConstraint("office_id <> partner_office_id", name="ck_office_partners_not_self"),
+        Index("uq_office_partners_pair", "office_id", "partner_office_id", unique=True),
+        Index("ix_office_partners_partner", "partner_office_id"),
+    )
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    office_id = Column(UUID(as_uuid=True), ForeignKey("offices.id", ondelete="CASCADE"), nullable=False)
+    partner_office_id = Column(UUID(as_uuid=True), ForeignKey("offices.id", ondelete="CASCADE"), nullable=False)
+    status = Column(String(10), nullable=False, default="invited", server_default="invited")
+    invited_by_vendor_id = Column(UUID(as_uuid=True), ForeignKey("vendors.id", ondelete="SET NULL"), nullable=True)
+    responded_by_vendor_id = Column(UUID(as_uuid=True), ForeignKey("vendors.id", ondelete="SET NULL"), nullable=True)
+    created_at = Column(TS, nullable=False, default=datetime.utcnow)
+    responded_at = Column(TS, nullable=True)
+    updated_at = Column(TS, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
