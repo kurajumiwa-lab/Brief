@@ -21,7 +21,7 @@ export const JOB_CATEGORIES = [
     shortLabel: "Packing",
     subtitle: "Sorting, grading, crate cleaning & order packing",
     minWage: 200,
-    unit: "per shift",
+    unit: "per session",
     icon: Package,
     tone: "bg-brand-50 text-brand-700 dark:bg-surface-2 dark:text-brand-300",
   },
@@ -31,7 +31,7 @@ export const JOB_CATEGORIES = [
     shortLabel: "Loading",
     subtitle: "Lorry offloading, pallet stacking & bay handling",
     minWage: 400,
-    unit: "per shift",
+    unit: "per session",
     icon: Users,
     tone: "bg-blue-50 text-blue-700 dark:bg-surface-2 dark:text-blue-300",
   },
@@ -51,7 +51,7 @@ export const JOB_CATEGORIES = [
     shortLabel: "Inventory",
     subtitle: "Shelf stocktaking, batch logging & POS entry",
     minWage: 300,
-    unit: "per shift",
+    unit: "per session",
     icon: ClipboardList,
     tone: "bg-purple-50 text-purple-700 dark:bg-surface-2 dark:text-purple-300",
   },
@@ -61,7 +61,7 @@ export const JOB_CATEGORIES = [
     shortLabel: "Retail & Display",
     subtitle: "Stall assistance, display setup & peak-hour help",
     minWage: 150,
-    unit: "per shift",
+    unit: "per session",
     icon: Store,
     tone: "bg-teal-50 text-teal-700 dark:bg-surface-2 dark:text-teal-300",
   },
@@ -81,7 +81,7 @@ export const JOB_CATEGORIES = [
     shortLabel: "Produce Prep",
     subtitle: "Fresh produce trimming, washing & kitchen support",
     minWage: 350,
-    unit: "per shift",
+    unit: "per session",
     icon: Utensils,
     tone: "bg-accent-50 text-accent-700 dark:bg-surface-2 dark:text-accent-300",
   },
@@ -102,11 +102,11 @@ export function categoryForSkill(skill = "") {
   if (found) return found;
   return {
     skill: skill || "general",
-    title: skill ? `${skill.charAt(0).toUpperCase()}${skill.slice(1)} Work` : "Temporary Shift",
-    shortLabel: skill || "Shift",
+    title: skill ? `${skill.charAt(0).toUpperCase()}${skill.slice(1)} Work` : "Temporary Work",
+    shortLabel: skill || "Work",
     subtitle: "Verified on-site business assistance",
     minWage: 200,
-    unit: "per shift",
+    unit: "per session",
     icon: Briefcase,
     tone: "bg-brand-50 text-brand-700 dark:bg-surface-2 dark:text-brand-300",
   };
@@ -121,24 +121,24 @@ export function getJobCallState(call = {}, { hasActiveContract = false, energyCa
     return { code: "cancelled", label: "Cancelled", badgeVariant: "gray", canApply: false, reason: "This job post was cancelled by the business." };
   }
   if (status === "completed") {
-    return { code: "filled", label: "Completed", badgeVariant: "blue", canApply: false, reason: "This shift has already been completed." };
+    return { code: "filled", label: "Completed", badgeVariant: "blue", canApply: false, reason: "This call-up has already been completed." };
   }
   if (status === "contracted" || status === "in_progress" || status === "proof_pending" || call.worker) {
-    return { code: "filled", label: "Position filled", badgeVariant: "amber", canApply: false, reason: "Another worker has already been contracted for this shift." };
+    return { code: "filled", label: "Position filled", badgeVariant: "amber", canApply: false, reason: "Another worker has already been contracted for this call-up." };
   }
   if (expiredByDate || status === "expired") {
-    return { code: "expired", label: "Expired", badgeVariant: "gray", canApply: false, reason: "The application window for this shift has closed." };
+    return { code: "expired", label: "Expired", badgeVariant: "gray", canApply: false, reason: "The application window for this call-up has closed." };
   }
   if (call.mine) {
     return { code: "mine", label: "Your job post", badgeVariant: "purple", canApply: false, reason: "Posted by your business." };
   }
   if (hasActiveContract) {
-    return { code: "restricted_active", label: "Open shift", badgeVariant: "brand", canApply: false, reason: "Finish your current active contract before accepting another shift." };
+    return { code: "restricted_active", label: "Open Call-Up", badgeVariant: "brand", canApply: false, reason: "Finish your current active contract before accepting another call-up." };
   }
   if (energyCapReached) {
-    return { code: "restricted_energy", label: "Open shift", badgeVariant: "brand", canApply: false, reason: "Daily safe shift limit reached (4/4). Rest today and apply tomorrow." };
+    return { code: "restricted_energy", label: "Open Call-Up", badgeVariant: "brand", canApply: false, reason: "Daily safe session limit reached (4/4). Rest today and apply tomorrow." };
   }
-  return { code: "open", label: "Open shift", badgeVariant: "brand", canApply: true, reason: null };
+  return { code: "open", label: "Open Call-Up", badgeVariant: "brand", canApply: true, reason: null };
 }
 
 /**
@@ -260,7 +260,7 @@ export function JobCategoryGrid({ activeSkill, onSelectSkill, calls = [] }) {
       <div className="flex items-center justify-between gap-2">
         <div>
           <h2 className="text-sm font-bold text-ink-1">Browse by work category</h2>
-          <p className="text-2xs text-ink-3">Select a category to filter available shifts and minimum rates</p>
+          <p className="text-2xs text-ink-3">Select a category to filter available call-ups and minimum rates</p>
         </div>
         {activeSkill && (
           <Button size="xs" variant="ghost" onClick={() => onSelectSkill("")}>
@@ -329,7 +329,7 @@ export function JobCard({
   const Icon = cat.icon;
   const state = getJobCallState(call, { hasActiveContract, energyCapReached });
   const clientName = call.client || call.business_name || (call.vendor_handle ? `@${call.vendor_handle}` : "Verified Business");
-  const shiftUnit = call.task_type === "delivery" ? "/ run" : "/ shift";
+  const shiftUnit = call.task_type === "delivery" ? "/ run" : "/ session";
 
   return (
     <article
@@ -350,7 +350,7 @@ export function JobCard({
               {cat.title}
             </span>
             <span className="block text-xs font-semibold text-ink-1 truncate">
-              {call.task_type ? call.task_type.replaceAll("_", " ") : "On-site shift"}
+              {call.task_type ? call.task_type.replaceAll("_", " ") : "On-site work"}
             </span>
           </div>
         </div>
@@ -400,11 +400,11 @@ export function JobCard({
           <div className="pt-2 border-t border-edge-1 flex flex-wrap items-center justify-between gap-2 text-micro text-ink-3">
             <span className="inline-flex items-center gap-1">
               <Clock size={11} className="text-ink-4" />
-              {call.expires_at ? `Window closes ${relativeTime(call.expires_at)}` : "Immediate shift"}
+              {call.expires_at ? `Window closes ${relativeTime(call.expires_at)}` : "Immediate call-up"}
             </span>
             <span className="font-medium text-ink-2">
               Tier: <strong className="capitalize">{call.required_tier || "common"}</strong>
-              {call.squad_id ? " · Squad shift" : ""}
+              {call.squad_id ? " · Squad call-up" : ""}
             </span>
           </div>
         </div>
@@ -526,7 +526,7 @@ export function JobDetailsModal({
               {call.expires_at ? `Closes ${shortDate(call.expires_at)}` : "Immediate start"}
             </p>
             <p className="text-micro text-ink-4 mt-0.5">
-              {call.expires_at ? relativeTime(call.expires_at) : "Single shift"}
+              {call.expires_at ? relativeTime(call.expires_at) : "Single call-up"}
             </p>
           </div>
           <div className="rounded-xl border border-edge-1 bg-surface-1 p-3">
@@ -535,7 +535,7 @@ export function JobDetailsModal({
               {call.required_tier || "Common"} skill card
             </p>
             <p className="text-micro text-ink-4 mt-0.5">
-              {call.squad_id ? "Squad team shift" : "Individual shift"}
+              {call.squad_id ? "Squad team call-up" : "Individual call-up"}
             </p>
           </div>
         </div>
@@ -554,8 +554,8 @@ export function JobDetailsModal({
           <h4 className="text-xs font-semibold text-ink-1">Completion &amp; payment terms</h4>
           <ul className="space-y-1 list-disc list-inside">
             <li>Agreed rate of <strong>KES {num(call.pay_kes)}</strong> is locked when you accept the contract.</li>
-            <li>Client receives a 6-digit completion OTP code when the shift is accepted.</li>
-            <li>Enter the client&apos;s 6-digit OTP at the end of the shift to record completion and unlock XP &amp; Gold.</li>
+            <li>Client receives a 6-digit completion OTP code when the call-up is accepted.</li>
+            <li>Enter the client&apos;s 6-digit OTP at the end of the work to record completion and unlock XP &amp; Gold.</li>
             {call.mine && call.otp_code && (
               <li className="text-brand-700 dark:text-brand-300 font-mono font-semibold">
                 Your client completion OTP: {call.otp_code}
@@ -641,7 +641,7 @@ export function PostJobModal({ open, onClose, onPosted, defaultLocation = "" }) 
       onClose={onClose}
       size="md"
       title="Post a temporary job"
-      description="Publish a paid shift with a guaranteed minimum rate and two-party OTP completion."
+      description="Publish paid work with a guaranteed minimum rate and two-party OTP completion."
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>
@@ -702,9 +702,9 @@ export function PostJobModal({ open, onClose, onPosted, defaultLocation = "" }) 
             onChange={(e) => setForm({ ...form, required_tier: e.target.value })}
             options={[
               { value: "common", label: "Common (Open to all verified workers)" },
-              { value: "rare", label: "Rare (10+ completed shifts, 4.0★+)" },
-              { value: "epic", label: "Epic (30+ completed shifts, 4.3★+)" },
-              { value: "legendary", label: "Legendary (75+ shifts, 4.5★+)" },
+              { value: "rare", label: "Rare (10+ completed work, 4.0★+)" },
+              { value: "epic", label: "Epic (30+ completed work, 4.3★+)" },
+              { value: "legendary", label: "Legendary (75+ completed work, 4.5★+)" },
             ]}
           />
         </div>

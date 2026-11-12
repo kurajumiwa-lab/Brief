@@ -733,7 +733,7 @@ export default function VendorProfile() {
 
       {tab === "about" && (
         <>
-          {PROFESSIONAL_PROFILE_ENABLED && <ProfessionalCard card={proCard} />}
+          {PROFESSIONAL_PROFILE_ENABLED && <ProfessionalCard card={proCard} vendorId={vendor?.id} canBook={!own} />}
           {credentials.length > 0 && (
             <section aria-labelledby="credentials-heading" className="rounded-2xl border border-edge-1 bg-surface-0 p-5 space-y-3">
               <h2 id="credentials-heading" className="text-sm font-bold text-ink-1">Licences and credentials</h2>

@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="430 80 540 600" role="img" aria-label="Home Office">
+  <title>Home Office</title>
+  <defs>
+    <linearGradient id="win" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0d3443"/>
+      <stop offset="1" stop-color="#1f5d6b"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f7c76a" stop-opacity="0"/>
+      <stop offset="1" stop-color="#f7c76a" stop-opacity="0.35"/>
+    </linearGradient>
+  </defs>
+  <!-- House silhouette with chimney and base line -->
+  <g fill="#0f1f38">
+    <path d="M703 123 L940 330 L893 330 L893 565 L515 565 L515 330 L467 330 Z"/>
+    <rect x="797" y="172" width="60" height="80"/>
+    <rect x="483" y="555" width="442" height="10"/>
+  </g>
+  <!-- Chimney smoke -->
+  <path d="M826 165 C812 140 838 125 826 100" fill="none" stroke="#f3dcb4" stroke-width="7" stroke-linecap="round" opacity="0.85"/>
+  <!-- Interior -->
+  <path d="M703 175 L857 305 L857 530 L553 530 L553 305 Z" fill="url(#win)"/>
+  <!-- Skyline -->
+  <g fill="#1b4a58">
+    <rect x="565" y="330" width="30" height="110"/>
+    <rect x="600" y="300" width="28" height="140"/>
+    <rect x="650" y="290" width="35" height="150"/>
+    <rect x="690" y="250" width="25" height="190"/>
+    <rect x="720" y="300" width="30" height="140"/>
+    <rect x="755" y="330" width="30" height="110"/>
+    <rect x="790" y="300" width="35" height="140"/>
+    <rect x="830" y="340" width="25" height="100"/>
+  </g>
+  <path d="M702 250 L703 222 L704 250 Z" fill="#7fe0e8"/>
+  <g fill="#f7c76a" opacity="0.8">
+    <rect x="572" y="350" width="4" height="4"/><rect x="584" y="372" width="4" height="4"/>
+    <rect x="608" y="320" width="4" height="4"/><rect x="622" y="350" width="4" height="4"/>
+    <rect x="658" y="312" width="4" height="4"/><rect x="674" y="340" width="4" height="4"/>
+    <rect x="698" y="290" width="4" height="4"/><rect x="698" y="330" width="4" height="4"/>
+    <rect x="728" y="330" width="4" height="4"/><rect x="740" y="360" width="4" height="4"/>
+    <rect x="798" y="330" width="4" height="4"/><rect x="812" y="360" width="4" height="4"/>
+  </g>
+  <!-- Warm glow at the window edge -->
+  <path d="M703 175 L857 305 L857 530 L553 530 L553 305 Z" fill="none" stroke="#f7c76a" stroke-width="5" opacity="0.9"/>
+  <rect x="553" y="440" width="304" height="90" fill="url(#glow)"/>
+  <!-- Desk -->
+  <rect x="615" y="462" width="195" height="12" fill="#5a3d1e"/>
+  <rect x="625" y="474" width="175" height="56" fill="#22170d"/>
+  <!-- Monitor -->
+  <rect x="672" y="392" width="80" height="48" rx="3" fill="#e6eef3"/>
+  <rect x="678" y="398" width="68" height="36" fill="#5fb3d9"/>
+  <rect x="682" y="416" width="8" height="14" fill="#1f5d6b"/>
+  <rect x="694" y="410" width="8" height="20" fill="#1f5d6b"/>
+  <rect x="706" y="404" width="8" height="26" fill="#1f5d6b"/>
+  <rect x="705" y="440" width="14" height="18" fill="#cfd8de"/>
+  <rect x="690" y="457" width="44" height="5" fill="#cfd8de"/>
+  <!-- Laptop -->
+  <polygon points="622,432 660,432 668,462 620,462" fill="#cfd8de"/>
+  <rect x="626" y="436" width="30" height="22" fill="#5fb3d9"/>
+  <!-- Lamp -->
+  <path d="M812 465 L792 405 L822 385" fill="none" stroke="#f7c76a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M796 396 L816 376 L830 392 Z" fill="#f7c76a"/>
+  <!-- Chair -->
+  <path d="M762 392 L790 398 L780 452 L752 448 Z" fill="#1a120b"/>
+  <rect x="720" y="448" width="75" height="14" rx="6" fill="#1a120b"/>
+  <rect x="751" y="462" width="6" height="22" fill="#1a120b"/>
+  <ellipse cx="754" cy="490" rx="26" ry="5" fill="#1a120b"/>
+  <!-- Plants -->
+  <path d="M590 505 C570 480 560 455 575 425 C590 450 596 470 600 500 Z" fill="#3f8f5a"/>
+  <path d="M592 505 C600 475 612 455 606 430 C590 450 585 475 585 505 Z" fill="#57b877"/>
+  <rect x="568" y="505" width="32" height="25" rx="3" fill="#3a2a1a"/>
+  <path d="M846 465 C838 448 836 438 844 428 C850 440 852 452 850 465 Z" fill="#57b877"/>
+  <rect x="834" y="465" width="22" height="12" rx="2" fill="#3a2a1a"/>
+  <!-- Wordmark -->
+  <text x="703" y="652" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="66" fill="#0f1f38" letter-spacing="1"><tspan font-weight="700">HOME</tspan><tspan font-weight="400"> OFFICE</tspan></text>
+</svg>

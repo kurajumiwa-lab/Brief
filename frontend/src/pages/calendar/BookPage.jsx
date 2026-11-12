@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
@@ -16,6 +16,7 @@ import { dayLabel, timeOf, toDayString } from "./calendarTime";
  */
 export default function BookPage() {
   const { vendorId } = useParams();
+  const [searchParams] = useSearchParams();
   const me = useAuthStore((s) => s.vendor);
   const [services, setServices] = useState(null);
   const [service, setService] = useState(null);
@@ -33,6 +34,14 @@ export default function BookPage() {
       .then(({ data }) => setServices(data.services))
       .catch((err) => setError(apiError(err, "Could not load this booking page")));
   }, [vendorId]);
+
+  // A link from a profile card can name the service: ?service=<id> opens straight onto it.
+  useEffect(() => {
+    if (!services) return;
+    const wanted = searchParams.get("service");
+    const match = wanted ? services.find((s) => s.id === wanted) : null;
+    if (match) setService(match);
+  }, [services, searchParams]);
 
   useEffect(() => {
     if (!service) return;

@@ -176,14 +176,14 @@ export default function TasksPortal() {
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-sm font-semibold text-ink-1 flex items-center gap-2">
-                  <ListChecks size={15} className="text-brand-600" /> No active shift in hand
+                  <ListChecks size={15} className="text-brand-600" /> No active work in hand
                 </p>
                 <p className="text-xs text-ink-3 mt-1">
-                  Apply for an open call-up below to lock in the shift rate. You can hold one active shift at a time.
+                  Apply for an open call-up below to lock in the rate. You can hold one active job at a time.
                 </p>
               </div>
               <Badge variant="outline" size="xs">
-                {me.energy?.used ?? 0} / {me.energy?.limit ?? 4} daily shifts
+                {me.energy?.used ?? 0} / {me.energy?.limit ?? 4} daily sessions
               </Badge>
             </div>
             <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-edge-1 text-micro text-ink-3">
@@ -217,7 +217,7 @@ export default function TasksPortal() {
           </div>
           {(me.cards || []).length === 0 ? (
             <p className="text-xs text-ink-3">
-              Complete your first shift to earn a verified skill card with your completion count and average client rating.
+              Complete your first call-up to earn a verified skill card with your completion count and average client rating.
             </p>
           ) : (
             <div className="flex flex-wrap gap-1.5">
@@ -237,7 +237,7 @@ export default function TasksPortal() {
             </div>
           )}
           <div className="flex items-center justify-between pt-2 border-t border-edge-1">
-            <span className="text-micro text-ink-4">{recent.length} recent completed shifts</span>
+            <span className="text-micro text-ink-4">{recent.length} recent completed work</span>
             <button
               type="button"
               onClick={() => setViewTab("portfolio")}
@@ -289,12 +289,12 @@ export default function TasksPortal() {
                 illustration={selectedSkill ? "search" : "jobs"}
                 title={
                   selectedSkill
-                    ? `No open ${categoryForSkill(selectedSkill).title} shifts right now`
+                    ? `No open ${categoryForSkill(selectedSkill).title} call-ups right now`
                     : "No open call-ups right now"
                 }
                 description={
                   selectedSkill
-                    ? "Clear the category filter to view all open shifts across the market, or post a job for your business."
+                    ? "Clear the category filter to view all open call-ups across the market, or post a job for your business."
                     : "Clients post paid temporary jobs here. Post a job if your business needs extra hands today."
                 }
                 action={
@@ -337,7 +337,7 @@ export default function TasksPortal() {
                 compact
                 icon={Trophy}
                 illustration="jobs"
-                title="No completed shifts yet"
+                title="No completed work yet"
                 description="Completed contracts, client ratings, XP, and Gold bonuses appear here as your verified work portfolio."
                 action={
                   <Button size="sm" onClick={() => setViewTab("available")}>
@@ -381,7 +381,7 @@ export default function TasksPortal() {
                 icon={Briefcase}
                 illustration="jobs"
                 title="No jobs posted by your business"
-                description="Need loaders, stock counters, packers, or a local runner? Post a shift with a fixed KES rate and two-party OTP proof."
+                description="Need loaders, stock counters, packers, or a local runner? Post a call-up with a fixed KES rate and two-party OTP proof."
                 action={
                   <Button size="sm" icon={Plus} onClick={() => setPostOpen(true)}>
                     Post a Job
