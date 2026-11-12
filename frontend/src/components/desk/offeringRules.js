@@ -17,6 +17,16 @@ export const TOOL_CATEGORIES = [
   "equipment", "packaging", "cold_storage",
 ].map((v) => ({ value: v, label: v.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase()) }));
 
+/** Phase 6: service domains. Must match the backend list (app/modules/schedule/domains.py). */
+export const SERVICE_DOMAINS = [
+  { value: "healthcare_care", label: "Healthcare & Care" },
+  { value: "trades_technical", label: "Trades & Technical" },
+  { value: "personal_care_beauty", label: "Personal Care & Beauty" },
+  { value: "logistics_delivery", label: "Logistics & Delivery" },
+  { value: "market_retail", label: "Market & Retail Support" },
+  { value: "other_services", label: "Other Services" },
+];
+
 export const MAX_PHOTOS = 8;
 export const MAX_RADIUS_KM = 500;
 
@@ -69,14 +79,18 @@ export function buildPayload(form, kind) {
     body.quantity = num(form.quantity) ?? 0;
   }
   if (kind === "tool") body.category = form.category;
-  if (kind === "service") body.duration_minutes = num(form.duration_minutes) ?? 30;
+  if (kind === "service") {
+    body.duration_minutes = num(form.duration_minutes) ?? 30;
+    // Blank clears the domain on edit; an unchanged domain is sent back as it was loaded.
+    body.domain = form.domain || null;
+  }
   if (kind !== "goods") body.service_radius_km = num(form.service_radius_km) ?? null;
   return body;
 }
 
 export const emptyForm = () => ({
   title: "", description: "", category: "", price_mode: "fixed", price: "", price_unit: "",
-  quantity: "", duration_minutes: "30", service_radius_km: "", photos: "",
+  quantity: "", duration_minutes: "30", service_radius_km: "", photos: "", domain: "",
 });
 
 /** The form for editing an existing offering. */
@@ -92,5 +106,6 @@ export function formFromOffering(item) {
     quantity: item.quantity == null ? "" : String(item.quantity),
     service_radius_km: item.service_radius_km == null ? "" : String(item.service_radius_km),
     photos: (item.photos || []).join("\n"),
+    domain: item.domain || "",
   };
 }

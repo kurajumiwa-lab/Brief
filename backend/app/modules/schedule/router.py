@@ -28,6 +28,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.models.vendor import Vendor
 from app.modules.schedule import service
+from app.modules.schedule.domains import ServiceDomain, check_domain
 from app.modules.schedule.models import (
     APPOINTMENT_STATUSES, ENTRY_KINDS, ENTRY_STATUSES, AvailabilityRule, BookableService, ScheduleEntry,
 )
@@ -86,6 +87,7 @@ class ServiceIn(BaseModel):
     delivery_home: bool = False
     delivery_remote: bool = False
     price_unit: Optional[str] = Field(default=None, max_length=30)
+    domain: Optional[ServiceDomain] = None  # Phase 6, optional
 
     @model_validator(mode="after")
     def _some_mode(self):
@@ -105,6 +107,7 @@ class ServicePatch(BaseModel):
     delivery_home: Optional[bool] = None
     delivery_remote: Optional[bool] = None
     price_unit: Optional[str] = Field(default=None, max_length=30)
+    domain: Optional[ServiceDomain] = None  # Phase 6; send null to clear
 
     @field_validator(*DELIVERY_FIELDS)
     @classmethod
@@ -151,7 +154,8 @@ def _service_out(s: BookableService) -> dict:
             "duration_minutes": s.duration_minutes, "buffer_minutes": s.buffer_minutes,
             "price_kes": s.price_kes, "is_active": s.is_active,
             "delivery_clinic": bool(s.delivery_clinic), "delivery_home": bool(s.delivery_home),
-            "delivery_remote": bool(s.delivery_remote), "price_unit": s.price_unit}
+            "delivery_remote": bool(s.delivery_remote), "price_unit": s.price_unit,
+            "domain": s.domain}
 
 
 def _rule_out(r: AvailabilityRule) -> dict:
@@ -211,6 +215,7 @@ async def add_service(data: ServiceIn, vendor: Vendor = Depends(get_current_vend
                       db: AsyncSession = Depends(get_db)):
     fields = data.model_dump()
     fields["price_unit"] = _unit(fields["price_unit"])
+    fields["domain"] = check_domain(fields["domain"])
     svc = BookableService(vendor_id=vendor.id, **fields)
     db.add(svc)
     await db.commit()
@@ -228,6 +233,8 @@ async def edit_service(service_id: uuid.UUID, data: ServicePatch, vendor: Vendor
         raise HTTPException(422, "Choose at least one way to give this service.")
     if "price_unit" in changes:
         changes["price_unit"] = _unit(changes["price_unit"])
+    if "domain" in changes:
+        changes["domain"] = check_domain(changes["domain"])
     for field, value in changes.items():
         setattr(svc, field, value)
     await db.commit()

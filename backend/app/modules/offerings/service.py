@@ -33,6 +33,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.stock import StockItem, StockSource
 from app.models.tools import ToolCategory, ToolListing
 from app.models.vendor import Vendor
+from app.modules.schedule.domains import check_domain
 from app.modules.schedule.models import AvailabilityRule, BookableService
 
 LIMIT = 200
@@ -82,6 +83,7 @@ def _item(kind: str, r) -> dict:
         base = {"title": r.name, "category": None, "price": r.price_kes,
                 "price_unit": r.price_unit or ("per visit" if r.price_kes is not None else None),
                 "available": bool(r.is_active),
+                "domain": r.domain,
                 "delivery_modes": [m for m, on in (("clinic", r.delivery_clinic),
                                                    ("home", r.delivery_home),
                                                    ("remote", r.delivery_remote)) if on]}
@@ -234,6 +236,14 @@ def _photos(value) -> list[str]:
     return out
 
 
+def _domain(value) -> Optional[str]:
+    """Phase 6: None or one of the six service domains. Anything else is refused."""
+    try:
+        return check_domain(value)
+    except ValueError as e:
+        raise OfferingError(str(e), 422)
+
+
 def _radius(value, kind: str) -> Optional[int]:
     if value is None:
         return None
@@ -276,6 +286,8 @@ async def create(db: AsyncSession, vendor: Vendor, kind: str, data: dict):
     radius = _radius(data.get("service_radius_km"), kind)
     desc = _text(data.get("description"), 1, 2000, "a description", required=False)
 
+    if kind != "service" and data.get("domain") is not None:
+        raise OfferingError("Only services have a domain.", 422)
     if kind == "goods":
         qty = data.get("quantity", 0)
         if not isinstance(qty, int) or isinstance(qty, bool) or not (0 <= qty <= 1_000_000):
@@ -301,6 +313,7 @@ async def create(db: AsyncSession, vendor: Vendor, kind: str, data: dict):
             price_kes=int(round(price)) if price is not None else None,
             is_active=True, price_mode=mode, service_radius_km=radius, images=photos,
             price_unit=_text(data.get("price_unit"), 1, 30, "a price unit", required=False),
+            domain=_domain(data.get("domain")),
         )
     else:
         cat = data.get("category")
@@ -338,7 +351,7 @@ async def owned(db: AsyncSession, vendor: Vendor, kind: str, offering_id: str):
 EDITABLE = {
     "goods": {"title", "description", "category", "price", "price_unit", "price_mode", "photos", "quantity"},
     "service": {"title", "description", "price", "price_unit", "price_mode", "photos", "service_radius_km",
-                "duration_minutes"},
+                "duration_minutes", "domain"},
     "tool": {"title", "description", "category", "price", "price_unit", "price_mode", "photos", "service_radius_km"},
 }
 
@@ -397,6 +410,8 @@ async def update(db: AsyncSession, vendor: Vendor, kind: str, offering_id: str, 
             row.duration_minutes = d
         if "price_unit" in patch:
             row.price_unit = _text(patch["price_unit"], 1, 30, "a price unit", required=False)
+        if "domain" in patch:
+            row.domain = _domain(patch["domain"])
     else:
         row.price_per_unit = price
         if "category" in patch:

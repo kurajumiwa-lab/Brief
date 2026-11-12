@@ -75,6 +75,7 @@ class BookableService(Base):
     delivery_home = Column(Boolean, nullable=False, default=False, server_default=text("false"))
     delivery_remote = Column(Boolean, nullable=False, default=False, server_default=text("false"))
     price_unit = Column(String(30), nullable=True)  # visit | hour | shift | ...; NULL = not stated
+    domain = Column(String(50), nullable=True)  # Phase 6: one of SERVICE_DOMAIN_KEYS; NULL = not stated
     archived_at = Column(DateTime, nullable=True)  # set = archived (kept, hidden from lists)
     service_radius_km = Column(Integer, nullable=True)  # how far the offer reaches, 1..500
     images = Column(JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb"))

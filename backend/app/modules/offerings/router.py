@@ -22,6 +22,7 @@ from app.database import get_db
 from app.models.vendor import Vendor
 from app.modules.offerings import service
 from app.modules.offerings.service import OfferingError
+from app.modules.schedule.domains import ServiceDomain
 from app.routes.auth import get_current_vendor
 
 router = APIRouter()
@@ -41,6 +42,7 @@ class OfferingIn(BaseModel):
     duration_minutes: Optional[StrictInt] = None
     service_radius_km: Optional[StrictInt] = None
     photos: list[str] = []
+    domain: Optional[ServiceDomain] = None  # Phase 6: services only
 
 
 class OfferingPatch(BaseModel):
@@ -55,6 +57,7 @@ class OfferingPatch(BaseModel):
     duration_minutes: Optional[StrictInt] = None
     service_radius_km: Optional[StrictInt] = None
     photos: Optional[list[str]] = None
+    domain: Optional[ServiceDomain] = None  # Phase 6: services only; null clears it
 
 
 class StatusIn(BaseModel):

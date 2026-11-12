@@ -8,7 +8,7 @@ import { SERVICE_PROFILES_ENABLED } from "@/config/flags";
 import OpeningHours from "@/components/schedule/OpeningHours";
 import { offeringsAPI, apiError } from "@/lib/api";
 import {
-  KINDS, PRICE_MODES, TOOL_CATEGORIES, buildPayload, emptyForm, formFromOffering, validateOffering,
+  KINDS, PRICE_MODES, SERVICE_DOMAINS, TOOL_CATEGORIES, buildPayload, emptyForm, formFromOffering, validateOffering,
 } from "./offeringRules";
 
 /**
@@ -88,6 +88,10 @@ export default function OfferingForm({ offering, onSaved, onCancel }) {
       {k !== "goods" && (
         <Input label="Service radius (km, optional)" type="number" min="1" max="500" value={form.service_radius_km}
           onChange={set("service_radius_km")} error={errors.service_radius_km} hint="How far you will go for this." />
+      )}
+      {SERVICE_PROFILES_ENABLED && k === "service" && (
+        <Select label="Service domain" placeholder="Not stated" value={form.domain} onChange={set("domain")}
+          options={SERVICE_DOMAINS} hint="Optional. Helps people find you." />
       )}
       {SERVICE_PROFILES_ENABLED && k === "service" && (
         <OpeningHours note="These hours cover all of your services, not only this one." />
