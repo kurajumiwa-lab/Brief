@@ -153,10 +153,10 @@ describe("The sign-in screen after a session ends on its own", () => {
 });
 
 describe("The product's name", () => {
-  it("is Vendor World in every string that matters, with Ogallo kept as the parent", async () => {
+  it("is Home Office in every string that matters, with Ogallo kept as the parent", async () => {
     const { BRAND } = await import("@/config/brand");
-    expect(BRAND.name).toBe("Vendor World");
-    expect(BRAND.wordmark).toBe("vendorworld");
+    expect(BRAND.name).toBe("Home Office");
+    expect(BRAND.wordmark).toBe("homeoffice");
     expect(BRAND.parent).toBe("Ogallo");
 
     const { default: Logo } = await import("@/components/layout/Logo");
@@ -165,15 +165,15 @@ describe("The product's name", () => {
         <Logo />
       </MemoryRouter>
     );
-    expect(screen.getByRole("link", { name: /vendor world — home/i })).toBeInTheDocument();
-    expect(screen.getByText("vendorworld")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /home office — home/i })).toBeInTheDocument();
+    expect(screen.getByText("homeoffice")).toBeInTheDocument();
   });
 
-  it("titles the document Vendor World, not Ogallo", async () => {
+  it("titles the document Home Office, not Ogallo", async () => {
     const { readFileSync } = await import("node:fs");
     const { resolve } = await import("node:path");
     const html = readFileSync(resolve(process.cwd(), "index.html"), "utf8");
-    expect(html).toMatch(/<title>Vendor World —/);
+    expect(html).toMatch(/<title>Home Office —/);
     expect(html).not.toMatch(/<title>Ogallo/);
   });
 });
@@ -207,6 +207,6 @@ describe("Your business billboard", () => {
       </MemoryRouter>
     );
     expect(screen.getByRole("heading", { name: "Your business" })).toBeInTheDocument();
-    expect(screen.getByText(/a shelf on vendor world/i)).toBeInTheDocument();
+    expect(screen.getByText(/a shelf on home office/i)).toBeInTheDocument();
   });
 });

@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { LogoMark } from "@/components/layout/Logo";
 import { BRAND } from "@/config/brand";
 import { cn } from "@/lib/utils";
 
@@ -70,12 +69,18 @@ export default function BootSplash({ onDone, enabled = !DISABLED }) {
       aria-live="polite"
     >
       <div className="w-full max-w-xs px-8 text-center">
-        {/* The mark, assembling: three shelves sliding in one after another. */}
+        {/* The house logo, arriving with the scale-in. */}
         <div className="mx-auto mb-5 grid place-items-center">
-          <LogoMark size={56} className="animate-scale-in" />
+          <img
+            src="/logo.svg"
+            alt={`${BRAND.name} logo`}
+            width={168}
+            height={186}
+            className="animate-scale-in"
+          />
         </div>
 
-        <p className="text-lg font-extrabold tracking-tight text-ink-1">{BRAND.wordmark}</p>
+        <p className="text-lg font-extrabold tracking-tight text-ink-1">{BRAND.name}</p>
         <p className="mt-0.5 text-2xs text-ink-4">{BRAND.tagline}</p>
 
         <div className="mx-auto mt-6 h-1 w-40 overflow-hidden rounded-full bg-surface-2">
