@@ -16,12 +16,12 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 from fastapi import HTTPException
-from sqlalchemy import exists, select
+from sqlalchemy import and_, exists, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.stock import StockMovement
 from app.models.vendor import Vendor
-from app.modules.office.models import Office, OfficeMember
+from app.modules.office.models import Office, OfficeMember, OfficePartner
 from app.modules.schedule.models import Appointment
 from app.modules.ratings import scoring
 from app.modules.ratings.models import OUTCOMES, SUBJECT_KINDS, PostTradeRating
@@ -57,9 +57,9 @@ async def conflict(db: AsyncSession, rater: Vendor, supplier_id, client_id) -> O
     1. A business cannot rate its own booking (supplier and client are the same office).
     2. Nobody rates a trade with a business that shares their contact number. That is the one
        reliable signal here that two accounts belong to one person.
-    3. Nobody rates a trade with a party who is on the same team: an active member of an office
-       that both accounts belong to (owner included). Partner teams (office_partners, Fluid Teams)
-       will extend this check when they exist.
+    3. Nobody rates a trade with a party on the same team: an active member of an office that both
+       accounts belong to (owner included), or of an office that is an active partner team of one
+       of theirs (Fluid Teams).
     """
     if client_id is not None and supplier_id == client_id:
         return "A business cannot rate its own booking."
@@ -83,7 +83,19 @@ async def _share_office(db: AsyncSession, a: uuid.UUID, b: uuid.UUID) -> bool:
                                 .where(OfficeMember.vendor_id == vendor_id,
                                        OfficeMember.status == "active", Office.status == "active"))
         return set(rows.scalars().all())
-    return bool(await active_office_ids(a) & await active_office_ids(b))
+    mine, theirs = await active_office_ids(a), await active_office_ids(b)
+    if mine & theirs:
+        return True
+    # Partner teams (Fluid Teams): a member of one active office cannot rate a member of an
+    # office that is an active partner of theirs.
+    if not mine or not theirs:
+        return False
+    linked = (await db.execute(select(OfficePartner.id).where(
+        OfficePartner.status == "active",
+        or_(and_(OfficePartner.office_id.in_(mine), OfficePartner.partner_office_id.in_(theirs)),
+            and_(OfficePartner.office_id.in_(theirs), OfficePartner.partner_office_id.in_(mine))),
+    ).limit(1))).scalar_one_or_none()
+    return linked is not None
 
 
 def _validate_kind_outcome(kind: str, outcome: str) -> None:

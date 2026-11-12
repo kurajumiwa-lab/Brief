@@ -330,6 +330,8 @@ app.include_router(trust_router, prefix="/api/trust", tags=["MarketTrust"])
 from app.modules.office.router import router as office_router, public as office_public  # noqa: E402
 app.include_router(office_router, prefix="/api/office", tags=["Home office"])
 app.include_router(office_public, prefix="/api/office", tags=["Home office"])
+from app.modules.office.partners_router import router as partners_router  # noqa: E402
+app.include_router(partners_router, prefix="/api/office/partners", tags=["Fluid Teams"])
 from app.modules.trust.router import customer as trust_customer  # noqa: E402
 app.include_router(trust_customer, prefix="/api/trust/customer", tags=["MarketTrust (customers)"])
 
