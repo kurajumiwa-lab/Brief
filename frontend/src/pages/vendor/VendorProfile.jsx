@@ -29,7 +29,9 @@ import SourceDialog from "@/components/stock/SourceDialog";
 import { Check } from "@/components/forms/GroupForm";
 import { useAuthStore } from "@/stores/authStore";
 import { useChatStore } from "@/stores/chatStore";
-import { vendorAPI, stockAPI, passportAPI, apiError } from "@/lib/api";
+import { vendorAPI, stockAPI, passportAPI, credentialsAPI, apiError } from "@/lib/api";
+import { CREDENTIALS_ENABLED } from "@/config/flags";
+import CredentialBadge from "@/components/credentials/CredentialBadge";
 import { describeFailure } from "@/lib/failure";
 import { readGalleryPhoto } from "@/lib/images";
 import { ROLE_BADGE, VENDOR_ROLES } from "@/config/constants";
@@ -74,6 +76,7 @@ export default function VendorProfile() {
   const [ownShelf, setOwnShelf] = useState([]);
   const [profile, setProfile] = useState(null);
   const [perf, setPerf] = useState(null);
+  const [credentials, setCredentials] = useState([]);
   const [error, setError] = useState(null);   // describeFailure(...) — see @/lib/failure
   const [editing, setEditing] = useState(false);
   const [sourcing, setSourcing] = useState(null);
@@ -94,6 +97,7 @@ export default function VendorProfile() {
     setError(null);
     setStock([]);
     setOwnShelf([]);
+    setCredentials([]);
     (async () => {
       try {
         const [{ data: v }, { data: items }] = await Promise.all([
@@ -110,6 +114,12 @@ export default function VendorProfile() {
         vendorAPI?.performance?.(handle)
           ?.then(({ data }) => alive && setPerf(data))
           ?.catch(() => {});
+        // Phase 4, flagged. Public credentials only (self_declared or verified). Off by default.
+        if (CREDENTIALS_ENABLED) {
+          credentialsAPI?.forMember?.(handle)
+            ?.then(({ data }) => alive && setCredentials(Array.isArray(data?.credentials) ? data.credentials : []))
+            ?.catch(() => {});
+        }
 
         if (me?.vendor_handle === handle) {
           stockAPI?.mine?.()
@@ -713,6 +723,20 @@ export default function VendorProfile() {
       )}
 
       {tab === "about" && (
+        <>
+          {credentials.length > 0 && (
+            <section aria-labelledby="credentials-heading" className="rounded-2xl border border-edge-1 bg-surface-0 p-5 space-y-3">
+              <h2 id="credentials-heading" className="text-sm font-bold text-ink-1">Licences and credentials</h2>
+              <ul className="flex flex-wrap gap-2">
+                {credentials.map((c, i) => (
+                  <li key={`${c.title}-${i}`} className="space-y-1">
+                    <CredentialBadge status={c.status} />
+                    <p className="text-xs text-ink-2">{c.title} · {c.issuing_body}</p>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
         <section className="grid lg:grid-cols-2 gap-4">
           <div className="rounded-2xl border border-edge-1 bg-surface-0 p-5 space-y-3">
             <h2 className="text-sm font-bold text-ink-1">The business</h2>
@@ -779,6 +803,7 @@ export default function VendorProfile() {
             )}
           </div>
         </section>
+        </>
       )}
 
       {own && (
