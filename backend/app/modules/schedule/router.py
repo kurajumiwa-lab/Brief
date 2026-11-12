@@ -21,7 +21,7 @@ from datetime import date, datetime
 from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -64,6 +64,16 @@ class EntryPatch(BaseModel):
     status: Optional[Literal["planned", "done", "cancelled"]] = None
 
 
+DELIVERY_FIELDS = ("delivery_clinic", "delivery_home", "delivery_remote")
+
+
+def _unit(value: Optional[str]) -> Optional[str]:
+    """Blank means not stated. Stored trimmed, at most 30 characters."""
+    if value is None:
+        return None
+    return value.strip() or None
+
+
 class ServiceIn(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     description: Optional[str] = Field(default=None, max_length=2000)
@@ -71,6 +81,17 @@ class ServiceIn(BaseModel):
     buffer_minutes: int = Field(default=0, ge=0, le=120)
     price_kes: Optional[int] = Field(default=None, ge=0)
     is_active: bool = True
+    # Delivery modes default to clinic only, which is the decision for existing services (D1).
+    delivery_clinic: bool = True
+    delivery_home: bool = False
+    delivery_remote: bool = False
+    price_unit: Optional[str] = Field(default=None, max_length=30)
+
+    @model_validator(mode="after")
+    def _some_mode(self):
+        if not (self.delivery_clinic or self.delivery_home or self.delivery_remote):
+            raise ValueError("Choose at least one way to give this service.")
+        return self
 
 
 class ServicePatch(BaseModel):
@@ -80,6 +101,18 @@ class ServicePatch(BaseModel):
     buffer_minutes: Optional[int] = Field(default=None, ge=0, le=120)
     price_kes: Optional[int] = Field(default=None, ge=0)
     is_active: Optional[bool] = None
+    delivery_clinic: Optional[bool] = None
+    delivery_home: Optional[bool] = None
+    delivery_remote: Optional[bool] = None
+    price_unit: Optional[str] = Field(default=None, max_length=30)
+
+    @field_validator(*DELIVERY_FIELDS)
+    @classmethod
+    def _not_null(cls, value):
+        # Sent as null, the column (NOT NULL) would refuse the write; say so plainly instead.
+        if value is None:
+            raise ValueError("Say true or false for each way of giving this service.")
+        return value
 
 
 class WindowIn(BaseModel):
@@ -116,7 +149,9 @@ def _entry_out(e: ScheduleEntry) -> dict:
 def _service_out(s: BookableService) -> dict:
     return {"id": str(s.id), "name": s.name, "description": s.description,
             "duration_minutes": s.duration_minutes, "buffer_minutes": s.buffer_minutes,
-            "price_kes": s.price_kes, "is_active": s.is_active}
+            "price_kes": s.price_kes, "is_active": s.is_active,
+            "delivery_clinic": bool(s.delivery_clinic), "delivery_home": bool(s.delivery_home),
+            "delivery_remote": bool(s.delivery_remote), "price_unit": s.price_unit}
 
 
 def _rule_out(r: AvailabilityRule) -> dict:
@@ -174,7 +209,9 @@ async def my_services(vendor: Vendor = Depends(get_current_vendor), db: AsyncSes
 @router.post("/services", status_code=201)
 async def add_service(data: ServiceIn, vendor: Vendor = Depends(get_current_vendor),
                       db: AsyncSession = Depends(get_db)):
-    svc = BookableService(vendor_id=vendor.id, **data.model_dump())
+    fields = data.model_dump()
+    fields["price_unit"] = _unit(fields["price_unit"])
+    svc = BookableService(vendor_id=vendor.id, **fields)
     db.add(svc)
     await db.commit()
     return _service_out(svc)
@@ -184,7 +221,14 @@ async def add_service(data: ServiceIn, vendor: Vendor = Depends(get_current_vend
 async def edit_service(service_id: uuid.UUID, data: ServicePatch, vendor: Vendor = Depends(get_current_vendor),
                        db: AsyncSession = Depends(get_db)):
     svc = await service.get_service(db, vendor.id, service_id)
-    for field, value in data.model_dump(exclude_unset=True).items():
+    changes = data.model_dump(exclude_unset=True)
+    # Check the delivery modes as they will be after this patch, before anything is written.
+    after = {f: changes.get(f, getattr(svc, f)) for f in DELIVERY_FIELDS}
+    if not any(after.values()):
+        raise HTTPException(422, "Choose at least one way to give this service.")
+    if "price_unit" in changes:
+        changes["price_unit"] = _unit(changes["price_unit"])
+    for field, value in changes.items():
         setattr(svc, field, value)
     await db.commit()
     return _service_out(svc)

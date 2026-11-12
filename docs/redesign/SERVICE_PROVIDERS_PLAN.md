@@ -1,6 +1,6 @@
 # Service providers: gap analysis and phased plan
 
-Status: **Owner decisions D1 to D5 recorded below. Phase 0 implemented behind `VITE_SERVICE_PROFILES_ENABLED`. Phases 1 and later not started.** Branch `arena/5a64c270-brief`, based on `main` at `e9e19b7`.
+Status: **Owner decisions D1 to D5 recorded below. Phase 0 implemented behind `VITE_SERVICE_PROFILES_ENABLED` (PR #92). Phase 1 built on the same branch: migration `0046_service_delivery_units`, delivery modes and price unit on `booking_services`. Phases 2 and later not started.** Branch `arena/5a64c270-brief`, based on `main` at `e9e19b7`.
 
 ## 0. Owner decisions (recorded)
 
