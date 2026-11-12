@@ -26,6 +26,7 @@ from pydantic import BaseModel, StrictBool
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.database import get_db
 from app.models.market_locks import MarketZone
 from app.models.public_place import PublicPlace
@@ -107,7 +108,8 @@ async def front_doors(
             continue
         near.append((v, d))
 
-    summary = await offerings.public_summary(db, [v.id for v, _ in near])
+    summary = await offerings.public_summary(
+        db, [v.id for v, _ in near], services_need_hours=settings.SERVICE_PROFILES_ENABLED)
     doors = []
     for v, d in near:
         s = summary.get(v.id)
