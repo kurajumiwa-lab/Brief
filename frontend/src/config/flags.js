@@ -29,9 +29,10 @@ export const FIVE_TAB_NAV_ENABLED = import.meta.env?.VITE_FIVE_TAB_NAV_ENABLED =
 
 /**
  * CREDENTIALS_ENABLED: licences and credentials on Me, credential badges on front doors and the
- * business profile. ON by default. Set VITE_CREDENTIALS_ENABLED=false to turn it off.
+ * business profile. OFF by default until the legal review (plan D3) is done.
+ * Set VITE_CREDENTIALS_ENABLED=true to opt in.
  */
-export const CREDENTIALS_ENABLED = import.meta.env?.VITE_CREDENTIALS_ENABLED !== "false";
+export const CREDENTIALS_ENABLED = import.meta.env?.VITE_CREDENTIALS_ENABLED === "true";
 
 /**
  * PROFESSIONAL_PROFILE_ENABLED: the professional card on a business profile (services, hours,

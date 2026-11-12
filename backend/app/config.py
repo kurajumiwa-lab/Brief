@@ -125,9 +125,10 @@ class Settings(BaseSettings):
     # doors list a provider's services whether or not they have opening hours, as before. On, a
     # provider's services count toward a front door only when they have opening hours set.
     SERVICE_PROFILES_ENABLED: bool = False
-    # Credentials and licences (Phase 4). ON by default. Set CREDENTIALS_ENABLED=false to switch
-    # the routes off (404) and drop credential data from front doors. Never changes visibility.
-    CREDENTIALS_ENABLED: bool = True
+    # Credentials and licences (Phase 4). OFF by default until the legal review (plan D3) is done.
+    # Set CREDENTIALS_ENABLED=true to opt in. While off, the routes return 404 and front doors carry
+    # no credential data. Never changes visibility.
+    CREDENTIALS_ENABLED: bool = False
     # Professional profile card (Phase 5). ON by default. Set PROFESSIONAL_PROFILE_ENABLED=false
     # to switch the route off (404). Built only from real rows.
     PROFESSIONAL_PROFILE_ENABLED: bool = True
