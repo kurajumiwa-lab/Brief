@@ -83,6 +83,7 @@ from app.routes import (
 from app.routes import (
     ops as ops_routes,
     credentials as credentials_routes,
+    professional_card as professional_card_routes,
 )
 from app.routes import (
     guide as guide_routes,
@@ -281,6 +282,7 @@ app.include_router(map_routes.router, prefix="/api/map", tags=["Map"])
 app.include_router(nearby_routes.router, prefix="/api/nearby", tags=["Nearby (B2C)"])
 app.include_router(credentials_routes.router, prefix="/api/credentials", tags=["Credentials & Licences"])
 app.include_router(credentials_routes.ops_router, prefix="/api/ops/credentials", tags=["Credentials (operators)"])
+app.include_router(professional_card_routes.router, prefix="/api/professional", tags=["Professional profile card"])
 app.include_router(onboarding_routes.router, prefix="/api/onboarding", tags=["Onboarding"])
 from app.modules.workers import router as workers_routes  # noqa: E402
 app.include_router(workers_routes.router, prefix="/api/workers", tags=["Workers"])

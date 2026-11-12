@@ -28,10 +28,17 @@ export const ONBOARDING_ACTIVITIES_ENABLED = import.meta.env?.VITE_ONBOARDING_AC
 export const FIVE_TAB_NAV_ENABLED = import.meta.env?.VITE_FIVE_TAB_NAV_ENABLED === "true";
 
 /**
- * CREDENTIALS_ENABLED: licences and credentials on Me, and credential badges on front doors.
- * Set VITE_CREDENTIALS_ENABLED=true to turn it on.
+ * CREDENTIALS_ENABLED: licences and credentials on Me, credential badges on front doors and the
+ * business profile. ON by default. Set VITE_CREDENTIALS_ENABLED=false to turn it off.
  */
-export const CREDENTIALS_ENABLED = import.meta.env?.VITE_CREDENTIALS_ENABLED === "true";
+export const CREDENTIALS_ENABLED = import.meta.env?.VITE_CREDENTIALS_ENABLED !== "false";
+
+/**
+ * PROFESSIONAL_PROFILE_ENABLED: the professional card on a business profile (services, hours,
+ * registrations, completed appointments). ON by default. Set VITE_PROFESSIONAL_PROFILE_ENABLED=false
+ * to turn it off.
+ */
+export const PROFESSIONAL_PROFILE_ENABLED = import.meta.env?.VITE_PROFESSIONAL_PROFILE_ENABLED !== "false";
 
 /**
  * MAIL_ENABLED: the consolidated "Mail" screen at /mail — every conversation I have joined

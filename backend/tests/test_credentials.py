@@ -44,7 +44,8 @@ async def _add(client, h, body=CRED):
     return r.json()
 
 
-async def test_flag_off_hides_every_route(client):
+async def test_flag_off_hides_every_route(client, monkeypatch):
+    monkeypatch.setattr(live_settings, "CREDENTIALS_ENABLED", False)
     _, _, h = await _who(client, "off")
     assert (await client.get("/api/credentials", headers=h)).status_code == 404
     assert (await client.post("/api/credentials", json=CRED, headers=h)).status_code == 404
