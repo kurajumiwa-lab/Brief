@@ -17,6 +17,7 @@ The radius is a filter, not a promise — a business 3.1 km away is not
 invented into the 3 km list.
 """
 
+import uuid
 import math
 from datetime import datetime
 from typing import Optional
@@ -130,6 +131,13 @@ async def front_doors(
         })
 
     doors.sort(key=lambda x: x["distance_km"])
+    # Phase 4: public credentials (self_declared or verified only). Credentials never change who
+    # appears here; they are only attached to doors already listed. Off by default.
+    if settings.CREDENTIALS_ENABLED and doors:
+        from app.modules.credentials import service as credentials
+        creds = await credentials.public_for_vendors(db, [uuid.UUID(d["id"]) for d in doors[:limit]])
+        for d in doors:
+            d["credentials"] = creds.get(uuid.UUID(d["id"]), [])
     return {
         "anchor": anchor,
         "reason": None,

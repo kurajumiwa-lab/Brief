@@ -28,6 +28,7 @@ from app.modules.enterprise.models import (
 )
 from app.modules.catalog.models import CatalogEnquiry
 from app.modules.runs.models import MarketRun, RunExpense, RunOrder, RunPurchase
+from app.models.credential import VendorCredential, CREDENTIAL_STATUSES
 from app.modules.trade.models import RequestWatch
 from app.platform.event_outbox import OutboxEvent
 from app.models.governance import (

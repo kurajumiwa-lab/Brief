@@ -28,6 +28,12 @@ export const ONBOARDING_ACTIVITIES_ENABLED = import.meta.env?.VITE_ONBOARDING_AC
 export const FIVE_TAB_NAV_ENABLED = import.meta.env?.VITE_FIVE_TAB_NAV_ENABLED === "true";
 
 /**
+ * CREDENTIALS_ENABLED: licences and credentials on Me, and credential badges on front doors.
+ * Set VITE_CREDENTIALS_ENABLED=true to turn it on.
+ */
+export const CREDENTIALS_ENABLED = import.meta.env?.VITE_CREDENTIALS_ENABLED === "true";
+
+/**
  * MAIL_ENABLED: the consolidated "Mail" screen at /mail — every conversation I have joined
  * (direct, deals, groups, business lists, topics) in one list, each opening the existing chat
  * thread. Conversations only; the bell (Connect) stays for notifications.
