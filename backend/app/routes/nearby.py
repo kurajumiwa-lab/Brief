@@ -131,6 +131,33 @@ async def front_doors(
         })
 
     doors.sort(key=lambda x: x["distance_km"])
+    # Phase 7, PR 102. OFF by default. Order by real data completeness and recent client ratings.
+    # Distance stays a true number on every door; it only changes the order.
+    if settings.DATA_DISCOVERY_RANKING_ENABLED and doors:
+        from app.modules.ratings import scoring
+        from app.modules.ratings import service as ratings
+        from app.modules.schedule.models import AvailabilityRule
+        ids = [uuid.UUID(d["id"]) for d in doors]
+        with_hours = set((await db.execute(
+            select(AvailabilityRule.vendor_id).where(AvailabilityRule.vendor_id.in_(ids)).distinct()
+        )).scalars().all())
+        stats = await ratings.supplier_stats(db, ids)
+        for d in doors:
+            vid = uuid.UUID(d["id"])
+            st = stats.get(vid, {"rated": 0, "avg_stars": None})
+            c = scoring.completeness({
+                "has_hours": vid in with_hours,
+                "offer_kinds": len(d["offers"]),
+                "has_titles": bool(d["titles"]),
+                "rated": st["rated"],
+                "avg_stars": st["avg_stars"],
+            })
+            d["data_completeness"] = c
+            d["recent_ratings"] = st
+            d["_rank"] = scoring.rank_score(c, d["distance_km"], radius_km)
+        doors.sort(key=lambda x: (-x["_rank"], x["distance_km"]))
+        for d in doors:
+            d.pop("_rank", None)
     # Phase 4: public credentials (self_declared or verified only). Credentials never change who
     # appears here; they are only attached to doors already listed. Off by default.
     if settings.CREDENTIALS_ENABLED and doors:

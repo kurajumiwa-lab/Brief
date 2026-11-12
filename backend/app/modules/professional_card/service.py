@@ -52,6 +52,8 @@ async def card_for_vendor(db: AsyncSession, vendor_id: uuid.UUID) -> dict:
         hours.setdefault(WEEKDAYS[r.weekday], []).append(f"{_hhmm(r.start_minute)}–{_hhmm(r.end_minute)}")
     hours_out = [{"day": d, "windows": hours[d]} for d in WEEKDAYS if d in hours]
 
+    # Every completed booking counts, rated or not. Ratings feed exposure (ranking) only; they never
+    # change this count, so an unrated trade cannot make a profile look smaller.
     completed = (await db.execute(
         select(func.count()).select_from(Appointment).where(
             Appointment.vendor_id == vendor_id, Appointment.status == "completed",

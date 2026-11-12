@@ -1,4 +1,6 @@
-# Vendor World is a connection layer (v2.18)
+# Home Office is a connection layer (v2.18)
+
+> Renamed from "Vendor World" by owner decision (2026-11). The direction below is unchanged.
 
 > **Decision: direction C — a connected business network *with* digital
 > identities, business registers, vendor fronts and automation inside it.**
@@ -15,7 +17,7 @@ things it deliberately did **not** claim yet.
 
 ## 1. The position, in one paragraph
 
-Vendor World does not create a new market. It connects existing ones. It does not
+Home Office does not create a new market. It connects existing ones. It does not
 replace businesses — it gives them a digital presence they can be found at. It
 does not separate buyers from sellers, because the same record can be both: a
 school buys electricians and stationery, a household buys a plumber and can rent

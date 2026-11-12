@@ -70,3 +70,10 @@ export const BRIEF_LANDING_ENABLED = import.meta.env?.VITE_BRIEF_LANDING_ENABLED
  * Set VITE_SERVICE_PROFILES_ENABLED=true to turn it on.
  */
 export const SERVICE_PROFILES_ENABLED = import.meta.env?.VITE_SERVICE_PROFILES_ENABLED === "true";
+
+/**
+ * POST_TRADE_RATING_GATE_ENABLED: a finished trade becomes final once its post-trade rating is
+ * recorded, and the rating prompt appears on bookings and received stock. OFF by default. Ratings
+ * measure exposure to the market and move no money. Set VITE_POST_TRADE_RATING_GATE_ENABLED=true.
+ */
+export const POST_TRADE_RATING_GATE_ENABLED = import.meta.env?.VITE_POST_TRADE_RATING_GATE_ENABLED === "true";

@@ -129,6 +129,13 @@ class Settings(BaseSettings):
     # Set CREDENTIALS_ENABLED=true to opt in. While off, the routes return 404 and front doors carry
     # no credential data. Never changes visibility.
     CREDENTIALS_ENABLED: bool = False
+    # Post-trade ratings (Phase 7, PR 102). OFF by default. On: a completed appointment or a received
+    # stock movement becomes FINAL only once its post-trade rating is recorded. Ratings measure
+    # exposure to the market; they never move money and never change a trade's status.
+    POST_TRADE_RATING_GATE_ENABLED: bool = False
+    # Data-based discovery (Phase 7, PR 102). OFF by default. On: front doors and supplier lists are
+    # ordered by real data completeness and recent post-trade ratings. Distances stay true.
+    DATA_DISCOVERY_RANKING_ENABLED: bool = False
     # Professional profile card (Phase 5). ON by default. Set PROFESSIONAL_PROFILE_ENABLED=false
     # to switch the route off (404). Built only from real rows.
     PROFESSIONAL_PROFILE_ENABLED: bool = True
