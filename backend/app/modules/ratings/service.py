@@ -21,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.stock import StockMovement
 from app.models.vendor import Vendor
+from app.modules.office.models import Office, OfficeMember
 from app.modules.schedule.models import Appointment
 from app.modules.ratings import scoring
 from app.modules.ratings.models import OUTCOMES, SUBJECT_KINDS, PostTradeRating
@@ -56,18 +57,33 @@ async def conflict(db: AsyncSession, rater: Vendor, supplier_id, client_id) -> O
     1. A business cannot rate its own booking (supplier and client are the same office).
     2. Nobody rates a trade with a business that shares their contact number. That is the one
        reliable signal here that two accounts belong to one person.
-    Team membership (an office and its partners) is checked once PR 103 creates office_partners.
+    3. Nobody rates a trade with a party who is on the same team: an active member of an office
+       that both accounts belong to (owner included). Partner teams (office_partners, Fluid Teams)
+       will extend this check when they exist.
     """
     if client_id is not None and supplier_id == client_id:
         return "A business cannot rate its own booking."
     other_id = client_id if rater.id == supplier_id else supplier_id
     if other_id is None:
         return None
+    if await _share_office(db, rater.id, other_id):
+        return "You cannot rate a trade with a member of your own team."
     other = await db.get(Vendor, other_id)
     mine, theirs = _digits(rater.phone), _digits(other.phone if other else None)
     if mine and theirs and mine == theirs:
         return "You cannot rate a trade with a business that shares your contact number."
     return None
+
+
+async def _share_office(db: AsyncSession, a: uuid.UUID, b: uuid.UUID) -> bool:
+    """True when both accounts are active members of the same active office."""
+    async def active_office_ids(vendor_id: uuid.UUID) -> set:
+        rows = await db.execute(select(OfficeMember.office_id)
+                                .join(Office, Office.id == OfficeMember.office_id)
+                                .where(OfficeMember.vendor_id == vendor_id,
+                                       OfficeMember.status == "active", Office.status == "active"))
+        return set(rows.scalars().all())
+    return bool(await active_office_ids(a) & await active_office_ids(b))
 
 
 def _validate_kind_outcome(kind: str, outcome: str) -> None:

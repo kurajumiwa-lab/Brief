@@ -241,6 +241,24 @@ async def test_nobody_rates_a_trade_with_a_business_sharing_their_number(client,
     assert "contact number" in r.json()["detail"]
 
 
+async def test_nobody_rates_a_trade_with_a_member_of_their_own_team(client, gate_on):
+    from app.modules.office.models import Office, OfficeMember
+    sup, _ = await _register(client, "ptr_sup11")
+    cli, hc = await _register(client, "ptr_cli11")
+    async with async_session() as db:
+        office = Office(owner_vendor_id=uuid.UUID(sup), name="Team 11", nature="Repairs", area="Kisumu",
+                        contact_mode="none", status="active", visibility="private")
+        db.add(office)
+        await db.flush()
+        db.add(OfficeMember(office_id=office.id, vendor_id=uuid.UUID(sup), role="owner", status="active"))
+        db.add(OfficeMember(office_id=office.id, vendor_id=uuid.UUID(cli), role="member", status="active"))
+        await db.commit()
+    appt = await _appointment(sup, cli, "completed")
+    r = await _post(client, hc, subject_kind="appointment", subject_id=appt, outcome="completed", stars=5)
+    assert r.status_code == 403
+    assert "own team" in r.json()["detail"]
+
+
 def test_a_rating_moves_rank_only_after_three_clients():
     assert scoring.rating_part(1, 5.0) == 0.0
     assert scoring.rating_part(2, 5.0) == 0.0
