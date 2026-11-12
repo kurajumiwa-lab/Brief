@@ -1,7 +1,7 @@
 /**
  * ONE PLACE FOR THE NAME.
  *
- * The product has been called Ogallo since v1. It is now Vendor World: the
+ * The product has been called Ogallo since v1. It is now Home Office: the
  * same network, a name that says what it is and that a trader in Kisumu, a
  * shop in Kampala and a buyer in Kigali can all say without explaining it.
  *
@@ -18,11 +18,11 @@
 
 export const BRAND = {
   /** Full name, for titles, headings and sentences. */
-  name: "Vendor World",
+  name: "Home Office",
   /** How the mark is set: lowercase, no space, one word on screen. */
-  wordmark: "vendorworld",
+  wordmark: "homeoffice",
   /** Short form for tight spaces (tab bar, badges). */
-  short: "Vendorworld",
+  short: "Homeoffice",
   /** The name this network was built under; kept, not erased. */
   parent: "Ogallo",
   /**
@@ -40,7 +40,7 @@ export const BRAND = {
   legacyDomain: "vendorworld.kikk",
 };
 
-/** `Vendor World — the digital connection layer for everyday trade` */
+/** `Home Office — the digital connection layer for everyday trade` */
 export const pageTitle = (suffix = BRAND.tagline) => `${BRAND.name} — ${suffix}`;
 
 export default BRAND;
