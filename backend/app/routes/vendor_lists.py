@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.database import get_db
 from app.models.chat import ChatRoom, ChatRoomType, chat_room_participants
 from app.models.groups import GroupMembership, VendorGroup
@@ -220,12 +221,25 @@ async def list_members(
     if not manager:
         query = query.where(VendorListMembership.status == "approved")
     rows = (await db.execute(query.order_by(VendorListMembership.joined_at.asc()))).all()
-    return [{
+    out = [{
         "vendor_id": str(v.id), "vendor_handle": v.vendor_handle, "business_name": v.business_name,
         "business_categories": v.business_categories or [], "status": m.status,
         "role_in_list": m.role_in_list, "joined_at": m.joined_at.isoformat(),
         "approved_at": m.approved_at.isoformat() if m.approved_at else None,
     } for m, v in rows]
+    # Phase 7, PR 102. OFF by default. Suppliers with recent client ratings come first, best first;
+    # the rest keep the joined order. Each supplier's real recent rating count is shown.
+    if settings.DATA_DISCOVERY_RANKING_ENABLED and out:
+        from app.modules.ratings import service as ratings
+        stats = await ratings.supplier_stats(db, [UUID(r["vendor_id"]) for r in out])
+        for r in out:
+            r["recent_ratings"] = stats.get(UUID(r["vendor_id"]), {"rated": 0, "avg_stars": None})
+        out.sort(key=lambda r: (
+            r["recent_ratings"]["avg_stars"] is None,
+            -(r["recent_ratings"]["avg_stars"] or 0),
+            r["joined_at"],
+        ))
+    return out
 
 
 @router.post("/{list_id}/register")

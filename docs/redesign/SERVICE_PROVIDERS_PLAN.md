@@ -24,7 +24,7 @@ Copy decisions: the section title is "Local Work & Services". Secondary labels f
 - **D2:** approved. A provider with 0 goods but at least one published `booking_service` and active `availability_rules` appears on Nearby and front doors. Implemented in Phase 3 (PR #95), behind `SERVICE_PROFILES_ENABLED`.
 - **D3:** a self-declared licence shows as "Self-declared Licence". Only an operator verification through `/api/ops/*` shows "Verified Credential". Verification stays separate from visibility. Legal review still open (section 4). Until it is complete, the credentials feature is OFF by default.
 - **D4:** domains framed as work and services: Healthcare & Care, Trades & Technical, Personal Care & Beauty, Logistics & Delivery, Market & Retail Support. Banner copy: "Local Work & Services" is the title (applied in Phase 6). Secondary labels for "Shifts" or "Gigs" use "Service Bookings". "Verified" is not used in new labels, because in this plan it means only the credential status from Phase 4, not any gig or shift check.
-- **D5:** "Vendor World" stays the public name. A user's space is called their workspace or home office inside it.
+- **D5 (overturned by the owner, 2026-11):** the public name is **"Home Office"**, not "Vendor World". A user's space is called their workspace inside it. The rename ships in the Phase 7 PR 1 rebrand.
 
 Phase 0 (copy only, flagged) as built: the offering form labels a service "Service name" and its unit placeholder reads "visit, hour, shift". The Desk empty-state link reads "Add goods to your stock". Flag off keeps the old wording.
 
@@ -104,7 +104,7 @@ Each phase is a separate PR. Each phase has a flag. Migrations are additive only
 - **D2.** Should a provider with services and hours be listed on Nearby and front doors with no goods or tools? This changes an existing contract.
 - **D3.** Who verifies registration numbers, and against which registers? Is a verified badge allowed to appear publicly? This touches identity and professional-licence obligations, so it needs legal review.
 - **D4.** Domain names and the "Verified Gigs & Services" label are brand and copy decisions.
-- **D5.** Confirm that "Vendor World" stays as the brand (open since Phase 11).
+- **D5.** Overturned by the owner (2026-11): the brand is "Home Office". Closed; the rename is in the Phase 7 PR 1 rebrand.
 
 ## 5. Rules that apply to every phase
 

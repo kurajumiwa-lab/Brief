@@ -11,6 +11,7 @@ import { toast } from "@/components/ui/Toast";
 import { useAuthStore } from "@/stores/authStore";
 import OpeningHours from "@/components/schedule/OpeningHours";
 import { scheduleAPI, apiError } from "@/lib/api";
+import PostTradeRatingPrompt from "@/components/ratings/PostTradeRatingPrompt";
 import { dayKey, dayLabel, mondayOf, shiftDays, timeRange, toDayString, toLocalStamp, WEEKDAYS } from "./calendarTime";
 
 /**
@@ -280,6 +281,7 @@ function AppointmentsTab() {
               </Button>
             ))}
           </div>
+          <PostTradeRatingPrompt kind="appointment" subjectId={a.id} />
         </Card>
       ))}
     </section>

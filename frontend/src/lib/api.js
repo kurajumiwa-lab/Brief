@@ -1054,3 +1054,10 @@ export const credentialsAPI = {
 export const professionalAPI = {
   card: (handle) => api.get(`/professional/${handle}`),
 };
+
+// ── Post-trade ratings (Phase 7, PR 102). Routes return 404 while the gate is off. ──
+export const postTradeRatingAPI = {
+  status: (subject_kind, subject_id) =>
+    api.get("/post-trade-ratings/status", { params: { subject_kind, subject_id } }),
+  record: (body) => api.post("/post-trade-ratings", body),
+};

@@ -57,7 +57,7 @@ Note on tests: under the owner's instruction, Phases 6 to 11 ran builds and lint
 3. Blocks come from `OutsideContentReport` (`is_block`), not `SocialBlock`. Unifying them needs an owner decision.
 4. Front-door responses still include exact coordinates for opted-in businesses. This needs a product decision.
 5. The Desk tab falls back to `/` when Desk is off. With the Brief flag on, that opens the Brief.
-6. The "Vendor World" brand stays until an owner decision (Phase 11).
+6. The "Vendor World" brand decision is overturned by the owner (2026-11). The product is "Home Office". The rename ships in the Phase 7 PR 1 rebrand.
 7. Signup name-field copy is waiting for review (Phase 0).
 8. Finance review: `app/services/halal.py:83` and `app/routes/chamas.py:266` are unchanged and need finance sign-off.
 9. Governance copy needs a governance reviewer.

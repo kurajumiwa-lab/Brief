@@ -7,6 +7,7 @@ import Avatar from "@/components/ui/Avatar";
 import { toast } from "@/components/ui/Toast";
 import { useConfirm } from "@/components/ui/ConfirmDialog";
 import { useStockStore } from "@/stores/stockStore";
+import PostTradeRatingPrompt from "@/components/ratings/PostTradeRatingPrompt";
 import { MOVEMENT_BADGE } from "@/config/constants";
 import { apiError } from "@/lib/api";
 import { currency, num, relativeTime } from "@/lib/formatters";
@@ -176,6 +177,7 @@ export default function MovementRow({ movement: m, actionable }) {
           ))}
         </div>
       </div>
+      <PostTradeRatingPrompt kind="movement" subjectId={m.id} />
     </article>
   );
 }
