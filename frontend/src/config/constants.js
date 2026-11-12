@@ -49,7 +49,7 @@ export const POS_SYSTEMS = [
   { value: "csv", label: "CSV Import", desc: "Upload your till's spreadsheet export", mode: "push" },
   { value: "square", label: "Square POS", desc: "Auto-sync from Square", mode: "pull" },
   { value: "shopify", label: "Shopify", desc: "Auto-sync from Shopify", mode: "pull" },
-  { value: "custom_api", label: "Custom API", desc: "Your system posts stock to Vendor World", mode: "push" },
+  { value: "custom_api", label: "Custom API", desc: "Your system posts stock to Home Office", mode: "push" },
 ];
 
 export const PRICE_UNITS = [
