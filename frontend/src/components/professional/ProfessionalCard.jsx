@@ -1,4 +1,5 @@
-import { CheckCircle2, MapPin } from "lucide-react";
+import { CalendarDays, CheckCircle2, MapPin } from "lucide-react";
+import { Link } from "react-router-dom";
 import CredentialBadge from "@/components/credentials/CredentialBadge";
 import { SERVICE_PROFILES_ENABLED } from "@/config/flags";
 import { currency } from "@/lib/formatters";
@@ -14,6 +15,29 @@ const completedLine = (n) => {
   if (!n) return "No completed bookings yet";
   return `${n} completed ${n === 1 ? "booking" : "bookings"}`;
 };
+
+/**
+ * The booking link for a card. One bookable service opens straight onto it; several open the
+ * booking page, which lists them. No link when there is no service, no vendor, or the viewer is the owner.
+ */
+export function bookingHref({ vendorId, services = [], canBook = true }) {
+  if (!canBook || !vendorId || services.length === 0) return null;
+  const q = services.length === 1 ? `?service=${encodeURIComponent(services[0].id)}` : "";
+  return `/book/${vendorId}${q}`;
+}
+
+function BookButton({ href }) {
+  if (!href) return null;
+  return (
+    <Link
+      to={href}
+      className="inline-flex items-center gap-2 self-start rounded-xl bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50"
+    >
+      <CalendarDays aria-hidden="true" className="h-4 w-4" />
+      Book Service
+    </Link>
+  );
+}
 
 /** Services grouped under their domain label, in the order they first appear. Unlabelled ones stay together. */
 function groupByDomain(services) {
@@ -38,11 +62,12 @@ function DeliveryBadges({ modes = [] }) {
  * Professional profile card. Built only from the server's real rows. Nothing is seeded: a missing
  * price, domain or location is left out, and zero completed bookings says so in words.
  */
-export default function ProfessionalCard({ card }) {
+export default function ProfessionalCard({ card, vendorId, canBook = true }) {
   if (!card) return null;
   const { services = [], hours = [], registrations = [], completed_appointments: done = 0, handle, location } = card;
+  const href = bookingHref({ vendorId, services, canBook });
 
-  if (!SERVICE_PROFILES_ENABLED) return <BasicCard card={card} />;
+  if (!SERVICE_PROFILES_ENABLED) return <BasicCard card={card} href={href} />;
 
   return (
     <section aria-labelledby="professional-card-heading" className="rounded-2xl border border-edge-1 bg-surface-0 p-5 space-y-5">
@@ -55,6 +80,8 @@ export default function ProfessionalCard({ card }) {
           </p>
         )}
       </header>
+
+      <BookButton href={href} />
 
       <p className="flex items-center gap-1.5 text-sm text-ink-2">
         {done > 0 && <CheckCircle2 aria-hidden="true" className="h-4 w-4 text-tech-700" />}
@@ -110,12 +137,13 @@ export default function ProfessionalCard({ card }) {
 }
 
 /** The layout shown while the service-profiles flag is off. Same data, plainer presentation. */
-function BasicCard({ card }) {
+function BasicCard({ card, href }) {
   const { services = [], hours = [], registrations = [], completed_appointments: done = 0 } = card;
   if (services.length === 0 && hours.length === 0 && registrations.length === 0 && !done) return null;
   return (
     <section aria-labelledby="professional-card-heading" className="rounded-2xl border border-edge-1 bg-surface-0 p-5 space-y-4">
       <h2 id="professional-card-heading" className="text-sm font-bold text-ink-1">Professional profile</h2>
+      <BookButton href={href} />
       {done > 0 && (
         <p className="flex items-center gap-1.5 text-sm text-ink-2">
           <CheckCircle2 aria-hidden="true" className="h-4 w-4 text-tech-700" />
