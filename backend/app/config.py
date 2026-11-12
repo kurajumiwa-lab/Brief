@@ -121,6 +121,10 @@ class Settings(BaseSettings):
     # Future fee engine. Off by default: fee rules are read and reported but
     # never applied to a transaction until this is switched on.
     FEES_ENABLED: bool = False
+    # Service providers (service-providers plan, Phase 3). Off by default: while off, the front
+    # doors list a provider's services whether or not they have opening hours, as before. On, a
+    # provider's services count toward a front door only when they have opening hours set.
+    SERVICE_PROFILES_ENABLED: bool = False
 
     # Database — Postgres only. Either shape is accepted; both derived URLs are
     # normalised in the validators below.

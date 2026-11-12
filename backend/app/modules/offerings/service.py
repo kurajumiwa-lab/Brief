@@ -33,7 +33,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.stock import StockItem, StockSource
 from app.models.tools import ToolCategory, ToolListing
 from app.models.vendor import Vendor
-from app.modules.schedule.models import BookableService
+from app.modules.schedule.models import AvailabilityRule, BookableService
 
 LIMIT = 200
 KINDS = ("goods", "service", "tool")
@@ -146,11 +146,13 @@ async def public_for(db: AsyncSession, vendor) -> dict:
     return await _collect(db, vendor.id, public=True)
 
 
-async def public_summary(db: AsyncSession, vendor_ids: list) -> dict:
+async def public_summary(db: AsyncSession, vendor_ids: list, *, services_need_hours: bool = False) -> dict:
     """Batch view for many people: {vendor_id: {"counts": {...}, "titles": [...]}}.
 
     Three queries in total, whatever the number of people. Only public rows count.
     Titles are capped at three per person.
+    services_need_hours: count a service only for a person who has opening hours set
+    (service-providers plan, Phase 3). Off keeps the previous behaviour.
     """
     out: dict = {vid: {"counts": {"goods": 0, "service": 0, "tool": 0}, "titles": []} for vid in vendor_ids}
     if not vendor_ids:
@@ -175,12 +177,18 @@ async def public_summary(db: AsyncSession, vendor_ids: list) -> dict:
     for vid, name in goods:
         add(vid, "goods", name)
 
+    service_where = [
+        BookableService.vendor_id.in_(vendor_ids),
+        BookableService.is_active.is_(True),
+        BookableService.archived_at.is_(None),
+    ]
+    if services_need_hours:
+        service_where.append(BookableService.vendor_id.in_(
+            select(AvailabilityRule.vendor_id).where(AvailabilityRule.vendor_id.in_(vendor_ids))
+        ))
     services = (await db.execute(
-        select(BookableService.vendor_id, BookableService.name).where(
-            BookableService.vendor_id.in_(vendor_ids),
-            BookableService.is_active.is_(True),
-            BookableService.archived_at.is_(None),
-        ).order_by(BookableService.name)
+        select(BookableService.vendor_id, BookableService.name).where(*service_where)
+        .order_by(BookableService.name)
     )).all()
     for vid, name in services:
         add(vid, "service", name)
