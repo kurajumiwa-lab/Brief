@@ -1,8 +1,8 @@
 """Professional profile card: services, hours, delivery, registration status, completed work.
 
 Every value comes from an existing row. Nothing is filled in as an example. The completed
-count comes only from appointments with status 'completed', and is None (not 0) when there are
-none, so the UI shows nothing rather than a made-up number.
+count comes only from appointments with status 'completed'. Zero is returned as zero, and the
+screen says there are no completed bookings yet.
 """
 
 import uuid
@@ -10,7 +10,9 @@ import uuid
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.vendor import Vendor
 from app.modules.credentials import service as credentials
+from app.modules.schedule.domains import SERVICE_DOMAIN_LABELS
 from app.modules.schedule.models import Appointment, AvailabilityRule, BookableService
 
 WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
@@ -32,6 +34,7 @@ def _delivery(s: BookableService) -> list:
 
 
 async def card_for_vendor(db: AsyncSession, vendor_id: uuid.UUID) -> dict:
+    vendor = await db.get(Vendor, vendor_id)
     services = (await db.execute(
         select(BookableService).where(
             BookableService.vendor_id == vendor_id,
@@ -58,6 +61,9 @@ async def card_for_vendor(db: AsyncSession, vendor_id: uuid.UUID) -> dict:
     creds = await credentials.public_for_handle_vendor(db, vendor_id)
 
     return {
+        "handle": vendor.vendor_handle if vendor else None,
+        # Area as the public profile already shows it (VendorOut.physical_location).
+        "location": vendor.physical_location if vendor else None,
         "services": [
             {
                 "id": str(s.id),
@@ -67,10 +73,12 @@ async def card_for_vendor(db: AsyncSession, vendor_id: uuid.UUID) -> dict:
                 "price_mode": s.price_mode,
                 "price_unit": s.price_unit,
                 "delivery": _delivery(s),
+                "domain": s.domain,
+                "domain_label": SERVICE_DOMAIN_LABELS.get(s.domain) if s.domain else None,
             }
             for s in services
         ],
         "hours": hours_out,
         "registrations": creds,
-        "completed_appointments": int(completed) if completed > 0 else None,
+        "completed_appointments": int(completed),
     }
