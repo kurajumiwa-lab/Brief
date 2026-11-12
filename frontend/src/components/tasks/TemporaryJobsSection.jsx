@@ -156,7 +156,7 @@ export function TemporaryJobsHero({ onBrowseJobs, onPostJob, openCount = 0, acti
           <div className="space-y-3">
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="brand" size="xs">
-                <ShieldCheck size={11} /> Verified Marketplace Shifts
+                <ShieldCheck size={11} /> Local Work & Services
               </Badge>
               {openCount > 0 && (
                 <Badge variant="amber" size="xs">
@@ -175,7 +175,7 @@ export function TemporaryJobsHero({ onBrowseJobs, onPostJob, openCount = 0, acti
             </h1>
 
             <p className="text-xs sm:text-sm text-ink-2 max-w-xl leading-relaxed">
-              Hire reliable hands for stock counting, crate packing, lorry offloading, stall merchandising, and local deliveries — or pick up verified shifts with upfront KES rates and two-party completion proof.
+              Find and offer reliable professional services, home care, skilled trades, and local work — with upfront rates and two-party completion proof.
             </p>
           </div>
 
