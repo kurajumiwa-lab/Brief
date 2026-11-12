@@ -5,6 +5,7 @@ import Button from "@/components/ui/Button";
 import { PageSpinner } from "@/components/ui/Spinner";
 import EmptyState from "@/components/ui/EmptyState";
 import { nearbyAPI, apiError } from "@/lib/api";
+import CredentialBadge from "@/components/credentials/CredentialBadge";
 
 const FILTERS = [
   { key: "", label: "All" },
@@ -145,6 +146,13 @@ export default function FrontDoorsPage() {
                   </p>
                   {d.titles?.length > 0 && (
                     <p className="truncate text-sm text-ink-2">{d.titles.join(", ")}</p>
+                  )}
+                  {d.credentials?.length > 0 && (
+                    <div className="flex flex-wrap gap-1 pt-1">
+                      {d.credentials.map((c, i) => (
+                        <CredentialBadge key={`${c.title}-${i}`} status={c.status} />
+                      ))}
+                    </div>
                   )}
                 </Card>
               </Link>

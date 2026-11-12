@@ -1038,3 +1038,14 @@ export const officeAPI = {
   publicProfile: (id) => api.get(`/office/public/offices/${id}`),
   acceptLink: (body) => api.post("/office/links/accept", body),
 };
+
+/** Licences and credentials (Phase 4). Behind CREDENTIALS_ENABLED on the backend. */
+export const credentialsAPI = {
+  mine: () => api.get("/credentials"),
+  add: (body) => api.post("/credentials", body),
+  remove: (id) => api.delete(`/credentials/${id}`),
+  forMember: (handle) => api.get(`/credentials/of/${handle}`),
+  opsQueue: () => api.get("/ops/credentials"),
+  verify: (id) => api.post(`/ops/credentials/${id}/verify`),
+  reject: (id, reason) => api.post(`/ops/credentials/${id}/reject`, { reason }),
+};
