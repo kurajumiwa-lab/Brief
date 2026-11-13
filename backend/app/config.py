@@ -129,6 +129,8 @@ class Settings(BaseSettings):
     # Set CREDENTIALS_ENABLED=true to opt in. While off, the routes return 404 and front doors carry
     # no credential data. Never changes visibility.
     CREDENTIALS_ENABLED: bool = False
+    # Ecosystem integrations (P4): fact provenance and e-GP links. OFF by default.
+    INTEGRATIONS_ENABLED: bool = False
     # Post-trade ratings (Phase 7, PR 102). OFF by default. On: a completed appointment or a received
     # stock movement becomes FINAL only once its post-trade rating is recorded. Ratings measure
     # exposure to the market; they never move money and never change a trade's status.
