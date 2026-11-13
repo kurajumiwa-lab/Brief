@@ -8,7 +8,8 @@ import { SERVICE_PROFILES_ENABLED } from "@/config/flags";
 import OpeningHours from "@/components/schedule/OpeningHours";
 import { offeringsAPI, apiError } from "@/lib/api";
 import {
-  KINDS, PRICE_MODES, SERVICE_DOMAINS, TOOL_CATEGORIES, buildPayload, emptyForm, formFromOffering, validateOffering,
+  KINDS, MAX_MODES, PRICE_MODES, SERVICE_DOMAINS, SERVICE_MODES, TOOL_CATEGORIES, buildPayload, emptyForm, emptyMode,
+  formFromOffering, validateOffering,
 } from "./offeringRules";
 
 /**
@@ -46,6 +47,10 @@ export default function OfferingForm({ offering, onSaved, onCancel }) {
   };
 
   const modeHint = PRICE_MODES.find((m) => m.value === form.price_mode)?.hint;
+  const setMode = (i, patch) => setForm((f) => ({ ...f, modes: f.modes.map((m, j) => (j === i ? { ...m, ...patch } : m)) }));
+  const addMode = () => setForm((f) => ({ ...f, modes: [...f.modes, emptyMode()] }));
+  const removeMode = (i) => setForm((f) => ({ ...f, modes: f.modes.filter((_, j) => j !== i) }));
+  const usedModes = new Set(form.modes.map((m) => m.mode));
 
   return (
     <form onSubmit={submit} className="space-y-4" aria-label={editing ? "Edit offering" : "Add an offering"} noValidate>
@@ -64,10 +69,44 @@ export default function OfferingForm({ offering, onSaved, onCancel }) {
         <Input label="Category (optional)" value={form.category} onChange={set("category")} />
       )}
 
-      <Select label="Pricing" value={form.price_mode} onChange={set("price_mode")}
-        options={PRICE_MODES.map(({ value, label }) => ({ value, label }))} hint={modeHint} />
+      {k === "service" && (
+        <fieldset className="space-y-3">
+          <legend className="text-sm font-semibold text-ink-1">Ways it is given</legend>
+          <p className="text-xs text-ink-3">Add each way with its own price. A salon might list In shop and Home visit separately.</p>
+          {errors.modes && <p className="text-xs text-red-700">{errors.modes}</p>}
+          {form.modes.map((m, i) => (
+            <div key={i} className="space-y-2 rounded-card border border-edge-1 p-3">
+              <Select label="How" value={m.mode} onChange={(e) => setMode(i, { mode: e.target.value })}
+                placeholder="Choose one" error={errors[`mode_${i}`]}
+                options={SERVICE_MODES.filter((o) => o.value === m.mode || !usedModes.has(o.value))} />
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Select label="Pricing" value={m.price_mode} onChange={(e) => setMode(i, { price_mode: e.target.value })}
+                  options={PRICE_MODES.map(({ value, label }) => ({ value, label }))} />
+                {m.price_mode !== "ask_me" && (
+                  <Input label={m.price_mode === "fixed" ? "Price (KES)" : "Starting price (KES, optional)"}
+                    type="number" min="0" inputMode="decimal" value={m.price}
+                    onChange={(e) => setMode(i, { price: e.target.value })} error={errors[`price_${i}`]} />
+                )}
+              </div>
+              {m.price_mode !== "ask_me" && (
+                <Input label="Per (optional)" placeholder="e.g. visit, hour, kg, item" value={m.price_unit}
+                  onChange={(e) => setMode(i, { price_unit: e.target.value })} />
+              )}
+              <Button type="button" variant="ghost" onClick={() => removeMode(i)}>Remove this way</Button>
+            </div>
+          ))}
+          {form.modes.length < MAX_MODES && (
+            <Button type="button" variant="secondary" onClick={addMode}>Add a way it is given</Button>
+          )}
+        </fieldset>
+      )}
 
-      {form.price_mode !== "ask_me" && (
+      {k !== "service" && (
+        <Select label="Pricing" value={form.price_mode} onChange={set("price_mode")}
+          options={PRICE_MODES.map(({ value, label }) => ({ value, label }))} hint={modeHint} />
+      )}
+
+      {k !== "service" && form.price_mode !== "ask_me" && (
         <div className="grid gap-3 sm:grid-cols-2">
           <Input label={form.price_mode === "fixed" ? "Price (KES)" : "Starting price (KES, optional)"}
             type="number" min="0" inputMode="decimal" value={form.price} onChange={set("price")} error={errors.price} />

@@ -29,6 +29,15 @@ router = APIRouter()
 public = APIRouter()
 
 
+class ModeIn(BaseModel):
+    """One way a service is given (services only), with its own price and unit."""
+    model_config = ConfigDict(extra="forbid")
+    mode: Literal["in_shop", "home_visit", "remote", "drop_off", "pickup_delivery"]
+    price: Optional[float] = None
+    price_unit: Optional[str] = Field(default=None, max_length=30)
+    price_mode: Literal["fixed", "negotiable", "ask_me"] = "fixed"
+
+
 class OfferingIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
     kind: Literal["goods", "service", "tool"]
@@ -43,6 +52,7 @@ class OfferingIn(BaseModel):
     service_radius_km: Optional[StrictInt] = None
     photos: list[str] = []
     domain: Optional[ServiceDomain] = None  # Phase 6: services only
+    modes: Optional[list[ModeIn]] = None  # services only: each way it is given, with its own price
 
 
 class OfferingPatch(BaseModel):
@@ -58,6 +68,7 @@ class OfferingPatch(BaseModel):
     service_radius_km: Optional[StrictInt] = None
     photos: Optional[list[str]] = None
     domain: Optional[ServiceDomain] = None  # Phase 6: services only; null clears it
+    modes: Optional[list[ModeIn]] = None  # services only: replaces the whole list of ways it is given
 
 
 class StatusIn(BaseModel):
@@ -88,7 +99,7 @@ async def create_offering(
     kind = data.pop("kind")
     try:
         row = await service.create(db, vendor, kind, data)
-        item = service._item(kind, row)
+        item = await service.item(db, kind, row)
         await db.commit()
     except OfferingError as exc:
         await db.rollback()
@@ -107,7 +118,7 @@ async def update_offering(
     patch = body.model_dump(exclude_unset=True)
     try:
         row = await service.update(db, vendor, kind, offering_id, patch)
-        item = service._item(kind, row)
+        item = await service.item(db, kind, row)
         await db.commit()
     except OfferingError as exc:
         await db.rollback()
@@ -125,7 +136,7 @@ async def offering_status(
 ):
     try:
         row = await service.set_status(db, vendor, kind, offering_id, body.action)
-        item = service._item(kind, row)
+        item = await service.item(db, kind, row)
         await db.commit()
     except OfferingError as exc:
         await db.rollback()

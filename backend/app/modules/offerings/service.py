@@ -27,14 +27,14 @@ import uuid
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.stock import StockItem, StockSource
 from app.models.tools import ToolCategory, ToolListing
 from app.models.vendor import Vendor
 from app.modules.schedule.domains import check_domain
-from app.modules.schedule.models import AvailabilityRule, BookableService
+from app.modules.schedule.models import SERVICE_MODES, AvailabilityRule, BookableService, ServiceModePrice
 
 LIMIT = 200
 KINDS = ("goods", "service", "tool")
@@ -62,6 +62,10 @@ def _now() -> datetime:
 
 FLAG = {"goods": "visible_to_network", "service": "is_active", "tool": "is_available"}
 PRICE_ATTR = {"goods": "unit_price", "service": "price_kes", "tool": "price_per_unit"}
+# A delivery mode maps to one of the three legacy flags. drop_off and pickup_delivery have none.
+LEGACY_FLAG = {"in_shop": "delivery_clinic", "home_visit": "delivery_home", "remote": "delivery_remote"}
+LEGACY_NAME = {"in_shop": "clinic", "home_visit": "home", "remote": "remote"}
+MAX_MODES = 5
 
 
 def _status(kind: str, row) -> str:
@@ -70,7 +74,18 @@ def _status(kind: str, row) -> str:
     return "active" if getattr(row, FLAG[kind]) else "paused"
 
 
-def _item(kind: str, r) -> dict:
+def _modes_out(r, modes) -> list[dict]:
+    """Each way the service is given, with its own price. Services with no mode rows yet
+    show their single legacy price as one mode, so older rows still read correctly."""
+    if modes:
+        return [{"mode": m.mode, "price": float(m.price_kes) if m.price_kes is not None else None,
+                 "price_unit": m.price_unit, "price_mode": m.price_mode} for m in modes]
+    legacy = [m for m, flag in LEGACY_FLAG.items() if getattr(r, flag)]
+    return [{"mode": m, "price": float(r.price_kes) if r.price_kes is not None else None,
+             "price_unit": r.price_unit, "price_mode": r.price_mode} for m in legacy]
+
+
+def _item(kind: str, r, modes=None) -> dict:
     """One normalised offering. The first keys are the Phase-2 contract; the rest are additive."""
     if kind == "goods":
         base = {"title": r.name, "category": r.category, "price": r.unit_price,
@@ -84,9 +99,8 @@ def _item(kind: str, r) -> dict:
                 "price_unit": r.price_unit or ("per visit" if r.price_kes is not None else None),
                 "available": bool(r.is_active),
                 "domain": r.domain,
-                "delivery_modes": [m for m, on in (("clinic", r.delivery_clinic),
-                                                   ("home", r.delivery_home),
-                                                   ("remote", r.delivery_remote)) if on]}
+                "delivery_modes": [LEGACY_NAME[m] for m, flag in LEGACY_FLAG.items() if getattr(r, flag)],
+                "modes": _modes_out(r, modes)}
         radius, photos = r.service_radius_km, list(r.images or [])
         quantity = None
     else:
@@ -116,6 +130,28 @@ def _visible_filter(kind: str, model):
     return [model.archived_at.is_(None), getattr(model, FLAG[kind]).is_(True)]
 
 
+async def mode_rows(db: AsyncSession, service_ids: list) -> dict:
+    """{service_id: [ServiceModePrice, ...]} for many services in one query."""
+    if not service_ids:
+        return {}
+    rows = (await db.execute(
+        select(ServiceModePrice).where(ServiceModePrice.service_id.in_(service_ids))
+        .order_by(ServiceModePrice.created_at)
+    )).scalars().all()
+    out: dict = {}
+    for r in rows:
+        out.setdefault(r.service_id, []).append(r)
+    return out
+
+
+async def item(db: AsyncSession, kind: str, r) -> dict:
+    """_item with the service's delivery modes loaded. Use this everywhere a row is returned."""
+    modes = None
+    if kind == "service":
+        modes = (await mode_rows(db, [r.id])).get(r.id, [])
+    return _item(kind, r, modes)
+
+
 async def _rows(db: AsyncSession, kind: str, vendor_id, public: bool, include_archived: bool = False) -> list[dict]:
     model = _model(kind)
     q = select(model).where(model.vendor_id == vendor_id)
@@ -125,7 +161,8 @@ async def _rows(db: AsyncSession, kind: str, vendor_id, public: bool, include_ar
         q = q.where(model.archived_at.is_(None))
     order = {"goods": StockItem.name, "service": BookableService.name, "tool": ToolListing.title}[kind]
     rows = (await db.execute(q.order_by(order).limit(LIMIT))).scalars().all()
-    return [_item(kind, r) for r in rows]
+    modes = await mode_rows(db, [r.id for r in rows]) if kind == "service" else {}
+    return [_item(kind, r, modes.get(r.id, []) if kind == "service" else None) for r in rows]
 
 
 async def _collect(db: AsyncSession, vendor_id, public: bool, include_archived: bool = False) -> dict:
@@ -274,14 +311,87 @@ def _check_price(mode: str, price: Optional[float], *, sent: bool) -> Optional[f
     return price
 
 
+def _modes_input(value) -> list[dict]:
+    """Validate the list of delivery modes a service is given in. Each has its own price."""
+    if not isinstance(value, list) or not value:
+        raise OfferingError("Add at least one way the service is given.", 422)
+    if len(value) > MAX_MODES:
+        raise OfferingError(f"At most {MAX_MODES} ways of giving a service.", 422)
+    seen, out = set(), []
+    for item in value:
+        if not isinstance(item, dict):
+            raise OfferingError("Each way of giving the service needs a mode and a price.", 422)
+        mode = item.get("mode")
+        if mode not in SERVICE_MODES:
+            raise OfferingError("Choose a way of giving the service from the list.", 422)
+        if mode in seen:
+            raise OfferingError("Each way of giving the service can be listed once.", 422)
+        seen.add(mode)
+        pmode = item.get("price_mode") or "fixed"
+        price = _price(item.get("price"))
+        price = _check_price(pmode, price, sent=item.get("price") is not None)
+        unit = _text(item.get("price_unit"), 1, 30, "a price unit", required=False)
+        out.append({"mode": mode, "price_mode": pmode, "price": price, "price_unit": unit})
+    return out
+
+
+def _summary(modes: list[dict]):
+    """The single price and flags the service row keeps for older readers.
+
+    Lowest priced way wins the top-level price. Flags say which legacy modes are on.
+    """
+    priced = [m for m in modes if m["price"] is not None]
+    best = min(priced, key=lambda m: m["price"]) if priced else None
+    if any(m["price_mode"] == "fixed" for m in modes):
+        top_mode = "fixed"
+    elif any(m["price_mode"] == "negotiable" for m in modes):
+        top_mode = "negotiable"
+    else:
+        top_mode = "ask_me"
+    flags = {flag: any(m["mode"] == mode for m in modes) for mode, flag in LEGACY_FLAG.items()}
+    return {
+        "price": best["price"] if best else None,
+        "price_unit": best["price_unit"] if best else None,
+        "price_mode": top_mode,
+        "flags": flags,
+    }
+
+
+def _apply_modes(row, modes: list[dict]) -> None:
+    """Attach the mode rows to a service row and refresh its summary fields."""
+    summary = _summary(modes)
+    row.price_kes = int(round(summary["price"])) if summary["price"] is not None else None
+    row.price_unit = summary["price_unit"]
+    row.price_mode = summary["price_mode"]
+    for flag, on in summary["flags"].items():
+        setattr(row, flag, on)
+
+
+async def _write_modes(db: AsyncSession, row, modes: list[dict]) -> None:
+    await db.execute(delete(ServiceModePrice).where(ServiceModePrice.service_id == row.id))
+    for m in modes:
+        db.add(ServiceModePrice(service_id=row.id, mode=m["mode"], price_mode=m["price_mode"],
+                                price_kes=int(round(m["price"])) if m["price"] is not None else None,
+                                price_unit=m["price_unit"]))
+    await db.flush()
+
+
 # ── writing ───────────────────────────────────────────────────────────────────
 
 async def create(db: AsyncSession, vendor: Vendor, kind: str, data: dict):
     """Create an offering for this person. No business profile is needed."""
     if kind not in KINDS:
         raise OfferingError("Kind must be goods, service or tool.", 422)
-    mode = data.get("price_mode") or "fixed"
-    price = _check_price(mode, _price(data.get("price")), sent=data.get("price") is not None)
+    modes_in = None
+    if data.get("modes") is not None:
+        if kind != "service":
+            raise OfferingError("Only services have ways of giving them.", 422)
+        modes_in = _modes_input(data.get("modes"))
+        summary = _summary(modes_in)
+        mode, price = summary["price_mode"], summary["price"]
+    else:
+        mode = data.get("price_mode") or "fixed"
+        price = _check_price(mode, _price(data.get("price")), sent=data.get("price") is not None)
     photos = _photos(data.get("photos"))
     radius = _radius(data.get("service_radius_km"), kind)
     desc = _text(data.get("description"), 1, 2000, "a description", required=False)
@@ -315,6 +425,8 @@ async def create(db: AsyncSession, vendor: Vendor, kind: str, data: dict):
             price_unit=_text(data.get("price_unit"), 1, 30, "a price unit", required=False),
             domain=_domain(data.get("domain")),
         )
+        if modes_in is not None:
+            _apply_modes(row, modes_in)
     else:
         cat = data.get("category")
         try:
@@ -330,6 +442,8 @@ async def create(db: AsyncSession, vendor: Vendor, kind: str, data: dict):
         )
     db.add(row)
     await db.flush()
+    if kind == "service" and modes_in is not None:
+        await _write_modes(db, row, modes_in)
     return row
 
 
@@ -351,7 +465,7 @@ async def owned(db: AsyncSession, vendor: Vendor, kind: str, offering_id: str):
 EDITABLE = {
     "goods": {"title", "description", "category", "price", "price_unit", "price_mode", "photos", "quantity"},
     "service": {"title", "description", "price", "price_unit", "price_mode", "photos", "service_radius_km",
-                "duration_minutes", "domain"},
+                "duration_minutes", "domain", "modes"},
     "tool": {"title", "description", "category", "price", "price_unit", "price_mode", "photos", "service_radius_km"},
 }
 
@@ -362,15 +476,23 @@ async def update(db: AsyncSession, vendor: Vendor, kind: str, offering_id: str, 
     if unknown:
         raise OfferingError(f"You cannot change: {', '.join(sorted(unknown))}.", 422)
 
-    mode = patch.get("price_mode", row.price_mode)
-    if "price" in patch:
-        price = _price(patch["price"])
-    elif mode == "ask_me":
-        price = None  # switching to ask me clears the stored price
+    modes_in = None
+    if "modes" in patch:
+        if kind != "service":
+            raise OfferingError("Only services have ways of giving them.", 422)
+        modes_in = _modes_input(patch["modes"])
+        summary = _summary(modes_in)
+        mode, price = summary["price_mode"], summary["price"]
     else:
-        raw = getattr(row, PRICE_ATTR[kind])
-        price = float(raw) if raw is not None else None
-    price = _check_price(mode, price, sent="price" in patch)
+        mode = patch.get("price_mode", row.price_mode)
+        if "price" in patch:
+            price = _price(patch["price"])
+        elif mode == "ask_me":
+            price = None  # switching to ask me clears the stored price
+        else:
+            raw = getattr(row, PRICE_ATTR[kind])
+            price = float(raw) if raw is not None else None
+        price = _check_price(mode, price, sent="price" in patch)
 
     if "title" in patch:
         title = _text(patch["title"], 2, 300 if kind != "service" else 200, "a title")
@@ -403,12 +525,14 @@ async def update(db: AsyncSession, vendor: Vendor, kind: str, offering_id: str, 
             row.quantity_available = qty
     elif kind == "service":
         row.price_kes = int(round(price)) if price is not None else None
+        if modes_in is not None:
+            _apply_modes(row, modes_in)  # sets price, unit, mode and legacy flags together
         if "duration_minutes" in patch:
             d = patch["duration_minutes"]
             if not isinstance(d, int) or isinstance(d, bool) or not (1 <= d <= 480):
                 raise OfferingError("Duration must be 1–480 minutes.", 422)
             row.duration_minutes = d
-        if "price_unit" in patch:
+        if "price_unit" in patch and modes_in is None:
             row.price_unit = _text(patch["price_unit"], 1, 30, "a price unit", required=False)
         if "domain" in patch:
             row.domain = _domain(patch["domain"])
@@ -423,6 +547,8 @@ async def update(db: AsyncSession, vendor: Vendor, kind: str, offering_id: str, 
             row.price_unit = _text(patch["price_unit"], 1, 50, "a price unit", required=False)
 
     await db.flush()
+    if kind == "service" and modes_in is not None:
+        await _write_modes(db, row, modes_in)
     return row
 
 

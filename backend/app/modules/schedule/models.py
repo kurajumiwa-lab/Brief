@@ -15,7 +15,7 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import (
-    Boolean, CheckConstraint, Column, DateTime, ForeignKey, Index, Integer, String, Text, text,
+    Boolean, CheckConstraint, Column, DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint, text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import relationship
@@ -79,6 +79,33 @@ class BookableService(Base):
     archived_at = Column(DateTime, nullable=True)  # set = archived (kept, hidden from lists)
     service_radius_km = Column(Integer, nullable=True)  # how far the offer reaches, 1..500
     images = Column(JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb"))
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+SERVICE_MODES = ("in_shop", "home_visit", "remote", "drop_off", "pickup_delivery")
+
+
+class ServiceModePrice(Base):
+    """One way a service is delivered, with its own price and unit (Offers step 1).
+
+    A service with no rows here falls back to its single legacy price on booking_services.
+    """
+    __tablename__ = "service_mode_prices"
+    __table_args__ = (
+        UniqueConstraint("service_id", "mode", name="uq_service_mode_price"),
+        CheckConstraint(f"mode IN {SERVICE_MODES}", name="ck_service_mode_price_mode"),
+        CheckConstraint("price_mode IN ('fixed', 'negotiable', 'ask_me')", name="ck_service_mode_price_price_mode"),
+        CheckConstraint("price_kes IS NULL OR price_kes >= 0", name="ck_service_mode_price_amount"),
+        CheckConstraint("price_mode <> 'ask_me' OR price_kes IS NULL", name="ck_service_mode_price_ask_me"),
+    )
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    service_id = Column(UUID(as_uuid=True), ForeignKey("booking_services.id", ondelete="CASCADE"),
+                        nullable=False, index=True)
+    mode = Column(String(16), nullable=False)
+    price_mode = Column(String(12), nullable=False, default="fixed", server_default="fixed")
+    price_kes = Column(Integer, nullable=True)
+    price_unit = Column(String(30), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
 
