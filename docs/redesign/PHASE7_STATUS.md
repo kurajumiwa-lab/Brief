@@ -1,7 +1,7 @@
 # Phase 7 status and PR map
 
 Owner review (2026-11) asked for one record that maps mandate items to GitHub PRs. This is it.
-Update it in the same PR that changes a state. Last updated on branch `arena/8b6aabc6-brief`, based on `main` at `abf3f79`. Not yet merged.
+Update it in the same PR that changes a state. Last checked against `main` at `4e3ed3a` (PR #106 merged).
 
 ## PR map
 
@@ -13,7 +13,8 @@ Update it in the same PR that changes a state. Last updated on branch `arena/8b6
 | Rating gate and data-based discovery | PR 102 | #103 | arena/d5093408-brief | merged (`d9f0c19`) |
 | Rebrand, Book Service link, Work copy, rating team block | PR 101 and 102 | #104 | arena/bb0cf6b5-brief | merged (`a36d693`) |
 | Partner teams (`office_partners`, Fluid Teams backend) | PR 103 | #105 | arena/f85ab880-brief | merged (`abf3f79`) |
-| Maturity gates (data-density check) | PR 104 | not started | - | - |
+| Rating window, Fluid Teams noticeboard and partner panel, `UserLink` dropped | PR 104 | #106 | arena/8b6aabc6-brief | merged (`4e3ed3a`) |
+| Maturity gates (data-density check) | PR 105 | not started | - | - |
 
 The mandate's numbers do not match GitHub's. Use this table, not the mandate, for any PR reference.
 
@@ -29,8 +30,8 @@ All three default to off. Nothing new is live.
 
 - `0049_post_trade_ratings`: in `main`, not yet run on staging or production.
 - `0050_office_partners`: in `main`, not yet run on staging or production.
-- `0051_trade_finalisations`: on this branch. Adds the closed-window record for unrated trades.
-- `0052_office_notices`: on this branch. Adds the home office noticeboard.
+- `0051_trade_finalisations`: in `main` (#106), not yet run on staging or production. Adds the closed-window record for unrated trades.
+- `0052_office_notices`: in `main` (#106), not yet run on staging or production. Adds the home office noticeboard.
 
 ## What is in `main`
 
@@ -104,6 +105,6 @@ button on the professional card, Work copy mapping.
   Noticeboard posts are kept until deleted.
 - **Access and correction:** no request path is built. The prompt says nothing about it.
 - **Privacy notice wording:** the prompt's notice is a minimum. Final wording goes to legal review.
-- **Maturity gates (PR 104 in the mandate):** not started. It is a pricing decision. It waits for
+- **Maturity gates (PR 105 in the mandate):** not started. It is a pricing decision. It waits for
   legal review and needs owner approval of the list of "data-rich" regions.
 - **Language:** "harvest", "data as currency", and "take" are not used in any user-facing copy.

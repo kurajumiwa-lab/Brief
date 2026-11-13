@@ -98,7 +98,7 @@ function interleave(a = [], b = []) {
 
 /* ── shelves ──────────────────────────────────────────────────────────────── */
 
-export const SHELVES = [
+const ALL_SHELVES = [
   // The primary shelf. Only offers that pass the confirmed-offer rule
   // (verified seller, and a completed deal with another business or a hand
   // confirmation by the Brief team). Backroom stock is not shown here.
@@ -487,10 +487,21 @@ export const SHELVES = [
   },
 ];
 
+/**
+ * Shelves retired from Home. Their definitions stay in this file so nothing that imports them
+ * breaks, but Home no longer shows them:
+ *   · people: Tinder-style people discovery waits for legal review (Kenya DPA 2019).
+ *   · markets: the market idea is out of the product for now.
+ */
+export const RETIRED_SHELF_KEYS = ["people", "markets"];
+
+/** The shelves Home shows, in registry order. */
+export const SHELVES = ALL_SHELVES.filter((s) => !RETIRED_SHELF_KEYS.includes(s.key));
+
 export const SHELVES_BEFORE_BANNER = SHELVES.filter((s) => s.group === "discovery");
 export const SHELVES_AFTER_BANNER = SHELVES.filter((s) => s.group === "more");
 
-export const shelfByKey = (key) => SHELVES.find((shelf) => shelf.key === key);
+export const shelfByKey = (key) => ALL_SHELVES.find((shelf) => shelf.key === key);
 
 /**
  * Own-inventory exclusion, in ONE place.
