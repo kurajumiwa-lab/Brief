@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { CalendarDays, Plus, MapPin, Users, Video, Ticket, Check, X, ClipboardList, Crown, DoorOpen, BarChart3 } from "lucide-react";
 import Tabs from "@/components/ui/Tabs";
 import Button from "@/components/ui/Button";
@@ -15,6 +15,7 @@ import { PageSpinner } from "@/components/ui/Spinner";
 import { toast } from "@/components/ui/Toast";
 import { useConfirm } from "@/components/ui/ConfirmDialog";
 import EventForm from "@/components/forms/EventForm";
+import { EVENT_HUB_ENABLED } from "@/config/flags";
 import { useEventStore } from "@/stores/eventStore";
 import { useGroupStore } from "@/stores/groupStore";
 import { useListStore } from "@/stores/listStore";
@@ -312,6 +313,12 @@ function EventDrawer({ event: ev, onClose, organiser, onStatus, onPatch }) {
             <Row k="Organiser" v={`${ev.organizer_business} · @${ev.organizer}`} />
             {requirementChips(ev.vendor_requirements).length > 0 && <Row k="Requirements" v={requirementChips(ev.vendor_requirements).join(", ")} />}
           </dl>
+
+          {EVENT_HUB_ENABLED && (
+            <Link to={`/event/${ev.id}`} className="inline-flex items-center text-sm font-medium text-brand-700 hover:underline dark:text-brand-300">
+              Open the event page
+            </Link>
+          )}
 
           {!organiser && registered && ev.status !== "cancelled" && ev.status !== "completed" && (
             <div className="rounded-xl border border-edge-1 bg-surface-2 p-3 flex items-center justify-between gap-3">

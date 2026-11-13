@@ -136,6 +136,8 @@ class Settings(BaseSettings):
     # Fluid Teams (Phase 7, PR 3): partner teams between two home offices. OFF by default. While off,
     # the /api/office/partners routes return 404 and no partner link can be made.
     FLUID_TEAMS_ENABLED: bool = False
+    # Event hub (Phase 8): meeting point, host gallery, host–attendee messages. OFF by default.
+    EVENT_HUB_ENABLED: bool = False
     # Data-based discovery (Phase 7, PR 102). OFF by default. On: front doors and supplier lists are
     # ordered by real data completeness and recent post-trade ratings. Distances stay true.
     DATA_DISCOVERY_RANKING_ENABLED: bool = False

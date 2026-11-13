@@ -1039,6 +1039,22 @@ export const officeAPI = {
   acceptLink: (body) => api.post("/office/links/accept", body),
 };
 
+/** Event hub (Phase 8): meeting point, host gallery, host–attendee messages. Behind EVENT_HUB_ENABLED. */
+export const eventHubAPI = {
+  getMeetingPoint: (eventId) => api.get(`/event-hub/events/${eventId}/meeting-point`),
+  setMeetingPoint: (eventId, body) => api.put(`/event-hub/events/${eventId}/meeting-point`, body),
+  gallery: (eventId) => api.get(`/event-hub/events/${eventId}/gallery`),
+  addPhoto: (eventId, file, caption) => {
+    const form = new FormData();
+    form.append("file", file);
+    if (caption) form.append("caption", caption);
+    return api.post(`/event-hub/events/${eventId}/gallery`, form, { headers: { "Content-Type": "multipart/form-data" } });
+  },
+  hostGallery: (hostId) => api.get(`/event-hub/hosts/${hostId}/gallery`),
+  messages: (eventId) => api.get(`/event-hub/events/${eventId}/messages`),
+  sendMessage: (eventId, body) => api.post(`/event-hub/events/${eventId}/messages`, { body }),
+};
+
 /** Fluid Teams (Phase 7): partner teams and the noticeboard. Behind FLUID_TEAMS_ENABLED on the backend. */
 export const teamsAPI = {
   listPartners: (officeId) => api.get(`/office/partners/offices/${officeId}`),
