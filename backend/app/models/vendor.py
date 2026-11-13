@@ -55,6 +55,8 @@ class Vendor(Base):
     account_kind = Column(String(24), nullable=False, default="business", server_default="business", index=True)
     hide_exact_location = Column(Boolean, nullable=False, default=True, server_default="true")
     home_storefront_config = Column(JSONB, nullable=False, default=dict, server_default=sa_text("'{}'::jsonb"))
+    # Public Page settings (tagline, About text, which sections show). Edited by the owner only.
+    public_page = Column(JSONB, nullable=False, default=dict, server_default=sa_text("'{}'::jsonb"))
     vendor_handle = Column(String(100), unique=True, nullable=False, index=True)  # @handle
     email = Column(String(255), unique=True, nullable=False, index=True)
     phone = Column(String(20))

@@ -1087,6 +1087,9 @@ export const professionalAPI = {
   card: (handle) => api.get(`/professional/${handle}`),
   // The public Page: no sign-in. Verified registrations only.
   page: (handle) => api.get(`/professional/page/${encodeURIComponent(handle)}`),
+  // The owner's Page settings (signed in). Only the owner can read or write their own.
+  myPage: () => api.get("/professional/me/page"),
+  savePage: (body) => api.put("/professional/me/page", body),
 };
 
 // ── Ecosystem integrations (P4). Routes return 404 while INTEGRATIONS_ENABLED is off. ──
