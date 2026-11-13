@@ -5,6 +5,7 @@ import ActionCentre from "@/components/home/ActionCentre";
 import ActivityList from "@/components/home/ActivityList";
 import HomeStorefront from "@/components/home/HomeStorefront";
 import DiscoveryLink from "@/components/home/DiscoveryLink";
+import HomePaths from "@/components/home/HomePaths";
 import DailyWelcome from "@/components/home/DailyWelcome";
 import CategoryRequest from "@/components/home/CategoryRequest";
 import StatusShelf from "@/components/statuses/StatusShelf";
@@ -16,6 +17,7 @@ import { CATEGORY_REQUIREMENTS, pendingCategoryRequest } from "@/config/category
  *
  * Five sections, in this order, and nothing else:
  *
+ *   0  paths          four free doors: Discover, Connect, My World, Create. None locked
  *   1  header         who this is, the shop's setup count (2/6), the status
  *                     shelf of businesses you follow, and the radar counts
  *   2  action centre  the next one or two things that need doing; "View all"
@@ -64,6 +66,7 @@ export default function HomeHub({ rules = CATEGORY_REQUIREMENTS }) {
         <StatusShelf />
         <RadarStrip />
       </div>
+      <HomePaths />
       <ActionCentre progress={progress} />
       <HomeStorefront />
       <ActivityList />
