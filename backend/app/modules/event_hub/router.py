@@ -6,7 +6,7 @@ router-level dependency, so it runs before authentication.
     GET  /events/{id}/meeting-point      participants: label and Google Maps link
     PUT  /events/{id}/meeting-point      host: set the meeting point
     GET  /events/{id}/gallery            public: photos from this event
-    POST /events/{id}/gallery            host: add a photo
+    POST /events/{id}/gallery            host: upload a photo (multipart, same pipeline as /api/files)
     GET  /hosts/{vendor_id}/gallery      public: a host's photos across their events
     GET  /events/{id}/messages           participants: the host–attendee thread
     POST /events/{id}/messages           participants: send a message
@@ -15,7 +15,7 @@ router-level dependency, so it runs before authentication.
 import uuid
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -24,6 +24,8 @@ from app.database import get_db
 from app.models.vendor import Vendor
 from app.modules.event_hub import service as svc
 from app.routes.auth import get_current_vendor
+from app.services.images import UnsupportedImage, prepare_image
+from app.services.storage import StorageError, max_bytes, safe_filename, storage
 
 
 def _enabled() -> None:
@@ -39,13 +41,32 @@ class MeetingPointIn(BaseModel):
     maps_url: Optional[str] = Field(default=None, max_length=500)
 
 
-class GalleryIn(BaseModel):
-    image_url: str = Field(..., min_length=8, max_length=500)
-    caption: Optional[str] = Field(default=None, max_length=300)
-
-
 class MessageIn(BaseModel):
     body: str = Field(..., min_length=1, max_length=1000)
+
+
+async def store_photo(file: UploadFile) -> str:
+    """The same checks and storage as /api/files/upload: type, size, image preparation, then store."""
+    try:
+        _, content_type = safe_filename(file.filename or "", file.content_type)
+    except StorageError as exc:
+        raise HTTPException(400, str(exc))
+    limit = max_bytes()
+    data = await file.read(limit * 10 + 1)
+    if len(data) > limit * 10:
+        raise HTTPException(413, f"File is larger than {limit * 10 // (1024 * 1024)} MB")
+    if not data:
+        raise HTTPException(400, "Empty file")
+    try:
+        data, stored_name, content_type = prepare_image(data, file.filename or "file", content_type, max_bytes=limit)
+    except UnsupportedImage as exc:
+        raise HTTPException(400, str(exc))
+    try:
+        return await storage.upload(data, stored_name, content_type)
+    except StorageError as exc:
+        raise HTTPException(503, str(exc))
+    except Exception as exc:
+        raise HTTPException(503, f"Storage unavailable: {type(exc).__name__}")
 
 
 def _meeting(row) -> Optional[dict]:
@@ -88,10 +109,20 @@ async def list_gallery(event_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/events/{event_id}/gallery", status_code=201)
-async def add_photo(event_id: uuid.UUID, body: GalleryIn, vendor: Vendor = Depends(get_current_vendor),
-                    db: AsyncSession = Depends(get_db)):
+async def add_photo(
+    event_id: uuid.UUID,
+    file: UploadFile = File(...),
+    caption: Optional[str] = Form(default=None),
+    vendor: Vendor = Depends(get_current_vendor),
+    db: AsyncSession = Depends(get_db),
+):
+    """Host uploads a photo. It goes through the same image pipeline as every other upload."""
+    # Check the host before reading the file, so a stranger's upload is refused at once.
+    event = await svc._event(db, event_id)
+    svc._require_organizer(event, vendor)
+    url = await store_photo(file)
     try:
-        row = await svc.add_gallery_item(db, vendor, event_id, image_url=body.image_url, caption=body.caption)
+        row = await svc.add_gallery_item(db, vendor, event_id, image_url=url, caption=caption)
     except HTTPException:
         await db.rollback()
         raise

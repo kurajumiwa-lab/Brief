@@ -90,6 +90,7 @@ const MarketLocks = lazy(() => import("@/pages/locks/MarketLocks"));
 const OurNetwork = lazy(() => import("@/pages/governance/OurNetwork"));
 const ToolsPage = lazy(() => import("@/pages/tools/ToolsPage"));
 const EventsPage = lazy(() => import("@/pages/events/EventsPage"));
+const EventHubPage = lazy(() => import("@/pages/events/EventHubPage"));
 const POSBridge = lazy(() => import("@/pages/pos/POSBridge"));
 const Analytics = lazy(() => import("@/pages/analytics/Analytics"));
 const Ops = lazy(() => import("@/pages/ops/Ops"));
@@ -280,6 +281,7 @@ function AppRoutes() {
           <Route path="/tools" element={<ToolsPage />} />
           <Route path="/groups" element={<Groups />} />
           <Route path="/events" element={<EventsPage />} />
+          <Route path="/event/:eventId" element={<EventHubPage />} />
           <Route path="/lists" element={<VendorLists />} />
           <Route path="/locks" element={<MarketLocks />} />
 

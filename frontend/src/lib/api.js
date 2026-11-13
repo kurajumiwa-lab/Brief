@@ -1044,7 +1044,12 @@ export const eventHubAPI = {
   getMeetingPoint: (eventId) => api.get(`/event-hub/events/${eventId}/meeting-point`),
   setMeetingPoint: (eventId, body) => api.put(`/event-hub/events/${eventId}/meeting-point`, body),
   gallery: (eventId) => api.get(`/event-hub/events/${eventId}/gallery`),
-  addPhoto: (eventId, body) => api.post(`/event-hub/events/${eventId}/gallery`, body),
+  addPhoto: (eventId, file, caption) => {
+    const form = new FormData();
+    form.append("file", file);
+    if (caption) form.append("caption", caption);
+    return api.post(`/event-hub/events/${eventId}/gallery`, form, { headers: { "Content-Type": "multipart/form-data" } });
+  },
   hostGallery: (hostId) => api.get(`/event-hub/hosts/${hostId}/gallery`),
   messages: (eventId) => api.get(`/event-hub/events/${eventId}/messages`),
   sendMessage: (eventId, body) => api.post(`/event-hub/events/${eventId}/messages`, { body }),

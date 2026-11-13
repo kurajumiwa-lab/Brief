@@ -3,7 +3,8 @@
 - A participant is the event's organiser, or a vendor whose registration is registered, confirmed
   or attended. Only participants read the meeting point and the host–attendee messages.
 - Only the organiser sets the meeting point, posts gallery photos, and sends messages as the host.
-- The gallery is public: it is how a host shows past events to new people.
+- The gallery is public: it is how a host shows past events to new people. Photos are uploaded
+  through the file pipeline (images are checked and stored there); no outside link is accepted.
 - The meeting point is a label and a Google Maps link only. No map is embedded, and no exact
   location is stored beyond what the organiser types.
 """
@@ -78,13 +79,6 @@ def clean_maps_url(url: Optional[str]) -> Optional[str]:
     return v
 
 
-def clean_image_url(url: str) -> str:
-    v = (url or "").strip()
-    if not v.startswith("https://") or len(v) > 500 or " " in v:
-        raise HTTPException(422, "Use a photo link that starts with https://")
-    return v
-
-
 # ── meeting point ─────────────────────────────────────────────────────────────
 
 async def get_meeting_point(db: AsyncSession, vendor: Vendor, event_id: uuid.UUID) -> Optional[EventMeetingPoint]:
@@ -132,7 +126,7 @@ async def add_gallery_item(db: AsyncSession, vendor: Vendor, event_id: uuid.UUID
     event = await _event(db, event_id)
     _require_organizer(event, vendor)
     text = (caption or "").strip()[:300] or None
-    row = EventGalleryItem(event_id=event_id, image_url=clean_image_url(image_url), caption=text,
+    row = EventGalleryItem(event_id=event_id, image_url=image_url, caption=text,
                            created_at=datetime.utcnow())
     db.add(row)
     await db.flush()

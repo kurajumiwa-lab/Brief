@@ -84,3 +84,9 @@ export const POST_TRADE_RATING_GATE_ENABLED = import.meta.env?.VITE_POST_TRADE_R
  * off by default.
  */
 export const FLUID_TEAMS_ENABLED = import.meta.env?.VITE_FLUID_TEAMS_ENABLED === "true";
+
+/**
+ * Event hub (Phase 8): meeting point, host gallery and host–attendee messages on the event page.
+ * Set VITE_EVENT_HUB_ENABLED=true to show them. Matches EVENT_HUB_ENABLED on the backend (off by default).
+ */
+export const EVENT_HUB_ENABLED = import.meta.env?.VITE_EVENT_HUB_ENABLED === "true";
