@@ -19,8 +19,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.events import Event, EventRegistration
+from app.models.notification import NotificationType
 from app.models.vendor import Vendor
 from app.modules.event_hub.models import EventGalleryItem, EventMeetingPoint, EventMessage
+from app.services.notification_service import create_notification, notify_many
 
 PARTICIPANT_STATUSES = ("registered", "confirmed", "attended")
 
@@ -130,6 +132,48 @@ async def add_gallery_item(db: AsyncSession, vendor: Vendor, event_id: uuid.UUID
                            created_at=datetime.utcnow())
     db.add(row)
     await db.flush()
+    await notify_participants(db, event, vendor, title=f"New photo from {event.title}",
+                              body=text or "Open the event page to see it.")
+    return row
+
+
+async def participant_ids(db: AsyncSession, event: Event) -> list:
+    """Everyone who RSVP'd (and still counts), excluding the host."""
+    rows = (await db.execute(select(EventRegistration.vendor_id).where(
+        EventRegistration.event_id == event.id,
+        EventRegistration.status.in_(PARTICIPANT_STATUSES),
+    ))).scalars().all()
+    return [r for r in rows if r != event.organizer_id]
+
+
+async def notify_participants(db: AsyncSession, event: Event, host: Vendor, *, title: str, body: str) -> None:
+    await notify_many(db, await participant_ids(db, event), NotificationType.EVENT_HOST_UPDATE, title,
+                      body[:200], sender_id=host.id, data={"event_id": str(event.id)})
+
+
+async def delete_gallery_item(db: AsyncSession, vendor: Vendor, event_id: uuid.UUID,
+                              photo_id: uuid.UUID) -> Optional[str]:
+    """Host removes a photo. Returns the stored image URL so the caller can delete the file."""
+    event = await _event(db, event_id)
+    _require_organizer(event, vendor)
+    row = await db.get(EventGalleryItem, photo_id)
+    if row is None or row.event_id != event_id:
+        raise HTTPException(404, "Photo not found")
+    url = row.image_url
+    await db.delete(row)
+    await db.flush()
+    return url
+
+
+async def update_gallery_caption(db: AsyncSession, vendor: Vendor, event_id: uuid.UUID,
+                                 photo_id: uuid.UUID, caption: Optional[str]) -> EventGalleryItem:
+    event = await _event(db, event_id)
+    _require_organizer(event, vendor)
+    row = await db.get(EventGalleryItem, photo_id)
+    if row is None or row.event_id != event_id:
+        raise HTTPException(404, "Photo not found")
+    row.caption = (caption or "").strip()[:300] or None
+    await db.flush()
     return row
 
 
@@ -152,4 +196,10 @@ async def post_message(db: AsyncSession, vendor: Vendor, event_id: uuid.UUID, bo
     row = EventMessage(event_id=event_id, sender_vendor_id=vendor.id, body=text, created_at=datetime.utcnow())
     db.add(row)
     await db.flush()
+    if vendor.id == event.organizer_id:
+        await notify_participants(db, event, vendor, title=f"Message from the host of {event.title}", body=text)
+    else:
+        await create_notification(db, event.organizer_id, NotificationType.EVENT_HOST_UPDATE,
+                                  f"Message about {event.title}", text[:200], sender_id=vendor.id,
+                                  data={"event_id": str(event.id)})
     return row

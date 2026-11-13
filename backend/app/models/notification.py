@@ -41,6 +41,7 @@ class NotificationType(str, PyEnum):
     COLLECTIVE_UPDATE = "collective_update"  # Group collective sourcing progress
     EVENT_REGISTRATION = "event_registration"  # A vendor registered for your event
     EVENT_REMINDER = "event_reminder"        # Upcoming event
+    EVENT_HOST_UPDATE = "event_host_update"  # Host posted a photo or a message for your event
     # Stock
     STOCK_LOW = "stock_low"                  # Stock running low (POS sync / receipt)
     STOCK_VERIFIED = "stock_verified"        # A patron verified your batch

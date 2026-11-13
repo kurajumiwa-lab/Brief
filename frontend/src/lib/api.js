@@ -1051,6 +1051,9 @@ export const eventHubAPI = {
     return api.post(`/event-hub/events/${eventId}/gallery`, form, { headers: { "Content-Type": "multipart/form-data" } });
   },
   hostGallery: (hostId) => api.get(`/event-hub/hosts/${hostId}/gallery`),
+  editPhotoCaption: (eventId, photoId, caption) =>
+    api.patch(`/event-hub/events/${eventId}/gallery/${photoId}`, { caption }),
+  deletePhoto: (eventId, photoId) => api.delete(`/event-hub/events/${eventId}/gallery/${photoId}`),
   messages: (eventId) => api.get(`/event-hub/events/${eventId}/messages`),
   sendMessage: (eventId, body) => api.post(`/event-hub/events/${eventId}/messages`, { body }),
 };

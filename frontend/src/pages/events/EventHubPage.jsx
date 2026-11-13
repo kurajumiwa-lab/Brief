@@ -295,10 +295,7 @@ function GalleryCard({ event, isHost }) {
       {photos && photos.length > 0 && (
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           {photos.map((p) => (
-            <figure key={p.id} className="overflow-hidden rounded-xl bg-surface-2">
-              <img src={p.image_url} alt={p.caption || event.title} loading="lazy" className="aspect-square w-full object-cover" />
-              {p.caption && <figcaption className="p-2 text-xs text-ink-3">{p.caption}</figcaption>}
-            </figure>
+            <PhotoTile key={p.id} photo={p} event={event} isHost={isHost} onChanged={load} />
           ))}
         </div>
       )}
@@ -313,5 +310,63 @@ function GalleryCard({ event, isHost }) {
         </div>
       )}
     </section>
+  );
+}
+
+function PhotoTile({ photo, event, isHost, onChanged }) {
+  const [editing, setEditing] = useState(false);
+  const [caption, setCaption] = useState(photo.caption || "");
+  const [busy, setBusy] = useState(false);
+
+  async function save() {
+    setBusy(true);
+    try {
+      await eventHubAPI.editPhotoCaption(event.id, photo.id, caption.trim() || null);
+      setEditing(false);
+      await onChanged();
+    } catch (err) {
+      toast.error(apiError(err, "The caption could not be saved."));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function remove() {
+    if (!window.confirm("Remove this photo from the event gallery?")) return;
+    setBusy(true);
+    try {
+      await eventHubAPI.deletePhoto(event.id, photo.id);
+      toast.success("Photo removed.");
+      await onChanged();
+    } catch (err) {
+      toast.error(apiError(err, "The photo could not be removed."));
+      setBusy(false);
+    }
+  }
+
+  return (
+    <figure className="overflow-hidden rounded-xl bg-surface-2">
+      <img src={photo.image_url} alt={photo.caption || event.title} loading="lazy" className="aspect-square w-full object-cover" />
+      {editing ? (
+        <div className="space-y-2 p-2">
+          <input className="block w-full rounded-md border border-edge-2 bg-surface-0 p-1.5 text-xs text-ink-1" maxLength={300}
+            value={caption} onChange={(e) => setCaption(e.target.value)} />
+          <span className="flex gap-2">
+            <Button size="sm" disabled={busy} onClick={save}>Save</Button>
+            <Button variant="ghost" size="sm" onClick={() => { setCaption(photo.caption || ""); setEditing(false); }}>Cancel</Button>
+          </span>
+        </div>
+      ) : (
+        <>
+          {photo.caption && <figcaption className="p-2 text-xs text-ink-3">{photo.caption}</figcaption>}
+          {isHost && (
+            <span className="flex gap-2 p-2">
+              <Button variant="ghost" size="sm" disabled={busy} onClick={() => setEditing(true)}>Edit caption</Button>
+              <Button variant="ghost" size="sm" disabled={busy} onClick={remove}>Remove</Button>
+            </span>
+          )}
+        </>
+      )}
+    </figure>
   );
 }
