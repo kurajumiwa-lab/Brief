@@ -29,6 +29,7 @@ from app.database import get_db
 from app.models.vendor import Vendor
 from app.modules.schedule import service
 from app.modules.schedule.domains import ServiceDomain, check_domain
+from app.modules.offerings import service as offering_service
 from app.modules.schedule.models import (
     APPOINTMENT_STATUSES, ENTRY_KINDS, ENTRY_STATUSES, AvailabilityRule, BookableService, ScheduleEntry,
 )
@@ -218,6 +219,8 @@ async def add_service(data: ServiceIn, vendor: Vendor = Depends(get_current_vend
     fields["domain"] = check_domain(fields["domain"])
     svc = BookableService(vendor_id=vendor.id, **fields)
     db.add(svc)
+    await db.flush()
+    await offering_service.sync_legacy_modes(db, svc)
     await db.commit()
     return _service_out(svc)
 
@@ -235,8 +238,11 @@ async def edit_service(service_id: uuid.UUID, data: ServicePatch, vendor: Vendor
         changes["price_unit"] = _unit(changes["price_unit"])
     if "domain" in changes:
         changes["domain"] = check_domain(changes["domain"])
+    old_kes, old_unit = svc.price_kes, svc.price_unit
     for field, value in changes.items():
         setattr(svc, field, value)
+    await db.flush()
+    await offering_service.sync_legacy_modes(db, svc, old_kes=old_kes, old_unit=old_unit)
     await db.commit()
     return _service_out(svc)
 

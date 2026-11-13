@@ -144,6 +144,36 @@ async def mode_rows(db: AsyncSession, service_ids: list) -> dict:
     return out
 
 
+async def sync_legacy_modes(db: AsyncSession, row, *, old_kes=None, old_unit=None) -> None:
+    """Keep service_mode_prices in step with the legacy columns (flags, price, unit, mode).
+
+    Used by writers that set the legacy columns directly: the schedule router and the single-price
+    path of /api/offerings. Rules:
+    - a flag switched on with no mode row gets one, at the service's current price;
+    - a flag switched off removes its mode row;
+    - a mode row still holding the old single price follows the new one; a row with its own
+      price (set by the desk form) is left alone.
+    drop_off and pickup_delivery have no flag, so they are never touched here.
+    Caller flushes/commits. row.id must already exist (flush first for new rows).
+    """
+    existing = {m.mode: m for m in (await mode_rows(db, [row.id])).get(row.id, [])}
+    current_kes = int(round(row.price_kes)) if row.price_kes is not None else None
+    for mode, flag in LEGACY_FLAG.items():
+        on = bool(getattr(row, flag))
+        cur = existing.get(mode)
+        if on and cur is None:
+            db.add(ServiceModePrice(
+                service_id=row.id, mode=mode, price_mode=row.price_mode,
+                price_kes=None if row.price_mode == "ask_me" else current_kes, price_unit=row.price_unit))
+        elif not on and cur is not None:
+            await db.delete(cur)
+        elif on and cur is not None and cur.price_kes == old_kes and cur.price_unit == old_unit:
+            cur.price_mode = row.price_mode
+            cur.price_kes = None if row.price_mode == "ask_me" else current_kes
+            cur.price_unit = row.price_unit
+    await db.flush()
+
+
 async def item(db: AsyncSession, kind: str, r) -> dict:
     """_item with the service's delivery modes loaded. Use this everywhere a row is returned."""
     modes = None
@@ -444,6 +474,8 @@ async def create(db: AsyncSession, vendor: Vendor, kind: str, data: dict):
     await db.flush()
     if kind == "service" and modes_in is not None:
         await _write_modes(db, row, modes_in)
+    elif kind == "service":
+        await sync_legacy_modes(db, row)
     return row
 
 
@@ -476,6 +508,8 @@ async def update(db: AsyncSession, vendor: Vendor, kind: str, offering_id: str, 
     if unknown:
         raise OfferingError(f"You cannot change: {', '.join(sorted(unknown))}.", 422)
 
+    old_kes = row.price_kes if kind == "service" else None
+    old_unit = row.price_unit if kind == "service" else None
     modes_in = None
     if "modes" in patch:
         if kind != "service":
@@ -549,6 +583,8 @@ async def update(db: AsyncSession, vendor: Vendor, kind: str, offering_id: str, 
     await db.flush()
     if kind == "service" and modes_in is not None:
         await _write_modes(db, row, modes_in)
+    elif kind == "service":
+        await sync_legacy_modes(db, row, old_kes=old_kes, old_unit=old_unit)
     return row
 
 
