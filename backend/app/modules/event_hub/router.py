@@ -7,6 +7,8 @@ router-level dependency, so it runs before authentication.
     PUT  /events/{id}/meeting-point      host: set the meeting point
     GET  /events/{id}/gallery            public: photos from this event
     POST /events/{id}/gallery            host: upload a photo (multipart, same pipeline as /api/files)
+    PATCH /events/{id}/gallery/{photo}   host: edit a caption
+    DELETE /events/{id}/gallery/{photo}  host: remove a photo
     GET  /hosts/{vendor_id}/gallery      public: a host's photos across their events
     GET  /events/{id}/messages           participants: the host–attendee thread
     POST /events/{id}/messages           participants: send a message
@@ -15,7 +17,7 @@ router-level dependency, so it runs before authentication.
 import uuid
 from typing import Optional
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -39,6 +41,10 @@ router = APIRouter(dependencies=[Depends(_enabled)])
 class MeetingPointIn(BaseModel):
     label: str = Field(..., min_length=2, max_length=200)
     maps_url: Optional[str] = Field(default=None, max_length=500)
+
+
+class CaptionIn(BaseModel):
+    caption: Optional[str] = Field(default=None, max_length=300)
 
 
 class MessageIn(BaseModel):
@@ -128,6 +134,35 @@ async def add_photo(
         raise
     await db.commit()
     return _photo(row)
+
+
+@router.patch("/events/{event_id}/gallery/{photo_id}")
+async def edit_caption(event_id: uuid.UUID, photo_id: uuid.UUID, body: CaptionIn,
+                       vendor: Vendor = Depends(get_current_vendor), db: AsyncSession = Depends(get_db)):
+    try:
+        row = await svc.update_gallery_caption(db, vendor, event_id, photo_id, body.caption)
+    except HTTPException:
+        await db.rollback()
+        raise
+    await db.commit()
+    return _photo(row)
+
+
+@router.delete("/events/{event_id}/gallery/{photo_id}", status_code=204)
+async def remove_photo(event_id: uuid.UUID, photo_id: uuid.UUID,
+                       vendor: Vendor = Depends(get_current_vendor), db: AsyncSession = Depends(get_db)):
+    try:
+        url = await svc.delete_gallery_item(db, vendor, event_id, photo_id)
+    except HTTPException:
+        await db.rollback()
+        raise
+    await db.commit()
+    # The row is gone; the file is removed best-effort. A leftover file is harmless, a failed delete is not.
+    try:
+        await storage.delete(url)
+    except Exception:
+        pass
+    return Response(status_code=204)
 
 
 @router.get("/hosts/{vendor_id}/gallery")

@@ -87,6 +87,6 @@ export const FLUID_TEAMS_ENABLED = import.meta.env?.VITE_FLUID_TEAMS_ENABLED ===
 
 /**
  * Event hub (Phase 8): meeting point, host gallery and host–attendee messages on the event page.
- * Set VITE_EVENT_HUB_ENABLED=true to show them. Matches EVENT_HUB_ENABLED on the backend (off by default).
+ * On by default. Set VITE_EVENT_HUB_ENABLED=false to hide them. Matches EVENT_HUB_ENABLED on the backend.
  */
-export const EVENT_HUB_ENABLED = import.meta.env?.VITE_EVENT_HUB_ENABLED === "true";
+export const EVENT_HUB_ENABLED = import.meta.env?.VITE_EVENT_HUB_ENABLED !== "false";
