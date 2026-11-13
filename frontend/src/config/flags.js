@@ -90,3 +90,10 @@ export const FLUID_TEAMS_ENABLED = import.meta.env?.VITE_FLUID_TEAMS_ENABLED ===
  * On by default. Set VITE_EVENT_HUB_ENABLED=false to hide them. Matches EVENT_HUB_ENABLED on the backend.
  */
 export const EVENT_HUB_ENABLED = import.meta.env?.VITE_EVENT_HUB_ENABLED !== "false";
+
+/**
+ * INTEGRATIONS_ENABLED: "Records and links" at /integrations. A business records facts that come from
+ * outside systems (eTIMS, KRA, BRS) with their source, and finds the official e-GP entry points.
+ * Off by default. Set VITE_INTEGRATIONS_ENABLED=true to turn it on. Matches the backend flag.
+ */
+export const INTEGRATIONS_ENABLED = import.meta.env?.VITE_INTEGRATIONS_ENABLED === "true";

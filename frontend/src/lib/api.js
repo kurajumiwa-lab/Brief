@@ -1089,6 +1089,13 @@ export const professionalAPI = {
   page: (handle) => api.get(`/professional/page/${encodeURIComponent(handle)}`),
 };
 
+// ── Ecosystem integrations (P4). Routes return 404 while INTEGRATIONS_ENABLED is off. ──
+export const integrationsAPI = {
+  facts: () => api.get("/integrations/facts"),
+  record: (body) => api.post("/integrations/facts", body),
+  links: () => api.get("/integrations/links"),
+};
+
 // ── Post-trade ratings (Phase 7, PR 102). Routes return 404 while the gate is off. ──
 export const postTradeRatingAPI = {
   status: (subject_kind, subject_id) =>

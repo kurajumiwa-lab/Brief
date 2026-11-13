@@ -84,6 +84,7 @@ from app.routes import (
     ops as ops_routes,
     credentials as credentials_routes,
     professional_card as professional_card_routes,
+    integrations as integrations_routes,
 )
 from app.modules.ratings import router as ratings_routes  # noqa: E402
 from app.routes import (
@@ -285,6 +286,8 @@ app.include_router(credentials_routes.router, prefix="/api/credentials", tags=["
 app.include_router(credentials_routes.ops_router, prefix="/api/ops/credentials", tags=["Credentials (operators)"])
 app.include_router(ratings_routes.router, prefix="/api/post-trade-ratings", tags=["Post-trade ratings"])
 app.include_router(professional_card_routes.router, prefix="/api/professional", tags=["Professional profile card"])
+app.include_router(integrations_routes.router, prefix="/api/integrations", tags=["Ecosystem integrations"])
+app.include_router(integrations_routes.ops_router, prefix="/api/ops/integrations", tags=["Ecosystem integrations (operators)"])
 app.include_router(onboarding_routes.router, prefix="/api/onboarding", tags=["Onboarding"])
 from app.modules.workers import router as workers_routes  # noqa: E402
 app.include_router(workers_routes.router, prefix="/api/workers", tags=["Workers"])
