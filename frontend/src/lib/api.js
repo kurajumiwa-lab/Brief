@@ -1085,6 +1085,8 @@ export const credentialsAPI = {
 /** Professional profile card (Phase 5). Behind PROFESSIONAL_PROFILE_ENABLED on the backend. */
 export const professionalAPI = {
   card: (handle) => api.get(`/professional/${handle}`),
+  // The public Page: no sign-in. Verified registrations only.
+  page: (handle) => api.get(`/professional/page/${encodeURIComponent(handle)}`),
 };
 
 // ── Post-trade ratings (Phase 7, PR 102). Routes return 404 while the gate is off. ──

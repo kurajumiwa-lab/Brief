@@ -22,6 +22,7 @@ import LogisticsOrderPage from "@/pages/logistics/LogisticsOrderPage";
 import CalendarPage from "@/pages/calendar/CalendarPage";
 import BookPage from "@/pages/calendar/BookPage";
 import OffersBrowsePage from "@/pages/offers/OffersBrowsePage";
+import PublicPage from "@/pages/page/PublicPage";
 import TrustBrowsePage from "@/pages/trust/TrustBrowsePage";
 import TrustBranchPage from "@/pages/trust/TrustBranchPage";
 import TrustMePage from "@/pages/trust/TrustMePage";
@@ -186,6 +187,8 @@ function AppRoutes() {
       <Route path="/storefront" element={<BusinessDeskPage />} />
       {/* Open to everyone, no account: browse offers, the knowledge directory and free templates. */}
       <Route path="/offers" element={<OffersBrowsePage />} />
+      {/* The public Page: a mini site per business. No account needed to read it. */}
+      <Route path="/page/:handle" element={<PublicPage />} />
       {/* MarketTrust: checked shops in Kenya, Ethiopia and Uganda. Open to everyone; rating needs sign-in. */}
       <Route path="/trust" element={<TrustBrowsePage />} />
       <Route path="/trust/branches/:id" element={<TrustBranchPage />} />
