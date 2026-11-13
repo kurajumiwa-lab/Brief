@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.vendor import Vendor
 from app.modules.credentials import service as credentials
+from app.modules.offerings.service import mode_rows
 from app.modules.schedule.domains import SERVICE_DOMAIN_LABELS
 from app.modules.schedule.models import Appointment, AvailabilityRule, BookableService
 
@@ -31,6 +32,16 @@ def _delivery(s: BookableService) -> list:
     if s.delivery_remote:
         modes.append("remote")
     return modes
+
+
+def _modes(s: BookableService, rows: list) -> list:
+    """Per-way prices (Offers step 1). A service with no mode rows falls back to its legacy price."""
+    if rows:
+        return [{"mode": r.mode, "price_mode": r.price_mode, "price_kes": r.price_kes,
+                 "price_unit": r.price_unit} for r in rows]
+    legacy = {"clinic": "in_shop", "home": "home_visit", "remote": "remote"}
+    return [{"mode": legacy[m], "price_mode": s.price_mode, "price_kes": s.price_kes,
+             "price_unit": s.price_unit} for m in _delivery(s)]
 
 
 async def card_for_vendor(db: AsyncSession, vendor_id: uuid.UUID) -> dict:
@@ -61,11 +72,14 @@ async def card_for_vendor(db: AsyncSession, vendor_id: uuid.UUID) -> dict:
     )).scalar_one()
 
     creds = await credentials.public_for_handle_vendor(db, vendor_id)
+    modes_by_service = await mode_rows(db, [s.id for s in services])
 
     return {
         "handle": vendor.vendor_handle if vendor else None,
         # Area as the public profile already shows it (VendorOut.physical_location).
         "location": vendor.physical_location if vendor else None,
+        "name": vendor.business_name if vendor else None,
+        "description": vendor.business_description if vendor else None,
         "services": [
             {
                 "id": str(s.id),
@@ -75,6 +89,7 @@ async def card_for_vendor(db: AsyncSession, vendor_id: uuid.UUID) -> dict:
                 "price_mode": s.price_mode,
                 "price_unit": s.price_unit,
                 "delivery": _delivery(s),
+                "modes": _modes(s, modes_by_service.get(s.id, [])),
                 "domain": s.domain,
                 "domain_label": SERVICE_DOMAIN_LABELS.get(s.domain) if s.domain else None,
             }

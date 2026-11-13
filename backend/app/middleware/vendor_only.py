@@ -33,7 +33,9 @@ OPEN_PREFIXES = ("/api/auth/", "/api/health", "/api/metrics", "/api/payments/web
 PUBLIC_READ_PREFIXES = ("/api/offers/public", "/api/knowledge/sectors", "/api/knowledge/listings",
                         "/api/blueprints", "/api/trust/public", "/api/office/public/",
                         # Offerings a person shows the network: visible rows only, GET only.
-                        "/api/offerings/of/")
+                        "/api/offerings/of/",
+                        # The public Page (/page/:handle): one read per business, no account.
+                        "/api/professional/page/")
 
 OFFICE_OPEN_POST = ("/api/office/links/accept",)
 
