@@ -12,20 +12,20 @@ export default function Footer() {
           <LogoMark size={30} />
           <div>
             <p className="text-sm font-extrabold tracking-tight text-ink-1">{BRAND.wordmark}</p>
-            <p className="text-2xs text-ink-4">A trading network built on real records.</p>
+            <p className="text-2xs text-ink-4">A connection layer for everyday trade.</p>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
           <span className="inline-flex items-center gap-1.5 text-2xs text-ink-3">
             <CheckCircle2 size={14} className="text-brand-700 dark:text-brand-400" aria-hidden="true" />
-            Prices are vendor-stated
+            Prices are stated by the person
           </span>
           <span className="inline-flex items-center gap-1.5 text-2xs text-ink-3">
             <ShieldCheck size={14} className="text-orchid-600 dark:text-orchid-300" aria-hidden="true" />
             Trust is earned through fulfilment
           </span>
-          <Link to="/browse" className="inline-flex items-center gap-1 text-2xs font-semibold text-brand-800 hover:text-brand-700 dark:text-brand-300">
-            Browse the network <ArrowRight size={13} aria-hidden="true" />
+          <Link to="/regions" className="inline-flex items-center gap-1 text-2xs font-semibold text-brand-800 hover:text-brand-700 dark:text-brand-300">
+            Open the regions <ArrowRight size={13} aria-hidden="true" />
           </Link>
         </div>
       </div>

@@ -134,41 +134,48 @@ beforeEach(async () => {
 });
 
 describe("routing & auth gate", () => {
-  it("sends signed-out visitors to /auth and shows the vendor-only pitch", async () => {
+  it("sends signed-out visitors to /auth, and joining asks no category at all", async () => {
     useAuthStore.setState({ token: null, vendor: null, ready: true });
     mount(<App />, "/stock");
     expect(await screen.findByRole("heading", { name: /enter the network/i })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("tab", { name: /join/i }));
-    expect(await screen.findByRole("heading", { name: /register your business/i })).toBeInTheDocument();
-    // handle auto-slugs from the business name
-    fireEvent.change(screen.getByLabelText(/business name/i), { target: { value: "Mama Mboga Fresh" } });
-    expect(screen.getByLabelText(/^handle/i)).toHaveValue("mama_mboga_fresh");
+    expect(await screen.findByRole("heading", { name: /join the network/i })).toBeInTheDocument();
+    // The redesign removed the account-kind grid and the handle field from
+    // sign-up: a person joins as a person, and the page address is derived.
+    expect(screen.queryByRole("radiogroup", { name: /account kind/i })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/^handle/i)).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/your name/i)).toBeInTheDocument();
+    expect(screen.getByText(/nothing is selected for you/i)).toBeInTheDocument();
   });
 
-  it("keeps the secondary drawer free of Home and primary navigation", async () => {
+  it("keeps the secondary drawer free of the five primary destinations", async () => {
     const { NAV } = await import("@/components/layout/Sidebar");
     mount(<Sidebar />, "/");
-    const nav = await screen.findByRole("navigation", { name: /more sections/i });
+    const nav = await screen.findByRole("navigation", { name: /more/i });
     for (const { label } of NAV) expect(within(nav).getByText(label)).toBeInTheDocument();
-    expect(within(nav).queryByRole("link", { name: /^home$/i })).not.toBeInTheDocument();
+    for (const label of [/^home$/i, /^regions$/i, /^inbox$/i, /^you$/i]) {
+      expect(within(nav).queryByRole("link", { name: label })).not.toBeInTheDocument();
+    }
+    // Create is the one action; it is not in the drawer either.
+    expect(within(nav).queryByRole("link", { name: /^create$/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("radiogroup", { name: /current role/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /sign out/i })).not.toBeInTheDocument();
   });
 });
 
-describe("Account menu and operating mode", () => {
-  it("keeps the sole mode switch in the identity menu and persists the server-backed choice", async () => {
+describe("Account menu", () => {
+  it("offers the page, the identity, the theme and the way out — no mode switch", async () => {
     mount(<><AccountMenu /><Sidebar /></>);
-    fireEvent.click(screen.getByRole("button", { name: /account and operating mode/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^account$/i }));
     const menu = screen.getByRole("menu");
-    const roleGroup = within(menu).getByRole("radiogroup", { name: /current role/i });
-    fireEvent.click(within(roleGroup).getByTitle(/^Sourcing —/));
-    await waitFor(() => expect(api.vendorAPI.switchRole).toHaveBeenCalledWith("sourcing"));
-    await waitFor(() => expect(useAuthStore.getState().vendor.current_role).toBe("sourcing"));
-    expect(screen.getAllByRole("radiogroup", { name: /current role/i })).toHaveLength(1);
-    expect(within(menu).getByRole("menuitem", { name: /profile settings/i })).toBeInTheDocument();
-    expect(within(menu).queryByRole("link", { name: /mama mboga fresh/i })).not.toBeInTheDocument();
-    expect(within(menu).queryByRole("menuitem", { name: /analytics|my shelf|pos bridge|dashboard/i })).not.toBeInTheDocument();
+    // The "I am currently sourcing / selling / both" switch was the vendor
+    // model in miniature. Capabilities on You replace it.
+    expect(within(menu).queryByRole("radiogroup", { name: /current role/i })).not.toBeInTheDocument();
+    expect(within(menu).getByRole("menuitem", { name: /your page & identity/i })).toBeInTheDocument();
+    expect(within(menu).getByText(/level \d of 5/i)).toBeInTheDocument();
+    expect(within(menu).getByRole("link", { name: /settings & records/i })).toHaveAttribute("href", "/more");
+    expect(within(menu).getByRole("menuitem", { name: /sign out/i })).toBeInTheDocument();
+    expect(api.vendorAPI.switchRole).not.toHaveBeenCalled();
   });
 });
 
@@ -545,14 +552,15 @@ describe("Business Control Centre, Stock Visibility, Shop Front & Gallery Photos
     expect(await screen.findByText("Start a workspace")).toBeInTheDocument();
   });
 
-  it("routes /@handle through App directly to the public Shop front", async () => {
+  it("routes /@handle through App to the page, not a shop front", async () => {
     api.vendorAPI.byHandle.mockResolvedValueOnce(ok(ME));
-    api.stockAPI.network.mockResolvedValueOnce(ok(STOCK));
-    api.stockAPI.mine.mockResolvedValueOnce(ok(STOCK));
     mount(<App />, "/@mama_mboga");
 
     expect(await screen.findByRole("heading", { name: "Mama Mboga Fresh" })).toBeInTheDocument();
-    expect(screen.getByRole("navigation", { name: /shop navigation/i })).toBeInTheDocument();
+    // A handle is a URL. The page shows the address and never makes the handle
+    // the identity.
+    expect(screen.getByText("/p/mama_mboga")).toBeInTheDocument();
+    expect(screen.queryByRole("navigation", { name: /shop navigation/i })).not.toBeInTheDocument();
   });
 
   /* ── v2.16 · the portfolio became a capability, not a page ──────────────── */
@@ -722,13 +730,17 @@ describe("Drawer navigation", () => {
       </MemoryRouter>,
     );
 
-  it("groups the long tail instead of listing it flat", async () => {
+  it("cuts the drawer to three short groups", async () => {
     useAuthStore.setState({ token: "tok", vendor: ME, ready: true, loading: false });
     mountDrawer();
 
-    for (const title of ["Community & network", "Workspace tools", "Administration"]) {
+    for (const title of ["Your office", "Learn & meet", "Everything else"]) {
       expect(screen.getByRole("heading", { name: title })).toBeInTheDocument();
     }
+    const links = screen.getAllByRole("link").map((a) => a.getAttribute("href"));
+    expect(links).toHaveLength(7);
+    expect(links).not.toContain("/markets");
+    expect(links).not.toContain("/mall");
   });
 
   it("does not repeat the five primary destinations", async () => {
@@ -740,15 +752,13 @@ describe("Drawer navigation", () => {
     }
   });
 
-  it("links the workspace tools to real destinations, including the vendor's own shop", async () => {
+  it("puts Home office first, then the work in progress, then one settings door", async () => {
     useAuthStore.setState({ token: "tok", vendor: ME, ready: true, loading: false });
     mountDrawer();
 
-    expect(screen.getByRole("link", { name: /my shelf/i })).toHaveAttribute("href", "/stock");
-    // A shop front is a handle, so the drawer resolves it from the session
-    // rather than hard-coding a placeholder link.
-    expect(screen.getByRole("link", { name: /shop front/i })).toHaveAttribute("href", "/@mama_mboga");
-    expect(screen.getByRole("link", { name: /market locks/i })).toHaveAttribute("href", "/locks");
-    expect(screen.getByRole("link", { name: /ops console/i })).toHaveAttribute("href", "/ops");
+    expect(screen.getByRole("link", { name: /home office/i })).toHaveAttribute("href", "/office");
+    expect(screen.getByRole("link", { name: /orders & trades/i })).toHaveAttribute("href", "/orders");
+    expect(screen.getByRole("link", { name: /calendar/i })).toHaveAttribute("href", "/calendar");
+    expect(screen.getByRole("link", { name: /settings & records/i })).toHaveAttribute("href", "/more");
   });
 });

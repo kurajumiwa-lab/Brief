@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
-import { Search, Package, Store, MapPin, Newspaper, Building2 } from "lucide-react";
+import { Search, Package, Store, Newspaper, Building2 } from "lucide-react";
 import SearchInput from "@/components/ui/SearchInput";
 import EmptyState from "@/components/ui/EmptyState";
 import { PageSpinner } from "@/components/ui/Spinner";
-import { stockAPI, vendorAPI, marketsAPI, newsAPI, mapAPI, searchAPI, apiError } from "@/lib/api";
+import { stockAPI, vendorAPI, newsAPI, mapAPI, searchAPI, apiError } from "@/lib/api";
 import { num, relativeTime } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 
@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 // SEARCH HUB — the lists, behind one door.
 //
 // Every list that used to demand a separate screen and a scroll (products,
-// suppliers, markets, news lines, places) is reachable here by typing. Each
+// suppliers, news lines, places) is reachable here by typing. Each
 // tab loads its real list once, then filters locally as you type — no fake
 // "no results" padding, no invented entries. Empty is a real answer.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -21,7 +21,6 @@ import { cn } from "@/lib/utils";
 const TABS = [
   { value: "products", label: "Products", icon: Package },
   { value: "suppliers", label: "Suppliers", icon: Store },
-  { value: "markets", label: "Markets", icon: MapPin },
   { value: "news", label: "News", icon: Newspaper },
   { value: "places", label: "Places", icon: Building2 },
 ];
@@ -33,29 +32,27 @@ export default function SearchHub() {
   const { tab: tabParam } = useParams();
   const tab = TABS.some((t) => t.value === tabParam) ? tabParam : "products";
   const [q, setQ] = useState("");
-  const [lists, setLists] = useState({ products: null, suppliers: null, markets: null, news: null, places: null });
+  const [lists, setLists] = useState({ products: null, suppliers: null, news: null, places: null });
   const [error, setError] = useState("");
 
   useEffect(() => {
     let live = true;
     const load = async () => {
-      const [p, s, m, n] = await Promise.allSettled([
+      const [p, s, n] = await Promise.allSettled([
         stockAPI.network(),
         vendorAPI.network(),
-        marketsAPI.list(),
         newsAPI.feed(7),
       ]);
       if (!live) return;
       const next = { ...lists };
       if (p.status === "fulfilled") next.products = p.value.data;
       if (s.status === "fulfilled") next.suppliers = s.value.data;
-      if (m.status === "fulfilled") next.markets = m.value.data.markets;
       if (n.status === "fulfilled") next.news = n.value.data.items;
       // Places are NOT preloaded: the directory is thousands of rows. The tab
       // searches it server-side as you type (see the effect below).
       next.places = [];
       setLists(next);
-      if (p.status === "rejected" && s.status === "rejected" && m.status === "rejected") {
+      if (p.status === "rejected" && s.status === "rejected" && n.status === "rejected") {
         setError(apiError(p.reason, "The search lists could not be loaded"));
       }
       return next;
@@ -119,10 +116,6 @@ export default function SearchHub() {
         return (lists.suppliers || [])
           .filter((v) => inText(`${v.business_name} ${v.vendor_handle} ${(v.business_categories || []).join(" ")} ${v.physical_location || ""}`))
           .slice(0, 50);
-      case "markets":
-        return (lists.markets || [])
-          .filter((m) => inText(`${m.name} ${m.city} ${m.country || ""}`))
-          .slice(0, 50);
       case "news":
         return (lists.news || [])
           .filter((it) => inText(newsHaystack(it)))
@@ -146,7 +139,7 @@ export default function SearchHub() {
         <p className="text-xs text-ink-4 mt-0.5">The lists, behind one door — type and they filter.</p>
       </div>
 
-      <SearchInput value={q} onChange={setQ} placeholder="Products, suppliers, markets, news, places…" />
+      <SearchInput value={q} onChange={setQ} placeholder="Products, people, news, places…" />
 
       <div className="flex gap-1.5 overflow-x-auto pb-1">
         {TABS.map((t) => (
@@ -188,17 +181,9 @@ export default function SearchHub() {
           {tab === "suppliers" && results.map((v) => (
             <Row key={v.id}
               title={v.business_name}
-              meta={`${(v.business_categories || []).slice(0, 3).join(" · ") || "categories not stated"}${v.physical_location ? ` · ${v.physical_location}` : ""}`}
-              sub={`@${v.vendor_handle}`}
-              onGo={() => navigate("/network")}
-            />
-          ))}
-          {tab === "markets" && results.map((m) => (
-            <Row key={m.id}
-              title={m.name}
-              meta={[m.city, m.country].filter(Boolean).join(", ")}
-              right={<span className="digital text-sm text-ink-1">{num(m.member_count)}<span className="text-2xs text-ink-4 ml-1">registered</span></span>}
-              onGo={() => navigate("/markets")}
+              meta={`${(v.business_categories || []).slice(0, 3).join(" · ") || "what they do is not stated"}${v.physical_location ? ` · ${v.physical_location}` : ""}`}
+              sub={`/p/${v.vendor_handle}`}
+              onGo={() => navigate(`/p/${v.vendor_handle}`)}
             />
           ))}
           {tab === "news" && results.map((it) => (

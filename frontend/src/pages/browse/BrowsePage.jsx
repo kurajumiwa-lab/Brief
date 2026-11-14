@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Globe, Package, SlidersHorizontal, Sparkles, X, Megaphone, Map as MapIcon,
-  MapPin, Newspaper, Network, Users, List, ShoppingBasket, Store,
+  Newspaper, Users, Store,
 } from "lucide-react";
 import Button from "@/components/ui/Button";
 import Chip from "@/components/ui/Chip";
@@ -42,7 +42,7 @@ import { cn } from "@/lib/utils";
    WHAT CHANGED   Browse is no longer "the stock list". It is organised around
                   what a business is trying to DO: find stock, find people,
                   move goods, get equipment — one search, one results system.
-                  The map, markets and news stay as context views of the same
+                  The map and the news stay as context views of the same
                   results, not competing doors. And when the directory cannot
                   answer, one reusable flow takes over: post a request.
    PRESERVED      The entire goods pipeline: stockAPI.network, category rail,
@@ -138,11 +138,6 @@ function ActionCenter({ search, onSearch, onPost, goType, refreshKey }) {
       {/* ── context: same results, other views ──────────────────────────── */}
       <section className="flex flex-wrap gap-2">
         <ContextLink to="/map" icon={MapIcon}>Map view</ContextLink>
-        <ContextLink to="/markets" icon={MapPin}>Markets</ContextLink>
-        <ContextLink to="/network" icon={Network}>Suppliers</ContextLink>
-        <ContextLink to="/lists" icon={List}>Business lists</ContextLink>
-        <ContextLink to="/locks" icon={ShoppingBasket}>Market locks</ContextLink>
-        <ContextLink to="/nearby" icon={Globe}>Around you</ContextLink>
         <ContextLink to="/news" icon={Newspaper}>Market news</ContextLink>
       </section>
     </>

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Plus, Search, Sparkles, Filter, CalendarDays, MapPin, Users, Ticket, ArrowRight, Edit3, Trash2, Eye } from "lucide-react";
+import { Plus, Search, Sparkles, Filter, CalendarDays, MapPin, Users, Ticket, ArrowRight, Edit3, Trash2, Eye, Check } from "lucide-react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";

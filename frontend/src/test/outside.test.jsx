@@ -170,38 +170,39 @@ const renderAt = (path, element) =>
 /* ── 1. navigation ─────────────────────────────────────────────────────────── */
 
 describe("Outside navigation", () => {
-  it("presents the five Outside destinations with one prominent create action", async () => {
+  it("presents the five destinations with one prominent create action", async () => {
     const { PRIMARY_NAV } = await import("@/config/navigation");
-    expect(PRIMARY_NAV.map((i) => i.label)).toEqual(["Home", "Local network", "Mall", "Connect", "My World"]);
-    // Create is no longer a tab (P1). It is the header action, CREATE_NAV.
-    expect(PRIMARY_NAV.filter((i) => i.action)).toHaveLength(0);
+    expect(PRIMARY_NAV.map((i) => i.label)).toEqual(["Home", "Regions", "Create", "Inbox", "You"]);
+    expect(PRIMARY_NAV.filter((i) => i.action)).toHaveLength(1);
+    expect(PRIMARY_NAV.find((i) => i.action).label).toBe("Create");
     expect(new Set(PRIMARY_NAV.map((i) => i.to)).size).toBe(5);
   });
 
-  it("keeps every v3 URL resolving to the tab that absorbed it", async () => {
+  it("keeps every old URL resolving to the tab that absorbed it", async () => {
     const { PRIMARY_NAV, isPrimaryActive } = await import("@/config/navigation");
-    const discover = PRIMARY_NAV.find((i) => i.label === "Local network");
-    const connect = PRIMARY_NAV.find((i) => i.label === "Connect");
-    const mine = PRIMARY_NAV.find((i) => i.label === "My World");
+    const regions = PRIMARY_NAV.find((i) => i.label === "Regions");
+    const inbox = PRIMARY_NAV.find((i) => i.label === "Inbox");
+    const you = PRIMARY_NAV.find((i) => i.label === "You");
 
-    // Browse's discovery surfaces are Discover.
-    for (const path of ["/explore", "/browse", "/network", "/nearby/food", "/map", "/markets",
-      "/news", "/search/goods", "/listing/x", "/place/y", "/events", "/groups", "/lists"]) {
-      expect(isPrimaryActive(discover, path), path).toBe(true);
+    // Discovery — including the retired markets and mall — is Regions.
+    for (const path of ["/regions", "/explore", "/browse", "/network", "/nearby/food", "/map",
+      "/markets", "/mall", "/news", "/search/goods", "/listing/x", "/place/y", "/events",
+      "/groups", "/lists"]) {
+      expect(isPrimaryActive(regions, path), path).toBe(true);
     }
-    // Work and Inbox are Connect.
-    for (const path of ["/activity", "/work", "/orders", "/chat", "/tasks", "/locks", "/tools"]) {
-      expect(isPrimaryActive(connect, path), path).toBe(true);
+    // Everything waiting is Inbox.
+    for (const path of ["/inbox", "/activity", "/work", "/orders", "/chat", "/tasks", "/locks", "/tools"]) {
+      expect(isPrimaryActive(inbox, path), path).toBe(true);
     }
-    // The workspace is My World, and only your own handle highlights it.
-    for (const path of ["/me", "/stock", "/analytics", "/pos", "/passport", "/enterprise"]) {
-      expect(isPrimaryActive(mine, path), path).toBe(true);
+    // The page and the workspace are You.
+    for (const path of ["/you", "/me", "/stock", "/analytics", "/pos", "/passport", "/enterprise"]) {
+      expect(isPrimaryActive(you, path), path).toBe(true);
     }
-    expect(isPrimaryActive(mine, "/@achieng", "achieng")).toBe(true);
-    expect(isPrimaryActive(mine, "/@someone_else", "achieng")).toBe(false);
+    expect(isPrimaryActive(you, "/@achieng", "achieng")).toBe(true);
+    expect(isPrimaryActive(you, "/@someone_else", "achieng")).toBe(false);
     // Areas never overlap.
-    expect(isPrimaryActive(connect, "/explore")).toBe(false);
-    expect(isPrimaryActive(discover, "/orders")).toBe(false);
+    expect(isPrimaryActive(inbox, "/regions")).toBe(false);
+    expect(isPrimaryActive(regions, "/orders")).toBe(false);
   });
 
   it("names all six content types for the single creation entry point", async () => {
@@ -210,14 +211,18 @@ describe("Outside navigation", () => {
       ["collection", "community", "event", "listing", "opportunity", "post"]);
   });
 
-  it("renders a bottom tab bar of five destinations, with Mall as its own tab", async () => {
+  it("renders a bottom tab bar of five destinations, with Create in the middle", async () => {
     const MobileTabBar = (await import("@/components/layout/MobileTabBar")).default;
     renderAt("/", <MobileTabBar />);
-    expect(screen.queryByTestId("tab-create")).not.toBeInTheDocument();
     expect(screen.getByRole("navigation", { name: /primary mobile/i })).toBeInTheDocument();
-    for (const label of ["home", "explore", "mall", "activity", "me"]) {
+    expect(screen.getByTestId("tab-create")).toHaveAttribute("href", "/create");
+    for (const label of ["home", "regions", "inbox", "you"]) {
       expect(screen.getByTestId(`tab-${label}`)).toBeInTheDocument();
     }
+    // The retired tabs are gone; their routes still resolve, but nothing points
+    // at a separate Mall or Explore tab.
+    expect(screen.queryByTestId("tab-mall")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("tab-explore")).not.toBeInTheDocument();
   });
 });
 

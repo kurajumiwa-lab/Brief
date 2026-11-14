@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import {
   ArrowRight, AtSign, Building2, ChevronDown, Hammer, Home, Lock, Mail,
@@ -65,7 +65,6 @@ export default function AuthPage() {
     password: "",
     account_kind: "person",
     business_name: "",
-    vendor_handle: "",
     email: "",
     phone: "",
     categories: "",
@@ -73,21 +72,19 @@ export default function AuthPage() {
     business_description: "",
     hide_exact_location: true,
   });
-  const [handleTouched, setHandleTouched] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const from = location.state?.from || "/";
+  // After a join we go to the one question, not straight to the app. The
+  // redirect below would otherwise race us there.
+  const justJoined = useRef(false);
 
   useEffect(() => {
-    if (token) navigate(from, { replace: true });
+    if (token && !justJoined.current) navigate(from, { replace: true });
   }, [token, from, navigate]);
 
   const set = (k) => (e) => {
     const v = e.target.value;
-    setForm((f) => {
-      const next = { ...f, [k]: v };
-      if (k === "business_name" && !handleTouched) next.vendor_handle = slugify(v);
-      return next;
-    });
+    setForm((f) => ({ ...f, [k]: v }));
   };
 
   const selectAccountKind = (kindValue) => {
@@ -106,25 +103,32 @@ export default function AuthPage() {
         await login(form.identifier.trim(), form.password);
         toast.success("Welcome back");
       } else {
-        if (!/^[a-z0-9_]{3,30}$/.test(form.vendor_handle)) return toast.error("Handle: 3–30 lowercase letters, numbers or _");
         if (form.password.length < 8) return toast.error("Password needs at least 8 characters");
         if (!/[A-Z]/.test(form.password) || !/[0-9]/.test(form.password))
           return toast.error("Password needs one uppercase letter and one number");
         const cleanName = form.business_name.trim();
+        if (!cleanName) return toast.error("Tell us what to call you");
+        // The page address is derived, not asked for. A handle is a URL; the
+        // person is not made to invent one before they have seen the product.
+        const base = slugify(cleanName).slice(0, 22) || "page";
+        const suffix = Math.random().toString(36).slice(2, 5);
+        const handle = `${base}_${suffix}`.slice(0, 30);
         await register({
-          account_kind: form.account_kind,
+          account_kind: "person",
           display_name: cleanName,
           business_name: cleanName,
-          vendor_handle: form.vendor_handle,
+          vendor_handle: handle,
           email: form.email.trim(),
           password: form.password,
           phone: form.phone.trim() || null,
-          business_categories: splitList(form.categories),
-          physical_location: form.physical_location.trim() || null,
-          business_description: form.business_description.trim() || null,
+          business_categories: [],
+          physical_location: null,
+          business_description: null,
           hide_exact_location: Boolean(form.hide_exact_location),
         });
-        toast.success(`@${form.vendor_handle} is ready`);
+        justJoined.current = true;
+        navigate("/start", { replace: true });
+        toast.success("You're in. One question next.");
       }
     } catch (err) {
       toast.error(apiError(err, mode === "login" ? "Couldn't sign in" : "Couldn't register"));
@@ -185,7 +189,7 @@ export default function AuthPage() {
         </div>
 
         <p className="relative text-micro text-ink-4">
-          People · households · artisans · institutions · businesses · {new Date().getFullYear()}
+          People · institutions · regions · {new Date().getFullYear()}
         </p>
       </section>
 
@@ -231,12 +235,12 @@ export default function AuthPage() {
             <h2 className="text-xl font-bold text-ink-1 tracking-tight">
               {mode === "login"
                 ? "Enter the network"
-                : "Join as a neighbour, household, artisan — or register your business"}
+                : "Join the network"}
             </h2>
             <p className="text-2xs text-ink-3 mt-1 mb-6">
               {mode === "login"
                 ? "Use your email or @handle."
-                : "No storefront required. Pick how you're joining — you can add optional shop tools anytime."}
+                : "One account, open to everyone. No category to pick and no shop to open."}
             </p>
 
             <form onSubmit={submit} className="space-y-4">
@@ -247,61 +251,20 @@ export default function AuthPage() {
                 </>
               ) : (
                 <>
-                  {/* Inclusive participation kind selector — defaults to `person` */}
-                  <div className="space-y-1.5">
-                    <p className="text-xs font-semibold text-ink-2">Joining as</p>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5" role="radiogroup" aria-label="Account kind">
-                      {ACCOUNT_KINDS.map((kind) => {
-                        const Icon = KIND_ICONS[kind.value] || UserRound;
-                        const active = form.account_kind === kind.value;
-                        return (
-                          <button
-                            key={kind.value}
-                            type="button"
-                            role="radio"
-                            aria-checked={active}
-                            data-testid={`account-kind-${kind.value}`}
-                            onClick={() => selectAccountKind(kind.value)}
-                            className={cn(
-                              "flex items-center gap-1.5 rounded-xl border px-2.5 py-2 text-left text-2xs font-semibold transition-colors",
-                              active
-                                ? "border-brand-500 bg-brand-50 text-brand-800 dark:bg-brand-500/15 dark:text-brand-200"
-                                : "border-edge-1 bg-surface-1 text-ink-3 hover:border-edge-2"
-                            )}
-                          >
-                            <Icon size={13} className="shrink-0" aria-hidden="true" />
-                            <span className="truncate">{kind.label}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                    <p className="text-micro text-ink-4" data-testid="account-kind-hint">
-                      {selectedKind.hint}
-                    </p>
-                  </div>
-
+                  {/* No category, no role, no shop. A person joins as a person;
+                      why they are here is the next screen and can change. */}
                   <Input
-                    label="Your name, household, or business name"
-                    icon={KIND_ICONS[form.account_kind] || UserRound}
+                    label="Your name"
+                    icon={UserRound}
                     required
                     autoFocus
                     value={form.business_name}
                     onChange={set("business_name")}
-                    placeholder={namePlaceholder}
-                  />
-                  <Input
-                    label="Handle"
-                    prefix="@"
-                    required
-                    value={form.vendor_handle}
-                    onChange={(e) => {
-                      setHandleTouched(true);
-                      setForm((f) => ({ ...f, vendor_handle: slugify(e.target.value) }));
-                    }}
-                    className="font-mono"
-                    hint="How neighbours address you. Lowercase letters, numbers and underscores."
+                    placeholder="e.g. Wanjiku Mwangi"
+                    autoComplete="name"
                   />
                   <Input label="Email" icon={Mail} type="email" required autoComplete="email" value={form.email} onChange={set("email")} />
+                  <Input label="Phone (optional)" icon={Phone} type="tel" autoComplete="tel" value={form.phone} onChange={set("phone")} placeholder="+2547…" />
                   <Input label="Password" icon={Lock} type="password" required autoComplete="new-password" minLength={8} value={form.password} onChange={set("password")} hint="At least 8 characters, with one uppercase letter and one number" />
 
                   <label className="flex items-start gap-2.5 rounded-xl border border-edge-1 bg-surface-1 p-3 cursor-pointer">
@@ -313,39 +276,15 @@ export default function AuthPage() {
                       className="mt-0.5 h-4 w-4 rounded border-edge-2 text-brand-600 focus:ring-brand-500"
                     />
                     <span className="text-2xs leading-relaxed text-ink-3">
-                      <strong className="font-semibold text-ink-1">Keep my exact home location private</strong> — show only my general neighbourhood publicly and share gate directions solely during an agreed booking.
+                      <strong className="font-semibold text-ink-1">Keep my exact location private</strong> — show only my region publicly, and share directions only during an agreed booking.
                     </span>
                   </label>
 
-                  {/* Optional neighbourhood & optional storefront details */}
-                  <div className="rounded-xl border border-edge-1 overflow-hidden">
-                    <button
-                      type="button"
-                      onClick={() => setMoreOpen((v) => !v)}
-                      aria-expanded={moreOpen}
-                      className="w-full flex items-center justify-between gap-3 px-3.5 py-3 text-left hover:bg-surface-1 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50"
-                    >
-                      <span className="min-w-0">
-                        <span className="block text-2xs font-bold text-ink-1">
-                          Neighbourhood, skills, or optional shop details
-                        </span>
-                        <span className="block text-micro text-ink-4">
-                          Optional — helps match nearby activities and trusted neighbours.
-                        </span>
-                      </span>
-                      <ChevronDown size={16} className={cn("text-ink-4 shrink-0 transition-transform duration-1", moreOpen && "rotate-180")} aria-hidden="true" />
-                    </button>
-                    {moreOpen && (
-                      <div className="px-3.5 pb-3.5 pt-1 space-y-3 border-t border-edge-1">
-                        <div className="grid sm:grid-cols-2 gap-3">
-                          <Input label="Neighbourhood / town" icon={MapPin} value={form.physical_location} onChange={set("physical_location")} placeholder="Kisii, Muthaiga, Kondele…" />
-                          <Input label="Skills or interests" value={form.categories} onChange={set("categories")} placeholder="repairs, fodder, cobbler" hint="Comma separated" />
-                        </div>
-                        <Input label="Phone" icon={Phone} value={form.phone} onChange={set("phone")} placeholder="+2547…" />
-                        <Textarea label="Short note (optional)" rows={2} value={form.business_description} onChange={set("business_description")} />
-                      </div>
-                    )}
-                  </div>
+                  <p className="rounded-xl bg-surface-2 px-3 py-2 text-micro leading-relaxed text-ink-3">
+                    Nothing is selected for you. After this you tell us why you
+                    joined — looking, offering, or representing an institution —
+                    and you can change it any month.
+                  </p>
                 </>
               )}
 

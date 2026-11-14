@@ -11,7 +11,7 @@ import { PageSpinner } from "@/components/ui/Spinner";
 import { useUIStore } from "@/stores/uiStore";
 
 /**
- * The app frame: a sticky marketplace header, a scrolling document body, a
+ * The app frame: a sticky network header, a scrolling document body, a
  * thumb-reachable primary tabs on phones, and one secondary drawer carrying
  * the long tail of the information architecture.
  *
@@ -68,8 +68,8 @@ export default function Shell() {
         side="left"
         width="max-w-xs"
         className="!p-0"
-        title="More sections"
-        description="Community and business tools"
+        title="More"
+        description="The places you open from a standing start"
       >
         <div className="-m-5 h-[calc(100%+2.5rem)]">
           <SidebarContent onNavigate={() => setSections(false)} />
@@ -77,10 +77,9 @@ export default function Shell() {
       </Drawer>
 
       {/* `OnboardingFlow` used to render here on every screen, opening itself
-          until a *business profile* was complete. That was shelf-specific
-          onboarding: you had to set up a shop before the app was usable. It is
-          now reachable from Profile, and the only first-run prompt is the
-          location card on Home (`components/home/LocationPrompt`). */}
+          until a *business profile* was complete. Joining now ends at /start,
+          outside this shell, where a person states why they came and what they
+          do today. Nothing about the app is gated on a shop. */}
       <ConfirmDialog />
     </div>
   );

@@ -2,7 +2,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 
-// Each case re-imports the config so the flag is read from the stubbed environment.
 async function load(env = {}) {
   vi.unstubAllEnvs();
   vi.resetModules();
@@ -12,81 +11,59 @@ async function load(env = {}) {
 
 afterEach(() => vi.unstubAllEnvs());
 
-describe("five-tab navigation (flagged, Phase 2)", () => {
-  it("is off by default: the tabs are exactly the current five", async () => {
-    const nav = await load();
-    expect(nav.PRIMARY_TABS).toBe(nav.PRIMARY_NAV);
-    expect(nav.PRIMARY_TABS.map((t) => t.label))
-      .toEqual(["Home", "Local network", "Mall", "Connect", "My World"]);
-  });
-
-  it("with the flag on: Desk, Nearby, Mail, Search, Me, in that order", async () => {
-    const nav = await load({ VITE_FIVE_TAB_NAV_ENABLED: "true" });
-    expect(nav.PRIMARY_TABS.map((t) => t.label)).toEqual(["Desk", "Nearby", "Mail", "Search", "Me"]);
-    expect(nav.PRIMARY_TABS.map((t) => t.to)).toEqual(["/", "/explore", "/activity", "/search", "/me"]);
-  });
-
-  it("Desk goes to /desk only when the desk screen is on, so the tab is never dead", async () => {
-    const off = await load({ VITE_FIVE_TAB_NAV_ENABLED: "true" });
-    expect(off.PRIMARY_TABS[0].to).toBe("/");
-    const on = await load({ VITE_FIVE_TAB_NAV_ENABLED: "true", VITE_DESK_ENABLED: "true" });
-    expect(on.PRIMARY_TABS[0].to).toBe("/desk");
-  });
-
-  it("Nearby and Search never both light up on /search", async () => {
-    const nav = await load({ VITE_FIVE_TAB_NAV_ENABLED: "true" });
-    const active = (p) => nav.PRIMARY_TABS.filter((t) => nav.isPrimaryActive(t, p, "someone")).map((t) => t.label);
-    expect(active("/search")).toEqual(["Search"]);
-    expect(active("/search/people")).toEqual(["Search"]);
-    expect(active("/explore")).toEqual(["Nearby"]);
-    expect(active("/map")).toEqual(["Nearby"]);
-    expect(active("/activity")).toEqual(["Mail"]);
-    expect(active("/orders/123")).toEqual(["Mail"]);
-    expect(active("/me")).toEqual(["Me"]);
-    expect(active("/@someone")).toEqual(["Me"]);
-  });
-
-  it("Mall is not a tab in this shape, but stays in the drawer", async () => {
-    const on = await load({ VITE_FIVE_TAB_NAV_ENABLED: "true" });
-    expect(on.PRIMARY_TABS.map((t) => t.label)).not.toContain("Mall");
-    const drawer = on.SECTION_GROUPS.flatMap((g) => g.items.map((i) => i.to));
-    expect(drawer).toContain("/mall");
+/**
+ * There used to be two tab shapes behind VITE_FIVE_TAB_NAV_ENABLED, and the
+ * tests pinned both. The redesign removes the flag: one shape, five
+ * destinations, and the old names now describe a product that no longer exists.
+ * These tests pin the shape and the fact that flags cannot change it.
+ */
+describe("five destinations, one shape", () => {
+  it("is the same five whether or not old flags are set", async () => {
     const off = await load();
-    const offDrawer = off.SECTION_GROUPS.flatMap((g) => g.items.map((i) => i.to));
-    expect(offDrawer).not.toContain("/mall");
+    const on = await load({ VITE_FIVE_TAB_NAV_ENABLED: "true", VITE_DESK_ENABLED: "true" });
+    expect(off.PRIMARY_TABS.map((t) => t.label)).toEqual(["Home", "Regions", "Create", "Inbox", "You"]);
+    expect(on.PRIMARY_TABS.map((t) => t.label)).toEqual(off.PRIMARY_TABS.map((t) => t.label));
+    expect(on.PRIMARY_TABS.map((t) => t.to)).toEqual(off.PRIMARY_TABS.map((t) => t.to));
+  });
+
+  it("does not move the Home tab when the old Brief landing flag is on", async () => {
+    const nav = await load({ VITE_BRIEF_LANDING_ENABLED: "true" });
+    expect(nav.PRIMARY_TABS[0]).toMatchObject({ to: "/", label: "Home" });
+  });
+
+  it("lights exactly one tab per path", async () => {
+    const nav = await load();
+    const active = (p) => nav.PRIMARY_TABS.filter((t) => nav.isPrimaryActive(t, p, "someone")).map((t) => t.label);
+
+    expect(active("/")).toEqual(["Home"]);
+    expect(active("/home")).toEqual(["Home"]);
+    expect(active("/regions")).toEqual(["Regions"]);
+    expect(active("/regions/nyanza")).toEqual(["Regions"]);
+    expect(active("/markets")).toEqual(["Regions"]);
+    expect(active("/mall")).toEqual(["Regions"]);
+    expect(active("/create")).toEqual(["Create"]);
+    expect(active("/inbox")).toEqual(["Inbox"]);
+    expect(active("/orders/123")).toEqual(["Inbox"]);
+    expect(active("/chat")).toEqual(["Inbox"]);
+    expect(active("/you")).toEqual(["You"]);
+    expect(active("/@someone")).toEqual(["You"]);
+    expect(active("/more")).toEqual(["You"]);
   });
 
   it("every tab target has a real route in App.jsx (no dead tabs)", async () => {
     const app = fs.readFileSync(path.resolve("src/App.jsx"), "utf8");
-    const nav = await load({ VITE_FIVE_TAB_NAV_ENABLED: "true", VITE_DESK_ENABLED: "true" });
+    const nav = await load();
     for (const tab of nav.PRIMARY_TABS) {
       const route = tab.to === "/" ? 'path="/" element' : `path="${tab.to}"`;
       expect(app.includes(route), `no route for ${tab.label} (${tab.to})`).toBe(true);
     }
   });
-});
 
-describe("Mail tab (flagged, consolidated Mail)", () => {
-  it("with the five tabs on but Mail off, Mail still goes to Connect and keeps its badge", async () => {
-    const nav = await load({ VITE_FIVE_TAB_NAV_ENABLED: "true" });
-    const mail = nav.PRIMARY_TABS.find((t) => t.label === "Mail");
-    expect(mail.to).toBe("/activity");
-    expect(mail.badge).toBe("activity");
-  });
-
-  it("with Mail on, the tab goes to /mail with no notification badge", async () => {
-    const nav = await load({ VITE_FIVE_TAB_NAV_ENABLED: "true", VITE_MAIL_ENABLED: "true" });
-    const mail = nav.PRIMARY_TABS.find((t) => t.label === "Mail");
-    expect(mail.to).toBe("/mail");
-    expect(mail.badge).toBeUndefined();
-  });
-
-  it("with Mail on, the tab lights for /mail and chat threads, not for the bell", async () => {
-    const nav = await load({ VITE_FIVE_TAB_NAV_ENABLED: "true", VITE_MAIL_ENABLED: "true" });
-    const active = (p) => nav.PRIMARY_TABS.filter((t) => nav.isPrimaryActive(t, p, "someone")).map((t) => t.label);
-    expect(active("/mail")).toEqual(["Mail"]);
-    expect(active("/chat")).toEqual(["Mail"]);
-    expect(active("/chat/x")).toEqual(["Mail"]);
-    expect(active("/activity")).toEqual([]);
+  it("keeps the Mail screen reachable when flagged, without a tab of its own", async () => {
+    const nav = await load({ VITE_MAIL_ENABLED: "true" });
+    expect(nav.PRIMARY_TABS.map((t) => t.label)).not.toContain("Mail");
+    // /mail still lights Inbox, because that is where a message waits now.
+    const inbox = nav.PRIMARY_TABS.find((t) => t.label === "Inbox");
+    expect(nav.isPrimaryActive(inbox, "/mail")).toBe(true);
   });
 });

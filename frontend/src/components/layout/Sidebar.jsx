@@ -1,15 +1,18 @@
 import { NavLink } from "react-router-dom";
-import { BarChart3, ListChecks, Terminal } from "lucide-react";
+import { BarChart3, ChevronRight, ListChecks, Terminal } from "lucide-react";
+import Avatar from "@/components/ui/Avatar";
 import { useAuthStore } from "@/stores/authStore";
+import { useIdentityStore } from "@/stores/identityStore";
 import { LogoMark } from "./Logo";
 import { SECTION_GROUPS } from "@/config/navigation";
 import { useUIStore } from "@/stores/uiStore";
+import { rankFor } from "@/config/identity";
 import { cn } from "@/lib/utils";
 import { BRAND } from "@/config/brand";
 
 // Kept as a small exported inventory for tests and other tooling.
 export const NAV = SECTION_GROUPS.flatMap((group) => group.items);
-// Retained as a non-rendered compatibility inventory; these now live in Me.
+// Retained as a non-rendered compatibility inventory; these now live in You.
 export const NAV_BRIEF = [
   { to: "/tasks", label: "Tasks & Brief", icon: ListChecks },
   { to: "/analytics", label: "Analytics", icon: BarChart3 },
@@ -18,65 +21,81 @@ export const NAV_BRIEF = [
 
 const linkCls = ({ isActive }) =>
   cn(
-    "group flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-colors",
+    "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold transition-colors",
     isActive
       ? "bg-brand-50 text-brand-800 dark:bg-brand-500/15 dark:text-brand-300"
-      : "text-ink-2 hover:text-ink-1 hover:bg-surface-2"
+      : "text-ink-2 hover:bg-surface-2 hover:text-ink-1",
   );
 
 /**
- * Secondary routes only: no Home, primary tabs, or operating-mode controls.
+ * MORE — seven rows, not thirty-five.
  *
- * The drawer is grouped, not expandable: three headings and a list of
- * destinations. Collapsing groups would hide links behind a second tap on the
- * screen people open specifically to find a link — the opposite of the point.
+ * The drawer used to be an alphabetical-ish dump of every route the app owned:
+ * Groups, Events, Markets, Find suppliers, Our network, Surfaces, My shelf, Shop
+ * front, Orders, Analytics, Business desk, Passport, Growth, Membership, Group
+ * orders, Calendar, Home office, Today, Learn, Templates, Receipts, Rentals,
+ * Tasks, Lists, Locks, POS, Ops, Enquiries, Market data, Intake…
+ *
+ * Most of those were the same page twice, and the rest were settings. What
+ * remains is the places a person opens from a standing start. The identity card
+ * at the top is the drawer's real job: reminding you which page you are on and
+ * what it is called.
  */
 export function SidebarContent({ onNavigate }) {
   const vendor = useAuthStore((s) => s.vendor);
-  const resolve = (item) =>
-    item.dynamic === "shop" && vendor?.vendor_handle ? `/@${vendor.vendor_handle}` : item.to;
+  const identity = useIdentityStore();
+  const rank = rankFor({ vendor, identity });
 
   return (
-    <div className="flex flex-col h-full bg-surface-0">
-      <div className="px-5 py-5 border-b border-edge-1 bg-surface-1">
+    <div className="flex h-full flex-col bg-surface-1">
+      <div className="border-b border-edge-1 bg-surface-0 px-5 py-4">
         <div className="flex items-center gap-3">
-          <LogoMark size={32} />
-          <div>
-            <p className="text-sm font-bold text-ink-1">More from {BRAND.name}</p>
-            <p className="text-2xs text-ink-4">Community and supporting tools</p>
+          <LogoMark size={30} />
+          <div className="min-w-0">
+            <p className="truncate text-sm font-extrabold tracking-tight text-ink-1">{BRAND.name}</p>
+            <p className="text-2xs text-ink-4">Everything else, in one place</p>
           </div>
         </div>
       </div>
 
-      <nav id="secondary-sections" className="flex-1 px-3 pb-5 overflow-y-auto" aria-label="More sections">
+      {vendor && (
+        <div className="flex items-center gap-3 border-b border-edge-1 px-4 py-3">
+          <Avatar name={vendor.business_name} src={vendor.avatar_url || vendor.logo_url} size="md" />
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-xs font-bold text-ink-1">{vendor.business_name}</span>
+            <span className="block truncate font-mono text-micro text-ink-4">/p/{vendor.vendor_handle}</span>
+          </span>
+          <span className="shrink-0 rounded-full border border-edge-1 bg-surface-1 px-2 py-0.5 text-micro font-bold text-ink-3">
+            {rank.label}
+          </span>
+        </div>
+      )}
+
+      <nav id="secondary-sections" className="flex-1 overflow-y-auto px-3 pb-4" aria-label="More">
         {SECTION_GROUPS.map((group) => (
-          <section key={group.title} aria-labelledby={`more-${group.title.toLowerCase().replaceAll(" ", "-")}`}>
-            <h2
-              id={`more-${group.title.toLowerCase().replaceAll(" ", "-")}`}
-              className="px-3 pt-5 pb-1.5 text-micro uppercase tracking-[0.12em] text-ink-4 font-bold"
-            >
+          <section key={group.title}>
+            <h2 className="px-3 pb-1 pt-4 text-micro font-bold uppercase tracking-[0.12em] text-ink-4">
               {group.title}
             </h2>
             <div className="space-y-0.5">
-              {group.items.map(({ to, label, icon: Icon, quiet, dynamic }) => (
-                <NavLink
-                  key={label}
-                  to={resolve({ to, dynamic })}
-                  onClick={onNavigate}
-                  className={(state) => cn(linkCls(state), quiet && "text-ink-4")}
-                >
+              {group.items.map(({ to, label, icon: Icon }) => (
+                <NavLink key={label} to={to} onClick={onNavigate} className={linkCls}>
                   <Icon size={17} className="shrink-0" aria-hidden="true" />
                   <span className="flex-1">{label}</span>
-                  {quiet && <span className="text-micro font-medium">admin</span>}
+                  <ChevronRight size={14} className="shrink-0 text-ink-4 opacity-0 transition-opacity group-hover:opacity-100" aria-hidden="true" />
                 </NavLink>
               ))}
             </div>
           </section>
         ))}
+
       </nav>
 
-      <div className="px-5 py-3 border-t border-edge-1">
-        <p className="text-2xs text-ink-4">Your main destinations stay in the five-tab navigation.</p>
+      <div className="border-t border-edge-1 px-5 py-3">
+        <p className="text-micro leading-relaxed text-ink-4">
+          The five daily destinations — Home, Regions, Create, Inbox, You — stay
+          on the bar. This drawer is for everything else.
+        </p>
       </div>
     </div>
   );

@@ -49,16 +49,17 @@ const Button = forwardRef(function Button(
     children,
     disabled,
     type = "button",
+    as: Tag = "button",
     ...rest
   },
   ref
 ) {
   const iconSize = ICON[size] ?? 16;
+  const isButton = Tag === "button";
   return (
-    <button
+    <Tag
       ref={ref}
-      type={type}
-      disabled={disabled || loading}
+      {...(isButton ? { type, disabled: disabled || loading } : {})}
       aria-busy={loading || undefined}
       className={cn(
         "inline-flex items-center justify-center font-semibold whitespace-nowrap select-none",
@@ -78,7 +79,7 @@ const Button = forwardRef(function Button(
       ) : null}
       {children}
       {IconRight && !loading ? <IconRight size={iconSize} className="shrink-0" aria-hidden="true" /> : null}
-    </button>
+    </Tag>
   );
 });
 

@@ -1022,6 +1022,22 @@ export const trustAPI = {
   moderateReview: (id, data) => api.post(`/trust/admin/reviews/${id}/moderation`, data),
 };
 
+// ── Identity: why you joined, what you can do, and who has checked it ──────
+// The account is a person. Capabilities are changeable; claims of institution
+// or licence are only marked verified by a check, never by the account itself.
+export const identityAPI = {
+  me: () => api.get("/identity/me"),
+  save: (body) => api.put("/identity/me", body), // { intent, capabilities, contact }
+  claimAffiliation: (body) => api.post("/identity/affiliations", body),
+  confirmAffiliation: (id, code) => api.post(`/identity/affiliations/${id}/confirm`, { code }),
+  claimLicence: (body) => api.post("/identity/licences", body),
+  // Operator side: the queue of claims waiting for a person to check them.
+  opsClaims: () => api.get("/identity/ops/claims"),
+  opsVerifyAffiliation: (id, body) => api.post(`/identity/ops/affiliations/${id}/verify`, body || {}),
+  opsVerifyLicence: (id, body) => api.post(`/identity/ops/licences/${id}/verify`, body || {}),
+  opsReject: (kind, id, reason) => api.post(`/identity/ops/${kind}/${id}/reject`, { reason }),
+};
+
 // ── Home office: a solo profile first, then team members by link or invite ──
 // Nobody is added without agreeing. Links are single-use and expire in seven days.
 export const officeAPI = {
