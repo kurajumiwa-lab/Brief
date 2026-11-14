@@ -1,14 +1,13 @@
 import { useEffect, useState, lazy, Fragment } from "react";
-import { Routes, Route, Navigate, useLocation, useSearchParams } from "react-router-dom";
+import { Routes, Route, Navigate, Link, useLocation } from "react-router-dom";
 import Shell from "@/components/layout/Shell";
 import { PageSpinner } from "@/components/ui/Spinner";
 import BootSplash from "@/components/system/BootSplash";
 import Button from "@/components/ui/Button";
 import AuthPage from "@/pages/auth/AuthPage";
-import HomeHub from "@/pages/home/HomeHub";
+import PreviewPage from "@/pages/preview/PreviewPage";
 import NearbyPage from "@/pages/nearby/NearbyPage";
 import PlaceProfile from "@/pages/nearby/PlaceProfile";
-import MarketDetail from "@/pages/markets/MarketDetail";
 import TaskTrack from "@/pages/tasks/TaskTrack";
 import BusinessDeskPage from "@/pages/storefront/BusinessDeskPage";
 import CreatePage from "@/pages/create/CreatePage";
@@ -35,15 +34,31 @@ import OfficePage from "@/pages/office/OfficePage";
 import LearnPage from "@/pages/learn/LearnPage";
 import LearnDetailPage from "@/pages/learn/LearnDetailPage";
 import LearnNewPage from "@/pages/learn/LearnNewPage";
-import TodayPage from "@/pages/today/TodayPage";
+import DayPage from "@/pages/today/TodayPage";
 import DeskPage from "@/pages/desk/DeskPage";
 import MailPage from "@/pages/mail/MailPage";
-import { BRIEF_LANDING_ENABLED, DESK_ENABLED, INTEGRATIONS_ENABLED, MAIL_ENABLED, NEARBY_DOORS_ENABLED } from "@/config/flags";
+import { DESK_ENABLED, INTEGRATIONS_ENABLED, MAIL_ENABLED, NEARBY_DOORS_ENABLED } from "@/config/flags";
 import FrontDoorsPage from "@/pages/nearby/FrontDoorsPage";
 import BlueprintsPage from "@/pages/templates/BlueprintsPage";
 import BlueprintDetailPage from "@/pages/templates/BlueprintDetailPage";
 import ReceiptsPage from "@/pages/payments/ReceiptsPage";
 import { useAuthStore } from "@/stores/authStore";
+import { useIdentityStore } from "@/stores/identityStore";
+import { canSellGoods } from "@/config/identity";
+
+// The five destinations. Today is the landing page; the rest are lazy like
+// everything else. The old home, Me and Activity screens stay in the tree as
+// deep links, but no navigation points at them.
+const TodayPage = lazy(() => import("@/pages/home/TodayPage"));
+const RegionsPage = lazy(() => import("@/pages/regions/RegionsPage"));
+const RegionPage = lazy(() => import("@/pages/regions/RegionPage"));
+const PortfolioPage = lazy(() => import("@/pages/you/PortfolioPage"));
+const YouPage = lazy(() => import("@/pages/you/YouPage"));
+const IdentityPage = lazy(() => import("@/pages/you/IdentityPage"));
+const RankPage = lazy(() => import("@/pages/you/RankPage"));
+const StartPage = lazy(() => import("@/pages/start/StartPage"));
+const InboxPage = lazy(() => import("@/pages/inbox/InboxPage"));
+const MorePage = lazy(() => import("@/pages/more/MorePage"));
 
 // Every page is lazy. The home screen downloads only what it renders —
 // Leaflet (map), chat, analytics, ops and the rest split into chunks fetched
@@ -56,9 +71,6 @@ const BrowsePage = lazy(() => import("@/pages/browse/BrowsePage"));
 // (`npm run build`, index 327.90 kB vs 313.56 kB lazy). If first paint ever
 // needs those kilobytes back, making it lazy is a one-line change and the
 // Suspense fallback in Shell already handles it.
-const ExplorePage = lazy(() => import("@/pages/explore/ExplorePage"));
-// The Mall (P1): verified businesses only. See pages/mall/Mall.jsx.
-const MallPage = lazy(() => import("@/pages/mall/Mall"));
 const CommunityPage = lazy(() => import("@/pages/community/CommunityPage"));
 const ParksPage = lazy(() =>
   import("@/pages/parks/ParksPage").then((m) => ({ default: m.ParksPage }))
@@ -79,8 +91,6 @@ const SearchHub = lazy(() => import("@/pages/search/SearchHub"));
 const MapPage = lazy(() => import("@/pages/map/MapPage"));
 const News = lazy(() => import("@/pages/news/News"));
 const TasksPortal = lazy(() => import("@/pages/tasks/TasksPortal"));
-const MarketsPage = lazy(() => import("@/pages/markets/MarketsPage"));
-const MePage = lazy(() => import("@/pages/me/MePage"));
 const PassportPage = lazy(() => import("@/pages/standing/PassportPage"));
 const GrowthPlannerPage = lazy(() => import("@/pages/growth/GrowthPlannerPage"));
 const EnterprisePage = lazy(() => import("@/pages/enterprise/EnterprisePage"));
@@ -97,7 +107,6 @@ const EventHubPage = lazy(() => import("@/pages/events/EventHubPage"));
 const POSBridge = lazy(() => import("@/pages/pos/POSBridge"));
 const Analytics = lazy(() => import("@/pages/analytics/Analytics"));
 const Ops = lazy(() => import("@/pages/ops/Ops"));
-const VendorProfile = lazy(() => import("@/pages/vendor/VendorProfile"));
 // Operator-only: kept out of the bundle a customer downloads.
 const EnquiryInboxPage = lazy(() => import("@/pages/storefront/EnquiryInboxPage"));
 // Operator-only intake desk: photographs of public advertising become market
@@ -140,22 +149,36 @@ function RequireVendor({ children }) {
 }
 
 /**
- * v3 promoted two tabs of the Stock Room into destinations of their own
- * (/browse and /orders). Every v2 URL still resolves — a link in someone's
- * WhatsApp thread from last month must still land on the right screen.
+ * Stock is not a universal screen any more. It appears when the person has said
+ * they sell goods — or when the account already holds stock, so nobody with a
+ * live shelf is locked out by a preference they never set.
  */
-function StockRoomRouter() {
-  const [params] = useSearchParams();
-  const tab = params.get("tab");
-  if (tab === "network") {
-    const next = new URLSearchParams(params);
-    next.delete("tab");
-    return <Navigate to={`/browse${next.toString() ? `?${next}` : ""}`} replace />;
-  }
-  if (tab === "movements") {
-    const next = new URLSearchParams(params);
-    next.delete("tab");
-    return <Navigate to={`/orders${next.toString() ? `?${next}` : ""}`} replace />;
+function StockRoute() {
+  const vendor = useAuthStore((s) => s.vendor);
+  const identity = useIdentityStore();
+  const loaded = identity.loaded;
+  const declared = identity.intent !== null || identity.capabilities.length > 0;
+  const allowed =
+    !loaded ||
+    !declared ||
+    canSellGoods(identity) ||
+    Boolean(vendor?.has_stock) ||
+    Number(vendor?.total_stock_moved || 0) > 0;
+
+  if (!allowed) {
+    return (
+      <div className="mx-auto max-w-md rounded-3xl border border-edge-1 bg-surface-1 p-6 text-center">
+        <h1 className="text-lg font-extrabold text-ink-1">Stock is off</h1>
+        <p className="mt-2 text-sm leading-relaxed text-ink-3">
+          You have not said you sell goods, so there is no shelf to manage. If
+          that changes, turn it on and the shelf appears — nothing was deleted.
+        </p>
+        <div className="mt-4 flex justify-center gap-2">
+          <Button as={Link} to="/you" size="sm">Open You</Button>
+          <Button as={Link} to="/create" size="sm" variant="secondary">Publish instead</Button>
+        </div>
+      </div>
+    );
   }
   return <StockRoom />;
 }
@@ -184,6 +207,8 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/auth" element={<AuthPage />} />
+      {/* Dev-only living spec for the redesign. See pages/preview/PreviewPage. */}
+      <Route path="/preview" element={<PreviewPage />} />
       {/* Public storefront (v2.14): catalogue, tiers, trial — readable without
           an account; enquiring attaches to a vendor @handle. */}
       <Route path="/storefront" element={<BusinessDeskPage />} />
@@ -208,6 +233,16 @@ function AppRoutes() {
       {/* Operator side of the market dataset: read photographs, confirm prices. */}
       <Route path="/intake" element={<MarketIntakePage />} />
       <Route path="/market-data" element={<MarketDataPage />} />
+      {/* The post-join question. Outside the shell on purpose: no tabs, no
+          drawer, no shelves — one answer and then the app. */}
+      <Route
+        path="/start"
+        element={
+          <RequireVendor>
+            <StartPage />
+          </RequireVendor>
+        }
+      />
       <Route
         element={
           <RequireVendor>
@@ -224,8 +259,20 @@ function AppRoutes() {
               (/orders, /tasks, /locks, /tools) under Work; business routes
               under /me. Nothing was deleted — only duplicated navigation. */}
           {/* Phase 10: the Morning Brief is the landing page when flagged; Home stays at /home. */}
-          <Route path="/" element={BRIEF_LANDING_ENABLED ? <MorningBriefPage /> : <HomeHub />} />
-          <Route path="/home" element={<HomeHub />} />
+          {/* ── The five destinations ─────────────────────────────────── */}
+          <Route path="/" element={<TodayPage />} />
+          <Route path="/home" element={<TodayPage />} />
+          <Route path="/regions" element={<RegionsPage />} />
+          <Route path="/regions/:slug" element={<RegionPage />} />
+          <Route path="/inbox" element={<InboxPage />} />
+          <Route path="/you" element={<YouPage />} />
+          <Route path="/you/page" element={<PageEditor />} />
+          <Route path="/you/identity" element={<IdentityPage />} />
+          <Route path="/you/rank" element={<RankPage />} />
+          <Route path="/more" element={<MorePage />} />
+          <Route path="/p/:handle" element={<PortfolioPage />} />
+          {/* Old address for the same page. A handle is a URL, not a product. */}
+          <Route path="/you/settings" element={<Navigate to="/more" replace />} />
           {/* v2.15 — the read-only brief, and the trust/data-rights surface */}
           <Route path="/brief" element={<MorningBriefPage />} />
           <Route path="/legal" element={<LegalPage />} />
@@ -241,7 +288,7 @@ function AppRoutes() {
           <Route path="/my-page" element={<PageEditor />} />
           {INTEGRATIONS_ENABLED && <Route path="/integrations" element={<IntegrationsPage />} />}
           <Route path="/learn/new" element={<LearnNewPage />} />
-          <Route path="/today" element={<TodayPage />} />
+          <Route path="/today" element={<DayPage />} />
           {/* Flagged: off unless VITE_DESK_ENABLED=true. A false child is skipped by Routes. */}
           {DESK_ENABLED && <Route path="/desk" element={<DeskPage />} />}
           {/* Flagged: off unless VITE_MAIL_ENABLED=true. */}
@@ -254,8 +301,6 @@ function AppRoutes() {
               Explore absorbs Browse's discovery surfaces; Activity absorbs
               Work and Inbox. Every older URL below still resolves and still
               highlights the right tab (see config/navigation.js areas). */}
-          <Route path="/explore" element={<ExplorePage />} />
-          <Route path="/mall" element={<MallPage />} />
           <Route path="/community" element={<CommunityPage />} />
           <Route path="/parks" element={<ParksPage />} />
           <Route path="/parks/:slug" element={<ParkDetailPage />} />
@@ -270,7 +315,7 @@ function AppRoutes() {
           <Route path="/orders/:id" element={<OrderDetailPage />} />
           <Route path="/work" element={<WorkPage />} />
           <Route path="/chat" element={<ChatPage />} />
-          <Route path="/stock" element={<StockRoomRouter />} />
+          <Route path="/stock" element={<StockRoute />} />
 
           {/* ── Browse and supporting discovery surfaces ──────────────── */}
           <Route path="/nearby" element={<NearbyPage />} />
@@ -282,8 +327,14 @@ function AppRoutes() {
           <Route path="/map" element={<MapPage />} />
           <Route path="/news" element={<News />} />
           <Route path="/news/:kind" element={<News />} />
-          <Route path="/markets" element={<MarketsPage />} />
-          <Route path="/markets/:id" element={<MarketDetail />} />
+          {/* Markets were retired in place of regions. The old addresses still
+              resolve so a WhatsApp link from last month lands somewhere useful. */}
+          <Route path="/markets" element={<Navigate to="/regions" replace />} />
+          <Route path="/markets/:id" element={<Navigate to="/regions" replace />} />
+          <Route path="/mall" element={<Navigate to="/regions" replace />} />
+          <Route path="/explore" element={<Navigate to="/regions" replace />} />
+          <Route path="/identity/ops" element={<Navigate to="/ops" replace />} />
+          <Route path="/inbox/:tab" element={<InboxPage />} />
           <Route path="/network" element={<Network />} />
           <Route path="/tools" element={<ToolsPage />} />
           <Route path="/groups" element={<Groups />} />
@@ -298,7 +349,7 @@ function AppRoutes() {
           <Route path="/tasks/:track" element={<TaskTrack />} />
 
           {/* ── Your business ─────────────────────────────────────────── */}
-          <Route path="/me" element={<MePage />} />
+          <Route path="/me" element={<Navigate to="/you" replace />} />
           {/* MarketTrust, signed in: my shops, till codes and points. Linked from /trust. */}
           <Route path="/trust/me" element={<TrustMePage />} />
           {/* MarketTrust check desk: Brief staff approve or reject shops. The API refuses everyone else. */}
@@ -322,7 +373,6 @@ function AppRoutes() {
               the enquiry inbox. LinkedIn-old links still land somewhere useful. */}
           <Route path="/portfolio" element={<Navigate to="/me" replace />} />
           <Route path="/studio" element={<Navigate to="/me" replace />} />
-          <Route path="/@:handle" element={<VendorProfile />} />
           <Route path="/:handle" element={<VendorHandleRoute />} />
 
           {/* ── v2 URLs that moved ────────────────────────────────────── */}
@@ -337,8 +387,11 @@ function AppRoutes() {
 
 function VendorHandleRoute() {
   const { pathname } = useLocation();
+  // /@handle is the old address for a page. It still resolves to the page,
+  // because a link in a WhatsApp thread must not break — but the page itself
+  // uses /p/handle and never presents the handle as the identity.
   if (pathname.startsWith("/@") && pathname.length > 2) {
-    return <VendorProfile />;
+    return <PortfolioPage />;
   }
   return <Navigate to="/" replace />;
 }

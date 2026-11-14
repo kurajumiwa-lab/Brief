@@ -335,22 +335,20 @@ describe("Local Activity Ledger — inference & API contract", () => {
 });
 
 describe("Inclusive signup", () => {
-  it("defaults to a person/household with exact location hidden and no compulsory business", async () => {
+  it("asks for a person, not a category, and hides the exact location by default", async () => {
     const AuthPage = (await import("@/pages/auth/AuthPage")).default;
     renderAt("/auth?mode=register", <AuthPage />);
 
     expect(
-      await screen.findByRole("heading", {
-        name: /Join as a neighbour, household, artisan/i,
-      }),
+      await screen.findByRole("heading", { name: /Join the network/i }),
     ).toBeInTheDocument();
-    expect(screen.getByTestId("account-kind-person")).toHaveAttribute("aria-checked", "true");
+    // The account-kind grid and the handle field were the preselected list.
+    // Neither is on the form any more.
+    expect(screen.queryByRole("radiogroup", { name: /account kind/i })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/^handle/i)).not.toBeInTheDocument();
     expect(screen.getByTestId("auth-hide-exact-location")).toBeChecked();
-    expect(screen.getByLabelText(/Your name, household, or business name/i)).toBeInTheDocument();
-
-    fireEvent.click(screen.getByTestId("account-kind-household"));
-    expect(screen.getByTestId("account-kind-household")).toHaveAttribute("aria-checked", "true");
-    expect(screen.getByTestId("account-kind-hint")).toHaveTextContent(/Homestead or family compound/i);
+    expect(screen.getByLabelText(/Your name/i)).toBeInTheDocument();
+    expect(screen.getByText(/Nothing is selected for you/i)).toBeInTheDocument();
   });
 });
 
