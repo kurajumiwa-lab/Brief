@@ -55,6 +55,9 @@ class VendorOut(BaseModel):
     is_patron: bool
     is_verified: bool
     connected: bool = False
+    # Published contact route. Only filled by the public page endpoint, and only
+    # when the owner has switched direct calls on. It is never part of a list.
+    contact_phone: Optional[str] = None
     # v2.6 halal-trade: 'halal_sharia' vendors are gated out of interest products
     finance_mode: str = "conventional"
     # v2.12 plan & server-side entitlements
@@ -444,6 +447,10 @@ async def vendor_by_handle(
         raise HTTPException(404, "Business not found")
     out = vendor_out(target, connected=await vendor_network.are_connected(db, vendor.id, target.id))
     out.reliability_score = await _reliability(db, target.id)
+    # A page may offer WhatsApp and a call button, but only from a number the
+    # owner deliberately published. Lists and search never receive it.
+    if target.allow_direct_calls and target.phone:
+        out.contact_phone = target.phone
     profile = (await db.execute(select(VendorProfile).where(VendorProfile.vendor_id == target.id))).scalars().first()
     if profile is not None:
         cap = dict(profile.supply_capacity or {})

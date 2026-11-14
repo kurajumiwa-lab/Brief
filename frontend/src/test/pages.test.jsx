@@ -557,9 +557,9 @@ describe("Business Control Centre, Stock Visibility, Shop Front & Gallery Photos
     mount(<App />, "/@mama_mboga");
 
     expect(await screen.findByRole("heading", { name: "Mama Mboga Fresh" })).toBeInTheDocument();
-    // A handle is a URL. The page shows the address and never makes the handle
-    // the identity.
-    expect(screen.getByText("/p/mama_mboga")).toBeInTheDocument();
+    // A handle is an address. The page shows it as a subdomain a person can
+    // say out loud, and never makes the handle the identity.
+    expect(screen.getByTestId("page-address")).toHaveTextContent("mama_mboga.vendorworld.ke");
     expect(screen.queryByRole("navigation", { name: /shop navigation/i })).not.toBeInTheDocument();
   });
 

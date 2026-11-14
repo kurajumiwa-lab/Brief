@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { Check, Copy, Globe, Share2 } from "lucide-react";
 import Card, { CardHeader, CardTitle } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
@@ -7,6 +8,7 @@ import Textarea from "@/components/ui/Textarea";
 import { PageSpinner } from "@/components/ui/Spinner";
 import { toast } from "@/components/ui/Toast";
 import { professionalAPI, apiError } from "@/lib/api";
+import { pageAddress, shareLinks } from "@/lib/pageShare";
 import { useAuthStore } from "@/stores/authStore";
 import {
   ABOUT_MAX, SECTION_OPTIONS, TAGLINE_MAX, aboutSource, toPayload, validatePage,
@@ -20,6 +22,7 @@ export default function PageEditor() {
   const vendor = useAuthStore((s) => s.vendor);
   const [form, setForm] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     professionalAPI.myPage()
@@ -49,6 +52,17 @@ export default function PageEditor() {
   }
 
   const handle = vendor?.vendor_handle;
+  const links = shareLinks({ handle, title: vendor?.business_name || "My page", phone: vendor?.phone || "" });
+
+  async function copyAddress() {
+    try {
+      await navigator.clipboard.writeText(links.url);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch {
+      // The address stays visible and selectable.
+    }
+  }
 
   return (
     <main className="mx-auto max-w-2xl space-y-6 px-4 py-6">
@@ -57,8 +71,48 @@ export default function PageEditor() {
           <h1 className="text-2xl font-semibold">Your Page</h1>
           <p className="text-sm text-ink-3 mt-1">What strangers see on your public Page. Only you can change it.</p>
         </div>
-        {handle && <Link to={`/page/${handle}`} className="text-sm text-brand-700 underline whitespace-nowrap">View Page</Link>}
+        {handle && <Link to={`/p/${handle}`} className="text-sm text-brand-700 underline whitespace-nowrap">View Page</Link>}
       </header>
+
+      {handle && (
+        <Card>
+          <CardHeader><CardTitle>Page address</CardTitle></CardHeader>
+          <p className="text-xs text-ink-3">
+            Your page has its own address. Share it with a customer, a group or a
+            colleague — the links below already carry the page.
+          </p>
+          <div className="mt-3 flex items-center gap-2 rounded-xl border border-edge-1 bg-surface-0 px-3 py-2">
+            <Globe size={14} className="shrink-0 text-brand-600 dark:text-brand-300" aria-hidden="true" />
+            <code className="min-w-0 flex-1 truncate text-micro font-semibold text-ink-2">
+              {pageAddress(handle)}
+            </code>
+            <button
+              type="button"
+              onClick={copyAddress}
+              className="inline-flex shrink-0 items-center gap-1 rounded-lg px-2 py-1 text-micro font-bold text-ink-3 hover:bg-surface-2 hover:text-ink-1"
+            >
+              {copied ? <Check size={12} aria-hidden="true" /> : <Copy size={12} aria-hidden="true" />}
+              {copied ? "Copied" : "Copy"}
+            </button>
+          </div>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <Link
+              to={`/p/${handle}`}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-edge-1 bg-surface-0 px-2.5 py-1.5 text-micro font-bold text-ink-2 hover:border-edge-2"
+            >
+              Open page
+            </Link>
+            <a
+              href={links.whatsapp}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-[#25D366]/40 bg-[#25D366]/10 px-2.5 py-1.5 text-micro font-bold text-[#128C4A] hover:bg-[#25D366]/15 dark:text-[#5BE39A]"
+            >
+              <Share2 size={12} aria-hidden="true" /> Share on WhatsApp
+            </a>
+          </div>
+        </Card>
+      )}
 
       <form onSubmit={save} className="space-y-6">
         <Card>
