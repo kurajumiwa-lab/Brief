@@ -23,6 +23,7 @@ import CalendarPage from "@/pages/calendar/CalendarPage";
 import BookPage from "@/pages/calendar/BookPage";
 import OffersBrowsePage from "@/pages/offers/OffersBrowsePage";
 import PublicPage from "@/pages/page/PublicPage";
+import PageEditor from "@/pages/page/PageEditor";
 import IntegrationsPage from "@/pages/integrations/IntegrationsPage";
 import TrustBrowsePage from "@/pages/trust/TrustBrowsePage";
 import TrustBranchPage from "@/pages/trust/TrustBranchPage";
@@ -190,7 +191,6 @@ function AppRoutes() {
       <Route path="/offers" element={<OffersBrowsePage />} />
       {/* The public Page: a mini site per business. No account needed to read it. */}
       <Route path="/page/:handle" element={<PublicPage />} />
-      {INTEGRATIONS_ENABLED && <Route path="/integrations" element={<IntegrationsPage />} />}
       {/* MarketTrust: checked shops in Kenya, Ethiopia and Uganda. Open to everyone; rating needs sign-in. */}
       <Route path="/trust" element={<TrustBrowsePage />} />
       <Route path="/trust/branches/:id" element={<TrustBranchPage />} />
@@ -238,6 +238,8 @@ function AppRoutes() {
           {/* Calendar: my week, appointments and a booking page for clients */}
           <Route path="/calendar" element={<CalendarPage />} />
           <Route path="/office" element={<OfficePage />} />
+          <Route path="/my-page" element={<PageEditor />} />
+          {INTEGRATIONS_ENABLED && <Route path="/integrations" element={<IntegrationsPage />} />}
           <Route path="/learn/new" element={<LearnNewPage />} />
           <Route path="/today" element={<TodayPage />} />
           {/* Flagged: off unless VITE_DESK_ENABLED=true. A false child is skipped by Routes. */}

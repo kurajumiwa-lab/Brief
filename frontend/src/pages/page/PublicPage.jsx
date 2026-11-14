@@ -39,6 +39,7 @@ export default function PublicPage() {
   }
   if (!card) return <PageSpinner />;
 
+  const sections = card.sections || {};
   const offers = offersFor(card.services);
   const registrations = verifiedOnly(card.registrations);
 
@@ -51,6 +52,7 @@ export default function PublicPage() {
           @{card.handle}{card.location ? ` · ${card.location}` : ""}
         </p>
         <p className="text-sm">
+          {card.tagline && <span className="block mt-1 text-base text-ink-2">{card.tagline}</span>}
           {card.completed_appointments > 0
             ? `${num(card.completed_appointments)} completed booking${card.completed_appointments === 1 ? "" : "s"}`
             : "No completed bookings yet."}
@@ -66,6 +68,7 @@ export default function PublicPage() {
       )}
 
       {/* Offers */}
+      {sections.offers !== false && (
       <section className="mt-6">
         <h2 className="text-lg font-semibold mb-2">Offers</h2>
         {offers.length === 0 ? (
@@ -97,7 +100,10 @@ export default function PublicPage() {
         )}
       </section>
 
+      )}
+
       {/* Hours and area */}
+      {sections.hours !== false && (
       <section className="mt-6">
         <h2 className="text-lg font-semibold mb-2">Hours and area</h2>
         <Card>
@@ -117,8 +123,10 @@ export default function PublicPage() {
         </Card>
       </section>
 
+      )}
+
       {/* Credentials: verified only */}
-      {registrations.length > 0 && (
+      {sections.credentials !== false && registrations.length > 0 && (
         <section className="mt-6">
           <h2 className="text-lg font-semibold mb-2">Credentials</h2>
           <Card>
