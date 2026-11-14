@@ -7,6 +7,7 @@ import PortfolioView from "@/components/you/PortfolioView";
 import RegionsView from "@/components/regions/RegionsView";
 import RegionView from "@/components/regions/RegionView";
 import StartView from "@/components/start/StartView";
+import ExplorePage from "@/pages/explore/ExplorePage";
 import { rankFor } from "@/config/identity";
 import { REGION_BY_SLUG } from "@/config/regions";
 import { cn } from "@/lib/utils";
@@ -87,8 +88,35 @@ const DEMO_ITEMS = [
   { kind: "opportunity", id: "i4", title: "Two kitchen assistants, Lumumba estate", location: "Kisumu", price_kes: 12000, created_at: "2026-11-11T09:00:00", to: "/regions/nyanza?tab=needs" },
 ];
 
+const DEMO_DISCOVERY = [
+  {
+    id: "d1", kind: "listing", to: "/listing/d1", title: "Fresh tilapia, 40 crates weekly",
+    summary: "Landing at Dunga beach every morning. Delivered in Kisumu before 10am.",
+    location: "Kisumu", distance_km: 2.4, created_at: "2026-11-13T08:00:00",
+    price_kes: 380, is_commercial: true,
+    owner: { id: "p1", handle: "achieng", name: "Achieng Groceries" },
+    counts: { available: 40 }, reactions: {}, meta: { unit: "crate" },
+  },
+  {
+    id: "d2", kind: "service", to: "/listing/d2", title: "Home nursing visits — wound care",
+    summary: "Licensed nurses, home visits across Kisumu and Kisii. Book a two-hour window.",
+    location: "Kisii", distance_km: 9.1, created_at: "2026-11-12T14:00:00",
+    price_kes: 1500, is_commercial: true,
+    owner: { id: "p2", handle: "kisii_nursing", name: "Kisii Nursing Home Outreach" },
+    counts: {}, reactions: {}, meta: {},
+  },
+  {
+    id: "d3", kind: "wanted", to: "/listing/d3", title: "Need 200 crates for a school event",
+    summary: "One supplier, delivered to Milimani on Friday morning. Quote with transport.",
+    location: "Kisumu", distance_km: 3.7, created_at: "2026-11-12T10:00:00",
+    owner: { id: "demo-1", handle: "ogallo", name: "Ogallo" },
+    counts: {}, reactions: {}, meta: {},
+  },
+];
+
 const SCREENS = [
   { key: "today", label: "Home" },
+  { key: "discover", label: "Discover" },
   { key: "regions", label: "Regions list" },
   { key: "region", label: "Nyanza" },
   { key: "you", label: "You" },
@@ -173,6 +201,17 @@ export default function PreviewPage() {
 
         {/* /regions is the discovery feed; this is the directory behind its
             knob, kept here as the "All regions" screen. */}
+        {screen === "discover" && (
+          <ExplorePage
+            regionAware
+            demo={{
+              items: DEMO_DISCOVERY,
+              location: { lat: -0.095, lng: 34.77, label: "Kondele, Kisumu", radius_km: 15 },
+              region,
+            }}
+          />
+        )}
+
         {screen === "regions" && (
           <RegionsView
             country="KE"

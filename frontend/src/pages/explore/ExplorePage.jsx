@@ -87,7 +87,7 @@ const FILTER_KIND = {
 
 const REGION_KEY = "brief-discovery-region";
 
-export default function ExplorePage({ regionAware = false }) {
+export default function ExplorePage({ regionAware = false, demo = null }) {
   const [params, setParams] = useSearchParams();
   // Search scopes call it `search`; the field calls it `q`. Both land here.
   const q = params.get("q") || params.get("search") || "";
@@ -104,24 +104,32 @@ export default function ExplorePage({ regionAware = false }) {
     try { return localStorage.getItem(REGION_KEY); } catch { return null; }
   });
 
-  const items = useOutsideStore((s) => s.items);
-  const status = useOutsideStore((s) => s.status);
-  const cursor = useOutsideStore((s) => s.cursor);
-  const error = useOutsideStore((s) => s.error);
+  // `demo` is the dev-only preview path: the real screen, with fixture data and
+  // no network. Every other caller leaves it null and gets the live stores.
+  const liveItems = useOutsideStore((s) => s.items);
+  const liveStatus = useOutsideStore((s) => s.status);
+  const liveCursor = useOutsideStore((s) => s.cursor);
+  const liveError = useOutsideStore((s) => s.error);
   const loadFeed = useOutsideStore((s) => s.loadFeed);
   const loadMore = useOutsideStore((s) => s.loadMore);
   const toggleReaction = useOutsideStore((s) => s.toggleReaction);
-  const location = useOutsideStore((s) => s.location);
+  const liveLocation = useOutsideStore((s) => s.location);
   const loadLocation = useOutsideStore((s) => s.loadLocation);
   const setLocation = useOutsideStore((s) => s.setLocation);
+
+  const items = demo ? demo.items : liveItems;
+  const status = demo ? "ready" : liveStatus;
+  const cursor = demo ? null : liveCursor;
+  const error = demo ? null : liveError;
+  const location = demo ? demo.location : liveLocation;
 
   const sentinel = useRef(null);
 
   const kinds = useMemo(() => (kind ? [kind] : null), [kind]);
 
   useEffect(() => {
-    if (!location) loadLocation();
-  }, [location, loadLocation]);
+    if (!demo && !location) loadLocation();
+  }, [demo, location, loadLocation]);
 
   const patchParams = useCallback((patch) => {
     const next = new URLSearchParams(params);
@@ -135,8 +143,8 @@ export default function ExplorePage({ regionAware = false }) {
   // Reload whenever the URL state changes — which is also what makes the back
   // button restore the previous results.
   useEffect(() => {
-    loadFeed({ kinds, query: q || null });
-  }, [kinds, q, loadFeed, location?.radius_km]);
+    if (!demo) loadFeed({ kinds, query: q || null });
+  }, [demo, kinds, q, loadFeed, location?.radius_km]);
 
   // Incremental loading: fetch the next page when the sentinel scrolls in.
   useEffect(() => {
@@ -162,8 +170,8 @@ export default function ExplorePage({ regionAware = false }) {
   const region = useMemo(() => {
     if (!regionAware) return null;
     const slug = params.get("region") || savedRegion;
-    return REGION_BY_SLUG[slug] || regionFromPlace(location?.label) || DEFAULT_REGION;
-  }, [regionAware, params, savedRegion, location?.label]);
+    return REGION_BY_SLUG[slug] || demo?.region || regionFromPlace(location?.label) || DEFAULT_REGION;
+  }, [regionAware, params, savedRegion, demo?.region, location?.label]);
 
   const chooseRegion = useCallback((next) => {
     try { localStorage.setItem(REGION_KEY, next.slug); } catch { /* private mode */ }

@@ -154,7 +154,28 @@ describe("3 · no market surface survives", () => {
   });
 });
 
-describe("4 · old entry points still drive the one feed", () => {
+describe("4 · the design preview renders the same screen without a network", () => {
+  it("takes fixture items and a region, and never calls the feed", async () => {
+    const { default: ExplorePage } = await import("@/pages/explore/ExplorePage");
+    const { REGION_BY_SLUG } = await import("@/config/regions");
+    mocks.feed.mockClear();
+
+    render(
+      <MemoryRouter>
+        <ExplorePage
+          regionAware
+          demo={{ items: ITEMS, location: LOCATION, region: REGION_BY_SLUG.nyanza }}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByTestId("content-card-listing")).toBeInTheDocument();
+    expect(screen.getByTestId("region-picker-label")).toHaveTextContent(/Nyanza · Kisumu/i);
+    expect(mocks.feed).not.toHaveBeenCalled();
+  });
+});
+
+describe("5 · old entry points still drive the one feed", () => {
   it("reads ?search= from the header scope into the field", async () => {
     await renderRegions("/regions?search=rice");
     await waitFor(() =>
