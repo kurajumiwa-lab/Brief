@@ -11,6 +11,11 @@ import ContentCard from "@/components/outside/ContentCard";
 import LocationBar from "@/components/outside/LocationBar";
 import MarketStrip from "@/components/explore/MarketStrip";
 import CategoryTiles from "@/components/explore/CategoryTiles";
+import RegionPicker from "@/components/regions/RegionPicker";
+import { BROWSE_NAV } from "@/config/navigation";
+import {
+  DEFAULT_REGION, REGION_BY_SLUG, regionFromPlace, regionLabel, regionPath,
+} from "@/config/regions";
 import { RADII, locationLabel, useOutsideStore } from "@/stores/outsideStore";
 import { cn } from "@/lib/utils";
 
@@ -73,15 +78,31 @@ const KIND_FILTERS = [
   { value: "person", label: "People" },
 ];
 
-export default function ExplorePage() {
+const FILTER_KIND = {
+  goods: "listing",
+  people: "person",
+  services: "service",
+  equipment: "rental",
+};
+
+const REGION_KEY = "brief-discovery-region";
+
+export default function ExplorePage({ regionAware = false }) {
   const [params, setParams] = useSearchParams();
-  const q = params.get("q") || "";
-  const kind = params.get("kind") || "";
+  // Search scopes call it `search`; the field calls it `q`. Both land here.
+  const q = params.get("q") || params.get("search") || "";
+  const kind =
+    params.get("kind") ||
+    (regionAware ? FILTER_KIND[params.get("filter")] : "") ||
+    "";
   const when = params.get("when") || "";
   const price = params.get("price") || "";
 
   const [placeOpen, setPlaceOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [savedRegion, setSavedRegion] = useState(() => {
+    try { return localStorage.getItem(REGION_KEY); } catch { return null; }
+  });
 
   const items = useOutsideStore((s) => s.items);
   const status = useOutsideStore((s) => s.status);
@@ -135,6 +156,21 @@ export default function ExplorePage() {
     patchParams({ q: (value || "").trim() });
   }, [patchParams]);
 
+  // The knob is a region, not a market. Precedence: the URL (shareable) →
+  // the last region this device chose → the region the GPS label belongs to →
+  // the largest corridor we serve. A market name is never the answer.
+  const region = useMemo(() => {
+    if (!regionAware) return null;
+    const slug = params.get("region") || savedRegion;
+    return REGION_BY_SLUG[slug] || regionFromPlace(location?.label) || DEFAULT_REGION;
+  }, [regionAware, params, savedRegion, location?.label]);
+
+  const chooseRegion = useCallback((next) => {
+    try { localStorage.setItem(REGION_KEY, next.slug); } catch { /* private mode */ }
+    setSavedRegion(next.slug);
+    patchParams({ region: next.slug, country: "" });
+  }, [patchParams]);
+
   const radius = Math.round(location?.radius_km ?? 15);
   const activeWhen = when ? WHEN_FILTERS.find((o) => o.value === when) : null;
   const activePrice = price === "free" ? "No price" : price === "priced" ? "Priced" : null;
@@ -151,22 +187,47 @@ export default function ExplorePage() {
             products. The heading follows the tab — two names for one screen is
             how a product starts to feel like two products. */}
         <h1 className="text-title-section font-bold tracking-tight text-ink-1">Discover</h1>
-        <button
-          type="button"
-          onClick={() => setPlaceOpen((v) => !v)}
-          aria-expanded={placeOpen}
-          data-testid="explore-place"
-          className="inline-flex h-8 min-w-0 max-w-[60%] items-center gap-1 rounded-full border border-edge-1 bg-surface-1 px-2.5 text-2xs font-semibold text-ink-2 transition-colors hover:border-ink-4 hover:text-ink-1"
-        >
-          <MapPin size={12} className="shrink-0 text-brand-600 dark:text-brand-300" aria-hidden="true" />
-          <span className="truncate" data-testid="explore-place-label">{locationLabel(location)}</span>
-          <ChevronDown
-            size={12}
-            aria-hidden="true"
-            className={cn("shrink-0 text-ink-4 transition-transform", placeOpen && "rotate-180")}
+        {regionAware ? (
+          <RegionPicker
+            region={region}
+            onSelect={chooseRegion}
+            className="relative max-w-[70%]"
           />
-        </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setPlaceOpen((v) => !v)}
+            aria-expanded={placeOpen}
+            data-testid="explore-place"
+            className="inline-flex h-8 min-w-0 max-w-[60%] items-center gap-1 rounded-full border border-edge-1 bg-surface-1 px-2.5 text-2xs font-semibold text-ink-2 transition-colors hover:border-ink-4 hover:text-ink-1"
+          >
+            <MapPin size={12} className="shrink-0 text-brand-600 dark:text-brand-300" aria-hidden="true" />
+            <span className="truncate" data-testid="explore-place-label">{locationLabel(location)}</span>
+            <ChevronDown
+              size={12}
+              aria-hidden="true"
+              className={cn("shrink-0 text-ink-4 transition-transform", placeOpen && "rotate-180")}
+            />
+          </button>
+        )}
       </div>
+
+      {/* The old discovery type row: Goods · People · Services · Equipment ·
+          Map. Each one is the same feed with a filter, not a new database. */}
+      {regionAware && (
+        <nav aria-label="Browse discovery" className="flex flex-wrap gap-2">
+          {BROWSE_NAV.map(({ to, label, icon: Icon }) => (
+            <Link
+              key={to}
+              to={to}
+              className="inline-flex items-center gap-1.5 rounded-full border border-edge-1 bg-surface-0 px-3 py-1.5 text-2xs font-bold text-ink-2 hover:bg-surface-1"
+            >
+              <Icon size={13} aria-hidden="true" />
+              {label}
+            </Link>
+          ))}
+        </nav>
+      )}
 
       {/* Discovery owns offers, suppliers and product browsing. Home links here
           and does not repeat them, so the doors to each must live here. */}
@@ -183,8 +244,10 @@ export default function ExplorePage() {
         aria-label="Search everything"
       />
 
-      {/* The full location controls, unchanged, one press away. */}
-      {placeOpen && (
+      {/* The full location controls, unchanged, one press away. In the region
+          version the knob is a region, so GPS is not offered as a second,
+          competing answer to "where am I looking?". */}
+      {!regionAware && placeOpen && (
         <div data-testid="explore-place-panel">
           <LocationBar showRadius={false} className="border-edge-1" />
         </div>
@@ -257,7 +320,7 @@ export default function ExplorePage() {
             </button>
           )}
         </div>
-        <CategoryTiles value={kind} onSelect={(value) => patchParams({ kind: value })} />
+        <CategoryTiles value={kind} onSelect={(value) => patchParams({ kind: value, filter: "" })} />
       </section>
 
       {/* ── everything else, behind one control that counts what is on ────── */}
@@ -324,11 +387,38 @@ export default function ExplorePage() {
         )}
       </div>
 
-      {/* ── markets, before the feed: a place to walk into ──────────────────
-          A strip, not a card wall. Two lines per market is enough to say
-          "there is a physical place behind these listings, and here is how
-          busy it is"; anything taller pushes the results below the fold. */}
-      <MarketStrip limit={2} />
+      {/* ── the region the results belong to ───────────────────────────────
+          The region is a scope, not a market gate. Two lines say what this
+          corridor is known for and offer the one door that matters: its own
+          page. Markets are gone, so nothing here turns into a directory. */}
+      {regionAware && region && (
+        <section
+          aria-label="Region"
+          data-testid="region-context"
+          className="flex items-center gap-3 rounded-xl border border-edge-1 bg-surface-0 px-3 py-2.5"
+        >
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-700 dark:bg-brand-500/10 dark:text-brand-300">
+            <MapPin size={16} aria-hidden="true" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-xs font-bold text-ink-1">{regionLabel(region)}</p>
+            <p className="truncate text-micro text-ink-4">
+              {region.knownFor.slice(0, 3).join(" · ")}
+            </p>
+          </div>
+          <Link
+            to={regionPath(region)}
+            className="shrink-0 text-micro font-bold text-brand-700 hover:underline dark:text-brand-300"
+          >
+            Open region
+          </Link>
+        </section>
+      )}
+
+      {!regionAware && (
+        /* A strip, not a card wall: markets were the old scope. */
+        <MarketStrip limit={2} />
+      )}
 
       {/* ── results ───────────────────────────────────────────────────────── */}
       <section aria-live="polite" aria-busy={status === "loading"} className="space-y-3">
@@ -344,6 +434,7 @@ export default function ExplorePage() {
               {items.length} {items.length === 1 ? "thing" : "things"}
               {q ? ` matching “${q}”` : ""}
               {location?.radius_km ? ` within ${radius} km` : ""}
+              {regionAware && region ? ` · ${regionLabel(region)}` : ""}
             </p>
             <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {items.map((item) => (

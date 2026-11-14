@@ -37,7 +37,7 @@ export const REGIONS = [
     name: "Nairobi Metro",
     country: "KE",
     hub: "Nairobi",
-    aliases: ["nairobi", "kiambu", "machakos", "kajiado", "thika", "ruiru", "westlands", "cbd"],
+    aliases: ["nairobi", "kiambu", "machakos", "kajiado", "thika", "ruiru", "westlands", "cbd", "gikomba", "marikiti", "wakulima"],
     knownFor: ["Services", "Software", "Finance", "Logistics"],
     summary: "The country's services and logistics hub: professional practices, software, transport and wholesale.",
     note: "Fastest place to find a licensed professional or a same-day courier.",
@@ -47,7 +47,7 @@ export const REGIONS = [
     name: "Coast",
     country: "KE",
     hub: "Mombasa",
-    aliases: ["mombasa", "kilifi", "malindi", "watamu", "diani", "lamu", "taita", "taveta"],
+    aliases: ["mombasa", "kilifi", "malindi", "watamu", "diani", "lamu", "taita", "taveta", "kongowea"],
     knownFor: ["Import & export", "Hospitality", "Spices", "Transport"],
     summary: "The port economy: imports, clearing and forwarding, hospitality and the coastal food trade.",
     note: "Most cross-border goods enter here before moving inland.",
@@ -57,7 +57,7 @@ export const REGIONS = [
     name: "Nyanza",
     country: "KE",
     hub: "Kisumu",
-    aliases: ["kisumu", "kisii", "siaya", "homa bay", "migori", "bondo", "ahero"],
+    aliases: ["kisumu", "kisii", "siaya", "homa bay", "migori", "bondo", "ahero", "kibuye"],
     knownFor: ["Fresh produce", "Fishing", "Education", "Health services"],
     summary: "The lake economy: fresh produce, fish, learning institutions and a dense small-town service trade.",
     note: "Kisumu and Kisii are the two anchors; most routes pass through one of them.",
@@ -277,6 +277,10 @@ export function regionFromPlace(place = "") {
 export const DEFAULT_REGION = REGION_BY_SLUG["nairobi-metro"];
 
 export const regionPath = (region) => `/regions/${region.slug}`;
+
+/** The short label on the discovery knob: "Nyanza · Kisumu", never a market. */
+export const regionLabel = (region) =>
+  region ? `${region.name} · ${region.hub}` : "Choose a region";
 
 /** A region's short line: "Nyanza · Kisumu, Kenya". */
 export function regionLine(region) {

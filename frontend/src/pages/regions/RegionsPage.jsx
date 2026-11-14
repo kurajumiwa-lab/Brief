@@ -1,50 +1,18 @@
-import { useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
-import RegionsView from "@/components/regions/RegionsView";
-import { REGIONS, regionFromPlace } from "@/config/regions";
+import ExplorePage from "@/pages/explore/ExplorePage";
 
 /**
- * Regions index. The country filter and the search are URL state, so a link to
- * "Uganda" or to "Kisumu" can be shared and the back button restores the list.
+ * REGIONS — the discovery screen, region-aware.
+ *
+ * The old discovery layout is back: one search, the four posting types, the
+ * colour-coded category tiles, the filters and the results. What changed is the
+ * knob at the top. It used to name a market ("Gikomba"), which made the app
+ * read like a vendor directory and expired whenever a trader moved. It now
+ * names a region — a corridor with a hub city — and the same feed answers
+ * "what is around here?".
+ *
+ * The region directory lives at /regions/all, and a single region still has its
+ * own page at /regions/:slug.
  */
 export default function RegionsPage() {
-  const [params, setParams] = useSearchParams();
-  const country = params.get("country") || "";
-  const initialSearch = params.get("q") || params.get("search") || "";
-  const [search, setSearch] = useState(initialSearch);
-
-  function update(patch) {
-    const next = new URLSearchParams(params);
-    for (const [key, value] of Object.entries(patch)) {
-      if (value) next.set(key, value);
-      else next.delete(key);
-    }
-    setParams(next, { replace: true });
-  }
-
-  const regions = useMemo(() => {
-    const needle = search.trim().toLowerCase();
-    if (!needle) return REGIONS;
-    const byPlace = regionFromPlace(needle);
-    return REGIONS.filter((region) => {
-      if (region === byPlace) return true;
-      return [region.name, region.hub, region.summary, ...region.knownFor, ...region.aliases]
-        .join(" ")
-        .toLowerCase()
-        .includes(needle);
-    });
-  }, [search]);
-
-  return (
-    <RegionsView
-      country={country}
-      onCountry={(code) => update({ country: code })}
-      regions={regions}
-      search={search}
-      onSearch={(value) => {
-        setSearch(value);
-        update({ q: value });
-      }}
-    />
-  );
+  return <ExplorePage regionAware />;
 }

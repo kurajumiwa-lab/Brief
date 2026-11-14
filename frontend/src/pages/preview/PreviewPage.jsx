@@ -89,7 +89,7 @@ const DEMO_ITEMS = [
 
 const SCREENS = [
   { key: "today", label: "Home" },
-  { key: "regions", label: "Regions" },
+  { key: "regions", label: "Regions list" },
   { key: "region", label: "Nyanza" },
   { key: "you", label: "You" },
   { key: "page", label: "Page" },
@@ -171,6 +171,8 @@ export default function PreviewPage() {
           />
         )}
 
+        {/* /regions is the discovery feed; this is the directory behind its
+            knob, kept here as the "All regions" screen. */}
         {screen === "regions" && (
           <RegionsView
             country="KE"

@@ -33,6 +33,10 @@ describe("regions, not markets", () => {
     expect(regionFromPlace("I live in Kisii town")?.slug).toBe("nyanza");
     expect(regionFromPlace("Mombasa")?.slug).toBe("coast");
     expect(regionFromPlace("Kampala")?.country).toBe("UG");
+    // A saved market label from the old app still resolves to its region
+    // without the market becoming a place in the new geography.
+    expect(regionFromPlace("Gikomba")?.slug).toBe("nairobi-metro");
+    expect(regionFromPlace("Kibuye")?.slug).toBe("nyanza");
     expect(regionFromPlace("somewhere unheard of")).toBeNull();
     expect(regionFromPlace("")).toBeNull();
     // An unset region is shown as unset, never silently guessed.
