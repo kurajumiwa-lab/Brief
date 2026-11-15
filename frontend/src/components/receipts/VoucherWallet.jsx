@@ -240,7 +240,12 @@ export default function VoucherWallet({ region = null }) {
           <p className="text-micro font-bold uppercase tracking-[0.16em] text-ink-4">Used</p>
           {spent.map((voucher) => (
             voucher.confirmation ? (
-              <VoucherConfirmationCard key={voucher.id} confirmation={voucher.confirmation} compact />
+              <VoucherConfirmationCard
+                key={voucher.id}
+                confirmation={voucher.confirmation}
+                compact
+                showShare
+              />
             ) : (
               <p key={voucher.id} className="rounded-xl border border-edge-1 bg-surface-1 px-3 py-2 text-xs text-ink-3">
                 {formatKes(voucher.value_kes)} off at {voucher.merchant_name || "a local shop"} — used.

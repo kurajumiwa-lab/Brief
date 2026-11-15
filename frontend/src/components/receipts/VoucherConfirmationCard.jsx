@@ -1,4 +1,4 @@
-import { Check, ShieldCheck } from "lucide-react";
+import { Check, MessageCircle, ShieldCheck } from "lucide-react";
 import { formatKes } from "@/lib/receipts";
 import { shortDateTime } from "@/lib/formatters";
 
@@ -9,9 +9,14 @@ import { shortDateTime } from "@/lib/formatters";
  * one green box, the code, what it was worth, who it came from, who took it,
  * and when. It is not a payment confirmation and it never says money moved.
  */
-export default function VoucherConfirmationCard({ confirmation, compact = false }) {
+export default function VoucherConfirmationCard({ confirmation, compact = false, showShare = false }) {
   if (!confirmation) return null;
   const customer = confirmation.customer;
+  const origin = typeof window !== "undefined" && window.location?.origin ? window.location.origin : "";
+  const shareUrl = customer?.handle ? `${origin}/p/${customer.handle}` : origin;
+  const shareText = customer?.handle
+    ? `I just used a voucher at ${confirmation.merchant_name} on Home Office. Local shops, receipt-backed:`
+    : `A voucher was just confirmed at ${confirmation.merchant_name} on Home Office.`;
 
   return (
     <div
@@ -75,6 +80,21 @@ export default function VoucherConfirmationCard({ confirmation, compact = false 
           This voucher is a discount, not a payment.
         </p>
       </div>
+
+      {showShare && (
+        <div className="border-t border-brand-200/80 px-4 py-2.5 dark:border-brand-500/25">
+          <a
+            href={`https://wa.me/?text=${encodeURIComponent(`${shareText} ${shareUrl}`)}`}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1.5 text-micro font-bold text-brand-800 underline decoration-brand-400 underline-offset-2 dark:text-brand-100"
+            data-testid="voucher-share-whatsapp"
+          >
+            <MessageCircle size={13} aria-hidden="true" />
+            Share this deal on WhatsApp
+          </a>
+        </div>
+      )}
     </div>
   );
 }

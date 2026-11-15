@@ -10,7 +10,7 @@ import EmptyState from "@/components/ui/EmptyState";
 import { PageSpinner } from "@/components/ui/Spinner";
 import { toast } from "@/components/ui/Toast";
 import { apiError } from "@/lib/api";
-import { formatKes } from "@/lib/receipts";
+import { formatKes, merchantSlug } from "@/lib/receipts";
 import { receiptsAPI } from "@/lib/receiptsApi";
 import { relativeTime } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
@@ -48,13 +48,16 @@ function statusLabel(status) {
   return "Waiting";
 }
 
-function inviteLink(merchant) {
+function inviteLink(merchant, pin) {
+  const name = merchant || "your shop";
   const text =
-    `I have a receipt from ${merchant || "your shop"} on Home Office. ` +
-    "Join and confirm it so the trade counts for both of us.";
-  const url = typeof window !== "undefined" && window.location?.origin
-    ? `${window.location.origin}/start`
-    : "/start";
+    `I have a receipt from ${name} on Home Office. ` +
+    "Claim the shop page free so the trade counts for both of us.";
+  const slug = merchantSlug(name) || pin || "";
+  const origin = typeof window !== "undefined" && window.location?.origin
+    ? window.location.origin
+    : "";
+  const url = `${origin}/invite/${encodeURIComponent(slug)}`;
   return `https://wa.me/?text=${encodeURIComponent(`${text} ${url}`)}`;
 }
 
@@ -289,7 +292,7 @@ export default function TradeProofsPage() {
                       </p>
                       <Button
                         as="a"
-                        href={inviteLink(proof.merchant_name)}
+                        href={inviteLink(proof.merchant_name, proof.merchant_pin)}
                         target="_blank"
                         rel="noreferrer"
                         variant="secondary"

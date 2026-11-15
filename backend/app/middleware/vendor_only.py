@@ -39,7 +39,8 @@ PUBLIC_READ_PREFIXES = ("/api/offers/public", "/api/knowledge/sectors", "/api/kn
                         # Receipt-network shop cards and merchant-funded deals:
                         # readable without an account, GET only. A claim, a claim
                         # of a voucher and redemption all still require a member.
-                        "/api/receipts/merchants", "/api/receipts/offers")
+                        "/api/receipts/merchants", "/api/receipts/offers",
+                        "/api/receipts/invites")
 
 OFFICE_OPEN_POST = ("/api/office/links/accept",)
 

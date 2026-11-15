@@ -122,5 +122,7 @@ describe("receipt-backed trades", () => {
     expect(within(unmatched).getByTestId("trade-proof-unmatched")).toHaveAttribute(
       "href", expect.stringMatching(/^https:\/\/wa\.me\/\?text=/),
     );
+    expect(within(unmatched).getByTestId("trade-proof-unmatched").getAttribute("href"))
+      .toContain(encodeURIComponent("/invite/a-shop-not-on-the-app"));
   });
 });

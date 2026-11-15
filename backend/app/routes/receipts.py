@@ -25,7 +25,7 @@ import uuid
 from datetime import datetime, time, timedelta, timezone
 from typing import Literal, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
@@ -37,6 +37,7 @@ from app.models.vendor import Vendor
 from app.routes.auth import get_current_vendor
 from app.routes.ops import require_operator
 from app.services import trade_proofs as trade_proof_service
+from app.services.og_cards import invite_card
 from app.services.receipt_rewards import (
     clean_region, clean_text, is_valid_pin, parse_receipt_payload, receipt_key,
     receipt_value, voucher_code, voucher_code_matches,
@@ -921,6 +922,35 @@ async def my_offers(vendor: Vendor = Depends(get_current_vendor), db: AsyncSessi
         )
     ).scalars().all()
     return {"offers": [_offer_out(offer, by_id.get(offer.merchant_id)) for offer in offers]}
+
+
+@router.get("/invites/{slug}")
+async def public_shop_invite(
+    slug: str,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """The public half of an unmatched-shop invite. No account, no receipt rows.
+
+    It returns the shop name, region, claim state and an aggregate count of
+    verified receipts. It never returns a buyer, an invoice number or a phone.
+    """
+    card = await invite_card(db, slug, str(request.base_url).rstrip("/"))
+    if card is None:
+        raise HTTPException(404, "That shop invite does not exist")
+    return {
+        "shop": {
+            "name": card["name"],
+            "pin": card["pin"],
+            "region": card["place"] or None,
+            "claim_status": card["claim_status"],
+            "verified": card["claim_status"] == "verified",
+        },
+        "receipts": card["receipts"],
+        "title": card["title"],
+        "description": card["description"],
+        "invite_path": f"/invite/{slug}",
+    }
 
 
 # --- vouchers ---------------------------------------------------------------

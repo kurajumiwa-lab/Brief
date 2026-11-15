@@ -23,6 +23,7 @@ import BookPage from "@/pages/calendar/BookPage";
 import OffersBrowsePage from "@/pages/offers/OffersBrowsePage";
 import PublicPage from "@/pages/page/PublicPage";
 import PageEditor from "@/pages/page/PageEditor";
+import InviteShopPage from "@/pages/trades/InviteShopPage";
 import IntegrationsPage from "@/pages/integrations/IntegrationsPage";
 import TrustBrowsePage from "@/pages/trust/TrustBrowsePage";
 import TrustBranchPage from "@/pages/trust/TrustBranchPage";
@@ -145,7 +146,13 @@ function SessionProblem() {
 function RequireVendor({ children }) {
   const { token, vendor, ready, authError } = useAuthStore();
   const location = useLocation();
-  if (!token) return <Navigate to="/auth" replace state={{ from: location.pathname + location.search }} />;
+  if (!token) {
+    // A `/p/<handle>` link arrives from WhatsApp. A stranger should see the
+    // public page, not a login wall; the short profile URL must keep working.
+    const shared = location.pathname.match(/^\/p\/([^/]+)\/?$/);
+    if (shared) return <Navigate to={`/page/${shared[1]}`} replace />;
+    return <Navigate to="/auth" replace state={{ from: location.pathname + location.search }} />;
+  }
   if (!ready) return <PageSpinner label="Entering the network…" />;
   if (!vendor) return authError ? <SessionProblem /> : <Navigate to="/auth" replace />;
   return children;
@@ -219,6 +226,9 @@ function AppRoutes() {
       <Route path="/offers" element={<OffersBrowsePage />} />
       {/* The public Page: a mini site per business. No account needed to read it. */}
       <Route path="/page/:handle" element={<PublicPage />} />
+      {/* A customer scanned a receipt from a shop with no page. Public, so the
+          link in a WhatsApp group works before anyone installs anything. */}
+      <Route path="/invite/:slug" element={<InviteShopPage />} />
       {/* MarketTrust: checked shops in Kenya, Ethiopia and Uganda. Open to everyone; rating needs sign-in. */}
       <Route path="/trust" element={<TrustBrowsePage />} />
       <Route path="/trust/branches/:id" element={<TrustBranchPage />} />

@@ -359,6 +359,14 @@ export function serverReceiptBody(receipt = {}) {
 export const formatKes = (value) =>
   `KES ${Math.round(Number(value) || 0).toLocaleString("en-KE")}`;
 
+/** The readable slug used by `/invite/<shop>`; the server slugifies the same way. */
+export const merchantSlug = (name = "") =>
+  String(name)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
+
 export const maskPin = (pin = "") =>
   pin ? `${pin.slice(0, 2)}••••${pin.slice(-2)}` : "";
 

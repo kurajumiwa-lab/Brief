@@ -27,6 +27,10 @@
       "destination": { "service": "backend" }
     },
     {
+      "source": "/og/(.*)",
+      "destination": { "service": "backend" }
+    },
+    {
       "source": "/(.*)",
       "destination": { "service": "frontend" }
     }

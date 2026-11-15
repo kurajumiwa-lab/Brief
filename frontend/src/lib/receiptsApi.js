@@ -26,6 +26,7 @@ export const receiptsAPI = {
   claimMerchant: (pin, body = {}) => api.post(`/receipts/merchants/${pin}/claim`, body),
   myMerchants: () => api.get("/receipts/merchants/me"),
   updateMerchant: (id, body) => api.patch(`/receipts/merchants/${id}`, body),
+  invite: (slug) => api.get(`/receipts/invites/${encodeURIComponent(slug)}`),
   tradeProofs: (status) => api.get("/receipts/trade-proofs", { params: status ? { status } : {} }),
   confirmTrade: (id) => api.post(`/receipts/trade-proofs/${id}/confirm`),
   disputeTrade: (id, reason) => api.post(`/receipts/trade-proofs/${id}/dispute`, { reason }),
