@@ -20,6 +20,9 @@ const empty = {
   points: 0,
   balance: null,
   lastAdded: null,
+  // Vouchers are cached with their fixed codes so a wallet card still opens at
+  // a counter with no signal. The server is still the authority on redemption.
+  vouchers: [],
   status: "idle",
 };
 
@@ -132,6 +135,8 @@ export const useReceiptStore = create(
         });
       },
 
+      setVouchers: (vouchers = []) => set({ vouchers }),
+
       markSynced: (localId, serverReceipt) => {
         const mapped = receiptFromServer(serverReceipt);
         set((state) => {
@@ -182,6 +187,7 @@ export const useReceiptStore = create(
         receipts: state.receipts,
         points: state.points,
         lastAdded: state.lastAdded,
+        vouchers: state.vouchers,
       }),
     },
   ),

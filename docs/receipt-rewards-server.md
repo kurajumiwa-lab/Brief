@@ -7,7 +7,7 @@ receipts into a regional aggregate without exposing any one of them.
 
 **There is no KRA verification call and no cash movement in this layer.** A QR
 is recorded as evidence the paper carried. A voucher is a merchant-funded
-discount, checked by a rotating code; `receipt_vouchers` has `redeemed_at` and
+discount, checked by a fixed six-character code; `receipt_vouchers` has `redeemed_at` and
 no payout field.
 
 ## Endpoints
@@ -29,11 +29,11 @@ Prefix: `/api/receipts`.
 | `POST` | `/offers` | verified owner | Publish a deal. |
 | `PATCH` | `/offers/{id}` | verified owner | Edit or pause a deal. |
 | `GET` | `/offers/mine` | member | All of my shop's deals, including paused. |
-| `POST` | `/offers/{id}/claim` | member | Spend points; returns a voucher and its current four digits. |
-| `GET` | `/vouchers` | member | My wallet, with rotating codes for unused vouchers. |
-| `GET` | `/vouchers/{id}` | owner | One voucher. |
+| `POST` | `/offers/{id}/claim` | member | Spend points; returns a voucher with its fixed `HO-XXX` code. |
+| `GET` | `/vouchers` | member | My wallet, with fixed codes and any redemption receipt. |
+| `GET` | `/vouchers/{id}` | owner | One voucher, used by the wallet to notice a redemption. |
 | `POST` | `/vouchers/{id}/cancel` | owner | Cancel an unused voucher and release its points. |
-| `POST` | `/merchant/redeem` | verified owner | Check a four-digit code and mark the voucher used. |
+| `POST` | `/merchant/redeem` | verified owner | Check a six-character code and mark the voucher used. |
 | `GET` | `/trade-proofs?status=` | member | Receipt-backed trades as buyer and seller. |
 | `POST` | `/trade-proofs/{id}/confirm` | seller | Both sides agree; each profile is credited once. |
 | `POST` | `/trade-proofs/{id}/dispute` | seller | Question a receipt, with a reason. |
@@ -71,9 +71,15 @@ offers a WhatsApp invite. A typed receipt never creates a proof.
   A client cannot post a point value.
 - **Identity**: `dedupe_key` is globally unique (`pin:invoice`, else token, else
   verification URL). The second account to scan the same paper gets `409`.
-- **Voucher code**: `HMAC(secret, voucher id + seed + one-minute window)`,
-  truncated to four digits. The seed never leaves the server. Redemption
-  accepts the current and previous minute to survive a code expiring mid-type.
+- **Voucher code**: `HMAC(secret, voucher id + seed)`, rendered as `HO-` plus
+  three characters from an unambiguous alphabet — six characters at the
+  counter, e.g. `HO-84K`. It is fixed at issue so the wallet can show it with
+  no signal; `status` and `expires_at` enforce single use and expiry. The seed
+  never leaves the server, and a code is unique among one shop's open vouchers.
+- **Redemption receipt**: a used voucher carries the same `confirmation` object
+  on the customer's and the shop's screens: code, value, customer, shop, time
+  and the customer's verified-trade count. A discount never increments that
+  count; only a confirmed receipt-backed trade does.
 
 ## Data products
 

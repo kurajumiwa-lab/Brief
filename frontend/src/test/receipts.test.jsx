@@ -247,7 +247,7 @@ describe("the ledger screen", () => {
       /^https:\/\/wa\.me\/\?text=/,
     );
     expect(screen.getByText(/no pos integration/i)).toBeInTheDocument();
-    expect(screen.getByText(/rotating four-digit code/i)).toBeInTheDocument();
+    expect(screen.getByText(/fixed six-character code/i)).toBeInTheDocument();
   });
 });
 

@@ -4,6 +4,7 @@ import {
   CalendarDays, ChevronRight, Inbox, MessageSquare, Package, ShoppingBag, Users,
 } from "lucide-react";
 import { PageSpinner } from "@/components/ui/Spinner";
+import VoucherRedeemCard from "@/components/receipts/VoucherRedeemCard";
 import { useOutsideStore } from "@/stores/outsideStore";
 import { useChatStore } from "@/stores/chatStore";
 import { useStockStore } from "@/stores/stockStore";
@@ -128,6 +129,10 @@ export default function InboxPage() {
           waiting carries a count.
         </p>
       </header>
+
+      <div className="mt-4">
+        <VoucherRedeemCard />
+      </div>
 
       <div className="mt-4 flex gap-1.5 overflow-x-auto no-scrollbar" role="group" aria-label="Inbox filter">
         {FILTERS.map((item) => {

@@ -7,10 +7,11 @@ The tests are written from the product's promises, not the schema:
   · one invoice is one reward across every account
   · a typed receipt records but earns nothing
   · a merchant cannot publish or redeem until the claim is verified
-  · a voucher code is four digits, changes every minute, and is single-use
+  · a voucher code is six characters, fixed at issue so it works offline, and single-use
   · region insight is aggregate-only and refuses a small cohort
 """
 
+import re
 import uuid
 from datetime import datetime, timedelta
 
@@ -205,10 +206,17 @@ async def test_merchant_claim_offer_voucher_and_single_use_redemption(client, mo
     assert claimed.status_code == 201, claimed.text
     voucher = claimed.json()["voucher"]
     assert voucher["status"] == "issued"
-    assert len(voucher["code"]) == 4 and voucher["code"].isdigit()
+    assert re.fullmatch(r"HO-[A-HJ-NP-Z2-9]{3}", voucher["code"])
+    assert voucher["confirmation"] is None
     assert claimed.json()["balance"]["available"] == 15
     voucher_id = voucher["id"]
     code = voucher["code"]
+
+    # The code is fixed at issue: reopening the wallet, or walking into a shop
+    # with no signal, shows the same six characters.
+    wallet_before = await client.get("/api/receipts/vouchers", headers=customer)
+    assert wallet_before.status_code == 200, wallet_before.text
+    assert wallet_before.json()["vouchers"][0]["code"] == code
 
     # One deal per person per day, even if they have the points.
     assert (await client.post(f"/api/receipts/offers/{offer_id}/claim", headers=customer)).status_code == 409
@@ -217,12 +225,21 @@ async def test_merchant_claim_offer_voucher_and_single_use_redemption(client, mo
     stranger = await _register(client, "rr_stranger")
     assert (await client.post("/api/receipts/merchant/redeem", json={"code": code}, headers=stranger[0])).status_code == 403
 
+    # A cashier may type it without the prefix or in lower case.
+    typed = f"  {code[3:].lower()} "
     redeemed = await client.post("/api/receipts/merchant/redeem", json={
-        "code": code, "voucher_id": voucher_id,
+        "code": typed, "voucher_id": voucher_id,
     }, headers=owner)
     assert redeemed.status_code == 200, redeemed.text
     assert redeemed.json()["voucher"]["status"] == "redeemed"
     assert redeemed.json()["voucher"]["code"] is None
+    confirmation = redeemed.json()["confirmation"]
+    assert confirmation["code"] == code
+    assert confirmation["reward"] == "KES 50 off"
+    assert confirmation["merchant_name"] == "Milimani Chemist"
+    assert confirmation["customer"]["handle"]
+    assert confirmation["redeemed_at"]
+    assert confirmation["verified_trades"] == 0
 
     # Single use.
     again = await client.post("/api/receipts/merchant/redeem", json={
@@ -233,6 +250,9 @@ async def test_merchant_claim_offer_voucher_and_single_use_redemption(client, mo
     wallet = await client.get("/api/receipts/vouchers", headers=customer)
     assert wallet.status_code == 200, wallet.text
     assert wallet.json()["vouchers"][0]["status"] == "redeemed"
+    # The customer's phone shows the same receipt the shop just saw.
+    assert wallet.json()["vouchers"][0]["confirmation"]["code"] == code
+    assert wallet.json()["vouchers"][0]["confirmation"]["merchant_name"] == "Milimani Chemist"
     assert wallet.json()["balance"]["available"] == 15
 
     # A deal that costs more than the balance is refused before any voucher exists.

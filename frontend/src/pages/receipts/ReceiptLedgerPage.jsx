@@ -1,5 +1,6 @@
 import { useState } from "react";
 import ReceiptsView from "@/components/receipts/ReceiptsView";
+import VoucherWallet from "@/components/receipts/VoucherWallet";
 import ReceiptScanner from "@/components/receipts/ReceiptScanner";
 import { useReceiptStore } from "@/stores/receiptStore";
 import { useReceiptSync } from "@/hooks/useReceiptSync";
@@ -33,6 +34,9 @@ export default function ReceiptLedgerPage() {
         sync={{ syncing, error, pending }}
         onScan={() => setOpen(true)}
       />
+      <div className="mx-auto mt-5 w-full max-w-2xl">
+        <VoucherWallet region={region} />
+      </div>
       <ReceiptScanner open={open} onClose={() => setOpen(false)} />
     </>
   );

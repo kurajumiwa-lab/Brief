@@ -8,8 +8,9 @@ Three things live here and nowhere else:
   · **Valuation.** Points depend on the amount, how old the receipt is, and how
     much evidence the code carried. The server computes this; a client cannot
     post "points: 500".
-  · **Redemption codes.** A voucher's four digits are derived from a server-only
-    seed and the current minute, so the code on a screenshot stops working.
+  · **Redemption codes.** A voucher's six characters are derived from a
+    server-only seed and the voucher itself. The code is fixed at issue, so it
+    can be shown in a shop with no signal; single use is enforced by the status.
 
 There is deliberately no KRA network call and no money movement in this module.
 """
@@ -302,32 +303,35 @@ def receipt_value(total: Any, issued_at: datetime | None, scanned_at: datetime) 
     }
 
 
-def voucher_code(voucher_id: Any, seed: str, at: datetime, window_seconds: int = 60) -> str:
-    """A four-digit code that is only valid for one minute.
+#: Six characters in total, including the constant prefix: HO-84K. The alphabet
+#: drops 0/O and 1/I so a code read across a counter cannot become another one.
+VOUCHER_CODE_PREFIX = "HO-"
+VOUCHER_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 
-    HMAC rather than `random()`: the merchant's phone can check the same minute
-    on the server, and the seed never leaves it.
+
+def voucher_code(voucher_id: Any, seed: str) -> str:
+    """The fixed code printed on a voucher wallet card.
+
+    It is derived from the voucher and a server-only seed, so the phone can keep
+    showing it offline. It is *not* a time-limited token: a code that changed
+    every minute would fail exactly when a shop has no signal. Single use and
+    expiry are enforced by the voucher's status and `expires_at`.
     """
-    window = int(at.replace(tzinfo=timezone.utc).timestamp()) // window_seconds
-    message = f"{voucher_id}:{seed}:{window}".encode()
+    message = f"voucher:{voucher_id}:{seed}".encode()
     digest = hmac.new(settings.SECRET_KEY.encode(), message, hashlib.sha256).digest()
-    return f"{int.from_bytes(digest[:4], 'big') % 10000:04d}"
+    suffix = "".join(VOUCHER_CODE_ALPHABET[byte % len(VOUCHER_CODE_ALPHABET)] for byte in digest[:3])
+    return f"{VOUCHER_CODE_PREFIX}{suffix}"
 
 
-def voucher_code_matches(
-    voucher_id: Any, seed: str, code: str, at: datetime, window_seconds: int = 60,
-) -> bool:
-    """Accept the current window and the one before it.
+def normalise_voucher_code(value: Any) -> str:
+    """Accept `HO-84K`, `ho 84k` or `84K` and compare the same characters."""
+    text = re.sub(r"[^A-Z0-9]", "", clean_text(value).upper())
+    if text.startswith("HO"):
+        text = text[2:]
+    return text
 
-    A code can expire while a cashier is typing it. Accepting one previous window
-    is a tolerance for that, not a licence to reuse yesterday's screenshot.
-    """
-    submitted = re.sub(r"\D", "", clean_text(code))
-    if len(submitted) != 4:
-        return False
-    current = int(at.replace(tzinfo=timezone.utc).timestamp()) // window_seconds
-    for offset in (0, -1):
-        window_dt = datetime.fromtimestamp((current + offset) * window_seconds, tz=timezone.utc).replace(tzinfo=None)
-        if hmac.compare_digest(voucher_code(voucher_id, seed, window_dt, window_seconds), submitted):
-            return True
-    return False
+
+def voucher_code_matches(voucher_id: Any, seed: str, code: Any) -> bool:
+    submitted = normalise_voucher_code(code)
+    expected = normalise_voucher_code(voucher_code(voucher_id, seed))
+    return len(submitted) == 3 and hmac.compare_digest(submitted, expected)

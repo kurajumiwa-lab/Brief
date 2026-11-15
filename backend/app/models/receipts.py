@@ -12,7 +12,7 @@ Two boundaries are deliberate:
     invoice number and total, and still be fabricated. The schema records what
     the code said; it does not claim the tax authority confirmed it.
   · There is no cash. A voucher is a discount a merchant chose to fund, issued
-    against points, and redeemed by a rotating code on the merchant's phone.
+    against points, and redeemed by a fixed six-character code on the merchant's phone.
     `receipt_vouchers` has a `redeemed_at` and no payout field, on purpose.
 """
 
@@ -201,9 +201,10 @@ class TradeProof(Base):
 class ReceiptVoucher(Base):
     """A discount held by a person and checked at the counter.
 
-    `code_seed` is server-side only. The four-digit code is derived from it and
-    a one-minute window, so a screenshot is not a permanent coupon. The merchant
-    phone asks the server; nothing is paid out in cash.
+    `code_seed` is server-side only. The six-character code is derived from it
+    and the voucher id, fixed at issue so it can be shown without a signal.
+    Status and expiry enforce single use. The merchant phone asks the server;
+    nothing is paid out in cash.
     """
     __tablename__ = "receipt_vouchers"
     __table_args__ = (

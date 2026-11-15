@@ -8,7 +8,7 @@ The shape of the product, in endpoint order:
   POST /api/receipts/merchants/{pin}/claim   a shopkeeper claims their shop
   GET  /api/receipts/offers             merchant-funded deals, public
   POST /api/receipts/offers/{id}/claim  spend points on a voucher
-  GET  /api/receipts/vouchers           my vouchers, with the current four digits
+  GET  /api/receipts/vouchers           my vouchers, each with its fixed six characters
   POST /api/receipts/merchant/redeem    the shopkeeper's phone checks the code
 
 No endpoint moves money, and no endpoint claims KRA confirmed a receipt. The QR
@@ -46,7 +46,6 @@ router = APIRouter()
 
 MAX_TOTAL_KES = 1_000_000
 MAX_PAYLOAD = 4000
-CODE_WINDOW_SECONDS = 60
 VOUCHER_DAYS = 14
 INSIGHT_MIN_RECEIPTS = 20
 INSIGHT_MIN_MERCHANTS = 3
@@ -115,12 +114,36 @@ def _offer_out(offer: ReceiptOffer, merchant: ReceiptMerchant | None = None) -> 
     }
 
 
-def _voucher_out(voucher: ReceiptVoucher, merchant: ReceiptMerchant | None, now: datetime) -> dict:
-    code = None
-    refresh_in = None
-    if voucher.status == "issued" and voucher.expires_at > now:
-        code = voucher_code(voucher.id, voucher.code_seed, now, CODE_WINDOW_SECONDS)
-        refresh_in = CODE_WINDOW_SECONDS - int(now.timestamp()) % CODE_WINDOW_SECONDS
+def _voucher_confirmation(
+    voucher: ReceiptVoucher,
+    merchant: ReceiptMerchant | None,
+    customer: Vendor | None,
+) -> dict:
+    """The receipt both phones should show after a redemption.
+
+    One shape, computed once, so the customer's wallet and the shop's counter
+    cannot tell two different stories about the same code.
+    """
+    return {
+        "code": voucher_code(voucher.id, voucher.code_seed),
+        "value_kes": voucher.value_kes,
+        "reward": f"KES {voucher.value_kes:,} off",
+        "merchant_name": merchant.name if merchant else "Local shop",
+        "merchant_pin": merchant.pin if merchant else None,
+        "customer": _person(customer),
+        "redeemed_at": _iso(voucher.redeemed_at),
+        # This is the customer's standing, not a trade invented by a discount.
+        "verified_trades": int(getattr(customer, "confirmed_trade_proofs", 0) or 0) if customer else 0,
+    }
+
+
+def _voucher_out(
+    voucher: ReceiptVoucher,
+    merchant: ReceiptMerchant | None,
+    now: datetime,
+    customer: Vendor | None = None,
+) -> dict:
+    active = voucher.status == "issued" and voucher.expires_at > now
     return {
         "id": str(voucher.id),
         "offer_id": str(voucher.offer_id) if voucher.offer_id else None,
@@ -133,9 +156,12 @@ def _voucher_out(voucher: ReceiptVoucher, merchant: ReceiptMerchant | None, now:
         "issued_at": _iso(voucher.issued_at),
         "expires_at": _iso(voucher.expires_at),
         "redeemed_at": _iso(voucher.redeemed_at),
-        "code": code,
-        "code_refresh_in": refresh_in,
-        "code_window_seconds": CODE_WINDOW_SECONDS,
+        "code": voucher_code(voucher.id, voucher.code_seed) if active else None,
+        "code_format": "HO-XXX",
+        "confirmation": (
+            _voucher_confirmation(voucher, merchant, customer)
+            if voucher.status == "redeemed" else None
+        ),
     }
 
 
@@ -328,7 +354,7 @@ class OfferUpdateIn(BaseModel):
 
 
 class RedeemIn(BaseModel):
-    code: str = Field(..., min_length=4, max_length=8)
+    code: str = Field(..., min_length=3, max_length=16)
     voucher_id: Optional[uuid.UUID] = None
 
 
@@ -943,13 +969,36 @@ async def claim_voucher(
     expires_at = now + timedelta(days=VOUCHER_DAYS)
     if offer.ends_at is not None:
         expires_at = min(expires_at, offer.ends_at)
+    # A three-character suffix has enough room for a counter, not for a global
+    # namespace. Uniqueness only has to hold among the vouchers this one shop
+    # can redeem, so a collision is resolved before the voucher exists.
+    active = (
+        await db.execute(
+            select(ReceiptVoucher.id, ReceiptVoucher.code_seed).where(
+                ReceiptVoucher.merchant_id == merchant.id,
+                ReceiptVoucher.status == "issued",
+                ReceiptVoucher.expires_at > now,
+            )
+        )
+    ).all()
+    taken = {voucher_code(row.id, row.code_seed) for row in active}
+    voucher_id = uuid.uuid4()
+    code_seed = secrets.token_hex(24)
+    for _ in range(12):
+        if voucher_code(voucher_id, code_seed) not in taken:
+            break
+        code_seed = secrets.token_hex(24)
+    else:
+        raise HTTPException(409, "Too many open vouchers at this shop. Use one before claiming another.")
+
     voucher = ReceiptVoucher(
+        id=voucher_id,
         offer_id=offer.id,
         merchant_id=merchant.id,
         vendor_id=vendor.id,
         value_kes=offer.discount_kes,
         points_cost=offer.points_cost,
-        code_seed=secrets.token_hex(24),
+        code_seed=code_seed,
         status="issued",
         issued_at=now,
         expires_at=expires_at,
@@ -958,9 +1007,9 @@ async def claim_voucher(
     await db.commit()
     await db.refresh(voucher)
     return {
-        "voucher": _voucher_out(voucher, merchant, now),
+        "voucher": _voucher_out(voucher, merchant, now, customer=vendor),
         "balance": await _points_balance(db, vendor.id, now),
-        "message": "Show the four digits at the counter. They change every minute.",
+        "message": "Show the six characters at the counter. The code works without a signal.",
     }
 
 
@@ -978,7 +1027,7 @@ async def my_vouchers(vendor: Vendor = Depends(get_current_vendor), db: AsyncSes
         )
     ).all()
     return {
-        "vouchers": [_voucher_out(voucher, merchant, now) for voucher, merchant in rows],
+        "vouchers": [_voucher_out(voucher, merchant, now, customer=vendor) for voucher, merchant in rows],
         "balance": await _points_balance(db, vendor.id, now),
     }
 
@@ -999,7 +1048,7 @@ async def my_voucher(
     ).first()
     if row is None:
         raise HTTPException(404, "That voucher is not in your wallet")
-    return _voucher_out(row[0], row[1], now)
+    return _voucher_out(row[0], row[1], now, customer=vendor)
 
 
 @router.post("/vouchers/{voucher_id}/cancel")
@@ -1050,15 +1099,18 @@ async def redeem_voucher(
 
     matches = [
         voucher for voucher in vouchers
-        if voucher_code_matches(voucher.id, voucher.code_seed, body.code, now, CODE_WINDOW_SECONDS)
+        if voucher_code_matches(voucher.id, voucher.code_seed, body.code)
     ]
     if not matches:
-        raise HTTPException(400, "That code is not valid at this minute. Ask for the current four digits.")
+        raise HTTPException(400, "That code is not valid at this shop. Check the six characters on the customer's screen.")
     if len(matches) > 1:
-        raise HTTPException(409, "That code matches more than one voucher. Enter the voucher reference.")
+        raise HTTPException(409, "That code matches more than one open voucher. Enter the voucher reference.")
 
     voucher = matches[0]
     merchant = next(merchant for merchant in merchants if merchant.id == voucher.merchant_id)
+    customer = (
+        await db.execute(select(Vendor).where(Vendor.id == voucher.vendor_id))
+    ).scalar_one_or_none()
     voucher.status = "redeemed"
     voucher.redeemed_at = now
     voucher.redeemed_by_vendor_id = vendor.id
@@ -1066,8 +1118,9 @@ async def redeem_voucher(
     await db.refresh(voucher)
     return {
         "redeemed": True,
-        "voucher": _voucher_out(voucher, merchant, now),
-        "message": f"{voucher.value_kes} KES off applied. Nothing was paid out in cash.",
+        "voucher": _voucher_out(voucher, merchant, now, customer=customer),
+        "confirmation": _voucher_confirmation(voucher, merchant, customer),
+        "message": f"KES {voucher.value_kes:,} off applied. Nothing was paid out in cash.",
     }
 
 

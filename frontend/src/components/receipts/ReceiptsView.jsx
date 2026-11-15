@@ -224,9 +224,9 @@ export default function ReceiptsView({ receipts = [], points = 0, region = null,
             </p>
             <p className="mt-2 flex items-start gap-1.5 text-micro leading-relaxed text-ink-4">
               <BadgePercent size={12} className="mt-0.5 shrink-0" aria-hidden="true" />
-              The redemption design is a rotating four-digit code or QR checked on the
-              shopkeeper&apos;s phone — never cash. That step arrives with merchant
-              accounts; today the ledger only banks points.
+              The redemption design is a fixed six-character code, checked on the
+              shopkeeper&apos;s phone — never cash. The code is issued with the
+              voucher, so it still opens in a shop with no signal.
             </p>
           </div>
         </div>
