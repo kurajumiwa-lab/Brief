@@ -6,6 +6,7 @@ import {
 import Button from "@/components/ui/Button";
 import { RankChip, RankMark } from "@/components/identity/Rank";
 import { ItemRow } from "@/components/regions/Rows";
+import ReceiptScanCard from "@/components/receipts/ReceiptScanCard";
 import { regionPath } from "@/config/regions";
 
 /**
@@ -118,6 +119,10 @@ export default function TodayView({
           </p>
         </section>
       )}
+
+      {/* Receipts live in the feed, not behind a settings door: the value of a
+          receipt is highest while the person is still in the shop. */}
+      <ReceiptScanCard />
 
       {unread > 0 && (
         <Link

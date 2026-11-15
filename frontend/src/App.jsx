@@ -51,6 +51,7 @@ import { canSellGoods } from "@/config/identity";
 // deep links, but no navigation points at them.
 const TodayPage = lazy(() => import("@/pages/home/TodayPage"));
 const RegionsPage = lazy(() => import("@/pages/regions/RegionsPage"));
+const ReceiptLedgerPage = lazy(() => import("@/pages/receipts/ReceiptLedgerPage"));
 const RegionsIndexPage = lazy(() => import("@/pages/regions/RegionsIndexPage"));
 const RegionPage = lazy(() => import("@/pages/regions/RegionPage"));
 const PortfolioPage = lazy(() => import("@/pages/you/PortfolioPage"));
@@ -264,6 +265,7 @@ function AppRoutes() {
           <Route path="/" element={<TodayPage />} />
           <Route path="/home" element={<TodayPage />} />
           <Route path="/regions" element={<RegionsPage />} />
+          <Route path="/receipts" element={<ReceiptLedgerPage />} />
           <Route path="/regions/all" element={<RegionsIndexPage />} />
           <Route path="/regions/:slug" element={<RegionPage />} />
           <Route path="/inbox" element={<InboxPage />} />

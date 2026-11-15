@@ -8,6 +8,8 @@ import RegionsView from "@/components/regions/RegionsView";
 import RegionView from "@/components/regions/RegionView";
 import StartView from "@/components/start/StartView";
 import ExplorePage from "@/pages/explore/ExplorePage";
+import ReceiptsView from "@/components/receipts/ReceiptsView";
+import ReceiptScanner from "@/components/receipts/ReceiptScanner";
 import { rankFor } from "@/config/identity";
 import { REGION_BY_SLUG } from "@/config/regions";
 import { cn } from "@/lib/utils";
@@ -114,9 +116,28 @@ const DEMO_DISCOVERY = [
   },
 ];
 
+const DEMO_RECEIPTS = [
+  {
+    id: "r1", merchant: "Milimani Chemist", pin: "P051234567X", invoice: "001234",
+    total: 1250, points: 25, freshness: "fresh", freshness_label: "Still in the shop — full value",
+    scanned_at: "2026-11-14T08:20:00.000Z", status: "verified", verified: true,
+  },
+  {
+    id: "r2", merchant: "Kondele Salon", pin: "P051234567X", invoice: "001190",
+    total: 800, points: 6, freshness: "day", freshness_label: "Within 24 hours — 40% value",
+    scanned_at: "2026-11-13T17:10:00.000Z", status: "verified", verified: true,
+  },
+  {
+    id: "r3", merchant: "Kibuye Hardware", pin: "P099999999Y", invoice: "000311",
+    total: 2300, points: 18, freshness: "hour", freshness_label: "Within the hour — 70% value",
+    scanned_at: "2026-11-12T09:40:00.000Z", status: "partial", verified: false,
+  },
+];
+
 const SCREENS = [
   { key: "today", label: "Home" },
   { key: "discover", label: "Discover" },
+  { key: "receipts", label: "Receipts" },
   { key: "regions", label: "Regions list" },
   { key: "region", label: "Nyanza" },
   { key: "you", label: "You" },
@@ -130,6 +151,7 @@ export default function PreviewPage() {
   const [intent, setIntent] = useState("offer");
   const [capabilities, setCapabilities] = useState(["sell_goods", "offer_services"]);
   const [regionTab, setRegionTab] = useState("people");
+  const [receiptOpen, setReceiptOpen] = useState(false);
 
   if (!import.meta.env.DEV) return <Link to="/">Home</Link>;
 
@@ -210,6 +232,18 @@ export default function PreviewPage() {
               region,
             }}
           />
+        )}
+
+        {screen === "receipts" && (
+          <>
+            <ReceiptsView
+              receipts={DEMO_RECEIPTS}
+              points={DEMO_RECEIPTS.reduce((sum, receipt) => sum + receipt.points, 0)}
+              region={region}
+              onScan={() => setReceiptOpen(true)}
+            />
+            <ReceiptScanner open={receiptOpen} onClose={() => setReceiptOpen(false)} />
+          </>
         )}
 
         {screen === "regions" && (
