@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
-  ArrowLeft, CalendarDays, Check, Eye, ImageIcon, Lock, MapPin, Save, Send,
+  ArrowLeft, CalendarDays, Check, Eye, ImageIcon, Lock, MapPin, Save, ScanLine, Send,
   ShieldCheck, Sparkles, Store, Trash2, X,
 } from "lucide-react";
 import Media from "@/components/ui/Media";
@@ -11,6 +11,7 @@ import Select from "@/components/ui/Select";
 import Textarea from "@/components/ui/Textarea";
 import Chip from "@/components/ui/Chip";
 import Badge from "@/components/ui/Badge";
+import ReceiptScanner from "@/components/receipts/ReceiptScanner";
 import { toast } from "@/components/ui/Toast";
 import { CREATE_TYPES, PRIMARY_POSTING_TYPES } from "@/config/navigation";
 import {
@@ -51,6 +52,7 @@ export default function CreatePage() {
   const loadLocation = useOutsideStore((s) => s.loadLocation);
 
   const [preview, setPreview] = useState(false);
+  const [verifyOpen, setVerifyOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [showAllFields, setShowAllFields] = useState(false);
   const fileRef = useRef(null);
@@ -193,6 +195,42 @@ export default function CreatePage() {
           </Button>
         )}
       </header>
+
+      {/* ── 0. The fifth action: make a receipt a two-sided trade ────────── */}
+      <section
+        aria-labelledby="verify-trade-heading"
+        data-testid="create-verify-trade"
+        className="rounded-card border border-brand-200 bg-brand-50/70 p-4 dark:border-brand-500/30 dark:bg-brand-500/10"
+      >
+        <div className="flex items-start gap-3">
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-brand-700 text-white">
+            <ScanLine size={19} aria-hidden="true" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <h2 id="verify-trade-heading" className="text-sm font-extrabold text-ink-1">
+              Verify a trade
+            </h2>
+            <p className="mt-1 max-w-md text-2xs leading-relaxed text-ink-3">
+              Scan the eTIMS QR on a shop receipt. If the shop is on Home Office,
+              it gets one tap to confirm; then the trade counts for both of you.
+              This is the fifth action — not another listing.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                icon={ScanLine}
+                onClick={() => setVerifyOpen(true)}
+                data-testid="create-verify-scan"
+              >
+                Scan a receipt
+              </Button>
+              <Button as={Link} to="/trades/proofs" size="sm" variant="ghost">
+                Trade proofs
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* ── 1A. Primary 4 Local Activity Ledger posting types ───────────── */}
       <section aria-labelledby="primary-posting-heading" className="space-y-3">
@@ -401,6 +439,8 @@ export default function CreatePage() {
           Or go and see what's already around you
         </Link>
       </div>
+
+      <ReceiptScanner open={verifyOpen} onClose={() => setVerifyOpen(false)} />
     </div>
   );
 }

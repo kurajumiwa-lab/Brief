@@ -206,7 +206,7 @@ export const BROWSE_NAV = [
   { to: "/regions?filter=people", label: "People", icon: Users },
   { to: "/regions?filter=services", label: "Services", icon: Wrench },
   { to: "/regions?filter=equipment", label: "Equipment", icon: Truck },
-  { to: "/regions?view=map", label: "Map", icon: Map },
+  { to: "/map", label: "Map", icon: Map },
 ];
 
 export const EXPLORE_NAV = [
@@ -214,16 +214,16 @@ export const EXPLORE_NAV = [
   { to: "/regions?filter=goods", label: "Goods", icon: Package },
   { to: "/regions?filter=services", label: "Services", icon: Wrench },
   { to: "/regions?filter=people", label: "People", icon: Users },
-  { to: "/regions?view=map", label: "Map", icon: Map },
+  { to: "/map", label: "Map", icon: Map },
 ];
 
 /** Search scopes route into the ONE results system. Markets are gone. */
 export const SEARCH_SCOPES = [
-  { value: "stock", label: "Goods", to: (q) => `/browse?type=goods&search=${encodeURIComponent(q)}`, icon: Package },
+  { value: "stock", label: "Goods", to: (q) => `/regions?filter=goods&search=${encodeURIComponent(q)}`, icon: Package },
   { value: "vendors", label: "Pages", to: (q) => `/regions?search=${encodeURIComponent(q)}`, icon: Store },
-  { value: "people", label: "People", to: (q) => `/browse?type=people&search=${encodeURIComponent(q)}`, icon: UserRound },
-  { value: "services", label: "Services", to: (q) => `/browse?type=services&search=${encodeURIComponent(q)}`, icon: Wrench },
-  { value: "rentals", label: "Rentals", to: (q) => `/browse?type=equipment&search=${encodeURIComponent(q)}`, icon: Truck },
+  { value: "people", label: "People", to: (q) => `/regions?filter=people&search=${encodeURIComponent(q)}`, icon: UserRound },
+  { value: "services", label: "Services", to: (q) => `/regions?filter=services&search=${encodeURIComponent(q)}`, icon: Wrench },
+  { value: "rentals", label: "Rentals", to: (q) => `/regions?filter=equipment&search=${encodeURIComponent(q)}`, icon: Truck },
 ];
 
 /**

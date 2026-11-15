@@ -66,6 +66,10 @@ class NotificationType(str, PyEnum):
     CLAIM_VERIFICATION_REQUESTED = "claim_verification_requested"  # Verifier desk queue
     OPPORTUNITY_MATCH = "opportunity_match"  # A posted request matches a standing watch
     BUSINESS_FOLLOW = "business_follow"      # A business started following you
+    # Receipt-backed trades (v2.19)
+    TRADE_PROOF_REQUEST = "trade_proof_request"      # A buyer scanned your shop's receipt; confirm it
+    TRADE_PROOF_CONFIRMED = "trade_proof_confirmed"  # The shop confirmed a receipt you scanned
+    TRADE_PROOF_DISPUTED = "trade_proof_disputed"    # The shop says a receipt is not theirs
     SYSTEM = "system"                        # Platform announcements
 
 

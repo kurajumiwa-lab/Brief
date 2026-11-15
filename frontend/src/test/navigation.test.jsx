@@ -109,6 +109,11 @@ describe("v5 navigation map", () => {
     expect(BROWSE_NAV.map(({ label }) => label)).not.toContain("Markets");
     expect(SEARCH_SCOPES.map(({ value }) => value)).not.toContain("markets");
     expect(SEARCH_SCOPES.find((scope) => scope.value === "vendors").to("rice")).toBe("/regions?search=rice");
+    // The header scopes feed the same discovery screen as the category tiles.
+    expect(SEARCH_SCOPES.find((scope) => scope.value === "stock").to("rice"))
+      .toBe("/regions?filter=goods&search=rice");
+    expect(SEARCH_SCOPES.find((scope) => scope.value === "services").to("rice"))
+      .toBe("/regions?filter=services&search=rice");
   });
 
   it("pins /markets and /mall to a redirect, so old links still land", () => {

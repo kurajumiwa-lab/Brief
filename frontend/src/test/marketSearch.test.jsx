@@ -170,7 +170,7 @@ describe("Specific to what is on the shelves", () => {
     fireEvent.change(field, { target: { value: "rice" } });
     fireEvent.submit(field.closest("form"));
     await waitFor(() =>
-      expect(screen.getByTestId("where")).toHaveTextContent("/browse?type=goods&search=rice")
+      expect(screen.getByTestId("where")).toHaveTextContent("/regions?filter=goods&search=rice")
     );
   });
 });

@@ -48,6 +48,8 @@ from app.routes import (
     notifications,
     payments,
     pos_bridge,
+    public_pages as public_pages_routes,
+    receipts as receipt_routes,
     reviews,
     route_planner,
     stock,
@@ -286,6 +288,7 @@ app.include_router(credentials_routes.router, prefix="/api/credentials", tags=["
 app.include_router(credentials_routes.ops_router, prefix="/api/ops/credentials", tags=["Credentials (operators)"])
 app.include_router(ratings_routes.router, prefix="/api/post-trade-ratings", tags=["Post-trade ratings"])
 app.include_router(professional_card_routes.router, prefix="/api/professional", tags=["Professional profile card"])
+app.include_router(receipt_routes.router, prefix="/api/receipts", tags=["Receipt rewards"])
 app.include_router(integrations_routes.router, prefix="/api/integrations", tags=["Ecosystem integrations"])
 app.include_router(integrations_routes.ops_router, prefix="/api/ops/integrations", tags=["Ecosystem integrations (operators)"])
 app.include_router(onboarding_routes.router, prefix="/api/onboarding", tags=["Onboarding"])
@@ -353,6 +356,11 @@ app.include_router(blueprints_router, prefix="/api/blueprints", tags=["Free blue
 # One route serves disk AND database bytes — see app/routes/media.py for why a
 # StaticFiles mount was not enough on an ephemeral, read-only host.
 app.include_router(media_routes.router, tags=["Media"])
+
+# Public share shells (`/p/<handle>`, `/invite/<shop>`) and their 1200×630
+# JPEGs. Registered before the SPA catch-all so the server, not the crawler's
+# lack of JavaScript, decides what a WhatsApp preview says.
+app.include_router(public_pages_routes.router, tags=["Public share cards"])
 
 
 @app.get("/api", include_in_schema=False)

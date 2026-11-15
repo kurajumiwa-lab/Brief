@@ -5,7 +5,8 @@ import { useAuthStore } from "@/stores/authStore";
 import { useIdentityStore } from "@/stores/identityStore";
 import { useStockStore } from "@/stores/stockStore";
 import { useOffice } from "@/hooks/useOffice";
-import { rankFor, pagePath } from "@/config/identity";
+import { rankFor } from "@/config/identity";
+import { pageUrl } from "@/lib/pageShare";
 import { vendorAPI } from "@/lib/api";
 
 /**
@@ -41,7 +42,7 @@ export default function YouPage() {
 
   async function share() {
     if (typeof window === "undefined" || !handle) return;
-    const url = `${window.location.origin}${pagePath(handle)}`;
+    const url = pageUrl(handle);
     if (navigator.share) {
       try {
         await navigator.share({ title: vendor?.business_name || "My page", url });

@@ -7,6 +7,7 @@ import Avatar from "@/components/ui/Avatar";
 import Button from "@/components/ui/Button";
 import { ClaimBadge, RankChip, RankLadder } from "@/components/identity/Rank";
 import { CAPABILITIES, INTENTS, canSellGoods, pagePath } from "@/config/identity";
+import { pageAddress } from "@/lib/pageShare";
 import { regionFromPlace } from "@/config/regions";
 import { cn } from "@/lib/utils";
 
@@ -80,7 +81,7 @@ export default function YouView({
           {handle && (
             <div className="mt-2.5 flex items-center gap-2">
               <code className="min-w-0 flex-1 truncate rounded-lg bg-surface-0 px-2.5 py-1.5 text-micro text-ink-3">
-                {pagePath(handle)}
+                {pageAddress(handle)}
               </code>
               <button
                 type="button"

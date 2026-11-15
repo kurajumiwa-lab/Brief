@@ -7,6 +7,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { useIdentityStore } from "@/stores/identityStore";
 import { rankFor } from "@/config/identity";
 import { vendorAPI } from "@/lib/api";
+import { pageUrl } from "@/lib/pageShare";
 
 /**
  * `/p/<handle>` — the page a buyer opens.
@@ -78,7 +79,7 @@ export default function PortfolioPage() {
 
   async function share() {
     if (typeof window === "undefined") return;
-    const url = `${window.location.origin}/p/${vendor.vendor_handle}`;
+    const url = pageUrl(vendor.vendor_handle);
     if (navigator.share) {
       try {
         await navigator.share({ title: vendor.business_name, url });

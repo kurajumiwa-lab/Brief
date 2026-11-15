@@ -7,6 +7,9 @@ import PortfolioView from "@/components/you/PortfolioView";
 import RegionsView from "@/components/regions/RegionsView";
 import RegionView from "@/components/regions/RegionView";
 import StartView from "@/components/start/StartView";
+import ExplorePage from "@/pages/explore/ExplorePage";
+import ReceiptsView from "@/components/receipts/ReceiptsView";
+import ReceiptScanner from "@/components/receipts/ReceiptScanner";
 import { rankFor } from "@/config/identity";
 import { REGION_BY_SLUG } from "@/config/regions";
 import { cn } from "@/lib/utils";
@@ -87,9 +90,55 @@ const DEMO_ITEMS = [
   { kind: "opportunity", id: "i4", title: "Two kitchen assistants, Lumumba estate", location: "Kisumu", price_kes: 12000, created_at: "2026-11-11T09:00:00", to: "/regions/nyanza?tab=needs" },
 ];
 
+const DEMO_DISCOVERY = [
+  {
+    id: "d1", kind: "listing", to: "/listing/d1", title: "Fresh tilapia, 40 crates weekly",
+    summary: "Landing at Dunga beach every morning. Delivered in Kisumu before 10am.",
+    location: "Kisumu", distance_km: 2.4, created_at: "2026-11-13T08:00:00",
+    price_kes: 380, is_commercial: true,
+    owner: { id: "p1", handle: "achieng", name: "Achieng Groceries" },
+    counts: { available: 40 }, reactions: {}, meta: { unit: "crate" },
+  },
+  {
+    id: "d2", kind: "service", to: "/listing/d2", title: "Home nursing visits — wound care",
+    summary: "Licensed nurses, home visits across Kisumu and Kisii. Book a two-hour window.",
+    location: "Kisii", distance_km: 9.1, created_at: "2026-11-12T14:00:00",
+    price_kes: 1500, is_commercial: true,
+    owner: { id: "p2", handle: "kisii_nursing", name: "Kisii Nursing Home Outreach" },
+    counts: {}, reactions: {}, meta: {},
+  },
+  {
+    id: "d3", kind: "wanted", to: "/listing/d3", title: "Need 200 crates for a school event",
+    summary: "One supplier, delivered to Milimani on Friday morning. Quote with transport.",
+    location: "Kisumu", distance_km: 3.7, created_at: "2026-11-12T10:00:00",
+    owner: { id: "demo-1", handle: "ogallo", name: "Ogallo" },
+    counts: {}, reactions: {}, meta: {},
+  },
+];
+
+const DEMO_RECEIPTS = [
+  {
+    id: "r1", merchant: "Milimani Chemist", pin: "P051234567X", invoice: "001234",
+    total: 1250, points: 25, freshness: "fresh", freshness_label: "Still in the shop — full value",
+    scanned_at: "2026-11-14T08:20:00.000Z", status: "verified", verified: true,
+  },
+  {
+    id: "r2", merchant: "Kondele Salon", pin: "P051234567X", invoice: "001190",
+    total: 800, points: 6, freshness: "day", freshness_label: "Within 24 hours — 40% value",
+    scanned_at: "2026-11-13T17:10:00.000Z", status: "verified", verified: true,
+  },
+  {
+    id: "r3", merchant: "Kibuye Hardware", pin: "P099999999Y", invoice: "000311",
+    total: 2300, points: 18, freshness: "hour", freshness_label: "Within the hour — 70% value",
+    scanned_at: "2026-11-12T09:40:00.000Z", status: "partial", verified: false,
+  },
+];
+
 const SCREENS = [
   { key: "today", label: "Home" },
-  { key: "regions", label: "Regions" },
+  { key: "discover", label: "Discover" },
+  { key: "receipts", label: "Receipts" },
+  { key: "regions", label: "Regions list" },
   { key: "region", label: "Nyanza" },
   { key: "you", label: "You" },
   { key: "page", label: "Page" },
@@ -102,6 +151,7 @@ export default function PreviewPage() {
   const [intent, setIntent] = useState("offer");
   const [capabilities, setCapabilities] = useState(["sell_goods", "offer_services"]);
   const [regionTab, setRegionTab] = useState("people");
+  const [receiptOpen, setReceiptOpen] = useState(false);
 
   if (!import.meta.env.DEV) return <Link to="/">Home</Link>;
 
@@ -169,6 +219,31 @@ export default function PreviewPage() {
               counts: { offers: 4, trades: 7, verified: false },
             }}
           />
+        )}
+
+        {/* /regions is the discovery feed; this is the directory behind its
+            knob, kept here as the "All regions" screen. */}
+        {screen === "discover" && (
+          <ExplorePage
+            regionAware
+            demo={{
+              items: DEMO_DISCOVERY,
+              location: { lat: -0.095, lng: 34.77, label: "Kondele, Kisumu", radius_km: 15 },
+              region,
+            }}
+          />
+        )}
+
+        {screen === "receipts" && (
+          <>
+            <ReceiptsView
+              receipts={DEMO_RECEIPTS}
+              points={DEMO_RECEIPTS.reduce((sum, receipt) => sum + receipt.points, 0)}
+              region={region}
+              onScan={() => setReceiptOpen(true)}
+            />
+            <ReceiptScanner open={receiptOpen} onClose={() => setReceiptOpen(false)} />
+          </>
         )}
 
         {screen === "regions" && (

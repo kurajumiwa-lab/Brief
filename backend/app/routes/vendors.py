@@ -55,6 +55,9 @@ class VendorOut(BaseModel):
     is_patron: bool
     is_verified: bool
     connected: bool = False
+    # Published contact route. Only filled by the public page endpoint, and only
+    # when the owner has switched direct calls on. It is never part of a list.
+    contact_phone: Optional[str] = None
     # v2.6 halal-trade: 'halal_sharia' vendors are gated out of interest products
     finance_mode: str = "conventional"
     # v2.12 plan & server-side entitlements
@@ -67,6 +70,7 @@ class VendorOut(BaseModel):
     # SRM-lite (v2.1 §4.4)
     fulfillment_rate: Optional[float] = None   # % of confirmed movements delivered; None until there is a sample
     movements_completed: int = 0
+    confirmed_trade_proofs: int = 0
     fulfillment_mark: Optional[dict] = None
     reliability_score: Optional[float] = None  # filled where the performance row is loaded
     # Storefront media & gallery photos
@@ -166,6 +170,7 @@ def vendor_out(v: Vendor, connected: bool = False) -> VendorOut:
         plan_watches_limit=int(getattr(v, "plan_watches_limit", 10) or 10),
         fulfillment_rate=stock_engine.fulfillment_rate(v),
         movements_completed=int(getattr(v, "movements_completed", 0) or 0),
+        confirmed_trade_proofs=int(getattr(v, "confirmed_trade_proofs", 0) or 0),
         fulfillment_mark=stock_engine.fulfillment_mark(v),
     )
 
@@ -444,6 +449,10 @@ async def vendor_by_handle(
         raise HTTPException(404, "Business not found")
     out = vendor_out(target, connected=await vendor_network.are_connected(db, vendor.id, target.id))
     out.reliability_score = await _reliability(db, target.id)
+    # A page may offer WhatsApp and a call button, but only from a number the
+    # owner deliberately published. Lists and search never receive it.
+    if target.allow_direct_calls and target.phone:
+        out.contact_phone = target.phone
     profile = (await db.execute(select(VendorProfile).where(VendorProfile.vendor_id == target.id))).scalars().first()
     if profile is not None:
         cap = dict(profile.supply_capacity or {})
