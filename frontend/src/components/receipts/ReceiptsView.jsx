@@ -207,8 +207,9 @@ export default function ReceiptsView({ receipts = [], points = 0, region = null,
             </p>
             <p className="mt-2 flex items-start gap-1.5 text-micro leading-relaxed text-ink-4">
               <BadgePercent size={12} className="mt-0.5 shrink-0" aria-hidden="true" />
-              A shopkeeper checks a reward on their own phone — a rotating four-digit code
-              or the voucher QR. Nothing is paid out in cash.
+              The redemption design is a rotating four-digit code or QR checked on the
+              shopkeeper&apos;s phone — never cash. That step arrives with merchant
+              accounts; today the ledger only banks points.
             </p>
           </div>
         </div>
