@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { isDuplicate, receiptKey, receiptValue } from "@/lib/receipts";
+import { isDuplicate, receiptFromServer, receiptKey, receiptValue } from "@/lib/receipts";
 
 /**
  * THE RECEIPT LEDGER.
@@ -18,6 +18,7 @@ import { isDuplicate, receiptKey, receiptValue } from "@/lib/receipts";
 const empty = {
   receipts: [],
   points: 0,
+  balance: null,
   lastAdded: null,
   status: "idle",
 };
@@ -83,6 +84,13 @@ export const useReceiptStore = create(
           age_minutes: value.ageMinutes,
           status,
           points,
+          raw_payload: candidate.raw_payload || null,
+          region: candidate.region || null,
+          // Written locally first. `useReceiptSync` sends it to the server when
+          // there is a session and a network; until then this row is honest
+          // about being a device-local record.
+          sync: "pending",
+          synced: false,
         };
 
         set((state) => ({
@@ -94,6 +102,77 @@ export const useReceiptStore = create(
 
         return { ok: true, receipt: record, points, value, duplicate: false };
       },
+
+      /**
+       * Replace the server-known part of the ledger without losing a scan that
+       * is still waiting to go up. A receipt present on both sides keeps the
+       * server's points; a local-only row keeps its provisional value.
+       */
+      hydrateFromServer: ({ receipts = [], summary = null, balance = null } = {}) => {
+        const serverRows = receipts.map(receiptFromServer);
+        const serverKeys = new Set(serverRows.map((row) => receiptKey(row)));
+        const localRows = get().receipts.filter(
+          (row) => row.sync !== "synced" && !serverKeys.has(receiptKey(row)),
+        );
+        const beyondPage = get().receipts.filter(
+          (row) => row.sync === "synced" && !serverKeys.has(receiptKey(row)),
+        );
+        const unsyncedPoints = localRows.reduce((sum, row) => sum + (Number(row.points) || 0), 0);
+        const awarded = summary ? Number(summary.points) || 0 : serverRows.reduce(
+          (sum, row) => sum + (Number(row.points) || 0), 0,
+        );
+        const merged = [...serverRows, ...localRows, ...beyondPage].sort(
+          (a, b) => String(b.scanned_at || "").localeCompare(String(a.scanned_at || "")),
+        );
+        set({
+          receipts: merged,
+          points: Math.max(0, awarded + unsyncedPoints),
+          balance,
+          status: "ready",
+        });
+      },
+
+      markSynced: (localId, serverReceipt) => {
+        const mapped = receiptFromServer(serverReceipt);
+        set((state) => {
+          const current = state.receipts.find((row) => row.id === localId);
+          if (!current) return state;
+          const delta = mapped.points - (Number(current.points) || 0);
+          return {
+            receipts: state.receipts.map((row) => (
+              row.id === localId
+                ? {
+                  ...mapped,
+                  id: localId,
+                  server_id: mapped.id,
+                  raw_payload: current.raw_payload || null,
+                  region: mapped.region || current.region || null,
+                }
+                : row
+            )),
+            points: Math.max(0, state.points + delta),
+            lastAdded: state.lastAdded?.id === localId
+              ? { ...state.lastAdded, ...mapped, id: localId }
+              : state.lastAdded,
+          };
+        });
+      },
+
+      markSyncFailed: (localId, reason = "") => set((state) => ({
+        receipts: state.receipts.map((row) => (
+          row.id === localId ? { ...row, sync: "local", sync_error: reason || null } : row
+        )),
+      })),
+
+      discardReceipt: (localId) => set((state) => {
+        const row = state.receipts.find((item) => item.id === localId);
+        if (!row) return state;
+        return {
+          receipts: state.receipts.filter((item) => item.id !== localId),
+          points: Math.max(0, state.points - (Number(row.points) || 0)),
+          lastAdded: state.lastAdded?.id === localId ? null : state.lastAdded,
+        };
+      }),
 
       clear: () => set({ ...empty }),
     }),

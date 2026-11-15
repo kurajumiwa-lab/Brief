@@ -295,6 +295,67 @@ export function networkSummary(receipts = []) {
   };
 }
 
+const FRESHNESS_LABEL = Object.fromEntries(FRESHNESS.map((step) => [step.key, step.label]));
+
+export const freshnessLabel = (key) => {
+  if (!key || key === "undated") return "Date missing — half value";
+  return FRESHNESS_LABEL[key] || "value recorded";
+};
+
+/**
+ * A server row, in the shape this device already uses.
+ *
+ * The mapping is explicit because the two records answer different questions:
+ * the local row remembers how the person scanned (`raw_payload`, `sync`), and
+ * the server row knows the authoritative points and the global identity.
+ * Keeping both means a sync can replace the numbers without losing the evidence.
+ */
+export function receiptFromServer(row = {}) {
+  return {
+    id: row.id,
+    server_id: row.id,
+    merchant: row.merchant_name || "Local merchant",
+    pin: row.merchant_pin || "",
+    invoice: row.invoice_no || "",
+    total: row.total,
+    tax: row.tax,
+    issued_at: row.issued_at,
+    scanned_at: row.scanned_at,
+    status: row.status || "partial",
+    points: Number(row.points) || 0,
+    base_points: Number(row.base_points) || 0,
+    freshness: row.freshness || "unknown",
+    freshness_label: freshnessLabel(row.freshness),
+    source: row.source || "qr",
+    verified: row.status === "verified",
+    verification_url: row.verification_url || null,
+    region: row.region || null,
+    raw_payload: null,
+    sync: "synced",
+    synced: true,
+  };
+}
+
+/** The body the server accepts. No points, no status — it decides those. */
+export function serverReceiptBody(receipt = {}) {
+  if (receipt.source === "manual") {
+    return {
+      source: "manual",
+      merchant_name: receipt.merchant,
+      total: receipt.total,
+      merchant_pin: receipt.pin || undefined,
+      invoice_no: receipt.invoice || undefined,
+      region: receipt.region || undefined,
+    };
+  }
+  if (!receipt.raw_payload) return null;
+  return {
+    payload: receipt.raw_payload,
+    total: receipt.total,
+    region: receipt.region || undefined,
+  };
+}
+
 export const formatKes = (value) =>
   `KES ${Math.round(Number(value) || 0).toLocaleString("en-KE")}`;
 

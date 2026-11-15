@@ -202,6 +202,10 @@ describe("the scan sheet", () => {
     fireEvent.click(screen.getByTestId("receipt-add"));
     expect(await screen.findByTestId("receipt-success")).toBeInTheDocument();
     await waitFor(() => expect(useReceiptStore.getState().points).toBe(25));
+    // The raw code is kept so the server can parse the same evidence, rather
+    // than trusting this phone's summary of it.
+    expect(useReceiptStore.getState().receipts[0].raw_payload).toBe(ETIMS_URL);
+    expect(useReceiptStore.getState().receipts[0].sync).toBe("pending");
   });
 
   it("types a receipt without pretending it earns points", async () => {
@@ -216,6 +220,8 @@ describe("the scan sheet", () => {
     expect(await screen.findByTestId("receipt-success")).toHaveTextContent(/recorded/i);
     expect(useReceiptStore.getState().points).toBe(0);
     expect(useReceiptStore.getState().receipts[0].merchant).toBe("Kibuye Hardware");
+    expect(useReceiptStore.getState().receipts[0].raw_payload).toBeNull();
+    expect(useReceiptStore.getState().receipts[0].sync).toBe("pending");
   });
 });
 

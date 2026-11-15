@@ -35,7 +35,11 @@ PUBLIC_READ_PREFIXES = ("/api/offers/public", "/api/knowledge/sectors", "/api/kn
                         # Offerings a person shows the network: visible rows only, GET only.
                         "/api/offerings/of/",
                         # The public Page (/page/:handle): one read per business, no account.
-                        "/api/professional/page/")
+                        "/api/professional/page/",
+                        # Receipt-network shop cards and merchant-funded deals:
+                        # readable without an account, GET only. A claim, a claim
+                        # of a voucher and redemption all still require a member.
+                        "/api/receipts/merchants", "/api/receipts/offers")
 
 OFFICE_OPEN_POST = ("/api/office/links/accept",)
 

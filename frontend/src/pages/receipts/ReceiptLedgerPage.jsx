@@ -2,6 +2,7 @@ import { useState } from "react";
 import ReceiptsView from "@/components/receipts/ReceiptsView";
 import ReceiptScanner from "@/components/receipts/ReceiptScanner";
 import { useReceiptStore } from "@/stores/receiptStore";
+import { useReceiptSync } from "@/hooks/useReceiptSync";
 import { useAuthStore } from "@/stores/authStore";
 import { regionFromPlace } from "@/config/regions";
 
@@ -18,8 +19,10 @@ export default function ReceiptLedgerPage() {
   const points = useReceiptStore((s) => s.points);
   const vendor = useAuthStore((s) => s.vendor);
   const [open, setOpen] = useState(false);
+  const { syncing, error } = useReceiptSync();
 
   const region = regionFromPlace(vendor?.physical_location || "") || null;
+  const pending = receipts.filter((receipt) => receipt.sync && receipt.sync !== "synced").length;
 
   return (
     <>
@@ -27,6 +30,7 @@ export default function ReceiptLedgerPage() {
         receipts={receipts}
         points={points}
         region={region}
+        sync={{ syncing, error, pending }}
         onScan={() => setOpen(true)}
       />
       <ReceiptScanner open={open} onClose={() => setOpen(false)} />

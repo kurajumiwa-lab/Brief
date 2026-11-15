@@ -7,6 +7,8 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { useQrScanner } from "@/hooks/useQrScanner";
 import { useReceiptStore } from "@/stores/receiptStore";
+import { useAuthStore } from "@/stores/authStore";
+import { regionFromPlace } from "@/config/regions";
 import { formatKes, parseReceiptPayload, receiptValue } from "@/lib/receipts";
 
 /**
@@ -20,6 +22,8 @@ import { formatKes, parseReceiptPayload, receiptValue } from "@/lib/receipts";
  */
 export default function ReceiptScanner({ open, onClose }) {
   const addReceipt = useReceiptStore((s) => s.addReceipt);
+  const vendor = useAuthStore((s) => s.vendor);
+  const region = regionFromPlace(vendor?.physical_location || "") || null;
   const [step, setStep] = useState("scan");
   const [raw, setRaw] = useState("");
   const [candidate, setCandidate] = useState(null);
@@ -34,7 +38,9 @@ export default function ReceiptScanner({ open, onClose }) {
       return;
     }
     setError(null);
-    setCandidate(parsed.receipt);
+    // Keep the raw payload: the server parses the same evidence rather than
+    // trusting this device's summary of it.
+    setCandidate({ ...parsed.receipt, raw_payload: value, region });
     setStep("confirm");
   };
 
@@ -99,6 +105,8 @@ export default function ReceiptScanner({ open, onClose }) {
       issued_at: new Date().toISOString(),
       verified: false,
       source: "manual",
+      raw_payload: null,
+      region,
     });
     if (!saved.ok) {
       setError(saved.error);

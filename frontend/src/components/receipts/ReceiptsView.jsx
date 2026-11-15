@@ -21,7 +21,7 @@ import { cn } from "@/lib/utils";
  * banked; vouchers appear when a partner merchant actually joins. An empty
  * reward shelf is honest and still useful.
  */
-export default function ReceiptsView({ receipts = [], points = 0, region = null, onScan }) {
+export default function ReceiptsView({ receipts = [], points = 0, region = null, sync = null, onScan }) {
   const merchants = useMemo(() => merchantStats(receipts), [receipts]);
   const summary = useMemo(() => networkSummary(receipts), [receipts]);
 
@@ -53,6 +53,23 @@ export default function ReceiptsView({ receipts = [], points = 0, region = null,
             {points}
           </p>
           <p className="text-micro text-ink-4">points banked</p>
+          {sync && (
+            <p
+              className={cn(
+                "mt-1 text-micro",
+                sync.error ? "text-accent-700 dark:text-accent-300" : "text-ink-4",
+              )}
+              data-testid="receipt-sync"
+            >
+              {sync.syncing
+                ? "Syncing to your account…"
+                : sync.error
+                  ? sync.error
+                  : sync.pending > 0
+                    ? `${sync.pending} saved on this phone, waiting for a connection`
+                    : "Synced to your account"}
+            </p>
+          )}
         </div>
       </header>
 

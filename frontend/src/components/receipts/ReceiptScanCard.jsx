@@ -4,6 +4,7 @@ import { ArrowRight, QrCode, Receipt, Sparkles } from "lucide-react";
 import Button from "@/components/ui/Button";
 import ReceiptScanner from "@/components/receipts/ReceiptScanner";
 import { useReceiptStore } from "@/stores/receiptStore";
+import { useReceiptSync } from "@/hooks/useReceiptSync";
 import { networkSummary } from "@/lib/receipts";
 
 /**
@@ -21,6 +22,7 @@ export default function ReceiptScanCard() {
   const receipts = useReceiptStore((s) => s.receipts);
   const points = useReceiptStore((s) => s.points);
   const [open, setOpen] = useState(false);
+  useReceiptSync();
 
   const summary = useMemo(() => networkSummary(receipts), [receipts]);
   const last = receipts[0];

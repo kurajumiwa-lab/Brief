@@ -48,6 +48,7 @@ from app.routes import (
     notifications,
     payments,
     pos_bridge,
+    receipts as receipt_routes,
     reviews,
     route_planner,
     stock,
@@ -286,6 +287,7 @@ app.include_router(credentials_routes.router, prefix="/api/credentials", tags=["
 app.include_router(credentials_routes.ops_router, prefix="/api/ops/credentials", tags=["Credentials (operators)"])
 app.include_router(ratings_routes.router, prefix="/api/post-trade-ratings", tags=["Post-trade ratings"])
 app.include_router(professional_card_routes.router, prefix="/api/professional", tags=["Professional profile card"])
+app.include_router(receipt_routes.router, prefix="/api/receipts", tags=["Receipt rewards"])
 app.include_router(integrations_routes.router, prefix="/api/integrations", tags=["Ecosystem integrations"])
 app.include_router(integrations_routes.ops_router, prefix="/api/ops/integrations", tags=["Ecosystem integrations (operators)"])
 app.include_router(onboarding_routes.router, prefix="/api/onboarding", tags=["Onboarding"])
