@@ -70,6 +70,7 @@ class VendorOut(BaseModel):
     # SRM-lite (v2.1 §4.4)
     fulfillment_rate: Optional[float] = None   # % of confirmed movements delivered; None until there is a sample
     movements_completed: int = 0
+    confirmed_trade_proofs: int = 0
     fulfillment_mark: Optional[dict] = None
     reliability_score: Optional[float] = None  # filled where the performance row is loaded
     # Storefront media & gallery photos
@@ -169,6 +170,7 @@ def vendor_out(v: Vendor, connected: bool = False) -> VendorOut:
         plan_watches_limit=int(getattr(v, "plan_watches_limit", 10) or 10),
         fulfillment_rate=stock_engine.fulfillment_rate(v),
         movements_completed=int(getattr(v, "movements_completed", 0) or 0),
+        confirmed_trade_proofs=int(getattr(v, "confirmed_trade_proofs", 0) or 0),
         fulfillment_mark=stock_engine.fulfillment_mark(v),
     )
 

@@ -32,10 +32,11 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.models.receipts import Receipt, ReceiptMerchant, ReceiptOffer, ReceiptVoucher
+from app.models.receipts import Receipt, ReceiptMerchant, ReceiptOffer, ReceiptVoucher, TradeProof
 from app.models.vendor import Vendor
 from app.routes.auth import get_current_vendor
 from app.routes.ops import require_operator
+from app.services import trade_proofs as trade_proof_service
 from app.services.receipt_rewards import (
     clean_region, clean_text, is_valid_pin, parse_receipt_payload, receipt_key,
     receipt_value, voucher_code, voucher_code_matches,
@@ -136,6 +137,75 @@ def _voucher_out(voucher: ReceiptVoucher, merchant: ReceiptMerchant | None, now:
         "code_refresh_in": refresh_in,
         "code_window_seconds": CODE_WINDOW_SECONDS,
     }
+
+
+def _person(vendor: Vendor | None) -> dict | None:
+    if vendor is None:
+        return None
+    return {
+        "id": str(vendor.id),
+        "name": vendor.business_name,
+        "handle": vendor.vendor_handle,
+    }
+
+
+def _proof_out(
+    proof: TradeProof,
+    viewer_id: uuid.UUID,
+    people: dict[uuid.UUID, Vendor],
+    receipt: Receipt | None = None,
+) -> dict:
+    seller = people.get(proof.seller_vendor_id) if proof.seller_vendor_id else None
+    buyer = people.get(proof.buyer_vendor_id)
+    role = "seller" if proof.seller_vendor_id == viewer_id else "buyer"
+    return {
+        "id": str(proof.id),
+        "status": proof.status,
+        "role": role,
+        "merchant_name": proof.merchant_name,
+        "merchant_pin": proof.merchant_pin,
+        "amount": proof.amount,
+        "created_at": _iso(proof.created_at),
+        "confirmed_at": _iso(proof.confirmed_at),
+        "disputed_at": _iso(proof.disputed_at),
+        "dispute_reason": proof.dispute_reason,
+        "buyer": _person(buyer),
+        "seller": _person(seller),
+        "can_confirm": role == "seller" and proof.status == "pending",
+        "can_dispute": role == "seller" and proof.status == "pending",
+        "receipt": {
+            "id": str(receipt.id),
+            "total": receipt.total,
+            "scanned_at": _iso(receipt.scanned_at),
+            "status": receipt.status,
+        } if receipt is not None else None,
+    }
+
+
+async def _proof_context(
+    db: AsyncSession, proofs: list[TradeProof],
+) -> tuple[dict[uuid.UUID, Vendor], dict[uuid.UUID, Receipt]]:
+    vendor_ids = {
+        vendor_id
+        for proof in proofs
+        for vendor_id in (proof.buyer_vendor_id, proof.seller_vendor_id)
+        if vendor_id is not None
+    }
+    people = {}
+    if vendor_ids:
+        rows = (
+            await db.execute(select(Vendor).where(Vendor.id.in_(vendor_ids)))
+        ).scalars().all()
+        people = {vendor.id: vendor for vendor in rows}
+
+    receipt_ids = [proof.receipt_id for proof in proofs]
+    receipts = {}
+    if receipt_ids:
+        rows = (
+            await db.execute(select(Receipt).where(Receipt.id.in_(receipt_ids)))
+        ).scalars().all()
+        receipts = {receipt.id: receipt for receipt in rows}
+    return people, receipts
 
 
 async def _expire_vouchers(db: AsyncSession, now: datetime, vendor_id: uuid.UUID | None = None) -> None:
@@ -265,6 +335,10 @@ class RedeemIn(BaseModel):
 class VerifyMerchantIn(BaseModel):
     approve: bool = True
     note: Optional[str] = Field(None, max_length=1000)
+
+
+class DisputeProofIn(BaseModel):
+    reason: str = Field(..., min_length=3, max_length=1000)
 
 
 # --- receipts ---------------------------------------------------------------
@@ -401,6 +475,12 @@ async def submit_receipt(
     )
     db.add(receipt)
     try:
+        await db.flush()
+        # A QR is one side of a trade. The proof waits for the shop; a typed
+        # receipt never produces one because it has no QR evidence.
+        await trade_proof_service.create_for_receipt(
+            db, receipt=receipt, buyer=vendor, merchant=merchant,
+        )
         await db.commit()
     except IntegrityError:
         await db.rollback()
@@ -505,6 +585,106 @@ async def my_summary(vendor: Vendor = Depends(get_current_vendor), db: AsyncSess
         "merchants": int(totals[3] or 0),
         "balance": await _points_balance(db, vendor.id, now),
     }
+
+
+# --- receipt-backed trades --------------------------------------------------
+
+@router.get("/trade-proofs")
+async def my_trade_proofs(
+    status: Optional[str] = Query(None, pattern="^(pending|confirmed|disputed|unmatched)$"),
+    limit: int = Query(100, ge=1, le=200),
+    vendor: Vendor = Depends(get_current_vendor),
+    db: AsyncSession = Depends(get_db),
+):
+    """The buyer's waiting questions and the seller's confirmation queue.
+
+    Only the two participants ever see a proof. The response says which side
+    the viewer is on, because the same row is "waiting for the shop" on one
+    phone and "confirm this" on the other.
+    """
+    proofs = await trade_proof_service.proofs_for(db, vendor.id, status=status, limit=limit)
+    people, receipts = await _proof_context(db, proofs)
+    out = [
+        _proof_out(proof, vendor.id, people, receipts.get(proof.receipt_id))
+        for proof in proofs
+    ]
+    return {
+        "proofs": out,
+        "summary": {
+            "pending_for_me": sum(1 for row in out if row["can_confirm"]),
+            "waiting_for_shop": sum(
+                1 for row in out if row["role"] == "buyer" and row["status"] == "pending"
+            ),
+            "confirmed": sum(1 for row in out if row["status"] == "confirmed"),
+            "unmatched": sum(1 for row in out if row["status"] == "unmatched"),
+        },
+        "confirmed_trade_proofs": int(vendor.confirmed_trade_proofs or 0),
+    }
+
+
+@router.post("/trade-proofs/{proof_id}/confirm")
+async def confirm_trade_proof(
+    proof_id: uuid.UUID,
+    vendor: Vendor = Depends(get_current_vendor),
+    db: AsyncSession = Depends(get_db),
+):
+    proof = (
+        await db.execute(select(TradeProof).where(TradeProof.id == proof_id).with_for_update())
+    ).scalar_one_or_none()
+    if proof is None:
+        raise HTTPException(404, "That trade proof does not exist")
+    if proof.seller_vendor_id != vendor.id:
+        raise HTTPException(403, "Only the shop named on the receipt can confirm it")
+    if proof.status != "pending":
+        raise HTTPException(409, "That trade is not waiting for confirmation")
+    buyer = await db.get(Vendor, proof.buyer_vendor_id)
+    if buyer is None:
+        raise HTTPException(409, "The buyer account no longer exists")
+
+    await trade_proof_service.confirm(db, proof=proof, seller=vendor, buyer=buyer)
+    await db.commit()
+    await db.refresh(proof)
+    await db.refresh(vendor)
+    await db.refresh(buyer)
+    people = {vendor.id: vendor, buyer.id: buyer}
+    receipt = await db.get(Receipt, proof.receipt_id)
+    return {
+        "proof": _proof_out(proof, vendor.id, people, receipt),
+        "confirmed_trade_proofs": {
+            "mine": int(vendor.confirmed_trade_proofs or 0),
+            "buyer": int(buyer.confirmed_trade_proofs or 0),
+        },
+    }
+
+
+@router.post("/trade-proofs/{proof_id}/dispute")
+async def dispute_trade_proof(
+    proof_id: uuid.UUID,
+    body: DisputeProofIn,
+    vendor: Vendor = Depends(get_current_vendor),
+    db: AsyncSession = Depends(get_db),
+):
+    proof = (
+        await db.execute(select(TradeProof).where(TradeProof.id == proof_id).with_for_update())
+    ).scalar_one_or_none()
+    if proof is None:
+        raise HTTPException(404, "That trade proof does not exist")
+    if proof.seller_vendor_id != vendor.id:
+        raise HTTPException(403, "Only the shop named on the receipt can question it")
+    if proof.status != "pending":
+        raise HTTPException(409, "That trade is not waiting for confirmation")
+    buyer = await db.get(Vendor, proof.buyer_vendor_id)
+    if buyer is None:
+        raise HTTPException(409, "The buyer account no longer exists")
+
+    await trade_proof_service.dispute(
+        db, proof=proof, seller=vendor, buyer=buyer, reason=body.reason,
+    )
+    await db.commit()
+    await db.refresh(proof)
+    people = {vendor.id: vendor, buyer.id: buyer}
+    receipt = await db.get(Receipt, proof.receipt_id)
+    return {"proof": _proof_out(proof, vendor.id, people, receipt)}
 
 
 # --- public merchant discovery / offers -------------------------------------

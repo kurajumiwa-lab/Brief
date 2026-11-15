@@ -19,6 +19,7 @@ import pytest
 from app.config import settings
 from app.database import async_session
 from app.models.receipts import Receipt, ReceiptMerchant
+from app.models.vendor import Vendor
 
 pytestmark = pytest.mark.asyncio
 
@@ -304,3 +305,105 @@ async def test_region_insight_is_aggregate_only_and_cohort_gated(client):
     assert small.status_code == 200, small.text
     assert small.json()["available"] is False
     assert small.json()["cohort"]["receipts"] == 2
+
+
+async def test_receipt_becomes_a_two_sided_trade_and_moves_both_counters(client):
+    buyer, buyer_id, _ = await _register(client, "tp_buyer")
+    seller, seller_id, _ = await _register(client, "tp_seller")
+
+    # The seller's registered name is the name printed on the receipt.
+    async with async_session() as db:
+        seller_row = await db.get(Vendor, uuid.UUID(seller_id))
+        seller_name = seller_row.business_name
+        await db.commit()
+
+    response = await _submit(
+        client, buyer, _qr(_pin(), _invoice(), 800, name=seller_name), region="nyanza",
+    )
+    assert response.status_code == 201, response.text
+
+    buyer_view = await client.get("/api/receipts/trade-proofs", headers=buyer)
+    assert buyer_view.status_code == 200, buyer_view.text
+    body = buyer_view.json()
+    assert body["summary"]["waiting_for_shop"] == 1
+    proof = body["proofs"][0]
+    assert proof["role"] == "buyer"
+    assert proof["status"] == "pending"
+    assert proof["can_confirm"] is False
+    assert proof["seller"]["id"] == seller_id
+    proof_id = proof["id"]
+
+    seller_view = await client.get("/api/receipts/trade-proofs", headers=seller)
+    assert seller_view.status_code == 200, seller_view.text
+    incoming = seller_view.json()["proofs"][0]
+    assert incoming["role"] == "seller"
+    assert incoming["can_confirm"] is True
+    assert incoming["buyer"]["id"] == buyer_id
+
+    stranger, _stranger_id, _ = await _register(client, "tp_stranger")
+    denied = await client.post(f"/api/receipts/trade-proofs/{proof_id}/confirm", headers=stranger)
+    assert denied.status_code == 403
+
+    confirmed = await client.post(f"/api/receipts/trade-proofs/{proof_id}/confirm", headers=seller)
+    assert confirmed.status_code == 200, confirmed.text
+    assert confirmed.json()["proof"]["status"] == "confirmed"
+    assert confirmed.json()["confirmed_trade_proofs"] == {"mine": 1, "buyer": 1}
+
+    again = await client.post(f"/api/receipts/trade-proofs/{proof_id}/confirm", headers=seller)
+    assert again.status_code == 409
+
+    async with async_session() as db:
+        buyer_row = await db.get(Vendor, uuid.UUID(buyer_id))
+        seller_row = await db.get(Vendor, uuid.UUID(seller_id))
+        assert buyer_row.confirmed_trade_proofs == 1
+        assert seller_row.confirmed_trade_proofs == 1
+
+    # The publication of the count is what the rank ladder reads.
+    profile = await client.get("/api/vendors/me", headers=buyer)
+    assert profile.status_code == 200, profile.text
+    assert profile.json()["confirmed_trade_proofs"] == 1
+
+
+async def test_a_shop_can_dispute_and_an_unmatched_shop_does_not_invent_a_trade(client):
+    buyer, _buyer_id, _ = await _register(client, "tp_dispute_buyer")
+    seller, seller_id, _ = await _register(client, "tp_dispute_seller")
+
+    async with async_session() as db:
+        seller_name = (await db.get(Vendor, uuid.UUID(seller_id))).business_name
+        await db.commit()
+
+    assert (await _submit(
+        client, buyer, _qr(_pin(), _invoice(), 600, name=seller_name),
+    )).status_code == 201
+    proof = (await client.get("/api/receipts/trade-proofs", headers=seller)).json()["proofs"][0]
+
+    disputed = await client.post(
+        f"/api/receipts/trade-proofs/{proof['id']}/dispute",
+        json={"reason": "This receipt is from another shop with a similar name."},
+        headers=seller,
+    )
+    assert disputed.status_code == 200, disputed.text
+    assert disputed.json()["proof"]["status"] == "disputed"
+    assert "another shop" in disputed.json()["proof"]["dispute_reason"]
+
+    async with async_session() as db:
+        assert (await db.get(Vendor, uuid.UUID(seller_id))).confirmed_trade_proofs == 0
+
+    # A shop that is not on Home Office cannot be confirmed. The buyer sees a
+    # real unmatched row, not a fabricated trade.
+    assert (await _submit(
+        client, buyer, _qr(_pin(), _invoice(), 300, name="A Shop Not On This Network"),
+    )).status_code == 201
+    unmatched = (await client.get("/api/receipts/trade-proofs?status=unmatched", headers=buyer)).json()
+    assert len(unmatched["proofs"]) == 1
+    assert unmatched["proofs"][0]["seller"] is None
+    assert unmatched["proofs"][0]["status"] == "unmatched"
+
+
+async def test_a_typed_receipt_never_creates_a_trade_proof(client):
+    buyer, _buyer_id, _ = await _register(client, "tp_manual")
+    response = await client.post("/api/receipts", json={
+        "source": "manual", "merchant_name": "Some Shop", "total": 400,
+    }, headers=buyer)
+    assert response.status_code == 201, response.text
+    assert (await client.get("/api/receipts/trade-proofs", headers=buyer)).json()["proofs"] == []

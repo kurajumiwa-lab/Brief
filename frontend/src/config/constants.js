@@ -147,5 +147,8 @@ export const NOTIFICATION_ROUTES = {
   parasitism_milestone: "/network",
   patron_promotion: "/profile",
   shipment_update: "/tools?tab=shipments",
+  trade_proof_request: "/trades/proofs",
+  trade_proof_confirmed: "/trades/proofs",
+  trade_proof_disputed: "/trades/proofs",
   system: "/",
 };

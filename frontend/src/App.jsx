@@ -52,6 +52,7 @@ import { canSellGoods } from "@/config/identity";
 const TodayPage = lazy(() => import("@/pages/home/TodayPage"));
 const RegionsPage = lazy(() => import("@/pages/regions/RegionsPage"));
 const ReceiptLedgerPage = lazy(() => import("@/pages/receipts/ReceiptLedgerPage"));
+const TradeProofsPage = lazy(() => import("@/pages/trades/TradeProofsPage"));
 const RegionsIndexPage = lazy(() => import("@/pages/regions/RegionsIndexPage"));
 const RegionPage = lazy(() => import("@/pages/regions/RegionPage"));
 const PortfolioPage = lazy(() => import("@/pages/you/PortfolioPage"));
@@ -266,6 +267,7 @@ function AppRoutes() {
           <Route path="/home" element={<TodayPage />} />
           <Route path="/regions" element={<RegionsPage />} />
           <Route path="/receipts" element={<ReceiptLedgerPage />} />
+          <Route path="/trades/proofs" element={<TradeProofsPage />} />
           <Route path="/regions/all" element={<RegionsIndexPage />} />
           <Route path="/regions/:slug" element={<RegionPage />} />
           <Route path="/inbox" element={<InboxPage />} />

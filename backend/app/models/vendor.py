@@ -97,6 +97,10 @@ class Vendor(Base):
     # SRM-lite (v2.1 §3.4): how reliably this vendor fulfils what it confirms.
     movements_completed = Column(Integer, default=0, nullable=False, server_default="0")
     movements_cancelled = Column(Integer, default=0, nullable=False, server_default="0")
+    # Receipt-backed trades confirmed by both sides. Kept separate from stock
+    # movements because that counter is recomputed from `stock_movements`; a
+    # shop receipt is a different kind of proof, not a movement to rewrite.
+    confirmed_trade_proofs = Column(Integer, default=0, nullable=False, server_default="0")
     parasitism_index = Column(Float, default=0.0, nullable=False)  # Mutual benefit score
 
     # POS Integration

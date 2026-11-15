@@ -34,11 +34,33 @@ Prefix: `/api/receipts`.
 | `GET` | `/vouchers/{id}` | owner | One voucher. |
 | `POST` | `/vouchers/{id}/cancel` | owner | Cancel an unused voucher and release its points. |
 | `POST` | `/merchant/redeem` | verified owner | Check a four-digit code and mark the voucher used. |
+| `GET` | `/trade-proofs?status=` | member | Receipt-backed trades as buyer and seller. |
+| `POST` | `/trade-proofs/{id}/confirm` | seller | Both sides agree; each profile is credited once. |
+| `POST` | `/trade-proofs/{id}/dispute` | seller | Question a receipt, with a reason. |
 | `GET` | `/ops/merchants?status=` | operator | Claim review queue. |
 | `POST` | `/ops/merchants/{id}/verify` | operator | Approve or reject a claim. |
 
 Operators are configured with `OPERATOR_HANDLES`. The role fails closed when
 unset.
+
+## Receipt → a two-sided trade
+
+A QR submission also creates a `trade_proofs` row. The server tries to match the
+shop, strongest evidence first:
+
+1. a verified merchant record already bound to a vendor account;
+2. the KRA PIN matching the vendor profile's tax id;
+3. the printed business name matching exactly after punctuation is removed.
+
+A name match must be unique; the buyer is never the seller. A matched shop gets
+a `trade_proof_request` notification and can confirm or dispute. Confirmation
+increments `vendors.confirmed_trade_proofs` for **both** accounts in the same
+transaction, once. The phone's rank ladder reads that counter alongside
+`movements_completed`, so level 3 (Trading) is reachable from a receipt-backed
+purchase without inventing a stock movement.
+
+An unmatched row is deliberate: it says the shop is not on Home Office yet and
+offers a WhatsApp invite. A typed receipt never creates a proof.
 
 ## What the server decides, not the client
 
@@ -69,3 +91,8 @@ so `line_items` is explicitly `false` rather than estimated.
   printed claim code would remove that queue, but would add an SMS cost or a
   print step; the review is the zero-cost MVP.
 - **Cash**: none, by design. Vouchers are discounts, funded by the merchant.
+- **Wrong-shop safety**: a claim or a name match can be wrong. The seller's
+  confirmation is the second signature; a dispute is recorded and notified rather
+  than silently discarded.
+- **Movement credit**: a confirmed proof does not create a `stock_movements`
+  row. It moves a separate counter so `performance_service` cannot overwrite it.

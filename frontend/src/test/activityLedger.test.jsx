@@ -360,6 +360,9 @@ describe("Four-type publishing", () => {
     for (const type of ["available", "wanted", "scheduled", "opportunity"]) {
       expect(screen.getByTestId(`posting-type-${type}`)).toBeInTheDocument();
     }
+    // The fifth action is a trade proof, not another posting type.
+    expect(screen.getByTestId("create-verify-trade")).toBeInTheDocument();
+    expect(screen.getByTestId("create-verify-scan")).toBeInTheDocument();
     // Classic types remain reachable for backward compatibility.
     expect(screen.getByTestId("create-type-event")).toBeInTheDocument();
 

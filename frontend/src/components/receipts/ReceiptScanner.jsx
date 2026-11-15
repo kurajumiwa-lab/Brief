@@ -359,6 +359,12 @@ export default function ReceiptScanner({ open, onClose }) {
                 {result.receipt.merchant} · {formatKes(result.receipt.total)}
               </p>
               <p className="mt-1 text-micro text-ink-4">{result.receipt.freshness_label}</p>
+              {result.receipt.status !== "manual" && (
+                <p className="mx-auto mt-2 max-w-xs text-micro leading-relaxed text-ink-4">
+                  If this shop is on Home Office, it now has one tap to confirm the
+                  trade. Both sides have to agree before it counts.
+                </p>
+              )}
             </div>
             <div className="flex justify-center gap-2">
               <Button

@@ -268,7 +268,10 @@ const hasText = (value) => typeof value === "string" && value.trim().length > 0;
 export function exposure({ vendor, profile, identity } = {}) {
   const place = vendor?.physical_location || profile?.preferred_regions?.[0] || "";
   const region = regionFromPlace(place) || null;
-  const completed = Number(vendor?.movements_completed || 0);
+  // A completed movement and a receipt-backed trade confirmed by both sides
+  // are different records, but both are a trade the network watched happen.
+  const completed =
+    Number(vendor?.movements_completed || 0) + Number(vendor?.confirmed_trade_proofs || 0);
   const fulfilment = vendor?.fulfillment_rate;
   // A route is exposed when a buyer can actually use it: a number with direct
   // calls on, an address the member chose to publish, or a number our staff have
@@ -326,15 +329,15 @@ export function exposure({ vendor, profile, identity } = {}) {
     {
       key: "trade",
       label: "Complete one trade",
-      detail: "A movement both sides confirmed.",
+      detail: "A movement, or a shop receipt the shop confirmed.",
       done: completed >= 1,
       step: 3,
-      to: "/orders",
+      to: "/trades/proofs",
     },
     {
       key: "record",
       label: "Build a fulfilment record",
-      detail: "Five completed movements with 90%+ delivered.",
+      detail: "Five completed trades with 90%+ delivered.",
       done: completed >= 5 && (fulfilment == null || fulfilment >= 0.9),
       step: 4,
       to: "/orders/records",

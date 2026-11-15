@@ -129,13 +129,22 @@ describe("rank is exposure, never a purchase", () => {
     expect(reachable.next.key).toBe("trading");
   });
 
-  it("reaches Trading on one movement, Trusted only on a real record", () => {
+  it("reaches Trading on one movement, or one receipt-backed trade", () => {
     const trading = rankFor({
       vendor: { ...page, movements_completed: 1 },
       identity: { contact: { phone: "+254700000000" } },
     });
     expect(trading.level).toBe(3);
     expect(trading.next.key).toBe("trusted");
+
+    // A shop receipt confirmed by both sides is a trade the network watched
+    // happen, even when no stock movement was created.
+    const receiptTrading = rankFor({
+      vendor: { ...page, movements_completed: 0, confirmed_trade_proofs: 1 },
+      identity: { contact: { phone: "+254700000000" } },
+    });
+    expect(receiptTrading.level).toBe(3);
+    expect(receiptTrading.items.find((item) => item.key === "trade").to).toBe("/trades/proofs");
 
     const nearly = rankFor({
       vendor: { ...page, movements_completed: 4, fulfillment_rate: 0.95 },

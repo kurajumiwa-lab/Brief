@@ -101,15 +101,15 @@ __all__ = [
     "PublicPlace",
     "HustleJobCall", "HustleContract", "HustleGoldLedger", "HustleSquad", "HustleSquadMember",
     "OutsidePost", "OutsideReaction", "OutsideDiscoveryPref", "OutsideContentReport",
-    "Receipt", "ReceiptMerchant", "ReceiptOffer", "ReceiptVoucher",
-    "MERCHANT_CLAIM_STATUSES", "RECEIPT_STATUSES", "VOUCHER_STATUSES",
+    "Receipt", "ReceiptMerchant", "ReceiptOffer", "ReceiptVoucher", "TradeProof",
+    "MERCHANT_CLAIM_STATUSES", "RECEIPT_STATUSES", "TRADE_PROOF_STATUSES", "VOUCHER_STATUSES",
     "LocalActivity", "ActivityResponse", "ActivityBooking", "ActivityFeedback",
     "ActivityLedgerEvent", "ActivityWatch", "SavedRelationship",
 ]
 
 from app.models.receipts import (
-    Receipt, ReceiptMerchant, ReceiptOffer, ReceiptVoucher,
-    MERCHANT_CLAIM_STATUSES, RECEIPT_STATUSES, VOUCHER_STATUSES,
+    Receipt, ReceiptMerchant, ReceiptOffer, ReceiptVoucher, TradeProof,
+    MERCHANT_CLAIM_STATUSES, RECEIPT_STATUSES, TRADE_PROOF_STATUSES, VOUCHER_STATUSES,
 )
 from app.models.guide import GuideSearch, GuideShelfVisit
 from app.models.park import (

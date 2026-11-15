@@ -29,6 +29,7 @@ from sqlalchemy.orm import relationship
 from app.database import Base
 
 MERCHANT_CLAIM_STATUSES = ("unclaimed", "pending", "verified", "rejected")
+TRADE_PROOF_STATUSES = ("pending", "confirmed", "disputed", "unmatched")
 RECEIPT_STATUSES = ("verified", "partial", "manual")
 VOUCHER_STATUSES = ("issued", "redeemed", "expired", "cancelled")
 
@@ -114,6 +115,7 @@ class Receipt(Base):
 
     merchant = relationship("ReceiptMerchant", back_populates="receipts")
     vouchers = relationship("ReceiptVoucher", back_populates="used_on_receipt")
+    trade_proof = relationship("TradeProof", back_populates="receipt", uselist=False)
 
 
 class ReceiptOffer(Base):
@@ -146,6 +148,54 @@ class ReceiptOffer(Base):
 
     merchant = relationship("ReceiptMerchant", back_populates="offers")
     vouchers = relationship("ReceiptVoucher", back_populates="offer")
+
+
+class TradeProof(Base):
+    """A receipt-backed trade, waiting for the other side.
+
+    The buyer scans the paper; this row is the question the seller answers. It
+    is deliberately not a StockMovement: there is no stock, no delivery and no
+    delivery quote. It is proof that money changed hands at a named shop, and
+    it only becomes a completed trade when the shop confirms it.
+
+    `confirmed_trade_proofs` on each Vendor is incremented once, inside the
+    same transaction as the status change. No cash moves here.
+    """
+    __tablename__ = "trade_proofs"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('pending','confirmed','disputed','unmatched')",
+            name="ck_trade_proofs_status",
+        ),
+        CheckConstraint("amount > 0", name="ck_trade_proofs_amount_positive"),
+        UniqueConstraint("receipt_id", name="uq_trade_proofs_receipt"),
+        Index("ix_trade_proofs_seller_status", "seller_vendor_id", "status", "created_at"),
+        Index("ix_trade_proofs_buyer_status", "buyer_vendor_id", "status", "created_at"),
+    )
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    receipt_id = Column(
+        UUID(as_uuid=True), ForeignKey("receipts.id", ondelete="CASCADE"), nullable=False,
+    )
+    buyer_vendor_id = Column(
+        UUID(as_uuid=True), ForeignKey("vendors.id", ondelete="CASCADE"), nullable=False, index=True,
+    )
+    seller_vendor_id = Column(
+        UUID(as_uuid=True), ForeignKey("vendors.id", ondelete="SET NULL"), nullable=True, index=True,
+    )
+    merchant_pin = Column(String(20), nullable=True)
+    merchant_name = Column(String(200), nullable=False)
+    amount = Column(Integer, nullable=False)
+    status = Column(String(16), nullable=False, default="pending", server_default="pending")
+    confirmed_at = Column(DateTime, nullable=True)
+    disputed_at = Column(DateTime, nullable=True)
+    dispute_reason = Column(Text, nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    receipt = relationship("Receipt", back_populates="trade_proof")
+    buyer = relationship("Vendor", foreign_keys=[buyer_vendor_id])
+    seller = relationship("Vendor", foreign_keys=[seller_vendor_id])
 
 
 class ReceiptVoucher(Base):
