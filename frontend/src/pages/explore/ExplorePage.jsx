@@ -206,7 +206,7 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
     return items.filter((item) => ownerLevel(item.owner) >= 3);
   }, [items, regionAware, trust]);
 
-  const clearAll = () => patchParams({ kind: "", intent: "", trust: "", when: "", price: "" });
+  const clearAll = () => patchParams({ kind: "", filter: "", intent: "", trust: "", when: "", price: "" });
 
   return (
     <div className="space-y-s3">
@@ -240,6 +240,34 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
           </button>
         )}
       </div>
+
+      {/* ── the region the results belong to ───────────────────────────────
+          The region is a scope, not a market gate. Two lines say what this
+          corridor is known for and offer the one door that matters: its own
+          page. Markets are gone, so nothing here turns into a directory. */}
+      {regionAware && region && (
+        <section
+          aria-label="Region"
+          data-testid="region-context"
+          className="flex items-center gap-3 rounded-xl border border-edge-1 bg-surface-0 px-3 py-2.5"
+        >
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-700 dark:bg-brand-500/10 dark:text-brand-300">
+            <MapPin size={16} aria-hidden="true" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-xs font-bold text-ink-1">{regionLabel(region)}</p>
+            <p className="truncate text-micro text-ink-4">
+              {region.knownFor.slice(0, 3).join(" · ")}
+            </p>
+          </div>
+          <Link
+            to={regionPath(region)}
+            className="shrink-0 text-micro font-bold text-brand-700 hover:underline dark:text-brand-300"
+          >
+            Open region
+          </Link>
+        </section>
+      )}
 
       {/* The old discovery type row: Goods · People · Services · Equipment ·
           Map. Each one is the same feed with a filter, not a new database. */}
@@ -456,34 +484,6 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
           </div>
         )}
       </div>
-
-      {/* ── the region the results belong to ───────────────────────────────
-          The region is a scope, not a market gate. Two lines say what this
-          corridor is known for and offer the one door that matters: its own
-          page. Markets are gone, so nothing here turns into a directory. */}
-      {regionAware && region && (
-        <section
-          aria-label="Region"
-          data-testid="region-context"
-          className="flex items-center gap-3 rounded-xl border border-edge-1 bg-surface-0 px-3 py-2.5"
-        >
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-700 dark:bg-brand-500/10 dark:text-brand-300">
-            <MapPin size={16} aria-hidden="true" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-xs font-bold text-ink-1">{regionLabel(region)}</p>
-            <p className="truncate text-micro text-ink-4">
-              {region.knownFor.slice(0, 3).join(" · ")}
-            </p>
-          </div>
-          <Link
-            to={regionPath(region)}
-            className="shrink-0 text-micro font-bold text-brand-700 hover:underline dark:text-brand-300"
-          >
-            Open region
-          </Link>
-        </section>
-      )}
 
       {!regionAware && (
         /* A strip, not a card wall: markets were the old scope. */

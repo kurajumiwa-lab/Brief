@@ -63,6 +63,11 @@ a check the card cannot prove.
 
 ## Intent and trust filters
 
+The chosen corridor sits directly under the heading, before the search and the
+filters: its name, what it is known for, and one door to its own page. The
+picker in the heading reaches every region; the card makes the current scope
+impossible to miss.
+
 On the region-aware Discover screen the posting-type row becomes four intent
 chips: `All`, `Offers`, `Wanted`, `Rounds & Events`. They map to the API's kind
 names in `REGION_INTENTS` and travel in the URL (`?intent=offers`) so Back and

@@ -50,10 +50,12 @@ const KIND_LABEL = {
 
 export const kindLabel = (kind) => KIND_LABEL[kind] || "Listed";
 
-export const priceLabel = (value) =>
-  value === null || value === undefined || value === ""
-    ? "Open"
-    : `KSh ${new Intl.NumberFormat("en-KE").format(Number(value))}`;
+export const priceLabel = (value) => {
+  if (value === null || value === undefined || value === "") return "Open";
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) return "Open";
+  return `KSh ${new Intl.NumberFormat("en-KE").format(amount)}`;
+};
 
 export const momentumLabel = (item = {}) => {
   const joined = Number(item.counts?.booked ?? item.counts?.attending ?? item.counts?.responses ?? 0);
