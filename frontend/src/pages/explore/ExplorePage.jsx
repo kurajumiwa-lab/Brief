@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
-  ChevronDown, Compass, MapPin, RefreshCw, SlidersHorizontal, X,
+  ChevronDown, Compass, MapPin, RefreshCw, ShieldCheck, SlidersHorizontal, X,
 } from "lucide-react";
 import Button from "@/components/ui/Button";
 import Chip from "@/components/ui/Chip";
@@ -12,11 +12,13 @@ import LocationBar from "@/components/outside/LocationBar";
 import MarketStrip from "@/components/explore/MarketStrip";
 import CategoryTiles from "@/components/explore/CategoryTiles";
 import RegionPicker from "@/components/regions/RegionPicker";
+import RegionsGrid from "@/components/regions/RegionsGrid";
 import { BROWSE_NAV } from "@/config/navigation";
 import {
   DEFAULT_REGION, REGION_BY_SLUG, regionFromPlace, regionLabel, regionPath,
 } from "@/config/regions";
 import { RADII, locationLabel, useOutsideStore } from "@/stores/outsideStore";
+import { ownerLevel } from "@/lib/standing";
 import { cn } from "@/lib/utils";
 
 /**
@@ -51,6 +53,14 @@ const TYPE_FILTERS = [
   { value: "scheduled", label: "Scheduled" },
   { value: "opportunity", label: "Opportunities" },
   { value: "post", label: "Posts" },
+];
+
+/** Regions browse by intent, not by the API's kind names. */
+export const REGION_INTENTS = [
+  { value: "", label: "All", kinds: null },
+  { value: "offers", label: "Offers", kinds: ["available", "listing", "service", "rental"] },
+  { value: "wanted", label: "Wanted", kinds: ["wanted", "opportunity"] },
+  { value: "rounds", label: "Rounds & Events", kinds: ["scheduled", "event"] },
 ];
 
 const WHEN_FILTERS = [
@@ -97,6 +107,8 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
     "";
   const when = params.get("when") || "";
   const price = params.get("price") || "";
+  const intent = params.get("intent") || "";
+  const trust = params.get("trust") || "";
 
   const [placeOpen, setPlaceOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -125,7 +137,11 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
 
   const sentinel = useRef(null);
 
-  const kinds = useMemo(() => (kind ? [kind] : null), [kind]);
+  const kinds = useMemo(() => {
+    if (kind) return [kind];
+    if (!regionAware) return null;
+    return REGION_INTENTS.find((option) => option.value === intent)?.kinds || null;
+  }, [kind, regionAware, intent]);
 
   useEffect(() => {
     if (!demo && !location) loadLocation();
@@ -183,9 +199,14 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
   const activeWhen = when ? WHEN_FILTERS.find((o) => o.value === when) : null;
   const activePrice = price === "free" ? "No price" : price === "priced" ? "Priced" : null;
   const hiddenFilterCount = (when ? 1 : 0) + (price ? 1 : 0);
-  const hasFilters = Boolean(kind || when || price);
+  const hasFilters = Boolean(kind || intent || trust || when || price);
 
-  const clearAll = () => patchParams({ kind: "", when: "", price: "" });
+  const visibleItems = useMemo(() => {
+    if (!regionAware || trust !== "3") return items;
+    return items.filter((item) => ownerLevel(item.owner) >= 3);
+  }, [items, regionAware, trust]);
+
+  const clearAll = () => patchParams({ kind: "", filter: "", intent: "", trust: "", when: "", price: "" });
 
   return (
     <div className="space-y-s3">
@@ -219,6 +240,34 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
           </button>
         )}
       </div>
+
+      {/* ── the region the results belong to ───────────────────────────────
+          The region is a scope, not a market gate. Two lines say what this
+          corridor is known for and offer the one door that matters: its own
+          page. Markets are gone, so nothing here turns into a directory. */}
+      {regionAware && region && (
+        <section
+          aria-label="Region"
+          data-testid="region-context"
+          className="flex items-center gap-3 rounded-xl border border-edge-1 bg-surface-0 px-3 py-2.5"
+        >
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-700 dark:bg-brand-500/10 dark:text-brand-300">
+            <MapPin size={16} aria-hidden="true" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-xs font-bold text-ink-1">{regionLabel(region)}</p>
+            <p className="truncate text-micro text-ink-4">
+              {region.knownFor.slice(0, 3).join(" · ")}
+            </p>
+          </div>
+          <Link
+            to={regionPath(region)}
+            className="shrink-0 text-micro font-bold text-brand-700 hover:underline dark:text-brand-300"
+          >
+            Open region
+          </Link>
+        </section>
+      )}
 
       {/* The old discovery type row: Goods · People · Services · Equipment ·
           Map. Each one is the same feed with a filter, not a new database. */}
@@ -261,52 +310,93 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
         </div>
       )}
 
-      {/* ── radius: one line, four choices ────────────────────────────────── */}
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-2xs text-ink-4">Discovery radius</span>
-        <div role="group" aria-label="Discovery radius" className="flex items-center gap-1">
-          {RADII.map((option) => {
-            const active = radius === option.value;
-            return (
-              <button
-                key={option.value}
-                type="button"
-                aria-pressed={active}
-                title={option.hint}
-                onClick={() => setLocation({ radius_km: option.value })}
-                data-testid={`explore-radius-${option.value}`}
-                className={cn(
-                  "inline-flex h-6 items-center rounded-full px-2 text-micro font-semibold tabular-nums transition-colors",
-                  active
-                    ? "bg-brand-600 text-white dark:bg-brand-500"
-                    : "text-ink-3 hover:bg-surface-2 hover:text-ink-1",
-                )}
-              >
-                {option.value} km
-              </button>
-            );
-          })}
+      {/* ── radius and the standing filter share one line ────────────────── */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <span className="text-2xs text-ink-4">Discovery radius</span>
+          <div role="group" aria-label="Discovery radius" className="flex items-center gap-1">
+            {RADII.map((option) => {
+              const active = radius === option.value;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  aria-pressed={active}
+                  title={option.hint}
+                  onClick={() => setLocation({ radius_km: option.value })}
+                  data-testid={`explore-radius-${option.value}`}
+                  className={cn(
+                    "inline-flex h-6 items-center rounded-full px-2 text-micro font-semibold tabular-nums transition-colors",
+                    active
+                      ? "bg-brand-600 text-white dark:bg-brand-500"
+                      : "text-ink-3 hover:bg-surface-2 hover:text-ink-1",
+                  )}
+                >
+                  {option.value} km
+                </button>
+              );
+            })}
+          </div>
         </div>
+        {regionAware && (
+          <button
+            type="button"
+            aria-pressed={trust === "3"}
+            aria-label="Only Level 3 or higher traders"
+            title="Only pages with a completed trade record (Level 3+)"
+            onClick={() => patchParams({ trust: trust === "3" ? "" : "3" })}
+            data-testid="regions-trust"
+            className={cn(
+              "inline-flex h-7 items-center gap-1 rounded-full border px-2.5 text-micro font-bold transition-colors",
+              trust === "3"
+                ? "border-brand-700 bg-brand-700 text-white"
+                : "border-edge-1 bg-surface-1 text-ink-3 hover:border-edge-2 hover:text-ink-1",
+            )}
+          >
+            <ShieldCheck size={12} aria-hidden="true" />
+            Lvl 3+ only
+          </button>
+        )}
       </div>
 
       {/* ── what you are doing: the secondary axis, kept quiet ────────────── */}
-      <div
-        role="group"
-        aria-label="Discovery type"
-        className="-mt-1 flex flex-wrap items-center gap-1 overflow-visible"
-      >
-        {TYPE_FILTERS.map((option) => (
-          <Chip
-            key={option.value || "all"}
-            size="sm"
-            active={kind === option.value}
-            onClick={() => patchParams({ kind: option.value })}
-            data-testid={`explore-type-${option.value || "all"}`}
-          >
-            {option.label}
-          </Chip>
-        ))}
-      </div>
+      {regionAware ? (
+        <div
+          role="group"
+          aria-label="Browse by intent"
+          className="-mt-1 flex flex-wrap items-center gap-1 overflow-visible"
+        >
+          {REGION_INTENTS.map((option) => (
+            <Chip
+              key={option.value || "all"}
+              size="sm"
+              active={!kind && intent === option.value}
+              onClick={() => patchParams({ intent: option.value, kind: "", filter: "" })}
+              data-testid={`regions-intent-${option.value || "all"}`}
+            >
+              {option.label}
+            </Chip>
+          ))}
+        </div>
+      ) : (
+        <div
+          role="group"
+          aria-label="Discovery type"
+          className="-mt-1 flex flex-wrap items-center gap-1 overflow-visible"
+        >
+          {TYPE_FILTERS.map((option) => (
+            <Chip
+              key={option.value || "all"}
+              size="sm"
+              active={kind === option.value}
+              onClick={() => patchParams({ kind: option.value })}
+              data-testid={`explore-type-${option.value || "all"}`}
+            >
+              {option.label}
+            </Chip>
+          ))}
+        </div>
+      )}
 
       {/* ── categories, in colour, wrapping into as many rows as needed ───── */}
       <section aria-labelledby="explore-categories-heading" className="space-y-1.5">
@@ -328,7 +418,7 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
             </button>
           )}
         </div>
-        <CategoryTiles value={kind} onSelect={(value) => patchParams({ kind: value, filter: "" })} />
+        <CategoryTiles value={kind} onSelect={(value) => patchParams({ kind: value, filter: "", intent: "" })} />
       </section>
 
       {/* ── everything else, behind one control that counts what is on ────── */}
@@ -395,34 +485,6 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
         )}
       </div>
 
-      {/* ── the region the results belong to ───────────────────────────────
-          The region is a scope, not a market gate. Two lines say what this
-          corridor is known for and offer the one door that matters: its own
-          page. Markets are gone, so nothing here turns into a directory. */}
-      {regionAware && region && (
-        <section
-          aria-label="Region"
-          data-testid="region-context"
-          className="flex items-center gap-3 rounded-xl border border-edge-1 bg-surface-0 px-3 py-2.5"
-        >
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-700 dark:bg-brand-500/10 dark:text-brand-300">
-            <MapPin size={16} aria-hidden="true" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-xs font-bold text-ink-1">{regionLabel(region)}</p>
-            <p className="truncate text-micro text-ink-4">
-              {region.knownFor.slice(0, 3).join(" · ")}
-            </p>
-          </div>
-          <Link
-            to={regionPath(region)}
-            className="shrink-0 text-micro font-bold text-brand-700 hover:underline dark:text-brand-300"
-          >
-            Open region
-          </Link>
-        </section>
-      )}
-
       {!regionAware && (
         /* A strip, not a card wall: markets were the old scope. */
         <MarketStrip limit={2} />
@@ -431,29 +493,39 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
       {/* ── results ───────────────────────────────────────────────────────── */}
       <section aria-live="polite" aria-busy={status === "loading"} className="space-y-3">
         {status === "loading" && !items.length ? (
-          <FeedSkeleton />
+          <FeedSkeleton regionAware={regionAware} />
         ) : status === "error" ? (
           <ErrorPanel onRetry={() => loadFeed({ kinds, query: q || null, force: true })} message={error} />
         ) : items.length === 0 ? (
           <EmptyPanel query={q} />
+        ) : visibleItems.length === 0 ? (
+          <FilteredEmpty
+            onClear={() => patchParams({ trust: "" })}
+            hasMore={Boolean(cursor)}
+            onMore={loadMore}
+          />
         ) : (
           <>
             <p className="text-2xs text-ink-4" data-testid="explore-count">
-              {items.length} {items.length === 1 ? "thing" : "things"}
+              {visibleItems.length} {visibleItems.length === 1 ? "thing" : "things"}
               {q ? ` matching “${q}”` : ""}
               {location?.radius_km ? ` within ${radius} km` : ""}
               {regionAware && region ? ` · ${regionLabel(region)}` : ""}
             </p>
-            <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {items.map((item) => (
-                <li key={`${item.kind}:${item.id}`}>
-                  <ContentCard item={item} onReact={toggleReaction} className="h-full" />
-                </li>
-              ))}
-            </ul>
+            {regionAware ? (
+              <RegionsGrid items={visibleItems} />
+            ) : (
+              <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {visibleItems.map((item) => (
+                  <li key={`${item.kind}:${item.id}`}>
+                    <ContentCard item={item} onReact={toggleReaction} className="h-full" />
+                  </li>
+                ))}
+              </ul>
+            )}
             <div ref={sentinel} className="h-4" aria-hidden="true" />
             {status === "loading_more" && <p className="py-3 text-center text-2xs text-ink-4">Loading more…</p>}
-            {!cursor && items.length > 4 && (
+            {!cursor && visibleItems.length > 4 && (
               <p className="py-3 text-center text-2xs text-ink-4">That's everything in this radius.</p>
             )}
           </>
@@ -463,9 +535,12 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
   );
 }
 
-function FeedSkeleton() {
+function FeedSkeleton({ regionAware = false }) {
   return (
-    <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-label="Loading results">
+    <ul
+      className={cn("grid gap-3", regionAware ? "grid-cols-2 lg:grid-cols-3" : "sm:grid-cols-2 lg:grid-cols-3")}
+      aria-label="Loading results"
+    >
       {[0, 1, 2, 3, 4, 5].map((i) => (
         <li key={i} className="overflow-hidden rounded-card border border-edge-1 bg-surface-1">
           <Skeleton className="aspect-[4/3] w-full rounded-none" />
@@ -491,6 +566,36 @@ function ErrorPanel({ onRetry, message }) {
       <Button className="mt-4" variant="secondary" icon={RefreshCw} onClick={onRetry}>
         Try again
       </Button>
+    </div>
+  );
+}
+
+function FilteredEmpty({ onClear, hasMore = false, onMore }) {
+  return (
+    <div
+      data-testid="explore-filtered-empty"
+      className="rounded-card-lg border border-edge-1 bg-surface-1 p-6 text-center shadow-xs"
+    >
+      <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-surface-2 text-ink-4">
+        <ShieldCheck size={22} aria-hidden="true" />
+      </span>
+      <h2 className="mt-3 text-title-section font-semibold text-ink-1">
+        {hasMore ? "No Level 3+ traders in these results yet" : "No Level 3+ traders here yet"}
+      </h2>
+      <p className="mx-auto mt-1.5 max-w-sm text-xs leading-relaxed text-ink-3">
+        Level 3 means at least one completed trade on record. Widen the radius,
+        load more, or turn the standing filter off — a new page is still worth reading.
+      </p>
+      <div className="mt-4 flex flex-wrap justify-center gap-2">
+        <Button variant="secondary" onClick={onClear}>
+          Show every page
+        </Button>
+        {hasMore && (
+          <Button variant="ghost" onClick={onMore}>
+            Load more
+          </Button>
+        )}
+      </div>
     </div>
   );
 }

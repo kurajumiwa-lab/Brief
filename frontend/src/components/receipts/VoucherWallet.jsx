@@ -118,7 +118,7 @@ export default function VoucherWallet({ region = null }) {
   const hidden = sorted.filter((voucher) => ["expired", "cancelled"].includes(voucher.status));
 
   return (
-    <section aria-labelledby="voucher-wallet-heading" className="space-y-3" data-testid="voucher-wallet">
+    <section id="voucher-wallet" aria-labelledby="voucher-wallet-heading" className="space-y-3" data-testid="voucher-wallet">
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
           <p className="eyebrow">Vouchers</p>

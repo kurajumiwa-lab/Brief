@@ -280,6 +280,7 @@ export function exposure({ vendor, profile, identity } = {}) {
   const contactExposed = Boolean(
     identity?.contact?.phone ||
       identity?.contact?.email ||
+      vendor?.contact_exposed ||
       vendor?.phone_verified_at ||
       (vendor?.phone && vendor?.allow_direct_calls),
   );

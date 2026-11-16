@@ -8,6 +8,10 @@ vi.mock("@/lib/receiptsApi", () => ({
   receiptsAPI: {
     invite: vi.fn(),
     claimMerchant: vi.fn(),
+    claimChallenge: vi.fn(),
+    claimEvidence: vi.fn(),
+    contestClaim: vi.fn(),
+    answerContest: vi.fn(),
   },
 }));
 
@@ -73,5 +77,74 @@ describe("the shop invite behind a WhatsApp card", () => {
     ));
     expect(await screen.findByTestId("invite-pending")).toHaveTextContent(/claim sent/i);
     expect(screen.getByText(/before the page can publish/i)).toBeInTheDocument();
+  });
+
+  it("issues a random KSh 1-99 challenge sale and unlocks probationary status, not verified", async () => {
+    auth.token = "token";
+    auth.vendor = { business_name: "Ogallo" };
+    receiptsAPI.claimChallenge.mockResolvedValue({
+      data: {
+        challenge: { amount_kes: 37, expires_in_seconds: 600 },
+        merchant: { claim_status: "pending" },
+      },
+    });
+    receiptsAPI.claimEvidence.mockResolvedValue({
+      data: {
+        merchant: {
+          claim_status: "probationary",
+          probationary: true,
+          verified: false,
+        },
+      },
+    });
+
+    renderPage();
+    fireEvent.click(await screen.findByTestId("invite-claim"));
+    fireEvent.click(await screen.findByTestId("invite-challenge-start"));
+
+    await waitFor(() => expect(receiptsAPI.claimChallenge).toHaveBeenCalledWith("P051234567X"));
+    expect(await screen.findByTestId("invite-challenge-amount")).toHaveTextContent("KSh 37");
+    expect(screen.getByTestId("invite-challenge-ttl")).toHaveTextContent(/left/i);
+
+    fireEvent.change(screen.getByTestId("invite-challenge-payload"), {
+      target: { value: "https://itax.kra.go.ke/KRA-Portal/invoiceChk.htm?actionCode=loadPage&invoiceNo=001&pin=P051234567X&total=37" },
+    });
+    fireEvent.click(screen.getByTestId("invite-challenge-submit"));
+
+    await waitFor(() => expect(receiptsAPI.claimEvidence).toHaveBeenCalledWith(
+      "P051234567X",
+      expect.stringContaining("total=37"),
+    ));
+    expect(await screen.findByTestId("invite-probationary")).toHaveTextContent(/probationary owner/i);
+    expect(screen.getByTestId("invite-probationary")).toHaveTextContent(/confirming trade proofs stays locked/i);
+  });
+
+  it("lets a real shop owner contest a claim and freeze new offers", async () => {
+    auth.token = "token";
+    auth.vendor = { business_name: "Real Owner" };
+    receiptsAPI.invite.mockResolvedValue({
+      data: {
+        ...INVITE,
+        shop: { ...INVITE.shop, claim_status: "probationary", probationary: true, verified: false },
+      },
+    });
+    receiptsAPI.contestClaim.mockResolvedValue({
+      data: {
+        merchant: { claim_status: "contested", contested: true, probationary: false, verified: false },
+      },
+    });
+
+    renderPage();
+    fireEvent.click(await screen.findByTestId("invite-contest-open"));
+    fireEvent.change(screen.getByTestId("invite-contest-reason"), {
+      target: { value: "This is my shop in Kisumu and I did not authorize this claim." },
+    });
+    fireEvent.click(screen.getByTestId("invite-contest-submit"));
+
+    await waitFor(() => expect(receiptsAPI.contestClaim).toHaveBeenCalledWith(
+      "P051234567X",
+      expect.objectContaining({ reason: expect.stringContaining("This is my shop") }),
+    ));
+    expect(await screen.findByTestId("invite-contested")).toHaveTextContent(/ownership contested/i);
   });
 });

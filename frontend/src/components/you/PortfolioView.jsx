@@ -10,7 +10,9 @@ import Button from "@/components/ui/Button";
 import { ClaimBadge, RankChip } from "@/components/identity/Rank";
 import { CAPABILITIES, identityLine } from "@/config/identity";
 import { regionFromPlace, regionPath } from "@/config/regions";
+import { apiError } from "@/lib/api";
 import { mailHref, pageAddress, shareLinks, telHref } from "@/lib/pageShare";
+import { receiptsAPI } from "@/lib/receiptsApi";
 import { cn } from "@/lib/utils";
 
 /**
@@ -36,6 +38,36 @@ export default function PortfolioView({
 }) {
   const [copied, setCopied] = useState(false);
   const [addressCopied, setAddressCopied] = useState(false);
+  const initialMerchant = Array.isArray(vendor?.claimed_merchants) && vendor.claimed_merchants.length > 0
+    ? vendor.claimed_merchants[0]
+    : null;
+  const [claimedShop, setClaimedShop] = useState(initialMerchant);
+  const [contestOpen, setContestOpen] = useState(false);
+  const [contestReason, setContestReason] = useState("");
+  const [contestPayload, setContestPayload] = useState("");
+  const [contestBusy, setContestBusy] = useState(false);
+  const [contestError, setContestError] = useState("");
+
+  async function submitPageContest(event) {
+    event.preventDefault();
+    if (!claimedShop?.pin) return;
+    setContestBusy(true);
+    setContestError("");
+    try {
+      const { data: result } = await receiptsAPI.contestClaim(claimedShop.pin, {
+        reason: contestReason.trim(),
+        payload: contestPayload.trim(),
+      });
+      if (result?.merchant) setClaimedShop(result.merchant);
+      setContestOpen(false);
+      setContestReason("");
+      setContestPayload("");
+    } catch (err) {
+      setContestError(apiError(err, "That contest could not be opened."));
+    } finally {
+      setContestBusy(false);
+    }
+  }
 
   const name = vendor?.business_name || vendor?.display_name || "Unnamed page";
   const handle = vendor?.vendor_handle;
@@ -263,6 +295,85 @@ export default function PortfolioView({
                 {addressCopied ? <Check size={12} aria-hidden="true" /> : <Copy size={12} aria-hidden="true" />}
                 {addressCopied ? "Copied" : "Copy"}
               </button>
+            </div>
+          )}
+
+          {claimedShop && (
+            <div
+              data-testid="page-claimed-shop"
+              className="mt-4 rounded-2xl border border-edge-1 bg-surface-0 px-3.5 py-3"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-xs font-extrabold text-ink-1">
+                    {claimedShop.name}
+                    {claimedShop.pin ? <span className="ml-1.5 font-mono text-micro font-normal text-ink-4">· {claimedShop.pin}</span> : null}
+                  </p>
+                  <p className="mt-0.5 text-micro text-ink-3" data-testid="page-claimed-shop-status">
+                    {claimedShop.claim_status_label || (
+                      claimedShop.contested
+                        ? "Ownership contested"
+                        : claimedShop.probationary
+                          ? "Probationary owner"
+                          : claimedShop.verified
+                            ? "Verified owner"
+                            : "Claim under review"
+                    )}
+                  </p>
+                </div>
+                {!isOwner && !claimedShop.contested && claimedShop.pin && (
+                  <button
+                    type="button"
+                    data-testid="page-contest-open"
+                    onClick={() => setContestOpen((value) => !value)}
+                    className="rounded-full border border-edge-2 bg-surface-1 px-2.5 py-1 text-micro font-bold text-ink-3 hover:border-edge-3 hover:text-ink-1"
+                  >
+                    Contest this claim
+                  </button>
+                )}
+              </div>
+
+              {contestOpen && !isOwner && !claimedShop.contested && (
+                <form
+                  onSubmit={submitPageContest}
+                  data-testid="page-contest-form"
+                  className="mt-3 space-y-2 border-t border-edge-1 pt-3"
+                >
+                  <input
+                    value={contestReason}
+                    onChange={(event) => setContestReason(event.target.value)}
+                    placeholder="Why is this your shop? (8+ characters)"
+                    className="h-9 w-full rounded-xl border border-edge-2 bg-surface-1 px-3 text-xs text-ink-1"
+                    data-testid="page-contest-reason"
+                  />
+                  <input
+                    value={contestPayload}
+                    onChange={(event) => setContestPayload(event.target.value)}
+                    placeholder="Optional receipt QR or eTIMS link from this shop"
+                    className="h-9 w-full rounded-xl border border-edge-2 bg-surface-1 px-3 text-xs text-ink-1"
+                    data-testid="page-contest-payload"
+                  />
+                  {contestError && (
+                    <p className="text-micro text-red-600 dark:text-red-400" data-testid="page-contest-error">
+                      {contestError}
+                    </p>
+                  )}
+                  <div className="flex gap-2">
+                    <Button
+                      type="submit"
+                      size="sm"
+                      loading={contestBusy}
+                      disabled={contestReason.trim().length < 8 && !contestPayload.trim()}
+                      data-testid="page-contest-submit"
+                    >
+                      Freeze and review
+                    </Button>
+                    <Button type="button" size="sm" variant="ghost" onClick={() => setContestOpen(false)}>
+                      Cancel
+                    </Button>
+                  </div>
+                </form>
+              )}
             </div>
           )}
         </div>

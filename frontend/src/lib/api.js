@@ -752,6 +752,7 @@ export const outsideAPI = {
   setLocation: (body) => api.put("/outside/location", body),
   report: (body) => api.post("/outside/reports", body),
   activity: (params) => api.get("/outside/activity", { params: noEmpty(params) }),
+  agenda: (params) => api.get("/outside/agenda", { params: noEmpty(params) }),
 };
 
 // ── Local Activity Ledger (`/api/ledger`) ──────────────────────────────────

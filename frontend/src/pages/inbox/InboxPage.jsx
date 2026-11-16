@@ -1,24 +1,31 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   CalendarDays, ChevronRight, Inbox, MessageSquare, Package, ShoppingBag, Users,
 } from "lucide-react";
 import { PageSpinner } from "@/components/ui/Spinner";
+import { toast } from "@/components/ui/Toast";
+import InboxTimeline from "@/components/inbox/InboxTimeline";
+import TradePassModal from "@/components/inbox/TradePassModal";
 import VoucherRedeemCard from "@/components/receipts/VoucherRedeemCard";
 import { useOutsideStore } from "@/stores/outsideStore";
 import { useChatStore } from "@/stores/chatStore";
 import { useStockStore } from "@/stores/stockStore";
+import { useAuthStore } from "@/stores/authStore";
 import { NOTIFICATION_ROUTES } from "@/config/constants";
+import { apiError, outsideAPI } from "@/lib/api";
+import ledgerAPI from "@/lib/ledgerApi";
 import { relativeTime } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 
 /**
- * INBOX — what is waiting, in one list.
+ * INBOX — the week first, then what is waiting.
  *
  * Connect, Work, Mail and the notification bell were four names for one
- * question. This is the question, answered once: messages, requests and trades,
- * newest first, with a count only where a count means somebody is waiting on a
- * reply.
+ * question. This is the question, answered once. The top of the page is the
+ * part a flat list could never answer: joined rounds, event RSVPs and bookings,
+ * on real dates, with a pass for the ones that are actually confirmed. The
+ * messages, requests and trades that need a reply stay below, newest first.
  *
  * The filters are four words, not seven categories. A person who wants the
  * long tail can use the search in the header.
@@ -63,14 +70,47 @@ export default function InboxPage() {
 
   const movements = useStockStore((s) => s.movements);
   const fetchMovements = useStockStore((s) => s.fetchMovements);
+  const memberHandle = useAuthStore((s) => s.vendor?.vendor_handle);
 
   const [filter, setFilter] = useState("all");
+  const [agenda, setAgenda] = useState([]);
+  const [agendaStatus, setAgendaStatus] = useState("idle");
+  const [agendaError, setAgendaError] = useState("");
+  const [openPass, setOpenPass] = useState(null);
+  const [confirmingId, setConfirmingId] = useState(null);
+
+  const loadAgenda = useCallback(async () => {
+    setAgendaStatus("loading");
+    try {
+      const { data } = await outsideAPI.agenda();
+      setAgenda(data.items || []);
+      setAgendaError("");
+    } catch (err) {
+      setAgendaError(apiError(err, "Check your connection and try again."));
+    } finally {
+      setAgendaStatus("ready");
+    }
+  }, []);
 
   useEffect(() => {
     loadActivity();
+    loadAgenda();
     fetchRooms({}).catch(() => {});
     fetchMovements({}).catch(() => {});
-  }, [loadActivity, fetchRooms, fetchMovements]);
+  }, [loadActivity, loadAgenda, fetchRooms, fetchMovements]);
+
+  const confirmTrade = async (item) => {
+    setConfirmingId(item.id);
+    try {
+      await ledgerAPI.confirmCompletion(item.record_id);
+      toast.success("Booking confirmed");
+      await loadAgenda();
+    } catch (err) {
+      toast.error(apiError(err, "That booking could not be confirmed."));
+    } finally {
+      setConfirmingId(null);
+    }
+  };
 
   const rows = useMemo(() => {
     const notifications = (activity?.groups || []).flatMap((group) =>
@@ -122,19 +162,36 @@ export default function InboxPage() {
   return (
     <div className="mx-auto w-full max-w-2xl">
       <header>
-        <p className="eyebrow">Waiting</p>
+        <p className="eyebrow">Now</p>
         <h1 className="mt-1.5 text-2xl font-extrabold tracking-tight text-ink-1 sm:text-3xl">Inbox</h1>
         <p className="mt-2 text-sm leading-relaxed text-ink-3">
-          Messages, requests and trades in one list. Only a reply that is actually
-          waiting carries a count.
+          Your week first, then the messages and trades that need a reply. Only a
+          reply that is actually waiting carries a count.
         </p>
       </header>
+
+      <div className="mt-5">
+        <InboxTimeline
+          items={agenda}
+          loading={agendaStatus === "loading" || agendaStatus === "idle"}
+          error={agendaError}
+          onRetry={loadAgenda}
+          onOpenPass={setOpenPass}
+          onConfirmTrade={confirmTrade}
+          confirmingId={confirmingId}
+        />
+      </div>
 
       <div className="mt-4">
         <VoucherRedeemCard />
       </div>
 
-      <div className="mt-4 flex gap-1.5 overflow-x-auto no-scrollbar" role="group" aria-label="Inbox filter">
+      <div className="mt-7 border-t border-edge-1 pt-5">
+        <p className="eyebrow">Everything else</p>
+        <h2 className="mt-1 text-base font-extrabold tracking-tight text-ink-1">Waiting on a reply</h2>
+      </div>
+
+      <div className="mt-3 flex gap-1.5 overflow-x-auto no-scrollbar" role="group" aria-label="Inbox filter">
         {FILTERS.map((item) => {
           const active = filter === item.value;
           return (
@@ -171,10 +228,10 @@ export default function InboxPage() {
       ) : shown.length === 0 ? (
         <div className="mt-6 rounded-2xl border border-dashed border-edge-2 bg-surface-0 px-5 py-12 text-center">
           <Inbox size={22} className="mx-auto text-ink-4" aria-hidden="true" />
-          <p className="mt-2 text-sm font-bold text-ink-1">Nothing is waiting</p>
+          <p className="mt-2 text-sm font-bold text-ink-1">Nothing else is waiting</p>
           <p className="mx-auto mt-1 max-w-xs text-2xs leading-relaxed text-ink-3">
-            When somebody replies, asks for something or moves a trade, it lands
-            here — and nowhere else.
+            Your week is above. When somebody replies, asks for something or moves
+            a trade, it lands here — and nowhere else.
           </p>
         </div>
       ) : (
@@ -221,6 +278,8 @@ export default function InboxPage() {
         </Link>{" "}
         keeps the full trade record.
       </p>
+
+      <TradePassModal pass={openPass} memberHandle={memberHandle} onClose={() => setOpenPass(null)} />
     </div>
   );
 }

@@ -23,12 +23,14 @@ from sqlalchemy import (
     Boolean, CheckConstraint, Column, DateTime, ForeignKey, Index, Integer, String, Text,
     UniqueConstraint,
 )
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import relationship
 
 from app.database import Base
 
-MERCHANT_CLAIM_STATUSES = ("unclaimed", "pending", "verified", "rejected")
+MERCHANT_CLAIM_STATUSES = (
+    "unclaimed", "pending", "probationary", "verified", "contested", "suspended", "rejected",
+)
 TRADE_PROOF_STATUSES = ("pending", "confirmed", "disputed", "unmatched")
 RECEIPT_STATUSES = ("verified", "partial", "manual")
 VOUCHER_STATUSES = ("issued", "redeemed", "expired", "cancelled")
@@ -44,7 +46,8 @@ class ReceiptMerchant(Base):
     __tablename__ = "receipt_merchants"
     __table_args__ = (
         CheckConstraint(
-            "claim_status IN ('unclaimed','pending','verified','rejected')",
+            "claim_status IN ('unclaimed','pending','probationary','verified',"
+            "'contested','suspended','rejected')",
             name="ck_receipt_merchants_claim_status",
         ),
         Index("ix_receipt_merchants_region_claim", "region", "claim_status"),
@@ -63,6 +66,17 @@ class ReceiptMerchant(Base):
     )
     claim_status = Column(String(16), nullable=False, default="unclaimed", server_default="unclaimed")
     claim_note = Column(Text, nullable=True)
+    # The automated claim engine keeps its evidence here. Never raw SMS, never a
+    # client-supplied score: a hashed receipt key, the challenge it answered, and
+    # the vouches that moved the shop to probationary.
+    claim_path = Column(String(32), nullable=True)
+    claim_confidence = Column(Integer, nullable=False, default=0, server_default="0")
+    claim_evidence = Column(JSONB, nullable=True)
+    # A challenge receipt can be used once. The unique key is the hash of
+    # `PIN:invoice`; it is null until evidence is accepted.
+    claim_receipt_key = Column(String(64), unique=True, nullable=True)
+    probation_until = Column(DateTime, nullable=True)
+    contest_deadline = Column(DateTime, nullable=True)
     claimed_at = Column(DateTime, nullable=True)
     verified_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)

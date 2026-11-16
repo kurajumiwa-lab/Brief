@@ -287,6 +287,18 @@ class Settings(BaseSettings):
     # job control; before this list existed any signed-in vendor could read it.
     # Empty means nobody — the endpoints stay closed rather than open by default.
     OPERATOR_HANDLES: str = ""
+    # Merchant claims (v2.20): a fresh challenge sale can unlock a probationary
+    # shop immediately. Probation is a capped state, never a verified badge.
+    MERCHANT_CLAIM_PROBATION_DAYS: int = 14
+    MERCHANT_CLAIM_CHALLENGE_MINUTES: int = 10
+    MERCHANT_CLAIM_CONTEST_HOURS: int = 48
+    MERCHANT_CLAIM_WEEKLY_VOUCHER_CAP: int = 5
+    MERCHANT_CLAIM_ACTIVE_OFFER_CAP: int = 1
+    MERCHANT_CLAIM_REQUIRED_CUSTOMERS: int = 3
+    # Reserved for a server-side KRA/DigiTax fetch with a host allowlist. Until
+    # that adapter exists this fails closed: a fresh challenge sale moves a shop
+    # to probationary, never to verified.
+    MERCHANT_CLAIM_AUTHORITY_VERIFY: bool = False
     # How often the scheduler sweeps claim expiry and queues renewal reminders.
     STANDING_SWEEP_INTERVAL: int = 3600
     # Cooperative member votes are disabled unless a registered entity and its

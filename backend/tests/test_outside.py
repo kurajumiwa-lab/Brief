@@ -433,6 +433,17 @@ async def test_attending_an_event_writes_a_real_registration(client, author, vie
     if regs.status_code == 200:
         assert len(regs.json() if isinstance(regs.json(), list) else regs.json().get("registrations", [])) >= 1
 
+    # The same registration is what the Inbox agenda shows, with a pass that
+    # points back at a record the server actually holds.
+    agenda = await client.get("/api/outside/agenda", headers=viewer)
+    assert agenda.status_code == 200, agenda.text
+    rows = agenda.json()["items"]
+    seat = next(row for row in rows if row["kind"] == "event" and row["title"] == "Meetup with seats")
+    assert seat["state"] == "joined"
+    assert seat["capacity"] == 12
+    assert seat["passable"] is True
+    assert seat["pass_code"].startswith("HO-")
+
     undo = await client.request("DELETE", "/api/outside/reactions", json={
         "content_kind": "event", "content_id": event_id, "reaction": "attending"},
         headers=viewer)

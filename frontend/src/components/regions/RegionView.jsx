@@ -1,7 +1,8 @@
 import { Link } from "react-router-dom";
 import { ArrowLeft, ArrowRight, MapPin, Plus, ShieldCheck } from "lucide-react";
 import Button from "@/components/ui/Button";
-import { ItemRow, PersonRow, RegionEmpty } from "@/components/regions/Rows";
+import { PersonRow, RegionEmpty } from "@/components/regions/Rows";
+import RegionsGrid from "@/components/regions/RegionsGrid";
 import { countryName } from "@/config/regions";
 import { cn } from "@/lib/utils";
 
@@ -137,11 +138,7 @@ export default function RegionView({
             />
           )
         ) : shownItems.length > 0 ? (
-          <ul className="divide-y divide-edge-1">
-            {shownItems.map((item) => (
-              <ItemRow key={`${item.kind}:${item.id}`} item={item} />
-            ))}
-          </ul>
+          <RegionsGrid items={shownItems} className="mt-3" />
         ) : (
           <RegionEmpty
             region={region}
