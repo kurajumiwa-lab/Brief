@@ -36,6 +36,10 @@ export function RegionCard({ item }) {
   const momentum = momentumLabel(item);
   const trades = Number(item.owner?.movements_completed || 0) + Number(item.owner?.confirmed_trade_proofs || 0);
   const hasImage = Boolean(item.image) && !imageFailed;
+  const claimStatus =
+    item.claim_status ||
+    item.owner?.claim_status ||
+    (item.probationary || item.owner?.probationary ? "probationary" : null);
 
   return (
     <Link
@@ -70,6 +74,19 @@ export function RegionCard({ item }) {
         <span className="absolute left-2 top-2 rounded-full bg-black/45 px-2 py-1 text-[10px] font-bold text-white backdrop-blur">
           {kindLabel(item.kind)}
         </span>
+        {(claimStatus === "probationary" || claimStatus === "verified") && (
+          <span
+            data-testid="region-card-claim-status"
+            className={cn(
+              "absolute bottom-2 left-2 rounded-full px-2 py-0.5 text-[10px] font-bold backdrop-blur",
+              claimStatus === "verified"
+                ? "bg-brand-700/90 text-white"
+                : "bg-amber-100/95 text-amber-900 dark:bg-amber-500/20 dark:text-amber-100",
+            )}
+          >
+            {claimStatus === "verified" ? "Verified shop" : "Probationary"}
+          </span>
+        )}
         <span
           className={cn(
             "absolute right-2 top-2 inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-extrabold",

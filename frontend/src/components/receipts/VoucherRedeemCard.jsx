@@ -10,8 +10,9 @@ import { apiError } from "@/lib/api";
  * THE SHOP'S SIDE OF THE COUNTER.
  *
  * One input, one button, one receipt. No scanner, no SMS, no operator queue.
- * The shop must already be verified for offers, which is the same review that
- * lets it publish deals — a code cannot be redeemed by an unrelated account.
+ * The shop must own the page, but it does not have to be verified: a
+ * probationary owner may check vouchers while trade-proof confirmation stays
+ * locked. The server decides the cap; this card only shows the door.
  */
 export default function VoucherRedeemCard() {
   const token = useAuthStore((state) => state.token);
@@ -34,8 +35,12 @@ export default function VoucherRedeemCard() {
 
   if (!token || !ready || merchants.length === 0) return null;
 
-  const verified = merchants.filter((merchant) => merchant.verified);
-  if (verified.length === 0) {
+  const redeemable = merchants.filter((merchant) => (
+    typeof merchant.can_redeem === "boolean"
+      ? merchant.can_redeem
+      : merchant.verified || merchant.probationary
+  ));
+  if (redeemable.length === 0) {
     return (
       <section className="rounded-2xl border border-edge-1 bg-surface-1 px-4 py-3" data-testid="voucher-redeem-pending">
         <div className="flex items-start gap-3">
@@ -43,16 +48,17 @@ export default function VoucherRedeemCard() {
             <Store size={16} aria-hidden="true" />
           </span>
           <div>
-            <p className="text-xs font-bold text-ink-1">Voucher checking unlocks after review</p>
+            <p className="text-xs font-bold text-ink-1">Voucher checking unlocks after a test sale</p>
             <p className="mt-0.5 text-micro leading-relaxed text-ink-4">
-              Your shop claim is still being checked. You can check customer codes once
-              the shop is verified.
+              Your claim is still pending. Answer one test sale at the till, or wait
+              for review, to check customer codes.
             </p>
           </div>
         </div>
       </section>
     );
   }
+  const probationary = redeemable.some((merchant) => merchant.probationary);
 
   const submit = async (event) => {
     event.preventDefault();
@@ -86,8 +92,9 @@ export default function VoucherRedeemCard() {
             Check a customer voucher
           </h2>
           <p className="mt-0.5 text-micro leading-relaxed text-ink-4">
-            {verified.map((merchant) => merchant.name).join(" · ")}. Type the six
+            {redeemable.map((merchant) => merchant.name).join(" · ")}. Type the six
             characters from the customer's screen. No scanner needed.
+            {probationary ? " Probationary owners can check up to five vouchers a week." : ""}
           </p>
         </div>
       </div>

@@ -66,6 +66,26 @@ describe("Regions visual grid", () => {
     );
     expect(screen.getByTestId("regions-grid").className).toContain("grid-cols-2");
   });
+
+  it("badges probationary and verified shops distinctly without inflating their level", () => {
+    const probationCard = {
+      ...listing,
+      id: "l-prob",
+      owner: { ...lowOwner, claim_status: "probationary", probationary: true },
+    };
+    const verifiedCard = {
+      ...service,
+      id: "s-ver",
+      owner: { ...highOwner, claim_status: "verified" },
+    };
+    render(
+      <MemoryRouter>
+        <RegionsGrid items={[probationCard, verifiedCard]} />
+      </MemoryRouter>,
+    );
+    const statuses = screen.getAllByTestId("region-card-claim-status");
+    expect(statuses.map((node) => node.textContent)).toEqual(["Probationary", "Verified shop"]);
+  });
 });
 
 describe("Regions intent and standing filters", () => {

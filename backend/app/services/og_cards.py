@@ -265,7 +265,7 @@ async def _offer_count(db: AsyncSession, vendor_id) -> int:
                 .join(ReceiptMerchant, ReceiptOffer.merchant_id == ReceiptMerchant.id)
                 .where(
                     ReceiptMerchant.claimed_by_vendor_id == vendor_id,
-                    ReceiptMerchant.claim_status == "verified",
+                    ReceiptMerchant.claim_status.in_(("verified", "probationary")),
                     ReceiptOffer.is_active.is_(True),
                     ReceiptOffer.starts_at <= now,
                     (ReceiptOffer.ends_at.is_(None)) | (ReceiptOffer.ends_at > now),
@@ -388,6 +388,16 @@ async def invite_card(db: AsyncSession, slug: str, origin: str) -> Optional[dict
         banner_note = "The owner has already asked to manage this page"
         title = f"{name} — claim waiting for review"
         description = "The shop owner has claimed this page. Review is pending; no second claim is needed."
+    elif merchant.claim_status == "probationary":
+        banner = "Probationary owner — trading now"
+        banner_note = "Vouchers and one offer are unlocked; trade proofs wait for verification"
+        title = f"{name} — probationary shop on Home Office"
+        description = "The owner answered a test sale at the till. The shop can trade now; confirmation of trade proofs waits for verification."
+    elif merchant.claim_status == "contested":
+        banner = "Ownership is contested"
+        banner_note = "New offers are frozen; vouchers already issued still work"
+        title = f"{name} — ownership contest open"
+        description = "Somebody with a receipt from this shop contested the claim. The current owner has 48 hours to answer."
 
     return {
         "name": name,

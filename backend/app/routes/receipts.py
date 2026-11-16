@@ -31,16 +31,20 @@ from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.database import get_db
+from app.models.notification import NotificationType
 from app.models.receipts import Receipt, ReceiptMerchant, ReceiptOffer, ReceiptVoucher, TradeProof
 from app.models.vendor import Vendor
 from app.routes.auth import get_current_vendor
 from app.routes.ops import require_operator
+from app.services import merchant_claims as claims_service
 from app.services import trade_proofs as trade_proof_service
+from app.services.notification_service import create_notification
 from app.services.og_cards import invite_card
 from app.services.receipt_rewards import (
-    clean_region, clean_text, is_valid_pin, parse_receipt_payload, receipt_key,
-    receipt_value, voucher_code, voucher_code_matches,
+    clean_region, clean_text, is_valid_pin, parse_date, parse_receipt_payload,
+    receipt_key, receipt_value, voucher_code, voucher_code_matches,
 )
 
 router = APIRouter()
@@ -84,17 +88,63 @@ def _receipt_out(receipt: Receipt) -> dict:
 
 
 def _merchant_out(merchant: ReceiptMerchant, *, offers: list[dict] | None = None) -> dict:
+    status = merchant.claim_status
     payload = {
         "id": str(merchant.id),
         "pin": merchant.pin,
         "name": merchant.name,
         "region": merchant.region,
-        "claim_status": merchant.claim_status,
-        "verified": merchant.claim_status == "verified",
+        "claim_status": status,
+        "claim_status_label": claims_service.status_label(status),
+        "verified": status == "verified",
+        "probationary": status == "probationary",
+        "contested": status == "contested",
+        "claim_path": merchant.claim_path,
+        "claim_confidence": int(merchant.claim_confidence or 0),
+        "probation_until": _iso(merchant.probation_until),
+        "contest_deadline": _iso(merchant.contest_deadline),
+        **claims_service.capabilities(status),
     }
     if offers is not None:
         payload["offers"] = offers
     return payload
+
+
+async def _notify_claim_owner(
+    db: AsyncSession, merchant: ReceiptMerchant, *,
+    title: str, body: str, sender_id: uuid.UUID | None = None, data: dict | None = None,
+) -> None:
+    if merchant.claimed_by_vendor_id is None:
+        return
+    await create_notification(
+        db,
+        recipient_id=merchant.claimed_by_vendor_id,
+        notification_type=NotificationType.SYSTEM,
+        title=title[:200],
+        body=body[:500],
+        sender_id=sender_id,
+        data={"merchant_pin": merchant.pin, "merchant_id": str(merchant.id), **(data or {})},
+    )
+
+
+async def _touch_claim_state(
+    db: AsyncSession, merchant: ReceiptMerchant, now: datetime,
+) -> bool:
+    """Resolve a contest deadline and promote a finished probation.
+
+    Called on the owner's read path and after a redemption. A GET may write here
+    because the alternative is a scheduler the single-container deploy does not
+    have; the write only advances a deadline that has already passed.
+    """
+    changed = claims_service.resolve_expired_contest(merchant, now)
+    if await claims_service.maybe_promote(db, merchant, now):
+        changed = True
+        await _notify_claim_owner(
+            db, merchant,
+            title="Your shop is verified by trading history",
+            body="Three customers redeemed vouchers and no dispute stayed open. Your shop can now confirm trade proofs.",
+        )
+    return changed
 
 
 def _offer_out(offer: ReceiptOffer, merchant: ReceiptMerchant | None = None) -> dict:
@@ -181,10 +231,24 @@ def _proof_out(
     viewer_id: uuid.UUID,
     people: dict[uuid.UUID, Vendor],
     receipt: Receipt | None = None,
+    *,
+    owned_merchants: list[ReceiptMerchant] | None = None,
 ) -> dict:
     seller = people.get(proof.seller_vendor_id) if proof.seller_vendor_id else None
     buyer = people.get(proof.buyer_vendor_id)
     role = "seller" if proof.seller_vendor_id == viewer_id else "buyer"
+    locked_reason = None
+    if role == "seller" and proof.status == "pending" and owned_merchants:
+        for merchant in owned_merchants:
+            if merchant.claim_status == "verified":
+                continue
+            if proof.merchant_pin and merchant.pin != proof.merchant_pin:
+                continue
+            locked_reason = (
+                "Confirming trade proofs unlocks when your shop is verified, "
+                "not while it is pending or probationary."
+            )
+            break
     return {
         "id": str(proof.id),
         "status": proof.status,
@@ -198,8 +262,9 @@ def _proof_out(
         "dispute_reason": proof.dispute_reason,
         "buyer": _person(buyer),
         "seller": _person(seller),
-        "can_confirm": role == "seller" and proof.status == "pending",
+        "can_confirm": role == "seller" and proof.status == "pending" and locked_reason is None,
         "can_dispute": role == "seller" and proof.status == "pending",
+        "confirm_locked_reason": locked_reason,
         "receipt": {
             "id": str(receipt.id),
             "total": receipt.total,
@@ -318,6 +383,19 @@ class MerchantClaimIn(BaseModel):
     region: Optional[str] = Field(None, max_length=80)
     phone: Optional[str] = Field(None, max_length=20)
     note: Optional[str] = Field(None, max_length=1000)
+
+
+class ClaimEvidenceIn(BaseModel):
+    payload: str = Field(..., min_length=8, max_length=MAX_PAYLOAD)
+
+
+class ClaimVouchIn(BaseModel):
+    note: Optional[str] = Field(None, max_length=500)
+
+
+class ClaimContestIn(BaseModel):
+    reason: str = Field(..., min_length=10, max_length=1000)
+    payload: str = Field(..., min_length=8, max_length=MAX_PAYLOAD)
 
 
 class MerchantUpdateIn(BaseModel):
@@ -631,8 +709,15 @@ async def my_trade_proofs(
     """
     proofs = await trade_proof_service.proofs_for(db, vendor.id, status=status, limit=limit)
     people, receipts = await _proof_context(db, proofs)
+    owned = await _owned_merchants(db, vendor.id)
     out = [
-        _proof_out(proof, vendor.id, people, receipts.get(proof.receipt_id))
+        _proof_out(
+            proof,
+            vendor.id,
+            people,
+            receipts.get(proof.receipt_id),
+            owned_merchants=owned,
+        )
         for proof in proofs
     ]
     return {
@@ -664,6 +749,21 @@ async def confirm_trade_proof(
         raise HTTPException(403, "Only the shop named on the receipt can confirm it")
     if proof.status != "pending":
         raise HTTPException(409, "That trade is not waiting for confirmation")
+
+    # Probation is deliberately not allowed to confirm receipts. Otherwise a
+    # fake owner could manufacture standing for colluding buyers without ever
+    # proving the till, and the 14-day rule would be decorative.
+    for merchant in await _owned_merchants(db, vendor.id):
+        if merchant.claim_status == "verified":
+            continue
+        if proof.merchant_pin and merchant.pin != proof.merchant_pin:
+            continue
+        raise HTTPException(
+            403,
+            "Confirming trade proofs unlocks when your shop is verified, "
+            "not while it is pending or probationary.",
+        )
+
     buyer = await db.get(Vendor, proof.buyer_vendor_id)
     if buyer is None:
         raise HTTPException(409, "The buyer account no longer exists")
@@ -722,7 +822,9 @@ async def list_merchants(
     limit: int = Query(50, ge=1, le=200),
     db: AsyncSession = Depends(get_db),
 ):
-    statement = select(ReceiptMerchant).where(ReceiptMerchant.claim_status == "verified")
+    statement = select(ReceiptMerchant).where(
+        ReceiptMerchant.claim_status.in_(("verified", "probationary"))
+    )
     slug = clean_region(region)
     if slug:
         statement = statement.where(ReceiptMerchant.region == slug)
@@ -734,13 +836,20 @@ async def list_merchants(
 
 @router.get("/merchants/me")
 async def my_merchants(vendor: Vendor = Depends(get_current_vendor), db: AsyncSession = Depends(get_db)):
-    return {"merchants": [_merchant_out(merchant) for merchant in await _owned_merchants(db, vendor.id)]}
+    now = datetime.utcnow()
+    merchants = await _owned_merchants(db, vendor.id)
+    for merchant in merchants:
+        await _touch_claim_state(db, merchant, now)
+    await db.commit()
+    return {"merchants": [_merchant_out(merchant) for merchant in merchants]}
 
 
 @router.get("/merchants/{pin}")
 async def merchant_card(pin: str, db: AsyncSession = Depends(get_db)):
     merchant = await _merchant_or_404(db, pin)
     now = datetime.utcnow()
+    if claims_service.resolve_expired_contest(merchant, now):
+        await db.commit()
     offers = (
         await db.execute(
             select(ReceiptOffer).where(
@@ -761,21 +870,48 @@ async def claim_merchant(
     vendor: Vendor = Depends(get_current_vendor),
     db: AsyncSession = Depends(get_db),
 ):
+    """Start a claim. It stays pending until a challenge sale or a vouch arrives.
+
+    A claim alone unlocks nothing. The claimant can ring a random test amount at
+    the shop's till, or collect two independent Level 3+ vouches, to enter the
+    capped probationary state without waiting for a person.
+    """
     normalized = clean_text(pin).upper()
     if not is_valid_pin(normalized):
         raise HTTPException(422, "A shop PIN looks like P051234567X. Check the receipt.")
-    merchant = await _merchant_or_404(db, normalized)
-    if merchant.claim_status == "verified" and merchant.claimed_by_vendor_id != vendor.id:
-        raise HTTPException(409, "That shop has already been claimed")
-    if merchant.claim_status == "pending" and merchant.claimed_by_vendor_id != vendor.id:
-        raise HTTPException(409, "Somebody has already applied to claim that shop")
-    if merchant.claimed_by_vendor_id == vendor.id and merchant.claim_status == "verified":
-        return {"merchant": _merchant_out(merchant), "message": "You already run this shop on the network"}
+    merchant = (
+        await db.execute(
+            select(ReceiptMerchant).where(ReceiptMerchant.pin == normalized).with_for_update()
+        )
+    ).scalar_one_or_none()
+    if merchant is None:
+        raise HTTPException(404, "That shop is not in the receipt network yet")
 
+    owned_by_viewer = merchant.claimed_by_vendor_id == vendor.id
+    if merchant.claim_status in ("verified", "probationary", "contested", "suspended"):
+        if not owned_by_viewer:
+            raise HTTPException(409, "That shop already has an owner or an open ownership contest")
+        return {
+            "merchant": _merchant_out(merchant),
+            "message": "You already run this shop on the network",
+        }
+    if merchant.claim_status == "pending" and not owned_by_viewer:
+        raise HTTPException(409, "Somebody has already applied to claim that shop")
+
+    fresh = not owned_by_viewer or merchant.claim_status in ("unclaimed", "rejected")
+    now = datetime.utcnow()
     merchant.claimed_by_vendor_id = vendor.id
     merchant.claim_status = "pending"
-    merchant.claimed_at = datetime.utcnow()
-    merchant.claim_note = clean_text(body.note)[:1000] or None
+    merchant.claimed_at = now if fresh or merchant.claimed_at is None else merchant.claimed_at
+    merchant.claim_note = clean_text(body.note)[:1000] or merchant.claim_note
+    if fresh:
+        merchant.claim_path = None
+        merchant.claim_confidence = 0
+        merchant.claim_evidence = {}
+        merchant.claim_receipt_key = None
+        merchant.probation_until = None
+        merchant.contest_deadline = None
+        merchant.verified_at = None
     if clean_text(body.name):
         merchant.name = clean_text(body.name)[:200]
     if clean_region(body.region):
@@ -786,7 +922,279 @@ async def claim_merchant(
     await db.refresh(merchant)
     return {
         "merchant": _merchant_out(merchant),
-        "message": "Claim received. Offers and redemption unlock after review.",
+        "message": (
+            "Claim saved. Ring a test sale now to start selling today, "
+            "or wait for review."
+        ),
+    }
+
+
+@router.post("/merchants/{pin}/claim/challenge", status_code=201)
+async def merchant_claim_challenge(
+    pin: str,
+    vendor: Vendor = Depends(get_current_vendor),
+    db: AsyncSession = Depends(get_db),
+):
+    """Issue one random KSh 1–99 test amount, valid for ten minutes.
+
+    The amount is server-generated and cannot be chosen by the client. Repeating
+    the call while it is live returns the same amount, so a shopkeeper already
+    at the till is not sent back to ring a different sale.
+    """
+    normalized = clean_text(pin).upper()
+    if not is_valid_pin(normalized):
+        raise HTTPException(422, "A shop PIN looks like P051234567X.")
+    merchant = (
+        await db.execute(
+            select(ReceiptMerchant).where(ReceiptMerchant.pin == normalized).with_for_update()
+        )
+    ).scalar_one_or_none()
+    if merchant is None:
+        raise HTTPException(404, "That shop is not in the receipt network yet")
+    if merchant.claimed_by_vendor_id != vendor.id:
+        raise HTTPException(403, "Claim the shop before asking for a test amount")
+    if merchant.claim_status == "verified":
+        raise HTTPException(409, "That shop is already verified")
+    if merchant.claim_status != "pending":
+        raise HTTPException(409, "That claim is not waiting for a test sale")
+
+    now = datetime.utcnow()
+    challenge = claims_service.issue_challenge(merchant, now)
+    await db.commit()
+    expires = challenge.get("expires_at")
+    return {
+        "challenge": {
+            "amount_kes": int(challenge["amount_kes"]),
+            "issued_at": challenge.get("issued_at"),
+            "expires_at": expires,
+            "seconds_left": max(
+                0,
+                int((datetime.fromisoformat(expires.replace("Z", "+00:00")).replace(tzinfo=None) - now).total_seconds()),
+            ) if expires else 0,
+        },
+        "merchant": _merchant_out(merchant),
+        "message": "Ring this exact amount at the shop's till, then submit the receipt.",
+    }
+
+
+@router.post("/merchants/{pin}/claim/evidence", status_code=200)
+async def merchant_claim_evidence(
+    pin: str,
+    body: ClaimEvidenceIn,
+    vendor: Vendor = Depends(get_current_vendor),
+    db: AsyncSession = Depends(get_db),
+):
+    """Answer the challenge sale. This unlocks probation, never a verified badge.
+
+    The server parses the raw QR itself. A client cannot post an amount, a score
+    or a "verified" flag. The receipt must carry the shop's PIN, the exact test
+    amount and an issue time inside the challenge window. The payload is hashed
+    and discarded; only the hash, invoice suffix and total are kept.
+    """
+    normalized = clean_text(pin).upper()
+    merchant = (
+        await db.execute(
+            select(ReceiptMerchant).where(ReceiptMerchant.pin == normalized).with_for_update()
+        )
+    ).scalar_one_or_none()
+    if merchant is None:
+        raise HTTPException(404, "That shop is not in the receipt network yet")
+    if merchant.claimed_by_vendor_id != vendor.id:
+        raise HTTPException(403, "Only the claimant can answer this challenge")
+    if merchant.claim_status != "pending":
+        if merchant.claim_status == "probationary":
+            raise HTTPException(409, "This shop is already on probation")
+        raise HTTPException(409, "That claim is not waiting for a test receipt")
+
+    now = datetime.utcnow()
+    evidence, error = claims_service.receipt_for_challenge(merchant, body.payload, now)
+    if error or evidence is None:
+        raise HTTPException(422, error or "That receipt did not answer the challenge")
+
+    digest = evidence["receipt"]["payload_sha256"]
+    replay = (
+        await db.execute(
+            select(ReceiptMerchant.id).where(
+                ReceiptMerchant.claim_receipt_key == digest,
+                ReceiptMerchant.id != merchant.id,
+            )
+        )
+    ).first()
+    if replay is not None:
+        raise HTTPException(409, "That receipt has already been used for another shop claim")
+
+    claims_service.mark_challenge_used(merchant, evidence, digest, now)
+    merchant.claim_path = "receipt_challenge"
+    merchant.claim_confidence = 45
+    merchant.claim_status = "probationary"
+    merchant.probation_until = claims_service.promotion_window(now)
+    merchant.verified_at = None
+    await db.commit()
+    await db.refresh(merchant)
+    return {
+        "merchant": _merchant_out(merchant),
+        "unlocked": [
+            "Check customer voucher codes",
+            f"Publish up to {settings.MERCHANT_CLAIM_ACTIVE_OFFER_CAP} active offer",
+            f"Issue at most {settings.MERCHANT_CLAIM_WEEKLY_VOUCHER_CAP} vouchers a week",
+        ],
+        "locked": [
+            "Confirming trade proofs stays locked until the shop is verified",
+            "The badge says Probationary owner, never Verified owner",
+        ],
+        "message": (
+            "Probationary owner. Your shop can trade now; "
+            "trade-proof confirmation waits for verification."
+        ),
+    }
+
+
+@router.post("/merchants/{pin}/claim/vouch", status_code=201)
+async def merchant_claim_vouch(
+    pin: str,
+    body: ClaimVouchIn,
+    vendor: Vendor = Depends(get_current_vendor),
+    db: AsyncSession = Depends(get_db),
+):
+    """One independent Level 3+ neighbour vouches. Two move a claim to probation."""
+    normalized = clean_text(pin).upper()
+    merchant = (
+        await db.execute(
+            select(ReceiptMerchant).where(ReceiptMerchant.pin == normalized).with_for_update()
+        )
+    ).scalar_one_or_none()
+    if merchant is None:
+        raise HTTPException(404, "That shop is not in the receipt network yet")
+    if merchant.claim_status not in ("pending", "probationary"):
+        raise HTTPException(409, "That claim is not open for vouches")
+    claimant = (
+        await db.get(Vendor, merchant.claimed_by_vendor_id)
+        if merchant.claimed_by_vendor_id else None
+    )
+    now = datetime.utcnow()
+    result, error = await claims_service.add_vouch(db, merchant, vendor, now, claimant)
+    if error:
+        raise HTTPException(422, error)
+    if merchant.claim_status == "probationary" and merchant.claim_path == "peer_vouch":
+        await _notify_claim_owner(
+            db, merchant,
+            title="Two neighbours vouched for your shop",
+            body="Your shop is probationary: vouchers and one active offer are unlocked. Trade proofs stay locked.",
+            sender_id=vendor.id,
+        )
+    merchant.claim_note = clean_text(body.note)[:1000] or merchant.claim_note
+    await db.commit()
+    await db.refresh(merchant)
+    return {
+        "merchant": _merchant_out(merchant),
+        "vouch": result,
+        "message": (
+            "Vouch recorded. One more independent Level 3+ neighbour unlocks probation."
+            if result and result.get("vouches", 0) < 2
+            else "Vouch recorded. The shop can operate on probation."
+        ),
+    }
+
+
+@router.post("/merchants/{pin}/claim/contest", status_code=201)
+async def merchant_claim_contest(
+    pin: str,
+    body: ClaimContestIn,
+    vendor: Vendor = Depends(get_current_vendor),
+    db: AsyncSession = Depends(get_db),
+):
+    """Freeze a claimed shop with a receipt from that shop, not a bare accusation.
+
+    The owner has 48 hours to answer with a fresh receipt. Until then new offers
+    stop and already-issued vouchers remain redeemable, so customers are not
+    punished for an ownership dispute.
+    """
+    normalized = clean_text(pin).upper()
+    merchant = (
+        await db.execute(
+            select(ReceiptMerchant).where(ReceiptMerchant.pin == normalized).with_for_update()
+        )
+    ).scalar_one_or_none()
+    if merchant is None:
+        raise HTTPException(404, "That shop is not in the receipt network yet")
+    if merchant.claim_status not in ("pending", "probationary", "verified"):
+        raise HTTPException(409, "That shop has no active owner claim to contest")
+    if merchant.claimed_by_vendor_id == vendor.id:
+        raise HTTPException(409, "You cannot contest your own shop")
+    if merchant.contest_deadline is not None and merchant.contest_deadline > datetime.utcnow():
+        raise HTTPException(409, "An ownership contest is already open for this shop")
+
+    now = datetime.utcnow()
+    evidence, error = await claims_service.contest_evidence(db, merchant, body.payload, now)
+    if error or evidence is None:
+        raise HTTPException(422, error or "That receipt cannot open a contest")
+
+    claims_service.start_contest(merchant, vendor, evidence, body.reason, now)
+    # A contest freezes new offers. Existing vouchers stay redeemable, so this
+    # does not cancel a customer's discount.
+    await db.execute(
+        update(ReceiptOffer)
+        .where(ReceiptOffer.merchant_id == merchant.id, ReceiptOffer.is_active.is_(True))
+        .values(is_active=False)
+    )
+    await _notify_claim_owner(
+        db, merchant,
+        title="Somebody contested your shop",
+        body="New offers are frozen. Add a fresh receipt from the shop within 48 hours or the claim returns to review.",
+        sender_id=vendor.id,
+        data={"reason": clean_text(body.reason)[:500]},
+    )
+    await db.commit()
+    await db.refresh(merchant)
+    return {
+        "merchant": _merchant_out(merchant),
+        "message": "Contest opened. The owner has 48 hours to answer; vouchers already issued still work.",
+    }
+
+
+@router.post("/merchants/{pin}/claim/contest/answer", status_code=200)
+async def merchant_claim_contest_answer(
+    pin: str,
+    body: ClaimEvidenceIn,
+    vendor: Vendor = Depends(get_current_vendor),
+    db: AsyncSession = Depends(get_db),
+):
+    """The owner answers a contest with a fresh receipt from the shop."""
+    normalized = clean_text(pin).upper()
+    merchant = (
+        await db.execute(
+            select(ReceiptMerchant).where(ReceiptMerchant.pin == normalized).with_for_update()
+        )
+    ).scalar_one_or_none()
+    if merchant is None:
+        raise HTTPException(404, "That shop is not in the receipt network yet")
+    if merchant.claimed_by_vendor_id != vendor.id:
+        raise HTTPException(403, "Only the shop's current owner can answer a contest")
+    now = datetime.utcnow()
+    if merchant.claim_status != "contested":
+        raise HTTPException(409, "That shop has no contest to answer")
+    if claims_service.resolve_expired_contest(merchant, now):
+        await db.commit()
+        raise HTTPException(409, "The 48-hour answer window has passed; the claim is back in review")
+
+    evidence, error = await claims_service.contest_evidence(db, merchant, body.payload, now)
+    if error or evidence is None:
+        raise HTTPException(422, error or "That receipt cannot answer the contest")
+    started = claims_service.contest_started_at(merchant)
+    issued = parse_date(evidence.get("issued_at"))
+    if started is None or issued is None or issued < started - timedelta(minutes=5):
+        raise HTTPException(422, "The receipt must be dated after the contest opened.")
+
+    previous = claims_service.answer_contest(merchant, evidence, now)
+    await db.commit()
+    await db.refresh(merchant)
+    return {
+        "merchant": _merchant_out(merchant),
+        "message": (
+            "Contest answered. Your previous shop status is restored."
+            if previous != "pending"
+            else "Contest answered. The claim is back in review."
+        ),
     }
 
 
@@ -802,8 +1210,10 @@ async def update_my_merchant(
     ).scalar_one_or_none()
     if merchant is None:
         raise HTTPException(404, "That shop is not in the receipt network")
-    if merchant.claimed_by_vendor_id != vendor.id or merchant.claim_status != "verified":
-        raise HTTPException(403, "Only the verified owner can edit this shop")
+    if merchant.claimed_by_vendor_id != vendor.id or merchant.claim_status not in (
+        "verified", "probationary",
+    ):
+        raise HTTPException(403, "Only the current owner can edit this shop")
     if body.name is not None:
         merchant.name = _clean_title(body.name)
     if body.region is not None:
@@ -829,7 +1239,7 @@ async def list_offers(
             ReceiptOffer.is_active.is_(True),
             ReceiptOffer.starts_at <= now,
             (ReceiptOffer.ends_at.is_(None)) | (ReceiptOffer.ends_at > now),
-            ReceiptMerchant.claim_status == "verified",
+            ReceiptMerchant.claim_status.in_(("verified", "probationary")),
         )
         .order_by(ReceiptOffer.points_cost.asc(), ReceiptOffer.discount_kes.desc())
         .limit(limit)
@@ -847,11 +1257,23 @@ async def create_offer(
     vendor: Vendor = Depends(get_current_vendor),
     db: AsyncSession = Depends(get_db),
 ):
-    merchants = await _owned_merchants(db, vendor.id, verified_only=True)
-    if not merchants:
-        raise HTTPException(403, "Claim and verify your shop before publishing a deal")
-    merchant = merchants[0]
+    merchants = await _owned_merchants(db, vendor.id)
+    eligible = [
+        merchant for merchant in merchants
+        if claims_service.can_publish_offers(merchant.claim_status)
+    ]
+    if not eligible:
+        raise HTTPException(403, "Claim your shop and complete a test sale before publishing a deal")
+    merchant = eligible[0]
     now = datetime.utcnow()
+    if merchant.claim_status == "probationary":
+        live = await claims_service.active_offers(db, merchant, now)
+        if live >= settings.MERCHANT_CLAIM_ACTIVE_OFFER_CAP:
+            raise HTTPException(
+                409,
+                f"A probationary shop can run {settings.MERCHANT_CLAIM_ACTIVE_OFFER_CAP} "
+                "active offer. Pause the current one first.",
+            )
     starts_at = body.starts_at or now
     if body.ends_at is not None and body.ends_at <= starts_at:
         raise HTTPException(422, "The deal must end after it starts")
@@ -886,8 +1308,20 @@ async def update_offer(
     ).scalar_one_or_none()
     if merchant is None or merchant.claimed_by_vendor_id != vendor.id:
         raise HTTPException(403, "Only the shop that published the deal can change it")
-    if merchant.claim_status != "verified":
-        raise HTTPException(403, "That shop is not verified yet")
+    if not claims_service.can_publish_offers(merchant.claim_status):
+        raise HTTPException(403, "That shop cannot publish offers right now")
+    if (
+        merchant.claim_status == "probationary"
+        and body.is_active is True
+        and not offer.is_active
+    ):
+        live = await claims_service.active_offers(db, merchant, datetime.utcnow())
+        if live >= settings.MERCHANT_CLAIM_ACTIVE_OFFER_CAP:
+            raise HTTPException(
+                409,
+                f"A probationary shop can run {settings.MERCHANT_CLAIM_ACTIVE_OFFER_CAP} "
+                "active offer.",
+            )
     if body.title is not None:
         offer.title = _clean_title(body.title)
     if body.description is not None:
@@ -969,10 +1403,18 @@ async def claim_voucher(
     merchant = (
         await db.execute(select(ReceiptMerchant).where(ReceiptMerchant.id == offer.merchant_id))
     ).scalar_one_or_none()
-    if merchant is None or merchant.claim_status != "verified":
-        raise HTTPException(409, "That shop has not been verified for offers yet")
+    if merchant is None or not claims_service.can_publish_offers(merchant.claim_status):
+        raise HTTPException(409, "That shop cannot publish offers right now")
     if not offer.is_active or offer.starts_at > now or (offer.ends_at is not None and offer.ends_at <= now):
         raise HTTPException(409, "That deal is not running right now")
+    if merchant.claim_status == "probationary":
+        issued = await claims_service.vouchers_this_week(db, merchant, now)
+        if issued >= settings.MERCHANT_CLAIM_WEEKLY_VOUCHER_CAP:
+            raise HTTPException(
+                409,
+                f"This probationary shop has issued {settings.MERCHANT_CLAIM_WEEKLY_VOUCHER_CAP} "
+                "vouchers this week. It can issue again next week.",
+            )
 
     start_of_day = datetime.combine(now.date(), time.min)
     already = (
@@ -1109,11 +1551,18 @@ async def redeem_voucher(
     vendor: Vendor = Depends(get_current_vendor),
     db: AsyncSession = Depends(get_db),
 ):
-    """The counter side: a verified shop checks the code and marks it used."""
+    """The counter side: a verified, probationary or contested shop checks a code.
+
+    A contest freezes new offers and new vouchers, but a customer already holding
+    one must still be able to use it.
+    """
     now = datetime.utcnow()
-    merchants = await _owned_merchants(db, vendor.id, verified_only=True)
+    merchants = [
+        merchant for merchant in await _owned_merchants(db, vendor.id)
+        if claims_service.can_redeem(merchant.claim_status)
+    ]
     if not merchants:
-        raise HTTPException(403, "Only a verified shop can check a voucher")
+        raise HTTPException(403, "Only the shop's current owner can check a voucher")
     merchant_ids = [merchant.id for merchant in merchants]
 
     statement = select(ReceiptVoucher).where(
@@ -1144,6 +1593,9 @@ async def redeem_voucher(
     voucher.status = "redeemed"
     voucher.redeemed_at = now
     voucher.redeemed_by_vendor_id = vendor.id
+    # A redemption is the only real signal that a shop has customers. Check the
+    # 14-day / 3-customer rule here so a finished probation promotes promptly.
+    await _touch_claim_state(db, merchant, now)
     await db.commit()
     await db.refresh(voucher)
     return {
@@ -1158,7 +1610,10 @@ async def redeem_voucher(
 
 @router.get("/ops/merchants")
 async def ops_merchants(
-    status: str = Query("pending", pattern="^(pending|verified|rejected|unclaimed)$"),
+    status: str = Query(
+        "pending",
+        pattern="^(pending|probationary|verified|contested|suspended|rejected|unclaimed)$",
+    ),
     _operator: Vendor = Depends(require_operator),
     db: AsyncSession = Depends(get_db),
 ):
@@ -1183,10 +1638,15 @@ async def verify_merchant(
     ).scalar_one_or_none()
     if merchant is None:
         raise HTTPException(404, "That shop is not in the receipt network")
-    if merchant.claim_status != "pending":
-        raise HTTPException(409, "Only a pending claim can be reviewed")
+    if merchant.claim_status not in ("pending", "probationary", "contested", "suspended"):
+        raise HTTPException(409, "Only an open claim can be reviewed")
+    now = datetime.utcnow()
     merchant.claim_status = "verified" if body.approve else "rejected"
-    merchant.verified_at = datetime.utcnow() if body.approve else None
+    merchant.verified_at = now if body.approve else None
+    merchant.probation_until = None
+    merchant.contest_deadline = None
+    merchant.claim_path = "operator" if body.approve else merchant.claim_path
+    merchant.claim_confidence = 100 if body.approve else merchant.claim_confidence
     merchant.claim_note = clean_text(body.note)[:1000] or merchant.claim_note
     await db.commit()
     await db.refresh(merchant)

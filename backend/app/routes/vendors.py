@@ -80,6 +80,9 @@ class VendorOut(BaseModel):
     portfolio_images: list = []
     # Selected work: what this business has done, shown on its shop front.
     work_items: list = []
+    # Claimed receipt merchants so `/p/:handle` can show probationary/verified/contested
+    # shop status and offer a "Contest this claim" button to the real shop owner.
+    claimed_merchants: list = []
 
 
 class VendorUpdate(BaseModel):
@@ -462,6 +465,34 @@ async def vendor_by_handle(
         out.avatar_url = cap.get("avatar_url") or chat_identity.get("avatar_url") or None
         out.portfolio_images = list(profile.portfolio_images or [])
         out.work_items = public_work_items(profile)
+    from app.models.receipts import ReceiptMerchant
+    from app.services.merchant_claims import status_label
+
+    merchants = (
+        await db.execute(
+            select(ReceiptMerchant)
+            .where(
+                ReceiptMerchant.claimed_by_vendor_id == target.id,
+                ReceiptMerchant.claim_status.in_(
+                    ("pending", "probationary", "verified", "contested")
+                ),
+            )
+            .order_by(ReceiptMerchant.created_at.desc())
+        )
+    ).scalars().all()
+    out.claimed_merchants = [
+        {
+            "pin": m.pin,
+            "name": m.name,
+            "region": m.region,
+            "claim_status": m.claim_status,
+            "claim_status_label": status_label(m.claim_status),
+            "probationary": m.claim_status == "probationary",
+            "contested": m.claim_status == "contested",
+            "verified": m.claim_status == "verified",
+        }
+        for m in merchants
+    ]
     return out
 
 

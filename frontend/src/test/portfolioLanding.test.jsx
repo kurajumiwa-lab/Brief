@@ -7,12 +7,13 @@
  * a place (`ogallo.vendorworld.ke`), not an internal route, and the page should
  * carry the links people actually forward: WhatsApp first, then the rest.
  */
-import { describe, expect, it } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import PortfolioView from "@/components/you/PortfolioView";
 import { rankFor } from "@/config/identity";
 import { pageAddress } from "@/lib/pageShare";
+import { receiptsAPI } from "@/lib/receiptsApi";
 
 const VENDOR = {
   id: "v1",
@@ -127,5 +128,53 @@ describe("a landing page, not a card", () => {
     // Sharing the page itself still works; only the direct routes are absent.
     expect(within(screen.getByTestId("page-share")).getByRole("link", { name: /whatsapp/i }).getAttribute("href"))
       .toMatch(/^https:\/\/wa\.me\/\?text=/);
+  });
+
+  it("lets a visitor contest a claimed shop on /p/handle and freeze it into contested status", async () => {
+    const spy = vi.spyOn(receiptsAPI, "contestClaim").mockResolvedValue({
+      data: {
+        merchant: {
+          pin: "P051234567X",
+          name: "Kisumu Fresh Mart",
+          claim_status: "contested",
+          claim_status_label: "Ownership contested",
+          contested: true,
+          probationary: false,
+          verified: false,
+        },
+      },
+    });
+    mount({
+      isOwner: false,
+      vendor: {
+        ...VENDOR,
+        claimed_merchants: [
+          {
+            pin: "P051234567X",
+            name: "Kisumu Fresh Mart",
+            claim_status: "probationary",
+            claim_status_label: "Probationary owner",
+            probationary: true,
+            contested: false,
+            verified: false,
+          },
+        ],
+      },
+    });
+
+    expect(screen.getByTestId("page-claimed-shop")).toHaveTextContent("Kisumu Fresh Mart");
+    expect(screen.getByTestId("page-claimed-shop-status")).toHaveTextContent("Probationary owner");
+    fireEvent.click(screen.getByTestId("page-contest-open"));
+    fireEvent.change(screen.getByTestId("page-contest-reason"), {
+      target: { value: "This is my shop in Kisumu and I hold the ETR." },
+    });
+    fireEvent.click(screen.getByTestId("page-contest-submit"));
+
+    await waitFor(() => expect(spy).toHaveBeenCalledWith(
+      "P051234567X",
+      expect.objectContaining({ reason: expect.stringContaining("This is my shop") }),
+    ));
+    expect(await screen.findByTestId("page-claimed-shop-status")).toHaveTextContent("Ownership contested");
+    spy.mockRestore();
   });
 });

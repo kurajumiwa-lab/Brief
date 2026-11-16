@@ -125,4 +125,30 @@ describe("receipt-backed trades", () => {
     expect(within(unmatched).getByTestId("trade-proof-unmatched").getAttribute("href"))
       .toContain(encodeURIComponent("/invite/a-shop-not-on-the-app"));
   });
+
+  it("blocks trade-proof confirmation for a probationary shop while keeping dispute available", async () => {
+    receiptsAPI.tradeProofs.mockResolvedValue({
+      data: {
+        proofs: [
+          {
+            ...base,
+            id: "p-probation",
+            status: "pending",
+            can_confirm: false,
+            can_dispute: true,
+            confirm_locked_reason:
+              "Confirming trade proofs unlocks when your shop is verified, not while it is pending or probationary.",
+          },
+        ],
+        summary: { pending_for_me: 0, waiting_for_shop: 0, confirmed: 0, unmatched: 0 },
+        confirmed_trade_proofs: 0,
+      },
+    });
+    renderPage();
+
+    const locked = await screen.findByTestId("trade-proof-confirm-locked");
+    expect(locked).toHaveTextContent(/unlocks when your shop is verified/i);
+    expect(screen.queryByTestId("trade-proof-confirm")).not.toBeInTheDocument();
+    expect(screen.getByTestId("trade-proof-dispute")).toBeInTheDocument();
+  });
 });

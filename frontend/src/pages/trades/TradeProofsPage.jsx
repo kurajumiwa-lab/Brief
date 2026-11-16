@@ -255,25 +255,38 @@ export default function TradeProofsPage() {
                   )}
 
                   {proof.status === "pending" && proof.role === "seller" && (
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <Button
-                        size="sm"
-                        icon={Check}
-                        data-testid="trade-proof-confirm"
-                        loading={busy === proof.id}
-                        onClick={() => confirm(proof)}
-                      >
-                        Confirm this was my shop
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        icon={X}
-                        data-testid="trade-proof-dispute"
-                        onClick={() => { setDisputing(proof.id); setReason(""); }}
-                      >
-                        Not mine
-                      </Button>
+                    <div className="mt-3 space-y-2">
+                      {proof.can_confirm === false ? (
+                        <p
+                          data-testid="trade-proof-confirm-locked"
+                          className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-micro leading-relaxed text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200"
+                        >
+                          {proof.confirm_locked_reason ||
+                            "Confirming trade proofs unlocks when your shop is verified, not while it is pending or probationary."}
+                        </p>
+                      ) : null}
+                      <div className="flex flex-wrap gap-2">
+                        {proof.can_confirm !== false && (
+                          <Button
+                            size="sm"
+                            icon={Check}
+                            data-testid="trade-proof-confirm"
+                            loading={busy === proof.id}
+                            onClick={() => confirm(proof)}
+                          >
+                            Confirm this was my shop
+                          </Button>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          icon={X}
+                          data-testid="trade-proof-dispute"
+                          onClick={() => { setDisputing(proof.id); setReason(""); }}
+                        >
+                          Not mine
+                        </Button>
+                      </div>
                     </div>
                   )}
 

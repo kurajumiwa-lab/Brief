@@ -1,6 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowRight, Check, Store, Ticket } from "lucide-react";
+import {
+  AlertTriangle, ArrowRight, Check, Clock, ShieldCheck, Store, Ticket,
+} from "lucide-react";
 import Button from "@/components/ui/Button";
 import EmptyState from "@/components/ui/EmptyState";
 import { PageSpinner } from "@/components/ui/Spinner";
@@ -9,12 +11,13 @@ import { receiptsAPI } from "@/lib/receiptsApi";
 import { apiError } from "@/lib/api";
 
 /**
- * A SHOP WITHOUT A PAGE.
+ * A SHOP WITHOUT A PAGE — and the fastest honest way to run it.
  *
- * This is where the WhatsApp invite lands. It is deliberately public: a
- * shopkeeper forwarded the link by a customer can read it without downloading
- * anything. Claiming needs an account, so the shop can be reviewed by a person
- * before it can publish offers or check vouchers.
+ * A claim starts in review. A shopkeeper can unlock the capped probationary
+ * state immediately by ringing one server-chosen amount (KSh 1–99) at the shop's
+ * own till and submitting that receipt. This is presence evidence at the
+ * counter, not a KRA verification: the badge says Probationary owner and trade
+ * proofs stay locked until the shop earns its way out.
  */
 export default function InviteShopPage() {
   const { slug } = useParams();
@@ -23,17 +26,32 @@ export default function InviteShopPage() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [claim, setClaim] = useState(null);
+  const [owned, setOwned] = useState(false);
   const [claiming, setClaiming] = useState(false);
   const [claimError, setClaimError] = useState("");
-  const [claimed, setClaimed] = useState(false);
+  const [challenge, setChallenge] = useState(null);
+  const [payload, setPayload] = useState("");
+  const [challengeBusy, setChallengeBusy] = useState(false);
+  const [challengeError, setChallengeError] = useState("");
+  const [contestOpen, setContestOpen] = useState(false);
+  const [contestReason, setContestReason] = useState("");
+  const [contestError, setContestError] = useState("");
+  const [contestBusy, setContestBusy] = useState(false);
+  const [answerPayload, setAnswerPayload] = useState("");
+  const [answerError, setAnswerError] = useState("");
+  const [answerBusy, setAnswerBusy] = useState(false);
+  const [clock, setClock] = useState(Date.now());
   const [form, setForm] = useState({ name: "", phone: "", note: "" });
+
+  const shopPin = data?.shop?.pin;
 
   useEffect(() => {
     let alive = true;
     receiptsAPI.invite(slug)
-      .then(({ data: payload }) => {
+      .then(({ data: payloadData }) => {
         if (!alive) return;
-        setData(payload);
+        setData(payloadData);
         setForm((current) => ({ ...current, name: me?.business_name || "" }));
       })
       .catch((err) => {
@@ -42,6 +60,42 @@ export default function InviteShopPage() {
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
   }, [slug, me?.business_name]);
+
+  useEffect(() => {
+    if (!token || !shopPin || typeof receiptsAPI.myMerchants !== "function") {
+      setOwned(false);
+      return undefined;
+    }
+    let alive = true;
+    receiptsAPI.myMerchants()
+      .then(({ data: my }) => {
+        if (!alive) return;
+        const found = (my.merchants || []).find((row) => row.pin === shopPin);
+        if (found) {
+          setOwned(true);
+          setClaim((current) => current || found);
+        }
+      })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [token, shopPin]);
+
+  useEffect(() => {
+    if (!challenge) return undefined;
+    const timer = setInterval(() => setClock(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [challenge]);
+
+  const status = claim?.claim_status || data?.shop?.claim_status || "unclaimed";
+  const challengeSeconds = useMemo(() => {
+    if (challenge?.expires_at) {
+      return Math.max(0, Math.floor((new Date(challenge.expires_at).getTime() - clock) / 1000));
+    }
+    if (challenge?.expires_in_seconds) {
+      return Math.max(0, Number(challenge.expires_in_seconds));
+    }
+    return 0;
+  }, [challenge, clock]);
 
   if (loading) return <PageSpinner label="Opening the shop invite…" />;
   if (error === "not-found") {
@@ -62,26 +116,99 @@ export default function InviteShopPage() {
   }
 
   const shop = data.shop;
-  const pending = claimed || shop.claim_status === "pending";
-  const verified = shop.verified;
+  const verified = status === "verified";
+  const probationary = status === "probationary";
+  const contested = status === "contested";
+  const pending = status === "pending";
 
-  const submit = async (event) => {
+  async function submitClaim(event) {
     event.preventDefault();
     setClaiming(true);
     setClaimError("");
     try {
-      await receiptsAPI.claimMerchant(shop.pin, {
+      const { data: result } = await receiptsAPI.claimMerchant(shop.pin, {
         name: form.name.trim() || shop.name,
         phone: form.phone.trim() || null,
         note: form.note.trim() || null,
       });
-      setClaimed(true);
+      setClaim(result.merchant);
+      setOwned(true);
     } catch (err) {
       setClaimError(apiError(err, "That claim could not be sent."));
     } finally {
       setClaiming(false);
     }
-  };
+  }
+
+  async function startChallenge() {
+    setChallengeBusy(true);
+    setChallengeError("");
+    try {
+      const { data: result } = await receiptsAPI.claimChallenge(shop.pin);
+      setChallenge(result.challenge);
+      if (result.merchant) setClaim(result.merchant);
+      setClock(Date.now());
+    } catch (err) {
+      setChallengeError(apiError(err, "Could not issue a test amount."));
+    } finally {
+      setChallengeBusy(false);
+    }
+  }
+
+  async function submitChallenge(event) {
+    event.preventDefault();
+    if (!payload.trim()) {
+      setChallengeError("Paste the receipt link or QR text first.");
+      return;
+    }
+    setChallengeBusy(true);
+    setChallengeError("");
+    try {
+      const { data: result } = await receiptsAPI.claimEvidence(shop.pin, payload.trim());
+      setClaim(result.merchant);
+      setChallenge(null);
+      setPayload("");
+    } catch (err) {
+      setChallengeError(apiError(err, "That receipt did not answer the test sale."));
+    } finally {
+      setChallengeBusy(false);
+    }
+  }
+
+  async function submitContest(event) {
+    event.preventDefault();
+    setContestBusy(true);
+    setContestError("");
+    try {
+      const { data: result } = await receiptsAPI.contestClaim(shop.pin, {
+        reason: contestReason.trim(),
+        payload: payload.trim(),
+      });
+      setClaim(result.merchant);
+      setContestOpen(false);
+      setContestReason("");
+      setPayload("");
+    } catch (err) {
+      setContestError(apiError(err, "That contest could not be opened."));
+    } finally {
+      setContestBusy(false);
+    }
+  }
+
+  async function submitAnswer(event) {
+    event.preventDefault();
+    setAnswerBusy(true);
+    setAnswerError("");
+    try {
+      const { data: result } = await receiptsAPI.answerContest(shop.pin, answerPayload.trim());
+      setClaim(result.merchant);
+      setAnswerPayload("");
+    } catch (err) {
+      setAnswerError(apiError(err, "That receipt did not answer the contest."));
+    } finally {
+      setAnswerBusy(false);
+    }
+  }
 
   return (
     <main className="mx-auto min-h-screen w-full max-w-xl px-4 py-8">
@@ -116,21 +243,125 @@ export default function InviteShopPage() {
               This shop already has a verified Home Office page. Ask the owner for its link,
               or search the name in Regions.
             </div>
+          ) : probationary ? (
+            <div className="mt-5 rounded-2xl border border-brand-200 bg-brand-50 px-4 py-4 dark:border-brand-500/25 dark:bg-brand-500/10" data-testid="invite-probationary">
+              <p className="flex items-center gap-2 text-sm font-bold text-brand-900 dark:text-brand-100">
+                <ShieldCheck size={15} aria-hidden="true" /> Probationary owner
+              </p>
+              <p className="mt-1 text-xs leading-relaxed text-brand-800 dark:text-brand-200">
+                {owned ? "You answered" : "The owner answered"} a test sale at the till.
+                The shop can check voucher codes and run one active offer with a maximum
+                of five vouchers a week. Confirming trade proofs stays locked until the
+                shop is verified.
+              </p>
+              <p className="mt-2 text-micro text-brand-700 dark:text-brand-300" data-testid="invite-probation-until">
+                Trading-history review unlocks after 14 days and three paying customers.
+              </p>
+              <Button as={Link} to="/receipts" className="mt-3" size="sm" icon={ArrowRight}>
+                Open your counter
+              </Button>
+            </div>
+          ) : contested ? (
+            <div className="mt-5 space-y-3" data-testid="invite-contested">
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-500/30 dark:bg-amber-500/10">
+                <p className="flex items-center gap-2 text-sm font-bold text-amber-900 dark:text-amber-100">
+                  <Clock size={15} aria-hidden="true" /> Ownership contested
+                </p>
+                <p className="mt-1 text-xs leading-relaxed text-amber-800 dark:text-amber-200">
+                  New offers are frozen. Vouchers already issued still work. The owner has
+                  48 hours to answer with a fresh receipt from this shop.
+                </p>
+              </div>
+              {owned && (
+                <form className="space-y-2 rounded-2xl border border-edge-1 bg-surface-0 p-4" onSubmit={submitAnswer} data-testid="invite-contest-answer-form">
+                  <label className="block">
+                    <span className="mb-1 block text-micro font-bold uppercase tracking-[0.14em] text-ink-4">
+                      Answer with a fresh receipt
+                    </span>
+                    <input
+                      value={answerPayload}
+                      onChange={(event) => setAnswerPayload(event.target.value)}
+                      placeholder="Paste the receipt QR or eTIMS link"
+                      className="h-11 w-full rounded-xl border border-edge-2 bg-surface-1 px-3 text-sm text-ink-1"
+                      data-testid="invite-contest-answer-payload"
+                    />
+                  </label>
+                  {answerError && <p className="text-xs text-red-600 dark:text-red-400">{answerError}</p>}
+                  <Button type="submit" size="sm" loading={answerBusy} disabled={!answerPayload.trim()}>
+                    Answer the contest
+                  </Button>
+                </form>
+              )}
+            </div>
           ) : pending ? (
-            <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-500/30 dark:bg-amber-500/10" data-testid="invite-pending">
-              <p className="flex items-center gap-2 text-sm font-bold text-amber-900 dark:text-amber-100">
-                <Check size={15} aria-hidden="true" /> Claim sent
-              </p>
-              <p className="mt-1 text-xs leading-relaxed text-amber-800 dark:text-amber-200">
-                Home Office will check the shop details before the page can publish
-                offers or check vouchers. No SMS is sent.
-              </p>
+            <div className="mt-5 space-y-3" data-testid="invite-pending">
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-500/30 dark:bg-amber-500/10">
+                <p className="flex items-center gap-2 text-sm font-bold text-amber-900 dark:text-amber-100">
+                  <Check size={15} aria-hidden="true" /> Claim sent
+                </p>
+                <p className="mt-1 text-xs leading-relaxed text-amber-800 dark:text-amber-200">
+                  {owned
+                    ? "Ring one test sale to start trading today on probation, or wait for review before the page can publish as verified."
+                    : "Home Office has this claim. The owner can answer a test sale before the page can publish, or a person can review it."}
+                </p>
+              </div>
+
+              {owned && (
+                challenge ? (
+                  <form className="rounded-2xl border border-brand-200 bg-brand-50 p-4 dark:border-brand-500/25 dark:bg-brand-500/10" onSubmit={submitChallenge} data-testid="invite-challenge">
+                    <p className="text-micro font-bold uppercase tracking-[0.14em] text-brand-800 dark:text-brand-200">
+                      Ring exactly this amount
+                    </p>
+                    <p className="mt-1 text-3xl font-extrabold tabular-nums text-brand-900 dark:text-brand-100" data-testid="invite-challenge-amount">
+                      KSh {Number(challenge.amount_kes).toLocaleString("en-KE")}
+                    </p>
+                    <p className="mt-1 flex items-center gap-1.5 text-micro text-brand-700 dark:text-brand-300" data-testid="invite-challenge-ttl">
+                      <Clock size={12} aria-hidden="true" />
+                      {challengeSeconds > 0
+                        ? `${Math.floor(challengeSeconds / 60)}:${String(challengeSeconds % 60).padStart(2, "0")} left`
+                        : "Expired — ask for a new amount"}
+                    </p>
+                    <p className="mt-2 text-micro leading-relaxed text-brand-800 dark:text-brand-200">
+                      Ring it on the shop&apos;s own till, then paste the receipt link or QR
+                      text below. This is presence at the counter, not a KRA verification.
+                    </p>
+                    <input
+                      value={payload}
+                      onChange={(event) => setPayload(event.target.value)}
+                      placeholder="Paste the receipt QR or eTIMS link"
+                      className="mt-3 h-11 w-full rounded-xl border border-brand-200 bg-white px-3 text-sm text-ink-1 dark:border-brand-500/30 dark:bg-surface-1"
+                      data-testid="invite-challenge-payload"
+                    />
+                    {challengeError && <p className="mt-2 text-xs text-red-600 dark:text-red-400" data-testid="invite-challenge-error">{challengeError}</p>}
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Button type="submit" size="sm" loading={challengeBusy} disabled={!payload.trim()} data-testid="invite-challenge-submit">
+                        Submit the test receipt
+                      </Button>
+                      <Button type="button" size="sm" variant="ghost" onClick={startChallenge} disabled={challengeBusy}>
+                        New amount
+                      </Button>
+                    </div>
+                  </form>
+                ) : (
+                  <div className="rounded-2xl border border-edge-1 bg-surface-0 p-4">
+                    <p className="text-sm font-bold text-ink-1">Start selling today</p>
+                    <p className="mt-1 text-xs leading-relaxed text-ink-3">
+                      Get a random amount between KSh 1 and KSh 99, ring it at the shop&apos;s
+                      till, and submit that receipt. The amount expires in ten minutes.
+                    </p>
+                    {challengeError && <p className="mt-2 text-xs text-red-600 dark:text-red-400" data-testid="invite-challenge-error">{challengeError}</p>}
+                    <Button className="mt-3" size="sm" onClick={startChallenge} loading={challengeBusy} data-testid="invite-challenge-start">
+                      Get a test amount
+                    </Button>
+                  </div>
+                )
+              )}
             </div>
           ) : token ? (
-            <form className="mt-5 space-y-3" onSubmit={submit} data-testid="invite-claim-form">
+            <form className="mt-5 space-y-3" onSubmit={submitClaim} data-testid="invite-claim-form">
               <p className="text-xs leading-relaxed text-ink-3">
-                Claiming does not publish a page immediately. A person checks the shop
-                details first, so a customer cannot claim someone else&apos;s till.
+                Claiming does not publish a page immediately. You can unlock probation with
+                one test sale, or a person can review the shop details.
               </p>
               <label className="block">
                 <span className="mb-1 block text-micro font-bold uppercase tracking-[0.14em] text-ink-4">
@@ -174,20 +405,66 @@ export default function InviteShopPage() {
                 </p>
               )}
               <Button type="submit" loading={claiming} icon={ArrowRight} data-testid="invite-claim">
-                Send this claim for review
+                Claim this shop
               </Button>
             </form>
           ) : (
             <div className="mt-5 rounded-2xl border border-edge-1 bg-surface-0 px-4 py-4">
               <p className="text-sm font-bold text-ink-1">Run this shop?</p>
               <p className="mt-1 text-xs leading-relaxed text-ink-3">
-                Sign in, then claim the page. Review protects the shop from a stranger
-                claiming its receipts.
+                Sign in, then claim the page. A test sale at the till unlocks probation
+                without waiting for a person.
               </p>
               <Button as={Link} to="/auth" className="mt-3" icon={ArrowRight}>
                 Sign in to claim
               </Button>
             </div>
+          )}
+
+          {!owned && !contestOpen && token && ["pending", "probationary", "verified", "contested"].includes(status) && (
+            <button
+              type="button"
+              onClick={() => setContestOpen(true)}
+              className="mt-3 text-micro font-semibold text-ink-4 underline-offset-2 hover:text-ink-2 hover:underline"
+              data-testid="invite-contest-open"
+            >
+              Not your shop? Contest this claim
+            </button>
+          )}
+          {contestOpen && (
+            <form className="mt-3 space-y-2 rounded-2xl border border-edge-1 bg-surface-0 p-4" onSubmit={submitContest} data-testid="invite-contest-form">
+              <p className="flex items-center gap-1.5 text-xs font-bold text-ink-1">
+                <AlertTriangle size={14} aria-hidden="true" /> Contest the current claim
+              </p>
+              <p className="text-micro leading-relaxed text-ink-4">
+                Attach a receipt from this shop. New offers stop; vouchers already issued
+                still work. This is not a deletion and the owner can answer.
+              </p>
+              <textarea
+                value={contestReason}
+                onChange={(event) => setContestReason(event.target.value)}
+                rows={2}
+                placeholder="Why is this claim wrong?"
+                className="w-full rounded-xl border border-edge-2 bg-surface-1 px-3 py-2 text-sm text-ink-1"
+                data-testid="invite-contest-reason"
+              />
+              <input
+                value={payload}
+                onChange={(event) => setPayload(event.target.value)}
+                placeholder="Receipt QR or eTIMS link"
+                className="h-11 w-full rounded-xl border border-edge-2 bg-surface-1 px-3 text-sm text-ink-1"
+                data-testid="invite-contest-payload"
+              />
+              {contestError && <p className="text-xs text-red-600 dark:text-red-400">{contestError}</p>}
+              <div className="flex flex-wrap gap-2">
+                <Button type="submit" size="sm" loading={contestBusy} disabled={contestReason.trim().length < 8 && !payload.trim()} data-testid="invite-contest-submit">
+                  Open a contest
+                </Button>
+                <Button type="button" size="sm" variant="ghost" onClick={() => setContestOpen(false)}>
+                  Cancel
+                </Button>
+              </div>
+            </form>
           )}
         </div>
       </section>
