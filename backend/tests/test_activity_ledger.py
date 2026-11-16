@@ -585,3 +585,58 @@ async def test_home_storefront_audience_and_utility_metrics(client):
         "notifications_acted_upon",
         "active_local_providers_30d",
     }
+
+
+# ── Agenda: the Inbox's joined rounds are real records, not a second list ─────
+
+async def test_inbox_agenda_promotes_a_pledge_to_a_confirmed_booking(client):
+    host, _ = await _register(
+        client, display_name="Kisumu Round Host", account_kind="artisan", location="Kisumu"
+    )
+    neighbour, _ = await _register(
+        client, display_name="Achieng Neighbour", account_kind="household", location="Kisumu"
+    )
+
+    starts = datetime.utcnow() + timedelta(days=2)
+    created = await client.post("/api/ledger/activities", json={
+        "posting_type": "opportunity",
+        "title": "Group order: Friday bulk maize",
+        "body": "A shared maize order collected from the depot on Friday morning.",
+        "target_quantity": 10.0,
+        "unit": "sacks",
+        "estimated_unit_price_kes": 3200,
+        "starts_at": starts.isoformat(),
+        "capacity": 8,
+        "area_name": "Kisumu",
+    }, headers=host)
+    assert created.status_code == 201, created.text
+    activity_id = created.json()["id"]
+
+    joined = await client.post(f"/api/ledger/activities/{activity_id}/responses", json={
+        "quantity": 1.0,
+        "note": "One sack for our house",
+    }, headers=neighbour)
+    assert joined.status_code == 201, joined.text
+
+    agenda = await client.get("/api/outside/agenda", headers=neighbour)
+    assert agenda.status_code == 200, agenda.text
+    waiting = next(row for row in agenda.json()["items"] if row["record_id"] == joined.json()["id"])
+    assert waiting["state"] == "waiting"
+    assert waiting["passable"] is False
+    assert waiting["capacity"] == 8
+    assert waiting["status_label"] == "Waiting confirmation"
+
+    booking = await client.post(f"/api/ledger/activities/{activity_id}/bookings", json={
+        "response_id": joined.json()["id"],
+        "settlement_method": "direct_cash",
+    }, headers=host)
+    assert booking.status_code == 201, booking.text
+
+    after = await client.get("/api/outside/agenda", headers=neighbour)
+    rows = after.json()["items"]
+    confirmed = next(row for row in rows if row["kind"] == "booking")
+    assert confirmed["state"] == "confirmed"
+    assert confirmed["passable"] is True
+    assert confirmed["pass_code"].startswith("HO-")
+    # The booking replaces its pledge; the same round cannot appear twice.
+    assert not any(row["kind"] == "round" and row["record_id"] == joined.json()["id"] for row in rows)

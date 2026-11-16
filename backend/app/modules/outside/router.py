@@ -13,6 +13,7 @@
     PUT    /api/outside/location              set it — GPS or typed, both fine
     POST   /api/outside/reports               report or block
     GET    /api/outside/activity              grouped activity for the tab
+    GET    /api/outside/agenda                 joined events, rounds & bookings
 
 Everything here reads records that already exist; the only tables Outside owns
 are the four in `models.py`. Location is resolved in one place
@@ -20,6 +21,8 @@ are the four in `models.py`. Location is resolved in one place
 radius and never the product.
 """
 
+import hashlib
+import hmac
 import uuid as uuidlib
 from datetime import datetime, timedelta
 from typing import Optional
@@ -43,6 +46,7 @@ from app.modules.outside.models import (
     CONTENT_KINDS, REACTIONS, OutsideContentReport, OutsideDiscoveryPref,
     OutsidePost, OutsideReaction,
 )
+from app.config import settings
 from app.modules.trade.models import BusinessRequest
 from app.routes.auth import get_current_vendor
 
@@ -796,6 +800,185 @@ async def activity(
             "groups": _GROUP_ORDER,
             "muted_groups": [],
         },
+    }
+
+
+# ── agenda ────────────────────────────────────────────────────────────────────
+
+AGENDA_RESPONSE_TYPES = {"group_pledge", "round_stop_request", "learning_enrolment"}
+AGENDA_BOOKING_STATUSES = {"agreed", "in_progress", "organizer_completed", "participant_completed"}
+
+
+def _agenda_code(record_id: str) -> str:
+    """A fixed, human-readable reference for a pass.
+
+    It is derived from the record and the server secret so it never changes
+    between reloads, and it fits the same `HO-84K` shape as a voucher. It is a
+    *reference*, not a cryptographic proof: the host still sees the member's
+    name on the booking/registration.
+    """
+    from app.services.receipt_rewards import VOUCHER_CODE_ALPHABET, VOUCHER_CODE_PREFIX
+
+    digest = hmac.new(
+        settings.SECRET_KEY.encode(), f"pass:{record_id}".encode(), hashlib.sha256,
+    ).digest()
+    suffix = "".join(VOUCHER_CODE_ALPHABET[b % len(VOUCHER_CODE_ALPHABET)] for b in digest[:3])
+    return f"{VOUCHER_CODE_PREFIX}{suffix}"
+
+
+def _agenda_item(
+    *, record_id: str, kind: str, title: str, starts_at, ends_at, place: str,
+    price_kes, capacity, joined: int, state: str, status_label: str,
+    counterparty: Optional[dict], to: str, passable: bool,
+) -> dict:
+    return {
+        "id": f"{kind}:{record_id}",
+        "kind": kind,
+        "record_id": record_id,
+        "title": title,
+        "starts_at": starts_at.isoformat() if starts_at else None,
+        "ends_at": ends_at.isoformat() if ends_at else None,
+        "place": place or "",
+        "price_kes": int(price_kes) if price_kes else None,
+        "capacity": int(capacity) if capacity else None,
+        "joined": int(joined or 0),
+        "state": state,
+        "status_label": status_label,
+        "counterparty": counterparty,
+        "to": to,
+        "passable": passable,
+        "pass_code": _agenda_code(record_id) if passable else None,
+    }
+
+
+@router.get("/agenda")
+async def agenda(
+    days: int = Query(30, ge=1, le=120),
+    vendor: Vendor = Depends(get_current_vendor), db: AsyncSession = Depends(get_db),
+):
+    """Everything this person has actually joined, in one dated list.
+
+    Three real records can put a round in somebody's week:
+
+      events      an `EventRegistration` for an upcoming/active event
+      bookings    a participant `ActivityBooking` that is not finished
+      pledges     an `ActivityResponse` (group buy, route stop, class) that has
+                  not been converted into a booking yet
+
+    A booking supersedes its pledge, so the same round cannot appear twice.
+    Nothing here invents attendance: a submitted pledge is shown as *waiting*,
+    not as a confirmed place, and only a confirmed/joined record gets a pass.
+    """
+    from app.modules.ledger.models import ActivityBooking, ActivityResponse, LocalActivity
+
+    now = datetime.utcnow()
+    horizon = now - timedelta(hours=12)
+    cutoff = now + timedelta(days=days)
+    items: list[dict] = []
+
+    event_rows = (await db.execute(
+        select(EventRegistration, Event, Vendor)
+        .join(Event, Event.id == EventRegistration.event_id)
+        .join(Vendor, Vendor.id == Event.organizer_id)
+        .where(
+            EventRegistration.vendor_id == vendor.id,
+            EventRegistration.status.in_(["registered", "confirmed"]),
+            Event.status.in_(["upcoming", "active"]),
+            Event.end_date >= horizon,
+            Event.start_date <= cutoff,
+            Vendor.fraud_suspended_at.is_(None),
+        )
+        .order_by(Event.start_date.asc())
+        .limit(50)
+    )).all()
+    for reg, ev, org in event_rows:
+        confirmed = reg.status == "confirmed"
+        items.append(_agenda_item(
+            record_id=str(reg.id), kind="event", title=ev.title,
+            starts_at=ev.start_date, ends_at=ev.end_date, place=ev.location,
+            price_kes=ev.entry_fee, capacity=ev.max_vendors,
+            joined=ev.registered_count or 0,
+            state="confirmed" if confirmed else "joined",
+            status_label="Confirmed" if confirmed else "Registered",
+            counterparty={"name": org.business_name, "handle": org.vendor_handle},
+            to=f"/events?event={ev.id}",
+            passable=True,
+        ))
+
+    booking_rows = (await db.execute(
+        select(ActivityBooking, LocalActivity, Vendor)
+        .join(LocalActivity, LocalActivity.id == ActivityBooking.activity_id)
+        .join(Vendor, Vendor.id == ActivityBooking.organizer_vendor_id)
+        .where(
+            ActivityBooking.participant_vendor_id == vendor.id,
+            ActivityBooking.status.in_(AGENDA_BOOKING_STATUSES),
+            LocalActivity.lifecycle_status.not_in(["cancelled", "expired"]),
+        )
+        .order_by(ActivityBooking.updated_at.desc())
+        .limit(50)
+    )).all()
+    booked_activities = set()
+    for booking, act, org in booking_rows:
+        starts = booking.scheduled_start or act.starts_at
+        waiting = booking.status == "organizer_completed"
+        if starts and starts > cutoff:
+            continue
+        # A completed visit still needs the member's confirmation even if the
+        # date has passed; other stale bookings drop out after a week.
+        if starts and starts < now - timedelta(days=7) and not waiting:
+            continue
+        booked_activities.add(str(act.id))
+        items.append(_agenda_item(
+            record_id=str(booking.id), kind="booking",
+            title=act.title, starts_at=starts, ends_at=booking.scheduled_end or act.ends_at,
+            place=act.area_name, price_kes=booking.agreed_price_kes or act.price_kes,
+            capacity=act.capacity, joined=act.spots_confirmed or 0,
+            state="waiting" if waiting else "confirmed",
+            status_label="Waiting on you" if waiting else "Booking confirmed",
+            counterparty={"name": org.business_name, "handle": org.vendor_handle},
+            to=f"/activities/{act.id}", passable=True,
+        ))
+
+    response_rows = (await db.execute(
+        select(ActivityResponse, LocalActivity, Vendor)
+        .join(LocalActivity, LocalActivity.id == ActivityResponse.activity_id)
+        .join(Vendor, Vendor.id == LocalActivity.organizer_vendor_id)
+        .where(
+            ActivityResponse.responder_vendor_id == vendor.id,
+            ActivityResponse.response_type.in_(AGENDA_RESPONSE_TYPES),
+            ActivityResponse.status.in_(["submitted", "shortlisted", "accepted"]),
+            LocalActivity.lifecycle_status.not_in(["cancelled", "expired"]),
+        )
+        .order_by(LocalActivity.starts_at.asc())
+        .limit(50)
+    )).all()
+    for response, act, org in response_rows:
+        if str(act.id) in booked_activities:
+            continue
+        starts = act.starts_at
+        if starts and (starts < horizon):
+            continue
+        accepted = response.status == "accepted"
+        items.append(_agenda_item(
+            record_id=str(response.id), kind="round", title=act.title,
+            starts_at=starts, ends_at=act.ends_at, place=act.area_name,
+            price_kes=act.price_kes, capacity=act.capacity,
+            joined=act.spots_confirmed or 0,
+            state="joined" if accepted else "waiting",
+            status_label="Joined round" if accepted else "Waiting confirmation",
+            counterparty={"name": org.business_name, "handle": org.vendor_handle},
+            to=f"/activities/{act.id}", passable=accepted,
+        ))
+
+    items.sort(key=lambda row: (row["starts_at"] is None, row["starts_at"] or ""))
+    return {
+        "items": items,
+        "counts": {
+            "total": len(items),
+            "waiting": sum(1 for row in items if row["state"] == "waiting"),
+            "passable": sum(1 for row in items if row["passable"]),
+        },
+        "window_days": days,
     }
 
 

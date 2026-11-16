@@ -41,8 +41,8 @@ In order, for a person who already has an account:
 All browsing stays in Regions: people, offers, needs, every listing with its
 full context. Home no longer repeats those rows.
 
-## What is deliberately not here yet
+## Inbox owns attendance
 
-The Inbox timeline (week strip, joined rounds, ticket passes) is the next slice.
-Home links to the Inbox rather than pretending to track attendance it does not
-yet model on the server.
+Joined rounds, bookings and event RSVPs live in the Inbox, not here. Home links
+to the Inbox rather than pretending to track attendance; see
+`docs/inbox-agenda.md` for the agenda and the shared Trade Pass.
