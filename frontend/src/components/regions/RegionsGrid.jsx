@@ -77,7 +77,7 @@ export function RegionCard({ item }) {
               ? "bg-brand-700 text-white"
               : "bg-white/95 text-ink-2 backdrop-blur",
           )}
-          title={`${rank.label} · level ${rank.level} of 5`}
+          title={`${rank.label} · Lvl ${rank.level}`}
           data-testid="region-card-level"
         >
           {rank.level >= 5 && <BadgeCheck size={11} aria-hidden="true" />}
