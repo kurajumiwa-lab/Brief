@@ -486,6 +486,11 @@ async def _local_activities(db, viewer, pair, limit, now):
                 "lifecycle_status": act.lifecycle_status,
                 "schedule_label": act.schedule_label,
                 "location_scope": act.location_scope,
+                "capacity": act.capacity,
+                "spots_left": (
+                    max(0, int(act.capacity) - int(act.spots_confirmed or 0))
+                    if act.capacity is not None else None
+                ),
                 "is_youth_opportunity": bool((act.permission_rules or {}).get("is_youth_opportunity")),
                 "custody_mode": "non_custodial",
                 "owner_id": str(org.id),

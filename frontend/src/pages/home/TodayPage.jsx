@@ -7,13 +7,16 @@ import { useStockStore } from "@/stores/stockStore";
 import { useOffice } from "@/hooks/useOffice";
 import { rankFor } from "@/config/identity";
 import { regionFromPlace } from "@/config/regions";
+import { parseApiDate } from "@/lib/formatters";
 
 /**
- * Today's container. It does exactly three reads:
+ * Today's container. Each read answers one question on the command centre:
  *
- *   the session profile     who this is
- *   the identity record     why they joined and what they can do
- *   the local feed          what is happening where they are
+ *   the session + identity  who this is and what they can do
+ *   dated feed              what can be joined where they are
+ *   activity                is anything waiting on a reply
+ *   stock + movements       what their own page and trades look like
+ *   office                  which home office they belong to
  *
  * The page used to make one profile request and one connections request for a
  * setup meter, then load statuses, radar counts, shelves, a newsletter and a
@@ -26,7 +29,6 @@ export default function TodayPage() {
   const loadIdentity = useIdentityStore((s) => s.load);
 
   const items = useOutsideStore((s) => s.items);
-  const status = useOutsideStore((s) => s.status);
   const loadFeed = useOutsideStore((s) => s.loadFeed);
   const location = useOutsideStore((s) => s.location);
   const loadLocation = useOutsideStore((s) => s.loadLocation);
@@ -46,7 +48,8 @@ export default function TodayPage() {
 
   useEffect(() => {
     if (!location) loadLocation();
-    loadFeed({});
+    // Home only needs dated rounds and events. The full feed belongs to Regions.
+    loadFeed({ kinds: ["scheduled", "event"] });
     loadActivity();
     fetchMine().catch(() => {});
     fetchMovements().catch(() => {});
@@ -57,15 +60,22 @@ export default function TodayPage() {
     [vendor?.physical_location, location?.label],
   );
 
-  const pulse = useMemo(() => {
+  const happening = useMemo(() => {
     if (!region) return [];
     const names = [region.hub, region.name, ...region.aliases].map((value) => value.toLowerCase());
+    const cutoff = Date.now() - 12 * 60 * 60 * 1000;
     return items
+      .filter((item) => item.kind === "scheduled" || item.kind === "event")
       .filter((item) => {
         const text = `${item.location || ""} ${item.area_name || ""}`.toLowerCase();
-        return names.some((name) => text.includes(name.toLowerCase()));
+        return names.some((name) => text.includes(name));
       })
-      .slice(0, 3);
+      .filter((item) => {
+        const start = parseApiDate(item.starts_at);
+        return Boolean(start) && start.getTime() >= cutoff;
+      })
+      .sort((a, b) => (parseApiDate(a.starts_at)?.getTime() || 0) - (parseApiDate(b.starts_at)?.getTime() || 0))
+      .slice(0, 8);
   }, [items, region]);
 
   const rank = rankFor({ vendor, identity });
@@ -87,10 +97,8 @@ export default function TodayPage() {
       name={name}
       firstName={firstName}
       rank={rank}
-      identity={identity}
       region={region}
-      pulse={pulse}
-      pulseLoading={status === "loading"}
+      happening={happening}
       unread={unread}
       institution={
         office

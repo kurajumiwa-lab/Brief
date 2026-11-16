@@ -1,29 +1,26 @@
 import { Link } from "react-router-dom";
 import {
-  ArrowRight, ArrowUpRight, Building2, ChevronRight, Inbox, MapPin,
-  PenLine, Sparkles,
+  ArrowRight, ChevronRight, Inbox, MapPin, Sparkles,
 } from "lucide-react";
-import Button from "@/components/ui/Button";
 import { RankChip, RankMark } from "@/components/identity/Rank";
-import { ItemRow } from "@/components/regions/Rows";
 import ReceiptScanCard from "@/components/receipts/ReceiptScanCard";
-import { regionPath } from "@/config/regions";
+import HappeningShelf from "@/components/home/HappeningShelf";
+import IdentityStrip from "@/components/home/IdentityStrip";
 
 /**
- * TODAY — the whole home screen.
+ * TODAY — the command centre, not a second discovery feed.
  *
- * Three questions, in the order a person asks them when they open an app:
+ * Four questions, in the order a returning person asks them:
  *
- *   1. Is anything waiting for me?       → the next step, and the inbox line
- *   2. What is happening where I am?     → the region pulse
- *   3. Is my page doing its job?         → the page strip
+ *   1. Who am I here, and what do I send?   → the identity strip
+ *   2. What is my next step?                → the ladder card
+ *   3. What can I claim or join now?        → receipt wallet + happening shelf
+ *   4. Is anything waiting on a reply?      → the inbox line
  *
- * Nothing else. No setup meter, no status shelf, no radar, no hero carousel,
- * no four-card grid, no second copy of the tab bar's destinations. The old Home
- * had 11 sections and 5,080 lines of components; this has three and one card.
- *
- * A block with no content renders nothing. There are no placeholders to scroll
- * past, and no "0" statistics pretending to be information.
+ * The full region feed lives in Regions. Home carries only dated rounds and
+ * events, because "what can I join this week?" is an action, while "what is
+ * listed?" is browsing. No setup meter, no duplicate listing rows, no second
+ * copy of the tab bar.
  */
 
 function greetingFor(hour) {
@@ -36,10 +33,8 @@ export default function TodayView({
   name = "there",
   firstName,
   rank,
-  identity,
   region,
-  pulse = [],
-  pulseLoading = false,
+  happening = [],
   page = {},
   institution = null,
   unread = 0,
@@ -50,7 +45,6 @@ export default function TodayView({
     ? now.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })
     : "";
   const displayName = firstName || name;
-  const published = page.published !== false;
 
   return (
     <div className="mx-auto w-full max-w-2xl space-y-7 sm:space-y-9">
@@ -62,17 +56,12 @@ export default function TodayView({
         </h1>
         <div className="mt-2.5 flex flex-wrap items-center gap-2">
           <RankChip rank={rank} />
-          {!published && identity?.intent !== "explore" && (
-            <Link
-              to="/you/page"
-              className="inline-flex items-center gap-1 rounded-full border border-accent-200 bg-accent-50 px-2.5 py-1 text-2xs font-bold text-accent-800 dark:border-accent-500/30 dark:bg-accent-500/15 dark:text-accent-300"
-            >
-              Page not published
-              <ArrowUpRight size={12} aria-hidden="true" />
-            </Link>
-          )}
         </div>
       </header>
+
+      {/* Identity sits immediately under the greeting: one box, one share
+          action, and the office the person belongs to. */}
+      <IdentityStrip name={name} page={page} institution={institution} />
 
       {/* ── The one thing to do next ─────────────────────────────────────── */}
       {rank && rank.level < 5 ? (
@@ -139,132 +128,9 @@ export default function TodayView({
         </Link>
       )}
 
-      {/* ── 2. Where you are ─────────────────────────────────────────────── */}
-      <section aria-labelledby="region-heading">
-        <div className="flex items-baseline justify-between gap-3 border-b border-edge-1 pb-2.5">
-          <div>
-            <h2 id="region-heading" className="text-base font-extrabold tracking-tight text-ink-1">
-              {region ? region.name : "Your region"}
-            </h2>
-            {region && (
-              <p className="mt-0.5 text-2xs text-ink-4">
-                {region.hub} · {region.knownFor.slice(0, 3).join(", ")}
-              </p>
-            )}
-          </div>
-          <Link
-            to={region ? regionPath(region) : "/regions"}
-            className="shrink-0 text-micro font-bold text-brand-700 hover:underline dark:text-brand-400"
-          >
-            {region ? "Open region" : "Choose a region"}
-          </Link>
-        </div>
-
-        {region ? (
-          <>
-            <p className="mt-3 text-xs leading-relaxed text-ink-3">{region.summary}</p>
-            {pulseLoading ? (
-              <div className="mt-2 space-y-2" aria-hidden="true">
-                {[0, 1, 2].map((i) => (
-                  <div key={i} className="h-14 animate-pulse rounded-xl bg-surface-2" />
-                ))}
-              </div>
-            ) : pulse.length > 0 ? (
-              <ul className="mt-1 divide-y divide-edge-1">
-                {pulse.slice(0, 3).map((item) => (
-                  <ItemRow key={`${item.kind}:${item.id}`} item={item} />
-                ))}
-              </ul>
-            ) : (
-              <p className="mt-3 rounded-2xl border border-dashed border-edge-2 bg-surface-0 px-4 py-4 text-2xs leading-relaxed text-ink-3">
-                Nothing has been published in {region.hub} yet. A region starts
-                with one honest page —{" "}
-                <Link to="/create" className="font-bold text-brand-700 hover:underline dark:text-brand-400">
-                  publish what you do
-                </Link>{" "}
-                and the next person has something to find.
-              </p>
-            )}
-          </>
-        ) : (
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-edge-1 bg-surface-1 px-4 py-4">
-            <p className="max-w-xs text-2xs leading-relaxed text-ink-3">
-              Tell us the town you work from. Everything you see here is ordered
-              by it, and you can change it whenever you move.
-            </p>
-            <Button as={Link} to="/regions" size="sm" variant="secondary">
-              Choose
-            </Button>
-          </div>
-        )}
-      </section>
-
-      {/* ── 3. Your page ─────────────────────────────────────────────────── */}
-      <section aria-labelledby="page-heading" className="rounded-2xl border border-edge-1 bg-surface-1 p-4 sm:p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h2 id="page-heading" className="text-base font-extrabold tracking-tight text-ink-1">
-              Your page
-            </h2>
-            <p className="mt-0.5 truncate text-2xs text-ink-4">
-              {page.url || "A page buyers can read before they call."}
-            </p>
-          </div>
-          <Link
-            to="/you"
-            className="shrink-0 text-micro font-bold text-brand-700 hover:underline dark:text-brand-400"
-          >
-            Open
-          </Link>
-        </div>
-
-        {page.counts ? (
-          <dl className="mt-4 grid grid-cols-3 divide-x divide-edge-1 rounded-xl border border-edge-1 bg-surface-0 py-3">
-            {[
-              ["On the page", page.counts.offers ?? 0],
-              ["Trades", page.counts.trades ?? 0],
-              ["Confirmed", page.counts.verified ? "Yes" : "No"],
-            ].map(([label, value]) => (
-              <div key={label} className="px-3 text-center">
-                <dd className="text-base font-extrabold tabular-nums text-ink-1">{value}</dd>
-                <dt className="mt-0.5 text-micro text-ink-4">{label}</dt>
-              </div>
-            ))}
-          </dl>
-        ) : null}
-
-        <div className="mt-3 flex flex-wrap gap-2">
-          <Button as={Link} to="/you/page" size="sm" variant="secondary" icon={PenLine}>
-            Edit page
-          </Button>
-          {page.href && (
-            <Button as={Link} to={page.href} size="sm" variant="ghost">
-              View as a visitor
-            </Button>
-          )}
-        </div>
-      </section>
-
-      {/* ── Your institution, if you belong to one ───────────────────────── */}
-      {institution && (
-        <section className="flex items-center gap-3 rounded-2xl border border-edge-1 bg-surface-1 px-4 py-4">
-          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-surface-2 text-ink-2">
-            <Building2 size={18} aria-hidden="true" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="eyebrow">Home office</p>
-            <p className="truncate text-sm font-bold text-ink-1">{institution.name}</p>
-            <p className="text-2xs text-ink-4">{institution.line}</p>
-          </div>
-          <Link
-            to="/office"
-            className="inline-flex shrink-0 items-center gap-1 text-micro font-bold text-brand-700 hover:underline dark:text-brand-400"
-          >
-            Open
-            <ArrowUpRight size={12} aria-hidden="true" />
-          </Link>
-        </section>
-      )}
+      {/* Dated rounds only. The full region feed lives in Regions; Home shows
+          what can be joined this week and nothing else. */}
+      <HappeningShelf items={happening} region={region} />
 
       <p className="flex items-center justify-center gap-1.5 pt-1 text-center text-micro text-ink-4">
         <MapPin size={11} aria-hidden="true" />
