@@ -1,11 +1,10 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import {
-  ArrowUpRight, Bike, CalendarDays, GraduationCap, ShoppingBasket, Users, Wrench,
-} from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import { format, isToday, isTomorrow } from "date-fns";
 import { formatKes } from "@/lib/receipts";
 import { parseApiDate } from "@/lib/formatters";
+import { paletteFor } from "@/lib/categoryArt";
 import { regionPath } from "@/config/regions";
 
 /**
@@ -18,32 +17,6 @@ import { regionPath } from "@/config/regions";
  * The visual header is generated when the creator uploaded no photograph. A
  * category is a design decision, not an empty grey rectangle.
  */
-
-const PALETTES = [
-  { from: "#0F3D2E", to: "#2B7A5A", ink: "#D7F1E2", Icon: ShoppingBasket },
-  { from: "#6B3F12", to: "#B8792B", ink: "#FBEBD5", Icon: CalendarDays },
-  { from: "#1E3A5F", to: "#3E6E9E", ink: "#DBEBFA", Icon: Bike },
-  { from: "#4A2C5A", to: "#7E5497", ink: "#F0E5F7", Icon: Users },
-  { from: "#4C2A1E", to: "#9A5A3A", ink: "#F8E6DC", Icon: Wrench },
-  { from: "#23423A", to: "#4F7F5C", ink: "#E1F3E4", Icon: GraduationCap },
-];
-
-const KEYWORDS = [
-  { match: ["grocery", "groceries", "bulk", "food", "market", "produce"], palette: 0 },
-  { match: ["brunch", "party", "wedding", "celebration", "music", "social"], palette: 1 },
-  { match: ["bike", "ride", "trip", "travel", "tour", "hike"], palette: 2 },
-  { match: ["community", "chama", "group", "meet", "neighbour", "neighbor"], palette: 3 },
-  { match: ["repair", "fundi", "service", "fix", "maintenance"], palette: 4 },
-  { match: ["learn", "class", "training", "session", "workshop", "school"], palette: 5 },
-];
-
-function paletteFor(item) {
-  const text = `${item.category || ""} ${item.title || ""}`.toLowerCase();
-  for (const entry of KEYWORDS) {
-    if (entry.match.some((word) => text.includes(word))) return PALETTES[entry.palette];
-  }
-  return item.kind === "event" ? PALETTES[1] : PALETTES[0];
-}
 
 function dateLabel(value) {
   const date = parseApiDate(value);

@@ -105,12 +105,25 @@ def _first_image(value) -> Optional[str]:
 
 
 def _owner(vendor) -> Optional[dict]:
+    """The public facts behind a card, enough to derive the same rank the
+    profile uses — never the phone number, only whether a route is exposed."""
     if vendor is None:
         return None
     return {
         "id": str(vendor.id),
         "handle": vendor.vendor_handle,
         "name": vendor.business_name,
+        "physical_location": vendor.physical_location,
+        "business_description": vendor.business_description,
+        "movements_completed": int(vendor.movements_completed or 0),
+        "confirmed_trade_proofs": int(vendor.confirmed_trade_proofs or 0),
+        "is_verified": bool(vendor.is_verified),
+        "contact_exposed": bool(
+            vendor.phone_verified_at
+            or (vendor.phone and vendor.allow_direct_calls)
+            or getattr(vendor, "email_verified_at", None)
+        ),
+        "page_live": bool(vendor.vendor_handle and vendor.business_name),
     }
 
 

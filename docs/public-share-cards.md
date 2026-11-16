@@ -63,11 +63,20 @@ operator. There is no SMS and no paid verification step.
 
 The single-container Docker image (the Railway deployment) builds `frontend/dist`
 and serves it from FastAPI, so the injected shell and the SPA are the same
-origin. On a split Vercel deployment the current `vercel.json` sends `/p/*` to
-the Vite service before FastAPI can answer; `/og/*` is proxied to the backend,
-but the HTML preview needs `/p/*` and `/invite/*` routed to the backend for
-crawler user-agents. Do not assume a Vercel deployment has crawler previews
-until that split is configured and tested.
+origin. On the split Vercel deployment, `/og/*` is proxied to the backend for
+every request, and `/p/*` and `/invite/*` are proxied to the backend when the
+`user-agent` matches a social crawler (WhatsApp, Facebook, Twitter, Telegram,
+LinkedIn, Slack, Discord, Pinterest). An ordinary browser still reaches the Vite
+app. The backend also has a standalone HTML fallback for service mode, but that
+fallback is not the React app, so the bot condition must stay narrow.
+
+If a crawler still receives the Vite `index.html`, test with the exact user-agent
+and check that the rewrite wins over the frontend catch-all:
+
+```sh
+curl -A "WhatsApp/2.23.20.0" -sI https://<host>/p/<handle>
+curl -A "WhatsApp/2.23.20.0" -s https://<host>/p/<handle> | grep 'og:'
+```
 
 ## Tests
 
