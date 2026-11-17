@@ -26,6 +26,12 @@ from app.modules.catalog import router as catalog_routes
 from app.modules.intake import router as intake_routes
 from app.modules.enterprise import router as enterprise_routes
 from app.modules.growth import router as growth_routes
+from app.modules.corridor_tasks import router as corridor_task_routes
+from app.modules.routines import router as routine_routes
+from app.modules.routines import sweep as routine_sweep
+from app.modules.social_trust import router as social_trust_routes
+from app.modules.price_index import router as price_index_routes
+from app.modules.price_index import sweep as price_index_sweep
 from app.modules.trade import router as requests_routes
 from app.modules.orders.router import router as orders_routes
 from app.modules.runs import router as runs_routes
@@ -192,12 +198,16 @@ async def lifespan(app: FastAPI):
     open_data = None
     outbox_task = None
     standing_task = None
+    routine_task = None
+    price_index_task = None
     if settings.RUN_SCHEDULER:
         scheduler = asyncio.create_task(pos_sync.scheduler_loop(async_session, settings.POS_SYNC_INTERVAL))
         payments_scheduler = asyncio.create_task(payment_worker.scheduler_loop(async_session))
         open_data = asyncio.create_task(geo_data.open_data_loop(async_session))
         outbox_task = asyncio.create_task(event_outbox.scheduler_loop(async_session))
         standing_task = asyncio.create_task(standing_sweep.scheduler_loop(async_session))
+        routine_task = asyncio.create_task(routine_sweep.scheduler_loop(async_session))
+        price_index_task = asyncio.create_task(price_index_sweep.scheduler_loop(async_session))
     else:
         log.info("scheduler disabled here (RUN_SCHEDULER=false) — run `python -m app.worker` once")
     log.info("🏪 Brief_ Vendor Network v%s initialized", settings.VERSION)
@@ -205,7 +215,8 @@ async def lifespan(app: FastAPI):
     try:
         yield
     finally:
-        for task in (scheduler, payments_scheduler, open_data, outbox_task, standing_task):
+        for task in (scheduler, payments_scheduler, open_data, outbox_task,
+                     standing_task, routine_task, price_index_task):
             if task:
                 task.cancel()
                 try:
@@ -258,6 +269,17 @@ app.include_router(governance.router, prefix="/api/governance", tags=["Vendor Go
 app.include_router(tools.router, prefix="/api/tools", tags=["Business Tools"])
 app.include_router(events.router, prefix="/api/events", tags=["Events"])
 app.include_router(spotted_deals.router, prefix="/api/spotted-deals", tags=["Spotted Deals"])
+# 0066 — Work-From-Home corridor tasks: peer-to-peer payouts, fee ledger, no custody.
+app.include_router(corridor_task_routes.router, prefix="/api/tasks", tags=["WFH Task Board"])
+# 0067 — recurring hustle routines: weekly market days, clinics, bulk-buy rounds.
+app.include_router(routine_routes.router, prefix="/api/routines", tags=["Recurring Routines"])
+# 0068 — social seller signals: bio-link checks, stock-in-hand, delivery reports.
+app.include_router(social_trust_routes.router, prefix="/api/social-trust", tags=["Social Seller Trust"])
+# The spec's two named endpoints, kept as aliases of the routes above.
+app.include_router(social_trust_routes.alias_router, prefix="/api/profile", tags=["Social Seller Trust"])
+app.include_router(social_trust_routes.alias_router, prefix="/api/social-proof", tags=["Social Seller Trust"])
+# 0069 — live corridor price index: 45-day median/IQR from confirmed local trades.
+app.include_router(price_index_routes.router, prefix="/api/corridors", tags=["Corridor Price Index"])
 app.include_router(pos_bridge.router, prefix="/api/pos", tags=["POS Bridge"])
 # v2.1
 app.include_router(news_routes.router, prefix="/api/news", tags=["Market News"])

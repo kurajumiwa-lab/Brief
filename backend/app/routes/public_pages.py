@@ -89,6 +89,12 @@ def _meta_html(card: dict, *, kind: str, index: bool = True) -> str:
         f"<meta name=\"twitter:image\" content=\"{html.escape(card['image_url'])}\">",
         f"<meta name=\"robots\" content=\"{'index,follow' if index else 'noindex,nofollow'}\">",
     ]
+    if card.get("alert"):
+        # A crawler that ignores og:description still gets the warning. It is a
+        # report count on the seller's page, not a finding by the platform.
+        tags.append(
+            f"<meta name=\"home-office-safety\" content=\"{html.escape(_clip(card['alert'], 160))}\">"
+        )
     return "\n    ".join(tags)
 
 
@@ -102,6 +108,12 @@ def _page(card: dict, *, kind: str, index: bool = True) -> str:
 
     # The API can run without the built frontend (Vercel service mode, a local
     # `uvicorn` beside `vite dev`). The crawler still needs a complete document.
+    alert_html = ""
+    if card.get("alert"):
+        alert_html = (
+            '<div class="card" style="border-color:#f59e0b;background:#fffbeb;'
+            f'color:#78350f;margin-bottom:16px">{html.escape(card["alert"])}</div>'
+        )
     return f"""<!doctype html>
 <html lang="en">
   <head>
@@ -117,6 +129,7 @@ def _page(card: dict, *, kind: str, index: bool = True) -> str:
   </head>
   <body>
     <main>
+      {alert_html}
       <div class="card">
         <p style="letter-spacing:.16em;font-size:12px;color:#c6e8d3">HOME OFFICE</p>
         <h1>{html.escape(card['name'])}</h1>

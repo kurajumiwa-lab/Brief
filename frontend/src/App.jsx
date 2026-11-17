@@ -62,6 +62,7 @@ const IdentityPage = lazy(() => import("@/pages/you/IdentityPage"));
 const RankPage = lazy(() => import("@/pages/you/RankPage"));
 const StartPage = lazy(() => import("@/pages/start/StartPage"));
 const InboxPage = lazy(() => import("@/pages/inbox/InboxPage"));
+const RoutinesPage = lazy(() => import("@/pages/routines/RoutinesPage"));
 const MorePage = lazy(() => import("@/pages/more/MorePage"));
 
 // Every page is lazy. The home screen downloads only what it renders —
@@ -282,6 +283,7 @@ function AppRoutes() {
           <Route path="/regions/all" element={<RegionsIndexPage />} />
           <Route path="/regions/:slug" element={<RegionPage />} />
           <Route path="/inbox" element={<InboxPage />} />
+          <Route path="/routines" element={<RoutinesPage />} />
           <Route path="/e/:slug" element={<EventShareRedirect />} />
           <Route path="/you" element={<YouPage />} />
           <Route path="/you/page" element={<PageEditor />} />

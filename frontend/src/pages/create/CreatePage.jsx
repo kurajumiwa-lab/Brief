@@ -13,13 +13,16 @@ import Chip from "@/components/ui/Chip";
 import Badge from "@/components/ui/Badge";
 import ReceiptScanner from "@/components/receipts/ReceiptScanner";
 import { toast } from "@/components/ui/Toast";
+import RepeatWeeklyCard from "@/components/routines/RepeatWeeklyCard";
+import CorridorPriceHint from "@/components/prices/CorridorPriceHint";
 import { CREATE_TYPES, PRIMARY_POSTING_TYPES } from "@/config/navigation";
 import {
   FIELD_OPTIONS, LEDGER_PRIMARY_TYPES, TYPE_FIELDS, fieldsFor, hasContent,
   missingFields, useCreateStore,
 } from "@/stores/createStore";
 import { useOutsideStore, locationLabel } from "@/stores/outsideStore";
-import { fileAPI, outsideAPI } from "@/lib/api";
+import { fileAPI, outsideAPI, corridorAPI } from "@/lib/api";
+import { regionFromPlace } from "@/config/regions";
 import {
   YOUTH_AGE_BANDS, YOUTH_SAFE_DOMAINS, inferActivityTemplate,
 } from "@/lib/inference";
@@ -55,6 +58,7 @@ export default function CreatePage() {
   const [verifyOpen, setVerifyOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [showAllFields, setShowAllFields] = useState(false);
+  const [priceHint, setPriceHint] = useState(null);
   const fileRef = useRef(null);
 
   const isLedgerMode = LEDGER_PRIMARY_TYPES.has(draft.content_type) || Boolean(draft.use_ledger);
@@ -72,6 +76,35 @@ export default function CreatePage() {
       }),
     [draft.content_type, draft.title, draft.body, draft.category],
   );
+
+  const hintPlace = String(draft.location || "").trim();
+  const hintRegion = useMemo(() => regionFromPlace(hintPlace), [hintPlace]);
+  const hintTown = hintPlace.split(",")[0].trim();
+  const hintCategory = draft.category || inference.suggested_category || "";
+
+  useEffect(() => {
+    let live = true;
+    if (!hintRegion || !hintCategory) {
+      setPriceHint(null);
+      return () => { live = false; };
+    }
+    // Debounced: the vendor is still typing the category or town.
+    const timer = window.setTimeout(async () => {
+      try {
+        const { data } = await corridorAPI.priceHint(hintRegion.slug, {
+          category: hintCategory,
+          town: hintTown || undefined,
+        });
+        if (live) setPriceHint(data);
+      } catch {
+        if (live) setPriceHint(null);
+      }
+    }, 300);
+    return () => {
+      live = false;
+      window.clearTimeout(timer);
+    };
+  }, [hintRegion, hintTown, hintCategory]);
 
   useEffect(() => {
     const wanted = params.get("type");
@@ -410,6 +443,14 @@ export default function CreatePage() {
 
         {preview && <Preview draft={draft} inference={isLedgerMode ? inference : null} />}
       </section>
+
+      <CorridorPriceHint
+        hint={priceHint}
+        enteredPrice={draft.price_kes}
+        onApplySuggestedPrice={(value) => setField("price_kes", String(Math.round(value)))}
+      />
+
+      <RepeatWeeklyCard draft={draft} />
 
       {/* ── 4. Publish ──────────────────────────────────────────────────── */}
       <div className="space-y-2">

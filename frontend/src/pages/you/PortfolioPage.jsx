@@ -2,12 +2,13 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import PresetContent from "@/components/page/PresetContent";
 import PortfolioView from "@/components/you/PortfolioView";
+import SocialTrustCard from "@/components/social/SocialTrustCard";
 import { PageSpinner } from "@/components/ui/Spinner";
 import EmptyState from "@/components/ui/EmptyState";
 import { useAuthStore } from "@/stores/authStore";
 import { useIdentityStore } from "@/stores/identityStore";
 import { rankFor } from "@/config/identity";
-import { vendorAPI, professionalAPI } from "@/lib/api";
+import { vendorAPI, professionalAPI, socialTrustAPI } from "@/lib/api";
 import { pageUrl } from "@/lib/pageShare";
 
 /**
@@ -31,6 +32,7 @@ export default function PortfolioPage() {
 
   const [vendor, setVendor] = useState(null);
   const [pageCard, setPageCard] = useState(null);
+  const [trustCard, setTrustCard] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -41,6 +43,7 @@ export default function PortfolioPage() {
     setLoading(true);
     setError(null);
     setPageCard(null);
+    setTrustCard(null);
     professionalAPI.page(String(handle).replace(/^@/, "")).then(({data}) => { if (alive && data.handle && data.handle !== String(handle).replace(/^@/, "").toLowerCase()) navigate(`/p/${data.handle}`, {replace:true}); else if (alive) setPageCard(data); }).catch(() => {});
     vendorAPI
       .byHandle(String(handle).replace(/^@/, ""))
@@ -54,6 +57,10 @@ export default function PortfolioPage() {
       .finally(() => {
         if (alive) setLoading(false);
       });
+    socialTrustAPI
+      ?.publicCard?.(String(handle).replace(/^@/, ""))
+      ?.then(({ data }) => { if (alive) setTrustCard(data); })
+      ?.catch(() => { /* the page still works without its trust signals */ });
     if (own) loadIdentity();
     return () => {
       alive = false;
@@ -104,6 +111,7 @@ export default function PortfolioPage() {
   return (
     <div className="pb-4">
       <div className="mx-auto max-w-2xl px-4">
+        {trustCard && <SocialTrustCard card={trustCard} className="mt-4" />}
         {pageCard?.whatsapp_phone && /^\+254[17]\d{8}$/.test(pageCard.whatsapp_phone) && <a className="mt-4 inline-block rounded-xl bg-[#128C4A] px-4 py-2 text-sm font-bold text-white" href={`https://wa.me/${pageCard.whatsapp_phone.slice(1)}`} target="_blank" rel="noreferrer">{pageCard.preset === "service" ? "Book / Request Slot on WhatsApp" : "Chat on WhatsApp"}</a>}
         <PresetContent card={pageCard} />
       </div>

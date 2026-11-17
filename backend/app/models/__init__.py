@@ -58,6 +58,7 @@ from app.modules.billing.models import Subscription, SubscriptionInvoice
 from app.modules.entitlements.models import FeatureEntitlement
 from app.modules.membership.models import MemberProfile, MembershipEvent  # noqa: F401
 from app.modules.fees.models import FeeRule, FeeRecord  # noqa: F401
+from app.modules.price_index.models import CorridorPriceIndex  # noqa: F401
 from app.modules.logistics.models import (  # noqa: F401
     LogisticsProvider, GroupOrder, GroupOrderParticipant, LogisticsEvent,
 )
@@ -105,6 +106,8 @@ __all__ = [
     "MERCHANT_CLAIM_STATUSES", "RECEIPT_STATUSES", "TRADE_PROOF_STATUSES", "VOUCHER_STATUSES",
     "LocalActivity", "ActivityResponse", "ActivityBooking", "ActivityFeedback",
     "ActivityLedgerEvent", "ActivityWatch", "SavedRelationship",
+    "CorridorTask", "CorridorTaskFee", "RecurringRoutine", "RecurringRoutineInstance",
+    "SocialBioCheck", "StockInHandProof", "SellerDeliveryReport",
 ]
 
 from app.models.receipts import (
@@ -128,6 +131,11 @@ from app.modules.ratings.models import PostTradeRating  # noqa: F401
 from app.modules.offers.models import OfferConfirmation  # noqa: F401
 from app.modules.knowledge.models import KnowledgeListing, KnowledgeRegistration, KnowledgeReview  # noqa: F401
 from app.modules.routine.models import RoutinePreference, RoutineCompletion  # noqa: F401
+from app.modules.corridor_tasks.models import CorridorTask, CorridorTaskFee  # noqa: F401
+from app.modules.routines.models import RecurringRoutine, RecurringRoutineInstance  # noqa: F401
+from app.modules.social_trust.models import (  # noqa: F401
+    SocialBioCheck, StockInHandProof, SellerDeliveryReport,
+)
 from app.modules.blueprints.models import BlueprintStart, BlueprintStepDone  # noqa: F401
 from app.modules.statuses.models import BusinessFollow, BusinessStatus, StatusView  # noqa: F401
 from app.modules.trust.models import (  # noqa: F401

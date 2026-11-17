@@ -275,6 +275,34 @@ async def _offer_count(db: AsyncSession, vendor_id) -> int:
     )
 
 
+async def delivery_warning(db: AsyncSession, vendor: Vendor) -> Optional[str]:
+    """The amber banner text, or None.
+
+    Two *unrelated Level 2+ buyers who actually traded with this seller* and
+    whose reports are still open. Reports are claims, never findings, so the
+    wording says "reports", not "confirmed failures". Imported lazily to keep
+    this hot share-card module free of a circular import.
+    """
+    from app.modules.social_trust.models import SellerDeliveryReport
+
+    rows = (await db.execute(
+        select(SellerDeliveryReport).where(
+            SellerDeliveryReport.seller_user_id == vendor.id,
+            SellerDeliveryReport.status == "OPEN",
+        )
+    )).scalars().all()
+    if not rows:
+        return None
+    qualified = 0
+    for report in rows:
+        reporter = await db.get(Vendor, report.reporter_user_id)
+        if reporter is not None and await _level_for(db, reporter) >= 2:
+            qualified += 1
+    if qualified < 2:
+        return None
+    return f"⚠ {qualified} Unresolved Delivery Reports — Inspect Before Paying"
+
+
 async def profile_card(db: AsyncSession, handle: str, origin: str) -> Optional[dict]:
     vendor = (
         await db.execute(
@@ -297,15 +325,24 @@ async def profile_card(db: AsyncSession, handle: str, origin: str) -> Optional[d
     trade_text = f"{trades:,} completed trade{'s' if trades != 1 else ''}"
     if trades == 0:
         trade_text = "No completed trades yet"
+    warning = await delivery_warning(db, vendor)
 
-    description = f"{trade_text} • {' & '.join(categories) if categories else 'Local trade'}. "
+    description = ""
+    if warning:
+        # The warning travels with the preview card, because the card is what a
+        # buyer sees before the page opens. It is a report count, not a finding.
+        description += f"{warning} "
+    description += f"{trade_text} • {' & '.join(categories) if categories else 'Local trade'}. "
     if offers:
         description += f"{offers} active offer{'s' if offers != 1 else ''} on Home Office."
     else:
         description += "View the page on Home Office."
 
     where = city or region or ""
-    title = f"{name} • {RANK_LABELS[level]} · Level {level} of 5"
+    if warning:
+        title = f"{warning} — {name}"
+    else:
+        title = f"{name} • {RANK_LABELS[level]} · Level {level} of 5"
     if where:
         title += f" in {where}"
 
@@ -318,6 +355,7 @@ async def profile_card(db: AsyncSession, handle: str, origin: str) -> Optional[d
         "categories": " & ".join(categories),
         "city": city,
         "region": region,
+        "alert": warning,
         "title": title,
         "description": description,
         "url": f"{origin}/p/{vendor.vendor_handle}",

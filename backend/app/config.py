@@ -301,6 +301,12 @@ class Settings(BaseSettings):
     MERCHANT_CLAIM_AUTHORITY_VERIFY: bool = False
     # How often the scheduler sweeps claim expiry and queues renewal reminders.
     STANDING_SWEEP_INTERVAL: int = 3600
+    # Recurring routine sweep (0067): hourly is the spec. Each pass publishes
+    # only routines whose 48h lead window has opened, and is idempotent.
+    ROUTINE_SWEEP_INTERVAL: int = 3600
+    # Corridor price index (0069): hourly rebuild of the 45-day percentile
+    # snapshot. Confirmed trades also trigger a refresh opportunistically.
+    PRICE_INDEX_REFRESH_INTERVAL: int = 3600
     # Cooperative member votes are disabled unless a registered entity and its
     # reviewed legal basis are configured explicitly.
     GOVERNANCE_COOPERATIVE_ENABLED: bool = False

@@ -19,6 +19,7 @@ date and the server clock, not from a client's word.
 from __future__ import annotations
 
 import hashlib
+import logging
 import math
 import secrets
 import uuid
@@ -38,6 +39,7 @@ from app.models.receipts import Receipt, ReceiptMerchant, ReceiptOffer, ReceiptV
 from app.models.vendor import Vendor
 from app.routes.auth import get_current_vendor
 from app.routes.ops import require_operator
+from app.modules.price_index import service as price_index_service
 from app.services import merchant_claims as claims_service
 from app.services import trade_proofs as trade_proof_service
 from app.services.notification_service import create_notification
@@ -46,6 +48,8 @@ from app.services.receipt_rewards import (
     clean_region, clean_text, is_valid_pin, parse_date, parse_receipt_payload,
     receipt_key, receipt_value, voucher_code, voucher_code_matches,
 )
+
+log = logging.getLogger("brief.receipts")
 
 router = APIRouter()
 
@@ -771,6 +775,15 @@ async def confirm_trade_proof(
 
     await trade_proof_service.confirm(db, proof=proof, seller=vendor, buyer=buyer)
     await db.commit()
+    # The index is allowed to be a few seconds stale, but a confirmation is
+    # exactly the event that changes it. Best-effort: never fail a real trade
+    # because a derived snapshot could not be rebuilt.
+    try:
+        await price_index_service.refresh_indices(db)
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        log.exception("corridor price index refresh after trade confirmation failed")
     await db.refresh(proof)
     await db.refresh(vendor)
     await db.refresh(buyer)

@@ -14,6 +14,8 @@ import logging
 
 from app.config import settings
 from app.database import async_session, engine
+from app.modules.routines import sweep as routine_sweep
+from app.modules.price_index import sweep as price_index_sweep
 from app.modules.standing import sweep as standing_sweep
 from app.platform import event_outbox
 from app.services import payment_worker, pos_sync
@@ -30,10 +32,14 @@ async def main() -> None:
     payments_task = asyncio.create_task(payment_worker.scheduler_loop(async_session))
     outbox_task = asyncio.create_task(event_outbox.scheduler_loop(async_session))
     standing_task = asyncio.create_task(standing_sweep.scheduler_loop(async_session))
+    routine_task = asyncio.create_task(routine_sweep.scheduler_loop(async_session))
+    price_index_task = asyncio.create_task(price_index_sweep.scheduler_loop(async_session))
     try:
-        await asyncio.gather(pos_task, payments_task, outbox_task, standing_task)
+        await asyncio.gather(pos_task, payments_task, outbox_task, standing_task,
+                             routine_task, price_index_task)
     finally:
-        for task in (pos_task, payments_task, outbox_task, standing_task):
+        for task in (pos_task, payments_task, outbox_task, standing_task,
+                     routine_task, price_index_task):
             task.cancel()
             try:
                 await task

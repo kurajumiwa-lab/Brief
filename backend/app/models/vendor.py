@@ -57,6 +57,11 @@ class Vendor(Base):
     home_storefront_config = Column(JSONB, nullable=False, default=dict, server_default=sa_text("'{}'::jsonb"))
     # Public Page settings (tagline, About text, which sections show). Edited by the owner only.
     public_page = Column(JSONB, nullable=False, default=dict, server_default=sa_text("'{}'::jsonb"))
+    # Social seller signals (migration 0068). Each entry is
+    # {"platform", "handle", "profile_url", "bio_verified", "checked_at"}.
+    # `bio_verified` records that a fetch saw /p/<handle> in the public bio on a
+    # date. It is a signal, never standing credit and never a KRA/bank check.
+    social_links = Column(JSONB, nullable=False, default=list, server_default=sa_text("'[]'::jsonb"))
     handle_changed_at = Column(DateTime, nullable=True)
     vendor_handle = Column(String(100), unique=True, nullable=False, index=True)  # @handle
     email = Column(String(255), unique=True, nullable=False, index=True)

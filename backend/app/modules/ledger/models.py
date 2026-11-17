@@ -201,6 +201,12 @@ class LocalActivity(Base):
     reused_from_activity_id = Column(
         UUID(as_uuid=True), ForeignKey("local_activities.id", ondelete="SET NULL"), nullable=True
     )
+    # Migration 0067: an instance published by a weekly routine. The label is
+    # denormalised ("Weekly • Every Sat") so a discovery card needs no join.
+    recurring_routine_id = Column(
+        UUID(as_uuid=True), ForeignKey("recurring_routines.id", ondelete="SET NULL"), nullable=True
+    )
+    recurrence_label = Column(String(64), nullable=True)
 
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
