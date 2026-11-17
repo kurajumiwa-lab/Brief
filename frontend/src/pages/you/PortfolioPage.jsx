@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
+import PresetContent from "@/components/page/PresetContent";
 import PortfolioView from "@/components/you/PortfolioView";
 import { PageSpinner } from "@/components/ui/Spinner";
 import EmptyState from "@/components/ui/EmptyState";
 import { useAuthStore } from "@/stores/authStore";
 import { useIdentityStore } from "@/stores/identityStore";
 import { rankFor } from "@/config/identity";
-import { vendorAPI } from "@/lib/api";
+import { vendorAPI, professionalAPI } from "@/lib/api";
 import { pageUrl } from "@/lib/pageShare";
 
 /**
@@ -23,11 +24,13 @@ import { pageUrl } from "@/lib/pageShare";
  */
 export default function PortfolioPage() {
   const { handle } = useParams();
+  const navigate = useNavigate();
   const me = useAuthStore((s) => s.vendor);
   const identity = useIdentityStore();
   const loadIdentity = useIdentityStore((s) => s.load);
 
   const [vendor, setVendor] = useState(null);
+  const [pageCard, setPageCard] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -37,10 +40,13 @@ export default function PortfolioPage() {
     let alive = true;
     setLoading(true);
     setError(null);
+    setPageCard(null);
+    professionalAPI.page(String(handle).replace(/^@/, "")).then(({data}) => { if (alive && data.handle && data.handle !== String(handle).replace(/^@/, "").toLowerCase()) navigate(`/p/${data.handle}`, {replace:true}); else if (alive) setPageCard(data); }).catch(() => {});
     vendorAPI
       .byHandle(String(handle).replace(/^@/, ""))
       .then(({ data }) => {
-        if (alive) setVendor(data);
+        if (alive && data.vendor_handle && data.vendor_handle !== String(handle).replace(/^@/, "").toLowerCase()) navigate(`/p/${data.vendor_handle}`, {replace:true});
+        else if (alive) setVendor(data);
       })
       .catch((err) => {
         if (alive) setError(err?.response?.status === 404 ? "not-found" : "failed");
@@ -52,7 +58,7 @@ export default function PortfolioPage() {
     return () => {
       alive = false;
     };
-  }, [handle, own, loadIdentity]);
+  }, [handle, own, loadIdentity, navigate]);
 
   if (loading) return <PageSpinner label="Opening the page…" />;
 
@@ -97,6 +103,10 @@ export default function PortfolioPage() {
 
   return (
     <div className="pb-4">
+      <div className="mx-auto max-w-2xl px-4">
+        {pageCard?.whatsapp_phone && /^\+254[17]\d{8}$/.test(pageCard.whatsapp_phone) && <a className="mt-4 inline-block rounded-xl bg-[#128C4A] px-4 py-2 text-sm font-bold text-white" href={`https://wa.me/${pageCard.whatsapp_phone.slice(1)}`} target="_blank" rel="noreferrer">{pageCard.preset === "service" ? "Book / Request Slot on WhatsApp" : "Chat on WhatsApp"}</a>}
+        <PresetContent card={pageCard} />
+      </div>
       <PortfolioView
         vendor={vendor}
         profile={{

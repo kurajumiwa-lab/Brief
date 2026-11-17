@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.services.discovery_visibility import active_window, discoverable
 from app.database import get_db
 from app.models.tools import (
     CourierRegistration, HotelSourcing, PopupShop, ToolCategory, ToolListing, TransportService,
@@ -151,7 +152,7 @@ async def browse_tools(
     query = (
         select(ToolListing, Vendor)
         .join(Vendor, ToolListing.vendor_id == Vendor.id)
-        .where(ToolListing.is_available.is_(True))
+        .where(ToolListing.is_available.is_(True), active_window(datetime.utcnow(), expires_at=ToolListing.available_until), discoverable(Vendor))
     )
     if category:
         query = query.where(ToolListing.category == category)

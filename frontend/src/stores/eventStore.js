@@ -35,20 +35,14 @@ export const useEventStore = create((set, get) => ({
   },
   register: async (event) => {
     const { data } = await eventAPI.register(event.id);
-    get().patch(event.id, {
-      my_status: "registered",
-      registered_count: (event.registered_count || 0) + 1,
-      spots_left: event.spots_left == null ? null : Math.max(0, event.spots_left - 1),
-    });
+    const { data: updated } = await eventAPI.get(event.id);
+    get().patch(event.id, updated);
     return data;
   },
   cancelRegistration: async (event) => {
     const { data } = await eventAPI.cancelRegistration(event.id);
-    get().patch(event.id, {
-      my_status: null,
-      registered_count: Math.max(0, (event.registered_count || 1) - 1),
-      spots_left: event.spots_left == null ? null : event.spots_left + 1,
-    });
+    const { data: updated } = await eventAPI.get(event.id);
+    get().patch(event.id, updated);
     return data;
   },
   setStatus: async (event, status) => {

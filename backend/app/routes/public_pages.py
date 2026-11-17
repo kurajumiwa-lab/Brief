@@ -18,7 +18,7 @@ from functools import lru_cache
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import HTMLResponse, Response
+from fastapi.responses import HTMLResponse, Response, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.concurrency import run_in_threadpool
 
@@ -59,6 +59,7 @@ def _dist_index() -> Optional[str]:
 
 _EXISTING = (
     re.compile(r"<title[^>]*>.*?</title>", re.I | re.S),
+    re.compile(r"<meta[^>]+name=[\"']description[\"'][^>]*>", re.I | re.S),
     re.compile(
         r"<meta[^>]+(?:property|name)=[\"'](?:og:[^\"']+|twitter:[^\"']+)[\"'][^>]*>",
         re.I | re.S,
@@ -162,6 +163,10 @@ def _image(data: bytes) -> Response:
 async def public_profile_shell(handle: str, request: Request, db: AsyncSession = Depends(get_db)):
     card = await profile_card(db, handle, _origin(request))
     if card is None:
+        from app.services.profile_handles import resolve_alias
+        target = await resolve_alias(db, handle)
+        if target:
+            return RedirectResponse(f"/p/{target}", status_code=301, headers={"Cache-Control": "no-store"})
         return HTMLResponse(_not_found_page(_origin(request)), status_code=404,
                             headers={"Cache-Control": "no-store", "X-Robots-Tag": "noindex"})
     return HTMLResponse(
@@ -198,3 +203,36 @@ async def public_invite_image(slug: str, request: Request, db: AsyncSession = De
         raise HTTPException(404, "No share card for that shop")
     data = await run_in_threadpool(render_invite_card, card)
     return _image(data)
+
+
+@router.get("/e/{slug}", include_in_schema=False)
+async def public_event_shell(slug: str, request: Request, db: AsyncSession = Depends(get_db)):
+    from app.services.event_og import share_card
+    card = await share_card(db, slug, _origin(request))
+    if card is None:
+        return HTMLResponse(_not_found_page(_origin(request)), status_code=404,
+                            headers={"Cache-Control": "no-store", "X-Robots-Tag": "noindex"})
+    return HTMLResponse(_page(card, kind="event"), headers={"Cache-Control": "public, max-age=120, s-maxage=120"})
+
+
+@router.api_route("/api/og/events/{slug}.jpg", methods=["GET", "HEAD"], include_in_schema=False)
+async def public_event_image(slug: str, request: Request, db: AsyncSession = Depends(get_db)):
+    from app.services.event_og import banner_bytes, render_event_card, share_card
+    card = await share_card(db, slug, _origin(request))
+    if card is None:
+        raise HTTPException(404, "No share card for that event")
+    banner = await banner_bytes(card['images'])
+    data = await run_in_threadpool(render_event_card, card, banner)
+    return Response(data if request.method == "GET" else b"", media_type="image/jpeg", headers={
+        "Cache-Control": "public, max-age=120, s-maxage=120", "X-Content-Type-Options": "nosniff", "Content-Length": str(len(data)),
+    })
+
+
+@router.get("/api/og/events/{slug}", include_in_schema=False)
+async def public_event_resolve(slug: str, request: Request, db: AsyncSession = Depends(get_db)):
+    """Resolve a share link for the app without publishing the private roster."""
+    from app.services.event_og import share_card
+    card = await share_card(db, slug, _origin(request))
+    if card is None:
+        raise HTTPException(404, "Event not found")
+    return {"id": card['id'], "kind": card['kind']}

@@ -50,6 +50,19 @@
       }
     },
     {
+      "source": "/e/(.*)",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(WhatsApp|facebookexternalhit|Facebot|Twitterbot|TelegramBot|LinkedInBot|Slackbot|Discordbot|Pinterestbot).*"
+        }
+      ],
+      "destination": {
+        "service": "backend"
+      }
+    },
+    {
       "source": "/invite/(.*)",
       "has": [
         {

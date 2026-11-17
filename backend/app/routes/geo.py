@@ -19,6 +19,7 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
+from app.services.discovery_visibility import active_window, discoverable
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import func, or_, select
@@ -205,7 +206,7 @@ async def nearby(
 
     out = {"radius_km": radius_km, "lat": lat, "lng": lng}
 
-    vendors = (await db.execute(select(Vendor))).scalars().all()
+    vendors = (await db.execute(select(Vendor).where(discoverable(Vendor), Vendor.fraud_suspended_at.is_(None)))).scalars().all()
     vrows = []
     for v in vendors:
         d = haversine_km({"lat": lat, "lng": lng}, {"lat": v.geo_lat, "lng": v.geo_lng})
@@ -221,7 +222,7 @@ async def nearby(
     vrows.sort(key=lambda r: r["distance_km"])
     out["vendors"] = vrows[:limit]
 
-    tools = (await db.execute(select(ToolListing).where(ToolListing.is_available.is_(True)))).scalars().all()
+    tools = (await db.execute(select(ToolListing).join(Vendor, Vendor.id == ToolListing.vendor_id).where(ToolListing.is_available.is_(True), active_window(datetime.utcnow(), expires_at=ToolListing.available_until), discoverable(Vendor), Vendor.fraud_suspended_at.is_(None)))).scalars().all()
     trows = []
     for t in tools:
         d = haversine_km({"lat": lat, "lng": lng}, {"lat": t.geo_lat, "lng": t.geo_lng})
@@ -236,7 +237,7 @@ async def nearby(
     trows.sort(key=lambda r: r["distance_km"])
     out["tools"] = trows[:limit]
 
-    events = (await db.execute(select(Event).where(Event.start_date >= datetime.utcnow()))).scalars().all()
+    events = (await db.execute(select(Event).join(Vendor, Vendor.id == Event.organizer_id).where(Event.start_date >= datetime.utcnow(), Event.status.in_(["upcoming", "active"]), Event.group_id.is_(None), Event.vendor_list_id.is_(None), discoverable(Vendor), Vendor.fraud_suspended_at.is_(None)))).scalars().all()
     erows = []
     for e in events:
         d = haversine_km({"lat": lat, "lng": lng}, {"lat": e.geo_lat, "lng": e.geo_lng})

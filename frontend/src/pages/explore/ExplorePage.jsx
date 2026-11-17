@@ -13,7 +13,8 @@ import MarketStrip from "@/components/explore/MarketStrip";
 import CategoryTiles from "@/components/explore/CategoryTiles";
 import RegionPicker from "@/components/regions/RegionPicker";
 import RegionsGrid from "@/components/regions/RegionsGrid";
-import { BROWSE_NAV } from "@/config/navigation";
+import { SpotDealModal } from "@/components/spotted/SpottedDealUI";
+import { spottedDealAPI } from "@/lib/api";
 import {
   DEFAULT_REGION, REGION_BY_SLUG, regionFromPlace, regionLabel, regionPath,
 } from "@/config/regions";
@@ -60,7 +61,16 @@ export const REGION_INTENTS = [
   { value: "", label: "All", kinds: null },
   { value: "offers", label: "Offers", kinds: ["available", "listing", "service", "rental"] },
   { value: "wanted", label: "Wanted", kinds: ["wanted", "opportunity"] },
+];
+
+const REGION_CATEGORIES = [
+  { value: "", label: "All", kinds: null },
+  { value: "listing", label: "Goods", kinds: ["listing"] },
+  { value: "service", label: "Services", kinds: ["service", "available"] },
+  { value: "person", label: "People", kinds: ["person"] },
+  { value: "rental", label: "Rentals", kinds: ["rental"] },
   { value: "rounds", label: "Rounds & Events", kinds: ["scheduled", "event"] },
+  { value: "spotted", label: "Spotted Sales", kinds: [] },
 ];
 
 const WHEN_FILTERS = [
@@ -110,6 +120,10 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
   const intent = params.get("intent") || "";
   const trust = params.get("trust") || "";
 
+  const [spotted, setSpotted] = useState([]);
+  const spottedRequest = useRef(0);
+  const [spottedError, setSpottedError] = useState("");
+  const [spottedOpen, setSpottedOpen] = useState(false);
   const [placeOpen, setPlaceOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [savedRegion, setSavedRegion] = useState(() => {
@@ -130,7 +144,7 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
   const setLocation = useOutsideStore((s) => s.setLocation);
 
   const items = demo ? demo.items : liveItems;
-  const status = demo ? "ready" : liveStatus;
+  const status = demo || (regionAware && kind === "spotted") ? "ready" : liveStatus;
   const cursor = demo ? null : liveCursor;
   const error = demo ? null : liveError;
   const location = demo ? demo.location : liveLocation;
@@ -138,9 +152,12 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
   const sentinel = useRef(null);
 
   const kinds = useMemo(() => {
-    if (kind) return [kind];
-    if (!regionAware) return null;
-    return REGION_INTENTS.find((option) => option.value === intent)?.kinds || null;
+    if (!regionAware) return kind ? [kind] : null;
+    const category = REGION_CATEGORIES.find((option) => option.value === kind);
+    const base = category?.kinds ?? (kind ? [kind] : null);
+    const intentKinds = REGION_INTENTS.find((option) => option.value === intent)?.kinds || null;
+    if (base && intentKinds) return base.filter((value) => intentKinds.includes(value));
+    return base || intentKinds;
   }, [kind, regionAware, intent]);
 
   useEffect(() => {
@@ -159,7 +176,7 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
   // Reload whenever the URL state changes — which is also what makes the back
   // button restore the previous results.
   useEffect(() => {
-    if (!demo) loadFeed({ kinds, query: q || null });
+    if (!demo && (!kinds || kinds.length)) loadFeed({ kinds, query: q || null });
   }, [demo, kinds, q, loadFeed, location?.radius_km]);
 
   // Incremental loading: fetch the next page when the sentinel scrolls in.
@@ -189,6 +206,15 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
     return REGION_BY_SLUG[slug] || demo?.region || regionFromPlace(location?.label) || DEFAULT_REGION;
   }, [regionAware, params, savedRegion, demo?.region, location?.label]);
 
+  const loadSpotted = useCallback(async () => {
+    if (!regionAware || demo || !region?.slug) return;
+    const request = ++spottedRequest.current;
+    setSpotted([]);
+    try { const { data } = await spottedDealAPI.list(region.slug, q); if (request === spottedRequest.current) { setSpotted(data); setSpottedError(""); } }
+    catch { if (request === spottedRequest.current) { setSpotted([]); setSpottedError("Spotted sales could not be loaded."); } }
+  }, [regionAware, demo, region?.slug, q]);
+  useEffect(() => { loadSpotted(); }, [loadSpotted]);
+
   const chooseRegion = useCallback((next) => {
     try { localStorage.setItem(REGION_KEY, next.slug); } catch { /* private mode */ }
     setSavedRegion(next.slug);
@@ -202,9 +228,12 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
   const hasFilters = Boolean(kind || intent || trust || when || price);
 
   const visibleItems = useMemo(() => {
-    if (!regionAware || trust !== "3") return items;
-    return items.filter((item) => ownerLevel(item.owner) >= 3);
-  }, [items, regionAware, trust]);
+    const ordinary = regionAware && kinds?.length === 0 ? [] : items;
+    const permitted = regionAware && trust === "3" ? ordinary.filter((item) => ownerLevel(item.owner) >= 3) : ordinary;
+    // The strict standing filter excludes all community-spotted sales.
+    const includeSpotted = regionAware && !demo && (!kind || kind === "spotted") && !when && !price && trust !== "3" && (!intent || intent === "offers");
+    return includeSpotted ? [...spotted, ...permitted] : permitted;
+  }, [items, regionAware, trust, intent, demo, kind, when, price, spotted, kinds]);
 
   const clearAll = () => patchParams({ kind: "", filter: "", intent: "", trust: "", when: "", price: "" });
 
@@ -269,30 +298,7 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
         </section>
       )}
 
-      {/* The old discovery type row: Goods · People · Services · Equipment ·
-          Map. Each one is the same feed with a filter, not a new database. */}
-      {regionAware && (
-        <nav aria-label="Browse discovery" className="flex flex-wrap gap-2">
-          {BROWSE_NAV.map(({ to, label, icon: Icon }) => (
-            <Link
-              key={to}
-              to={to}
-              className="inline-flex items-center gap-1.5 rounded-full border border-edge-1 bg-surface-0 px-3 py-1.5 text-2xs font-bold text-ink-2 hover:bg-surface-1"
-            >
-              <Icon size={13} aria-hidden="true" />
-              {label}
-            </Link>
-          ))}
-        </nav>
-      )}
-
-      {/* Discovery owns offers, suppliers and product browsing. Home links here
-          and does not repeat them, so the doors to each must live here. */}
-      <nav aria-label="Browse the network" className="flex flex-wrap gap-2">
-        <Link to="/offers" className="rounded-full border border-edge-1 bg-surface-0 px-3 py-1.5 text-2xs font-bold text-ink-2 hover:bg-surface-1">Verified offers</Link>
-        <Link to="/browse?type=people" className="rounded-full border border-edge-1 bg-surface-0 px-3 py-1.5 text-2xs font-bold text-ink-2 hover:bg-surface-1">Suppliers</Link>
-        <Link to="/browse?type=goods" className="rounded-full border border-edge-1 bg-surface-0 px-3 py-1.5 text-2xs font-bold text-ink-2 hover:bg-surface-1">Goods</Link>
-      </nav>
+      {!regionAware && <nav aria-label="Browse the network" className="flex flex-wrap gap-2"><Link to="/offers" className="underline text-xs">Verified offers</Link><Link to="/browse?type=people" className="underline text-xs">Suppliers</Link></nav>}
 
       <SearchInput
         value={q}
@@ -300,6 +306,10 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
         placeholder="Search goods, people, services…"
         aria-label="Search everything"
       />
+
+      {regionAware && <div role="group" aria-label="Browse by category" className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+        {REGION_CATEGORIES.map(option => <button key={option.value || "all"} type="button" aria-pressed={kind === option.value} onClick={() => patchParams({ kind: option.value, filter: "" })} className={cn("shrink-0 rounded-full border px-3 py-1.5 text-xs font-bold", kind === option.value ? "bg-brand-700 text-white border-brand-700" : "border-edge-1 bg-surface-0 text-ink-2")}>{option.label}</button>)}
+      </div>}
 
       {/* The full location controls, unchanged, one press away. In the region
           version the knob is a region, so GPS is not offered as a second,
@@ -370,8 +380,8 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
             <Chip
               key={option.value || "all"}
               size="sm"
-              active={!kind && intent === option.value}
-              onClick={() => patchParams({ intent: option.value, kind: "", filter: "" })}
+              active={intent === option.value}
+              onClick={() => patchParams({ intent: option.value })}
               data-testid={`regions-intent-${option.value || "all"}`}
             >
               {option.label}
@@ -399,7 +409,7 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
       )}
 
       {/* ── categories, in colour, wrapping into as many rows as needed ───── */}
-      <section aria-labelledby="explore-categories-heading" className="space-y-1.5">
+      {!regionAware && <section aria-labelledby="explore-categories-heading" className="space-y-1.5">
         <div className="flex items-baseline justify-between gap-2">
           <h2
             id="explore-categories-heading"
@@ -419,7 +429,7 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
           )}
         </div>
         <CategoryTiles value={kind} onSelect={(value) => patchParams({ kind: value, filter: "", intent: "" })} />
-      </section>
+      </section>}
 
       {/* ── everything else, behind one control that counts what is on ────── */}
       <div className="rounded-xl border border-edge-1 bg-surface-1">
@@ -490,13 +500,14 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
         <MarketStrip limit={2} />
       )}
 
+      {regionAware && !demo && <><button type="button" onClick={() => setSpottedOpen(true)} className="rounded-xl border border-amber-400 px-3 py-2 text-xs font-bold">Spot a public sale</button><SpotDealModal region={region?.slug} open={spottedOpen} onClose={() => setSpottedOpen(false)} onCreated={loadSpotted} />{spottedError && <p role="alert" className="text-xs text-rose-700">{spottedError}</p>}</>}
       {/* ── results ───────────────────────────────────────────────────────── */}
       <section aria-live="polite" aria-busy={status === "loading"} className="space-y-3">
         {status === "loading" && !items.length ? (
           <FeedSkeleton regionAware={regionAware} />
         ) : status === "error" ? (
           <ErrorPanel onRetry={() => loadFeed({ kinds, query: q || null, force: true })} message={error} />
-        ) : items.length === 0 ? (
+        ) : visibleItems.length === 0 && (!items.length || (regionAware && kinds?.length === 0)) ? (
           <EmptyPanel query={q} />
         ) : visibleItems.length === 0 ? (
           <FilteredEmpty
@@ -513,7 +524,7 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
               {regionAware && region ? ` · ${regionLabel(region)}` : ""}
             </p>
             {regionAware ? (
-              <RegionsGrid items={visibleItems} />
+              <RegionsGrid items={visibleItems} onSpottedChanged={loadSpotted} />
             ) : (
               <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {visibleItems.map((item) => (

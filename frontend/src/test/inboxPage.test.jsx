@@ -1,3 +1,4 @@
+vi.mock("@/lib/receiptsApi", () => ({ receiptsAPI: { ledger: vi.fn().mockResolvedValue({ data: { receipts: [] } }) } }));
 import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
@@ -32,6 +33,8 @@ vi.mock("@/stores/authStore", () => ({
   useAuthStore: (selector) => selector({ vendor: { vendor_handle: "ogallo" }, token: null }),
 }));
 vi.mock("@/lib/api", () => ({
+  spottedDealAPI: { jury: vi.fn().mockResolvedValue({ data: [] }), mine: vi.fn().mockResolvedValue({ data: [] }) },
+  eventAPI: { paymentQueue: vi.fn().mockResolvedValue({ data: [] }) },
   outsideAPI: { agenda: vi.fn().mockResolvedValue({ data: mocks.agenda }) },
   apiError: (_error, fallback) => fallback,
 }));

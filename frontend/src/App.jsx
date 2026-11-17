@@ -106,6 +106,7 @@ const ChatPage = lazy(() => import("@/pages/chat/ChatPage"));
 const MarketLocks = lazy(() => import("@/pages/locks/MarketLocks"));
 const OurNetwork = lazy(() => import("@/pages/governance/OurNetwork"));
 const ToolsPage = lazy(() => import("@/pages/tools/ToolsPage"));
+const EventShareRedirect = lazy(() => import("@/pages/events/EventShareRedirect"));
 const EventsPage = lazy(() => import("@/pages/events/EventsPage"));
 const EventHubPage = lazy(() => import("@/pages/events/EventHubPage"));
 const POSBridge = lazy(() => import("@/pages/pos/POSBridge"));
@@ -281,6 +282,7 @@ function AppRoutes() {
           <Route path="/regions/all" element={<RegionsIndexPage />} />
           <Route path="/regions/:slug" element={<RegionPage />} />
           <Route path="/inbox" element={<InboxPage />} />
+          <Route path="/e/:slug" element={<EventShareRedirect />} />
           <Route path="/you" element={<YouPage />} />
           <Route path="/you/page" element={<PageEditor />} />
           <Route path="/you/identity" element={<IdentityPage />} />

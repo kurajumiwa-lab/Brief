@@ -114,10 +114,43 @@ async def expire_subscriptions(session_factory) -> int:
         return changed
 
 
+async def expire_event_holds(session_factory) -> int:
+    from sqlalchemy import select
+    from app.models.events import Event, EventRegistration
+    from app.services.event_payments import expire_stale_holds
+    from datetime import datetime
+    async with session_factory() as db:
+        ids = (await db.execute(select(EventRegistration.event_id).where(
+            EventRegistration.booking_status == "PENDING_PAYMENT",
+            EventRegistration.hold_expires_at <= datetime.utcnow(),
+        ).distinct().order_by(EventRegistration.event_id))).scalars().all()
+        total = 0
+        for event_id in ids:
+            async with session_factory() as session:
+                await session.get(Event, event_id, with_for_update=True)
+                total += await expire_stale_holds(session, event_id=event_id)
+                await session.commit()
+        return total
+
+
 async def scheduler_loop(session_factory, interval_seconds: int = 60) -> None:
     log.info("💳 payments scheduler: every %ss", interval_seconds)
+    cycle = 0
     while True:
-        for name, job in (("expire intents", expire_stale_intents),
+        if cycle % max(1, 300 // interval_seconds) == 0:
+            try:
+                from app.services.spotted_deal_policy import sweep_expired
+                from datetime import datetime
+                async with session_factory() as session:
+                    await sweep_expired(session, datetime.utcnow())
+                    await session.commit()
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                log.exception("spotted-deal expiry sweep failed")
+        cycle += 1
+        for name, job in (("event holds", expire_event_holds),
+                          ("expire intents", expire_stale_intents),
                           ("chama defaults", flag_chama_defaults),
                           ("murabaha defaults", flag_murabaha_defaults),
                           ("daily reconciliation", run_daily_reconciliation),

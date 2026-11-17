@@ -22,6 +22,7 @@ import math
 from datetime import datetime
 from typing import Optional
 
+from app.services.discovery_visibility import discoverable
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, StrictBool
 from sqlalchemy import select
@@ -98,7 +99,7 @@ async def front_doors(
     # Only doors their owners have chosen to show (Phase 8). Off by default.
     min_lat, max_lat, min_lng, max_lng = radius_box(center_lat, center_lng, radius_km)
     vres = await db.execute(select(Vendor).where(
-        Vendor.geo_lat.is_not(None), Vendor.id != vendor.id, Vendor.front_door_visible.is_(True),
+        Vendor.geo_lat.is_not(None), Vendor.id != vendor.id, Vendor.front_door_visible.is_(True), discoverable(Vendor),
         Vendor.fraud_suspended_at.is_(None),
         Vendor.geo_lat.between(min_lat, max_lat), Vendor.geo_lng.between(min_lng, max_lng),
     ))
@@ -222,7 +223,7 @@ async def nearby(
     # Bounding box first (indexed on geo_lat, geo_lng), exact distance on what is left.
     min_lat, max_lat, min_lng, max_lng = radius_box(center_lat, center_lng, radius_km)
     vres = await db.execute(select(Vendor).where(
-        Vendor.geo_lat.is_not(None),
+        Vendor.geo_lat.is_not(None), discoverable(Vendor), Vendor.fraud_suspended_at.is_(None),
         Vendor.geo_lat.between(min_lat, max_lat), Vendor.geo_lng.between(min_lng, max_lng),
     ))
     for v in vres.scalars().all():
@@ -236,7 +237,7 @@ async def nearby(
             "group": group_id,
             "label": label,
             "distance_km": round(d, 2),
-            "phone": v.phone or None,
+            "phone": v.phone if v.allow_direct_calls else None,
             "source": "member",
             "handle": v.vendor_handle,
             "categories": list(v.business_categories or [])[:4],

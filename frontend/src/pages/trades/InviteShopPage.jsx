@@ -8,7 +8,7 @@ import EmptyState from "@/components/ui/EmptyState";
 import { PageSpinner } from "@/components/ui/Spinner";
 import { useAuthStore } from "@/stores/authStore";
 import { receiptsAPI } from "@/lib/receiptsApi";
-import { apiError } from "@/lib/api";
+import { apiError, spottedDealAPI } from "@/lib/api";
 
 /**
  * A SHOP WITHOUT A PAGE — and the fastest honest way to run it.
@@ -237,6 +237,8 @@ export default function InviteShopPage() {
               ? `${data.receipts} customer ${data.receipts === 1 ? "receipt was" : "receipts were"} scanned at this shop. Claim the page free to answer them and be found by neighbours.`
               : "A customer tried to log a trade here. Claim the page free so receipts can be confirmed and neighbours can find the shop."}
           </p>
+
+          {owned && claim?.id && (verified || probationary) && <div className="mt-4 rounded-xl border p-3 text-sm"><p>Community-spotted sales: {claim.allow_spotted_deals === false ? "blocked" : "allowed"}</p><button className="underline mt-2" onClick={async () => {try {const next = claim.allow_spotted_deals !== false; const {data: result} = await spottedDealAPI.settings(claim.id, next); setClaim({...claim, allow_spotted_deals: result.allow_spotted_deals});} catch (e) {setClaimError(apiError(e));}}}>{claim.allow_spotted_deals === false ? "Allow future spotted sales" : "Block spotted sales for this shop"}</button><p className="text-xs mt-1">Blocking hides all current spotted listings. Re-enabling may make unexpired eligible listings visible again.</p></div>}
 
           {verified ? (
             <div className="mt-5 rounded-2xl border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-brand-900 dark:border-brand-500/25 dark:bg-brand-500/10 dark:text-brand-100" data-testid="invite-verified">

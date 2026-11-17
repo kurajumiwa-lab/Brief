@@ -171,7 +171,7 @@ async def _seed_pair(client, author, viewer):
     return near.json()["id"], far.json()["id"]
 
 
-async def test_the_nearer_post_outranks_the_farther_one(client, author, viewer):
+async def test_proximity_remains_explained_while_evergreen_order_is_chronological(client, author, viewer):
     near_id, far_id = await _seed_pair(client, author, viewer)
     r = await client.get("/api/outside/feed",
                          params={"kinds": "post", "lat": KISUMU[0], "lng": KISUMU[1],
@@ -180,7 +180,9 @@ async def test_the_nearer_post_outranks_the_farther_one(client, author, viewer):
     assert r.status_code == 200, r.text
     ids = [i["id"] for i in r.json()["items"]]
     assert near_id in ids and far_id in ids
-    assert ids.index(near_id) < ids.index(far_id), "proximity must decide the order"
+    rows = {item["id"]: item for item in r.json()["items"]}
+    assert rows[near_id]["distance_km"] < rows[far_id]["distance_km"]
+    assert ids.index(far_id) < ids.index(near_id), "evergreen results are newest first"
 
 
 async def test_the_radius_is_a_filter_that_keeps_unlocated_content(client, author, viewer):
@@ -622,3 +624,78 @@ def test_repeated_commercial_posting_is_decayed_but_never_hidden():
     assert scored.score > 0, "decayed is not hidden"
     clean = RankContext(now=now)
     assert score_item(item, clean).score > scored.score
+
+async def test_discovery_decay_and_visibility(client, author, viewer, monkeypatch):
+    from app.config import settings
+    monkeypatch.setattr(settings, "PROFESSIONAL_PROFILE_ENABLED", True)
+    now = datetime.utcnow()
+    stale = await _create(client, author, content_type="event", title="Past concert", starts_at=(now-timedelta(hours=7)).isoformat())
+    active = await _create(client, author, content_type="event", title="In progress concert", starts_at=(now-timedelta(hours=2)).isoformat())
+    expired = await _create(client, author, content_type="available", title="Expired repair", body="Repair service in town", expires_at=(now-timedelta(minutes=1)).isoformat())
+    valid = await _create(client, author, content_type="available", title="Current repair", body="Repair service in town", expires_at=(now+timedelta(days=1)).isoformat())
+    for r in (stale, active, expired, valid): assert r.status_code == 201, r.text
+    r = await client.get('/api/outside/feed', headers=viewer, params={'kinds':'event,available', 'limit':50})
+    assert r.status_code == 200, r.text
+    ids = {row['id'] for row in r.json()['items']}
+    assert active.json()['id'] in ids and valid.json()['id'] in ids
+    assert stale.json()['id'] not in ids and expired.json()['id'] not in ids
+    assert (await client.put('/api/professional/me/page',headers=author,json={'discoverable':False})).status_code == 200
+    r = await client.get('/api/outside/feed', headers=viewer, params={'kinds':'event,available', 'limit':50})
+    assert active.json()['id'] not in {row['id'] for row in r.json()['items']}
+    assert valid.json()['id'] not in {row['id'] for row in r.json()['items']}
+
+async def test_scheduled_requires_date_and_defaults_expiry(client, author):
+    missing = await _create(client, author, content_type="scheduled", title="Travelling clinic", body="We are visiting for clinic", schedule_label="Friday")
+    assert missing.status_code == 422
+    start = datetime.utcnow() + timedelta(days=2)
+    made = await _create(client, author, content_type="scheduled", title="Travelling clinic", body="We are visiting for clinic", starts_at=start.isoformat())
+    assert made.status_code == 201, made.text
+    from app.database import async_session
+    from app.modules.ledger.models import LocalActivity
+    async with async_session() as db:
+        activity = await db.get(LocalActivity, uuid.UUID(made.json()['id']))
+        assert activity.expires_at == activity.starts_at + timedelta(hours=6)
+
+
+async def test_people_category_and_discovery_switch(client, author, viewer, monkeypatch):
+    from app.config import settings
+    monkeypatch.setattr(settings, "PROFESSIONAL_PROFILE_ENABLED", True)
+    profile = (await client.get('/api/vendors/me', headers=author)).json()
+    before = await client.get('/api/outside/feed', headers=viewer, params={'kinds':'person','limit':50})
+    assert profile['id'] in {row['id'] for row in before.json()['items']}
+    await client.put('/api/professional/me/page', headers=author, json={'discoverable':False})
+    after = await client.get('/api/outside/feed', headers=viewer, params={'kinds':'person','limit':50})
+    assert profile['id'] not in {row['id'] for row in after.json()['items']}
+
+async def test_composite_cursor_orders_mixed_deadlines_across_pages(client, author, viewer):
+    now=datetime.utcnow()
+    marker='unique'+uuid.uuid4().hex[:8]
+    posts=[]
+    for i, days in enumerate([4, 1, 2, None, None, 3]):
+        payload={'content_type':'post','title':f'{marker} {i}', 'body':f'{marker} body content number {i}'}
+        if days is not None: payload['expires_at']=(now+timedelta(days=days)).isoformat()
+        r=await _create(client,author,**payload); assert r.status_code==201,r.text
+        posts.append(r.json()['id'])
+    cursor=None; found=[]
+    for _ in range(10):
+        r=await client.get('/api/outside/search',headers=viewer,params={'kinds':'post','q':marker,'limit':2,**({'cursor':cursor} if cursor else {})})
+        assert r.status_code==200,r.text
+        found.extend(r.json()['items']); cursor=r.json()['next_cursor']
+        if not cursor: break
+    ids=[x['id'] for x in found]
+    assert ids == [posts[1],posts[2],posts[5],posts[0],posts[4],posts[3]]
+    assert len(ids)==len(set(ids))
+
+async def test_cursor_works_when_previous_item_expires_between_pages(client, author, viewer):
+    from app.database import async_session
+    from app.modules.outside.models import OutsidePost
+    marker='expire'+uuid.uuid4().hex[:8]; now=datetime.utcnow(); ids=[]
+    for days in (1,2,3):
+        result=await _create(client,author,content_type='post',title=marker,body=f'{marker} a public announcement',expires_at=(now+timedelta(days=days)).isoformat())
+        ids.append(result.json()['id'])
+    first=(await client.get('/api/outside/search',headers=viewer,params={'kinds':'post','q':marker,'limit':1})).json()
+    assert first['items'][0]['id']==ids[0] and first['next_cursor']
+    async with async_session() as db:
+        item=await db.get(OutsidePost,uuid.UUID(ids[0])); item.expires_at=now-timedelta(seconds=1); await db.commit()
+    second=(await client.get('/api/outside/search',headers=viewer,params={'kinds':'post','q':marker,'limit':1,'cursor':first['next_cursor']})).json()
+    assert second['items'][0]['id']==ids[1]

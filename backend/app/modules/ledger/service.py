@@ -1,7 +1,7 @@
 """Local Activity Ledger service — lifecycle state machine, privacy, watches & Phase 2."""
 
 import uuid as uuidlib
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from uuid import UUID
 
@@ -9,6 +9,7 @@ from fastapi import HTTPException
 from sqlalchemy import and_, delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.services.discovery_visibility import active_window, discoverable
 from app.models.groups import GroupMembership
 from app.models.notification import Notification, NotificationType
 from app.models.vendor import Vendor
@@ -55,10 +56,10 @@ def parse_dt(value, field_name: str = "datetime") -> Optional[datetime]:
     if value is None or value == "":
         return None
     if isinstance(value, datetime):
-        return value.replace(tzinfo=None) if value.tzinfo else value
+        return value.astimezone(timezone.utc).replace(tzinfo=None) if value.tzinfo else value
     try:
         dt = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
-        return dt.replace(tzinfo=None) if dt.tzinfo else dt
+        return dt.astimezone(timezone.utc).replace(tzinfo=None) if dt.tzinfo else dt
     except ValueError:
         raise HTTPException(422, f"Invalid {field_name}: '{value}'")
 
@@ -343,6 +344,7 @@ def serialize_activity_card(
         "private_directions_unlocked": bool(activity.private_directions and can_see_exact),
         "starts_at": activity.starts_at.isoformat() if activity.starts_at else None,
         "ends_at": activity.ends_at.isoformat() if activity.ends_at else None,
+        "expires_at": activity.expires_at.isoformat() if activity.expires_at else None,
         "schedule_label": activity.schedule_label,
         "capacity": activity.capacity,
         "spots_confirmed": activity.spots_confirmed,
@@ -505,11 +507,14 @@ async def create_activity(db: AsyncSession, organizer: Vendor, payload: dict) ->
 
     starts_at = parse_dt(payload.get("starts_at"), "starts_at")
     ends_at = parse_dt(payload.get("ends_at"), "ends_at")
+    expires_at = parse_dt(payload.get("expires_at"), "expires_at")
     if ends_at and starts_at and ends_at < starts_at:
         raise HTTPException(422, "ends_at cannot be earlier than starts_at.")
 
-    if posting_type == "scheduled" and starts_at is None and not (payload.get("schedule_label") or "").strip():
-        raise HTTPException(422, "A Scheduled activity requires starts_at or schedule_label.")
+    if posting_type == "scheduled" and starts_at is None:
+        raise HTTPException(422, "A Scheduled activity requires starts_at.")
+    if posting_type == "scheduled":
+        expires_at = starts_at + timedelta(hours=6)
 
     template_fields = dict(payload.get("template_fields") or {})
     # Merge convenient top-level fields into template_fields when supplied
@@ -619,6 +624,7 @@ async def create_activity(db: AsyncSession, organizer: Vendor, payload: dict) ->
         private_directions=private_directions,
         starts_at=starts_at,
         ends_at=ends_at,
+        expires_at=expires_at,
         schedule_label=(payload.get("schedule_label") or "").strip() or None,
         capacity=capacity,
         spots_confirmed=0,
@@ -692,7 +698,8 @@ async def list_activities(
     if mine_only:
         stmt = stmt.where(LocalActivity.organizer_vendor_id == viewer.id)
     else:
-        stmt = stmt.where(LocalActivity.lifecycle_status.not_in(["cancelled", "expired"]))
+        stmt = stmt.where(LocalActivity.lifecycle_status.not_in(["cancelled", "expired"]),
+            active_window(datetime.utcnow(), starts_at=LocalActivity.starts_at, expires_at=LocalActivity.expires_at), discoverable(Vendor))
 
     if posting_type:
         stmt = stmt.where(LocalActivity.posting_type == posting_type.strip().lower())

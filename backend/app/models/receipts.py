@@ -65,6 +65,9 @@ class ReceiptMerchant(Base):
         UUID(as_uuid=True), ForeignKey("vendors.id", ondelete="SET NULL"), nullable=True, index=True,
     )
     claim_status = Column(String(16), nullable=False, default="unclaimed", server_default="unclaimed")
+    allow_spotted_deals = Column(Boolean, nullable=False, default=True, server_default="true")
+    spotted_opt_out_at = Column(DateTime, nullable=True)
+    spotted_opt_out_by = Column(UUID(as_uuid=True), ForeignKey("vendors.id", ondelete="SET NULL"), nullable=True)
     claim_note = Column(Text, nullable=True)
     # The automated claim engine keeps its evidence here. Never raw SMS, never a
     # client-supplied score: a hashed receipt key, the challenge it answered, and

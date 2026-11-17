@@ -11,6 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.services.discovery_visibility import discoverable
 from app.database import get_db
 from app.models.notification import NotificationType
 from app.models.stock import MovementStatus, QualityStatus, StockItem, StockMovement, StockReservation, StockSource
@@ -452,6 +453,8 @@ async def browse_network_stock(
         .where(StockItem.visible_to_network.is_(True))
         .where(StockItem.quantity_available >= min_quantity)
     )
+    if not vendor_handle:
+        query = query.where(discoverable(Vendor))
     if not vendor_handle and not include_mine:
         query = query.where(StockItem.vendor_id != vendor.id)
     if category:

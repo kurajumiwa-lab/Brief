@@ -25,7 +25,7 @@ no price at all.
 
 import re
 import uuid as uuidlib
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from sqlalchemy import select
@@ -72,10 +72,11 @@ def _slug(name: str) -> str:
 
 
 def _parse_dt(value):
-    if value is None or isinstance(value, datetime):
-        return value
+    if value is None:
+        return None
     try:
-        return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        dt = value if isinstance(value, datetime) else datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        return dt.astimezone(timezone.utc).replace(tzinfo=None) if dt.tzinfo else dt
     except ValueError:
         raise PublishError(f"'{value}' is not a readable date and time")
 

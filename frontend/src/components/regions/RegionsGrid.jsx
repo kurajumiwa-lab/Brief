@@ -1,3 +1,4 @@
+import { SpottedDealCard } from "@/components/spotted/SpottedDealUI";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { BadgeCheck, MapPin } from "lucide-react";
@@ -13,13 +14,13 @@ import { cn } from "@/lib/utils";
  * it costs, and whether enough people have joined. Nothing here repeats Home's
  * job; this is the browsing surface.
  */
-export default function RegionsGrid({ items = [], className }) {
+export default function RegionsGrid({ items = [], className, onSpottedChanged = () => {} }) {
   if (items.length === 0) return null;
   return (
     <ul className={cn("grid grid-cols-2 gap-3 lg:grid-cols-3", className)} data-testid="regions-grid">
       {items.map((item) => (
         <li key={`${item.kind}:${item.id}`} className="min-w-0">
-          <RegionCard item={item} />
+          {item.feed_kind === "SPOTTED_DEAL" ? <SpottedDealCard deal={item} onChanged={onSpottedChanged} /> : <RegionCard item={item} />}
         </li>
       ))}
     </ul>

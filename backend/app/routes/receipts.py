@@ -95,6 +95,7 @@ def _merchant_out(merchant: ReceiptMerchant, *, offers: list[dict] | None = None
         "name": merchant.name,
         "region": merchant.region,
         "claim_status": status,
+        "allow_spotted_deals": merchant.allow_spotted_deals,
         "claim_status_label": claims_service.status_label(status),
         "verified": status == "verified",
         "probationary": status == "probationary",

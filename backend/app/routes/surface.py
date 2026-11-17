@@ -25,6 +25,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 
+from app.services.discovery_visibility import discoverable
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -126,7 +127,7 @@ def _price_index_rows(items):
 
 async def _price_index(db: AsyncSession, limit: int = 20):
     res = await db.execute(
-        select(StockItem).where(StockItem.visible_to_network.is_(True))
+        select(StockItem).join(Vendor, Vendor.id == StockItem.vendor_id).where(StockItem.visible_to_network.is_(True), discoverable(Vendor), Vendor.fraud_suspended_at.is_(None))
     )
     rows = res.scalars().all()
     return _price_index_rows(rows)[:limit]
@@ -175,8 +176,8 @@ async def surface_feed(
 
     # product — hero: the stated price
     res = await db.execute(
-        select(StockItem)
-        .where(StockItem.visible_to_network.is_(True))
+        select(StockItem).join(Vendor, Vendor.id == StockItem.vendor_id)
+        .where(StockItem.visible_to_network.is_(True), discoverable(Vendor), Vendor.fraud_suspended_at.is_(None))
         .order_by(StockItem.updated_at.desc())
         .limit(12)
     )
@@ -206,8 +207,8 @@ async def surface_feed(
 
     # call-up — hero: the pay. Urgency = soonest expiry first.
     res = await db.execute(
-        select(HustleJobCall)
-        .where(HustleJobCall.status == "open",
+        select(HustleJobCall).join(Vendor, Vendor.id == HustleJobCall.vendor_id)
+        .where(discoverable(Vendor), Vendor.fraud_suspended_at.is_(None), HustleJobCall.status == "open",
                HustleJobCall.expires_at >= now,
                HustleJobCall.vendor_id != vendor.id)
         .order_by(HustleJobCall.expires_at.asc())
@@ -265,7 +266,7 @@ async def surface_feed(
 
     # event — hero: the date
     res = await db.execute(
-        select(Event).where(Event.start_date >= now)
+        select(Event).join(Vendor, Vendor.id == Event.organizer_id).where(Event.start_date >= now, Event.status.in_(["upcoming", "active"]), Event.group_id.is_(None), Event.vendor_list_id.is_(None), discoverable(Vendor), Vendor.fraud_suspended_at.is_(None))
         .order_by(Event.start_date.asc()).limit(3)
     )
     evs = []
@@ -348,7 +349,7 @@ async def surface_feed(
 
     # vendor — hero: distance (the people you can trade with, nearest first)
     vres2 = await db.execute(
-        select(Vendor).where(Vendor.geo_lat.is_not(None), Vendor.id != vendor.id)
+        select(Vendor).where(Vendor.geo_lat.is_not(None), Vendor.id != vendor.id, discoverable(Vendor), Vendor.fraud_suspended_at.is_(None))
         .order_by(Vendor.last_active.desc().nulls_last())
         .limit(10)
     )

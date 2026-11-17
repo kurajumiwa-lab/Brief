@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
+import PresetContent from "@/components/page/PresetContent";
 import Card, { CardHeader, CardTitle } from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import { PageSpinner } from "@/components/ui/Spinner";
@@ -14,6 +15,7 @@ import { offersFor, verifiedOnly } from "./pageRules";
  */
 export default function PublicPage() {
   const { handle = "" } = useParams();
+  const navigate = useNavigate();
   const [card, setCard] = useState(null);
   const [error, setError] = useState(null);
 
@@ -22,10 +24,10 @@ export default function PublicPage() {
     setCard(null);
     setError(null);
     professionalAPI.page(handle)
-      .then((r) => { if (live) setCard(r.data); })
+      .then((r) => { if (live && r.data.handle && r.data.handle !== handle.toLowerCase()) navigate(`/page/${r.data.handle}`, {replace:true}); else if (live) setCard(r.data); })
       .catch((e) => { if (live) setError(apiError(e, "This page is not available.")); });
     return () => { live = false; };
-  }, [handle]);
+  }, [handle, navigate]);
 
   if (error) {
     return (
@@ -42,6 +44,7 @@ export default function PublicPage() {
   const sections = card.sections || {};
   const offers = offersFor(card.services);
   const registrations = verifiedOnly(card.registrations);
+  const whatsapp = card.whatsapp_phone && /^\+254[17]\d{8}$/.test(card.whatsapp_phone) ? `https://wa.me/${card.whatsapp_phone.slice(1)}` : null;
 
   return (
     <Shell>
@@ -51,6 +54,7 @@ export default function PublicPage() {
         <p className="text-sm text-gray-500">
           @{card.handle}{card.location ? ` · ${card.location}` : ""}
         </p>
+        {whatsapp && <a href={whatsapp} target="_blank" rel="noreferrer" className="inline-block rounded-xl bg-[#128C4A] px-4 py-2 text-sm font-bold text-white">{card.preset === "service" ? "Book / Request Slot on WhatsApp" : "Chat on WhatsApp"}</a>}
         <p className="text-sm">
           {card.tagline && <span className="block mt-1 text-base text-ink-2">{card.tagline}</span>}
           {card.completed_appointments > 0
@@ -58,6 +62,8 @@ export default function PublicPage() {
             : "No completed bookings yet."}
         </p>
       </section>
+
+      <PresetContent card={card} />
 
       {/* About */}
       {card.description && (
@@ -70,7 +76,7 @@ export default function PublicPage() {
       {/* Offers */}
       {sections.offers !== false && (
       <section className="mt-6">
-        <h2 className="text-lg font-semibold mb-2">Offers</h2>
+        <h2 className="text-lg font-semibold mb-2">{card.preset === "service" ? "Consultation / Service Menu" : card.preset === "shop" ? "Offers" : "Services"}</h2>
         {offers.length === 0 ? (
           <Card><p className="text-sm text-gray-500">Nothing is offered right now.</p></Card>
         ) : (

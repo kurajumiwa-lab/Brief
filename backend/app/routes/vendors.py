@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.services.discovery_visibility import discoverable
 from app.database import get_db
 from app.models.vendor import ACCOUNT_KINDS, Vendor, VendorProfile, VendorRole, vendor_connections
 from app.routes.auth import get_current_vendor
@@ -199,6 +200,8 @@ async def update_profile(
     display_name = payload.pop("display_name", None)
     if display_name and "business_name" not in payload:
         payload["business_name"] = display_name.strip()
+    if "phone" in payload and payload["phone"] != vendor.phone:
+        vendor.phone_verified_at = None
     for field, value in payload.items():
         setattr(vendor, field, value)
     await db.commit()
@@ -320,7 +323,7 @@ async def browse_vendor_network(
     db: AsyncSession = Depends(get_db),
 ):
     """Browse the vendor network. Everyone here is a vendor."""
-    query = select(Vendor).where(Vendor.id != vendor.id)
+    query = select(Vendor).where(Vendor.id != vendor.id, discoverable(Vendor))
 
     if category:
         query = query.where(Vendor.business_categories.contains([category]))
@@ -449,6 +452,11 @@ async def vendor_by_handle(
 ):
     target = (await db.execute(select(Vendor).where(Vendor.vendor_handle == handle.lstrip("@").lower()))).scalars().first()
     if not target:
+        from app.services.profile_handles import resolve_alias
+        from fastapi.responses import RedirectResponse
+        canonical = await resolve_alias(db, handle)
+        if canonical:
+            return RedirectResponse(f"/api/vendors/{canonical}", status_code=301, headers={"Cache-Control": "no-store"})
         raise HTTPException(404, "Business not found")
     out = vendor_out(target, connected=await vendor_network.are_connected(db, vendor.id, target.id))
     out.reliability_score = await _reliability(db, target.id)
