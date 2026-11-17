@@ -30,7 +30,7 @@ OPEN_PREFIXES = ("/api/auth/", "/api/health", "/api/metrics", "/api/payments/web
 # directory and the free blueprint library. Only GET is open here. Every route
 # under these prefixes that is personal or changes data still depends on
 # `get_current_vendor`, so it answers 401 without a token at the route level too.
-PUBLIC_READ_PREFIXES = ("/api/offers/public", "/api/knowledge/sectors", "/api/knowledge/listings",
+PUBLIC_READ_PREFIXES = ("/api/profiles/", "/api/og/events/", "/api/offers/public", "/api/knowledge/sectors", "/api/knowledge/listings",
                         "/api/blueprints", "/api/trust/public", "/api/office/public/",
                         # Offerings a person shows the network: visible rows only, GET only.
                         "/api/offerings/of/",
@@ -48,8 +48,8 @@ OFFICE_OPEN_POST = ("/api/office/links/accept",)
 class VendorOnlyMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         path = request.url.path
-        public_read = request.method == "GET" and path.startswith(PUBLIC_READ_PREFIXES)
-        office_link = request.method == "POST" and path in OFFICE_OPEN_POST
+        public_read = (request.method == "GET" and path.startswith(PUBLIC_READ_PREFIXES)) or (request.method == "HEAD" and path.startswith("/api/og/events/"))
+        office_link = request.method == "POST" and (path in OFFICE_OPEN_POST or (path.startswith("/api/spotted-deals/") and path.endswith("/opt-out")))
         if path.startswith("/api/") and not path.startswith(OPEN_PREFIXES) and not public_read \
                 and not office_link and request.method != "OPTIONS":
             auth = request.headers.get("authorization", "")

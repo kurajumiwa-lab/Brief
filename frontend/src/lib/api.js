@@ -416,6 +416,11 @@ export const eventAPI = {
   mine: () => api.get("/events/mine"),
   get: (id) => api.get(`/events/${id}`),
   registrations: (id) => api.get(`/events/${id}/registrations`),
+  resolveShare: (slug) => api.get(`/og/events/${encodeURIComponent(slug)}`),
+  paymentQueue: () => api.get("/events/payment-queue"),
+  submitPayment: (id, raw_text) => api.post(`/events/${id}/submit-payment`, { raw_text }),
+  confirmPayment: (id, registrationId) => api.post(`/events/${id}/confirm-payment/${registrationId}`),
+  roster: (id) => api.get(`/events/${id}/roster`),
   create: (data) => api.post("/events/create", data),
   register: (id) => api.post(`/events/${id}/register`),
   cancelRegistration: (id) => api.post(`/events/${id}/cancel-registration`),
@@ -423,6 +428,21 @@ export const eventAPI = {
   checkIn: (id) => api.post(`/events/${id}/check-in`),
   checkInVendor: (id, vendorId) => api.post(`/events/${id}/check-in/${vendorId}`),
   analytics: (id) => api.get(`/events/${id}/analytics`),
+};
+
+export const spottedDealAPI = {
+  list: (region_slug, q = "") => api.get("/spotted-deals", { params: { region_slug, q } }),
+  shops: (region_slug, q = "") => api.get("/spotted-deals/shops", { params: { region_slug, q } }),
+  mine: () => api.get("/spotted-deals/mine"),
+  create: (data) => api.post("/spotted-deals", data),
+  seen: (id) => api.post(`/spotted-deals/${id}/seen`),
+  flag: (id, flag_type) => api.post(`/spotted-deals/${id}/flags`, { flag_type }),
+  link: (id, receipt_id) => api.post(`/spotted-deals/${id}/confirm-receipt`, { receipt_id }),
+  optOut: (id, body = {}) => api.post(`/spotted-deals/${id}/opt-out`, body),
+  dispute: (id, receipt_id) => api.post(`/spotted-deals/${id}/dispute`, { receipt_id }),
+  jury: () => api.get("/spotted-deals/jury-assignments"),
+  vote: (id, decision) => api.post(`/spotted-deals/${id}/dispute/vote`, { decision }),
+  settings: (id, opt_out_all_future) => api.post(`/spotted-deals/merchants/${id}/settings`, { opt_out_all_future }),
 };
 
 // ── Notifications (v2.1) ───────────────────────────────────────────────────
@@ -1100,6 +1120,8 @@ export const credentialsAPI = {
 };
 
 /** Professional profile card (Phase 5). Behind PROFESSIONAL_PROFILE_ENABLED on the backend. */
+export const profileHandleAPI = { change: (new_handle) => api.patch("/profile/handle", { new_handle }) };
+
 export const professionalAPI = {
   card: (handle) => api.get(`/professional/${handle}`),
   // The public Page: no sign-in. Verified registrations only.

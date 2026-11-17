@@ -134,3 +134,6 @@ from app.modules.trust.models import (  # noqa: F401
     TrustBranch, BranchVerification, TransactionToken, BusinessReview, AuditEvent, PointsEntry,
     ReviewIdentity, ReviewFlag, ReviewModeration,
 )
+
+# Spotted sales schema is registered for migrations/parity, but not exposed yet.
+from app.models.spotted_deals import SpottedDeal, SpottedDealFlag, SpottedDealSeenTap, SpottedDealCooldown, SpottedDealJuryAssignment, SpottedOptOutAttempt  # noqa: F401,E402

@@ -34,7 +34,7 @@ const SHIPMENTS = [
   { id: "sh2", tracking_number: "BRF-11AA22", status: "delivered", courier_name: "Boda Express", courier_handle: "boda_express", sender_handle: "gikomba_textiles", receiver_handle: "mama_mboga", status_history: [], rating: null, my_role: "receiver", created_at: "2026-09-28T07:00:00", delivered_at: "2026-09-28T09:00:00" },
 ];
 const EVENT = { id: "e1", title: "Ngara Farm-Gate Saturday", event_type: "sourcing_trip", organizer: "mama_mboga", organizer_id: "v-me", organizer_business: "Mama Mboga Fresh", start_date: "2026-09-29T06:00:00", end_date: "2026-09-29T11:00:00", location: "Ngara", is_virtual: false, entry_fee: 0, max_vendors: 20, registered_count: 2, spots_left: 18, status: "active", vendor_requirements: {}, my_status: null };
-const ATTENDEE_EVENT = { ...EVENT, id: "e2", title: "Eastlands Trade Fair", organizer: "gikomba_textiles", organizer_id: "v-3", organizer_business: "Gikomba Textiles", my_status: "registered" };
+const ATTENDEE_EVENT = { ...EVENT, id: "e2", title: "Eastlands Trade Fair", organizer: "gikomba_textiles", organizer_id: "v-3", organizer_business: "Gikomba Textiles", my_status: "registered", my_booking_status: "CONFIRMED", my_registration: { booking_status: "CONFIRMED" } };
 
 vi.mock("@/lib/api", () => {
   const apiError = (e, f = "Something went wrong") => e?.response?.data?.detail || f;

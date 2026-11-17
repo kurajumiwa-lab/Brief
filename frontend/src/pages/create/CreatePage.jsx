@@ -890,9 +890,20 @@ function Field({
         />
       );
 
-    case "starts_at":
-    case "ends_at":
     case "expires_at": {
+      const preset = (kind) => {
+        if (kind === "ongoing") { setField("expires_at", ""); return; }
+        const now = new Date(); const end = new Date(now);
+        if (kind === "weekend") end.setDate(end.getDate() + ((7 - end.getDay()) % 7));
+        if (kind === "week") end.setDate(end.getDate() + 7);
+        end.setHours(23, 59, 0, 0);
+        const local = new Date(end.getTime() - end.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+        setField("expires_at", local);
+      };
+      return <div className="space-y-2"><span className="text-sm font-medium">Pop-up / Available until</span><div className="flex flex-wrap gap-2">{[["today","Today only"],["weekend","This weekend"],["week","7 days"],["ongoing","Ongoing"]].map(([key,label])=><button type="button" key={key} className="rounded-full border border-edge-1 px-3 py-1 text-xs" onClick={()=>preset(key)}>{label}</button>)}</div><Input label="Available until (optional)" type="datetime-local" value={draft.expires_at} onChange={e=>setField("expires_at",e.target.value)} hint="Local time. Leave blank for ongoing availability." data-testid="create-expires_at" /></div>;
+    }
+    case "starts_at":
+    case "ends_at": {
       const labels = {
         starts_at: draft.content_type === "event" ? "When does it start?" : "When does it happen?",
         ends_at: "When does it end?",
@@ -905,7 +916,7 @@ function Field({
           required={required}
           value={draft[field]}
           onChange={(e) => setField(field, e.target.value)}
-          hint={required ? undefined : "Optional — helps people see it at the right time."}
+          hint={field === "starts_at" && ["event", "scheduled"].includes(draft.content_type) ? "Discovery ends six hours after the start time." : required ? undefined : "Optional — helps people see it at the right time."}
           data-testid={`create-${field}`}
         />
       );

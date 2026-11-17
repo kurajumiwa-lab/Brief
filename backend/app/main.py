@@ -40,6 +40,7 @@ from app.routes import (
     chat,
     collective,
     events,
+    spotted_deals,
     files,
     governance,
     groups,
@@ -256,6 +257,7 @@ app.include_router(murabaha.router, prefix="/api/murabaha", tags=["Murabaha Adva
 app.include_router(governance.router, prefix="/api/governance", tags=["Vendor Governance & Benefits"])
 app.include_router(tools.router, prefix="/api/tools", tags=["Business Tools"])
 app.include_router(events.router, prefix="/api/events", tags=["Events"])
+app.include_router(spotted_deals.router, prefix="/api/spotted-deals", tags=["Spotted Deals"])
 app.include_router(pos_bridge.router, prefix="/api/pos", tags=["POS Bridge"])
 # v2.1
 app.include_router(news_routes.router, prefix="/api/news", tags=["Market News"])
@@ -361,6 +363,8 @@ app.include_router(media_routes.router, tags=["Media"])
 # JPEGs. Registered before the SPA catch-all so the server, not the crawler's
 # lack of JavaScript, decides what a WhatsApp preview says.
 app.include_router(public_pages_routes.router, tags=["Public share cards"])
+from app.routes.profile_handles import router as profile_handles_router
+app.include_router(profile_handles_router, prefix="/api", tags=["Profile handles"])
 
 
 @app.get("/api", include_in_schema=False)

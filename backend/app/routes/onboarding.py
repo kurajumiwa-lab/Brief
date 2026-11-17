@@ -18,6 +18,7 @@ from datetime import datetime
 from typing import Optional
 from math import asin, cos, radians, sin, sqrt
 
+from app.services.discovery_visibility import active_window, discoverable
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
@@ -207,15 +208,15 @@ async def onboarding(vendor: Vendor = Depends(get_current_vendor), db: AsyncSess
             out.sort(key=lambda t: t[0])
             return out
 
-        vs = (await db.execute(select(Vendor).where(Vendor.id != vendor.id))).scalars().all()
+        vs = (await db.execute(select(Vendor).where(Vendor.id != vendor.id, discoverable(Vendor), Vendor.fraud_suspended_at.is_(None)))).scalars().all()
         ps = (await db.execute(
             select(PublicPlace).where(PublicPlace.status.in_(["active", "claimed"]))
         )).scalars().all()
         calls = (await db.execute(
-            select(HustleJobCall).where(HustleJobCall.status == "open", HustleJobCall.expires_at >= datetime.utcnow())
+            select(HustleJobCall).join(Vendor, Vendor.id == HustleJobCall.vendor_id).where(HustleJobCall.status == "open", HustleJobCall.expires_at > datetime.utcnow(), discoverable(Vendor), Vendor.fraud_suspended_at.is_(None))
         )).scalars().all()
-        tools = (await db.execute(select(ToolListing).where(ToolListing.is_available.is_(True)))).scalars().all()
-        events = (await db.execute(select(Event).where(Event.start_date >= datetime.utcnow()))).scalars().all()
+        tools = (await db.execute(select(ToolListing).join(Vendor, Vendor.id == ToolListing.vendor_id).where(ToolListing.is_available.is_(True), active_window(datetime.utcnow(), expires_at=ToolListing.available_until), discoverable(Vendor), Vendor.fraud_suspended_at.is_(None)))).scalars().all()
+        events = (await db.execute(select(Event).join(Vendor, Vendor.id == Event.organizer_id).where(Event.start_date >= datetime.utcnow(), Event.status.in_(["upcoming", "active"]), Event.group_id.is_(None), Event.vendor_list_id.is_(None), discoverable(Vendor), Vendor.fraud_suspended_at.is_(None)))).scalars().all()
 
         nearby = {
             "lat": lat, "lng": lng, "radius_km": RADAR_RADIUS_KM,

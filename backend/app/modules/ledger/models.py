@@ -180,6 +180,7 @@ class LocalActivity(Base):
     # Schedule & capacity
     starts_at = Column(DateTime, nullable=True, index=True)
     ends_at = Column(DateTime, nullable=True)
+    expires_at = Column(DateTime, nullable=True)
     schedule_label = Column(String(160), nullable=True)
     capacity = Column(Integer, nullable=True)
     spots_confirmed = Column(Integer, nullable=False, default=0, server_default="0")

@@ -14,6 +14,8 @@ import EmptyState from "@/components/ui/EmptyState";
 import { PageSpinner } from "@/components/ui/Spinner";
 import { toast } from "@/components/ui/Toast";
 import { useConfirm } from "@/components/ui/ConfirmDialog";
+import EventPaymentCard from "@/components/events/EventPaymentCard";
+import WhatsAppRosterButton from "@/components/events/WhatsAppRosterButton";
 import EventForm from "@/components/forms/EventForm";
 import { EVENT_HUB_ENABLED } from "@/config/flags";
 import { useEventStore } from "@/stores/eventStore";
@@ -78,6 +80,8 @@ export default function EventsPage() {
   const onRegister = async (ev) => {
     try {
       const res = await register(ev);
+      const { data: refreshed } = await eventAPI.get(ev.id);
+      setFetched(refreshed);
       toast.success(res?.message || `You're in: ${ev.title}`);
     } catch (e) {
       toast.error(apiError(e, "Registration failed"));
@@ -195,17 +199,17 @@ export default function EventsPage() {
                           Manage
                         </Button>
                       </>
-                    ) : ev.my_status === "registered" || ev.my_status === "confirmed" ? (
+                    ) : ev.my_registration && !["EXPIRED", "CANCELLED"].includes(ev.my_booking_status) ? (
                       <>
                         <Badge variant="brand">
-                          <Check size={10} /> {ev.my_status}
+                          <Check size={10} /> {ev.my_booking_status?.replaceAll("_", " ") || ev.my_status}
                         </Badge>
                         {!past && <Button size="xs" variant="ghost" icon={X} onClick={() => onCancel(ev)} aria-label="Cancel registration" />}
                       </>
                     ) : (
                       !past && (
-                        <Button size="xs" onClick={() => onRegister(ev)} disabled={full}>
-                          {full ? "Full" : "Register"}
+                        <Button size="xs" onClick={() => onRegister(ev)}>
+                          {full ? "Join waitlist" : "Register"}
                         </Button>
                       )
                     )}
@@ -220,7 +224,7 @@ export default function EventsPage() {
       <Modal open={creating} onClose={() => setCreating(false)} title="Organise an event" description="Optionally restrict registration to one of your groups or business lists.">
         <EventForm groups={groups.filter((g) => g.my_role === "admin")} lists={lists.filter((l) => l.i_run_it)} onDone={() => setCreating(false)} onCancel={() => setCreating(false)} />
       </Modal>
-      <EventDrawer event={open} onClose={() => setOpen(null)} organiser={open?.organizer === me?.vendor_handle} onStatus={onStatus} onPatch={(patch) => setFetched((f) => (f && f.id === open?.id ? { ...f, ...patch } : f))} />
+      <EventDrawer event={open} onClose={() => setOpen(null)} organiser={open?.organizer === me?.vendor_handle} onStatus={onStatus} onBook={onRegister} onPatch={(patch) => setFetched((f) => (f && f.id === open?.id ? { ...f, ...patch } : f))} />
     </div>
   );
 }
@@ -254,7 +258,7 @@ const startsByToday = (iso) => {
   return d <= endOfToday;
 };
 
-function EventDrawer({ event: ev, onClose, organiser, onStatus, onPatch }) {
+function EventDrawer({ event: ev, onClose, organiser, onStatus, onPatch, onBook }) {
   const { registrations, checkIn, checkInVendor, analytics } = useEventStore();
   const [rows, setRows] = useState([]);
   const [stats, setStats] = useState(null);
@@ -314,13 +318,18 @@ function EventDrawer({ event: ev, onClose, organiser, onStatus, onPatch }) {
             {requirementChips(ev.vendor_requirements).length > 0 && <Row k="Requirements" v={requirementChips(ev.vendor_requirements).join(", ")} />}
           </dl>
 
+          {ev.meeting_point && <p className="text-sm">Meeting point: {ev.meeting_point}{ev.departure_time && ` · ${ev.departure_time}`}</p>}
+          {ev.inclusions?.length > 0 && <p className="text-sm">Includes: {ev.inclusions.join(", ")}</p>}
+          {ev.checklist?.length > 0 && <p className="text-sm">Bring: {ev.checklist.join(", ")}</p>}
+          {!organiser && ev.status !== "cancelled" && ev.status !== "completed" && <EventPaymentCard event={ev} registration={ev.my_registration} onBook={() => onBook(ev)} onSubmitMpesa={async (sms) => { try { await eventAPI.submitPayment(ev.id, sms); const { data } = await eventAPI.get(ev.id); useEventStore.getState().patch(ev.id, data); onPatch?.(data); toast.success("Note submitted for organiser review"); } catch (err) { toast.error(apiError(err)); } }} />}
+          {organiser && !ev.group_id && !ev.vendor_list_id && <WhatsAppRosterButton event={ev} />}
           {EVENT_HUB_ENABLED && (
             <Link to={`/event/${ev.id}`} className="inline-flex items-center text-sm font-medium text-brand-700 hover:underline dark:text-brand-300">
               Open the event page
             </Link>
           )}
 
-          {!organiser && registered && ev.status !== "cancelled" && ev.status !== "completed" && (
+          {!organiser && registered && ev.my_booking_status === "CONFIRMED" && ev.status !== "cancelled" && ev.status !== "completed" && (
             <div className="rounded-xl border border-edge-1 bg-surface-2 p-3 flex items-center justify-between gap-3">
               <p className="text-xs text-ink-3">{checkInOpen ? "Check-in is open. Tap when you arrive." : "Check-in opens on the day of the event."}</p>
               <Button size="sm" icon={DoorOpen} disabled={!checkInOpen} loading={busy === "self"} onClick={selfCheckIn}>

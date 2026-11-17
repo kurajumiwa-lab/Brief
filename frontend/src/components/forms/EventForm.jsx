@@ -16,6 +16,7 @@ export default function EventForm({ onDone, onCancel, groups = [], lists = [] })
   const create = useEventStore((s) => s.create);
   const [form, setForm] = useState({
     title: "", description: "", event_type: "networking", start_date: "", end_date: "", location: "", is_virtual: false,
+    meeting_point: "", departure_time: "", inclusions: "", checklist: "", payment_method: "", payment_number: "", payment_account: "", payment_recipient_name: "", hold_ttl_minutes: "120",
     max_vendors: "", entry_fee: "", required_categories: "", other_requirements: "", group_id: "", vendor_list_id: "",
   });
   const [busy, setBusy] = useState(false);
@@ -42,6 +43,8 @@ export default function EventForm({ onDone, onCancel, groups = [], lists = [] })
         location: form.location.trim() || null,
         is_virtual: form.is_virtual,
         entry_fee: form.entry_fee === "" ? 0 : Number(form.entry_fee),
+        meeting_point: form.meeting_point || null, departure_time: form.departure_time || null, inclusions: splitList(form.inclusions), checklist: splitList(form.checklist),
+        payment_method: form.payment_method || null, payment_number: form.payment_number || null, payment_account: form.payment_account || null, payment_recipient_name: form.payment_recipient_name || null, hold_ttl_minutes: Number(form.hold_ttl_minutes),
         vendor_requirements,
         group_id: form.group_id || null,
         vendor_list_id: form.vendor_list_id || null,
@@ -68,6 +71,14 @@ export default function EventForm({ onDone, onCancel, groups = [], lists = [] })
         <Input label="Ends" type="datetime-local" required value={form.end_date} onChange={set("end_date")} min={form.start_date || undefined} />
         <Input label="Max businesses" type="number" min="1" value={form.max_vendors} onChange={set("max_vendors")} placeholder="50" />
         <Input label="Entry fee" type="number" min="0" step="any" prefix="KES" value={form.entry_fee} onChange={set("entry_fee")} placeholder="0" />
+      </div>
+      <div className="grid sm:grid-cols-2 gap-3">
+        <Input label="Meeting point" value={form.meeting_point} onChange={set("meeting_point")} />
+        <Input label="Departure time" value={form.departure_time} onChange={set("departure_time")} placeholder="06:30 AM" />
+        <Input label="Inclusions" value={form.inclusions} onChange={set("inclusions")} placeholder="Transport, water" />
+        <Input label="Checklist" value={form.checklist} onChange={set("checklist")} placeholder="ID, hiking shoes" />
+        <Select label="Payment method" value={form.payment_method} onChange={set("payment_method")} placeholder="Pay on arrival / free" options={["FREE", "TILL", "PAYBILL", "POCHI", "SEND_MONEY"].map(value => ({ value, label: value.replace("_", " ") }))} />
+        {form.payment_method && form.payment_method !== "FREE" && <><Input label="Payment number" required value={form.payment_number} onChange={set("payment_number")} /><Input label="Recipient name" value={form.payment_recipient_name} onChange={set("payment_recipient_name")} />{form.payment_method === "PAYBILL" && <Input label="Paybill account" value={form.payment_account} onChange={set("payment_account")} />}<Input label="Hold minutes" type="number" min="5" max="10080" value={form.hold_ttl_minutes} onChange={set("hold_ttl_minutes")} /></>}
       </div>
       <div className="grid sm:grid-cols-2 gap-3">
         <Input label="Required categories" value={form.required_categories} onChange={set("required_categories")} placeholder="vegetables, fruit" hint="Only businesses trading these can register" />

@@ -3,7 +3,7 @@ from datetime import datetime
 from enum import Enum as PyEnum
 
 from sqlalchemy import (
-    Boolean, CheckConstraint, Column, DateTime, Enum, Float, ForeignKey, Integer, String, Table, Text,
+    Boolean, CheckConstraint, Column, DateTime, Enum, Float, ForeignKey, Index, Integer, String, Table, Text,
     text as sa_text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
@@ -57,6 +57,7 @@ class Vendor(Base):
     home_storefront_config = Column(JSONB, nullable=False, default=dict, server_default=sa_text("'{}'::jsonb"))
     # Public Page settings (tagline, About text, which sections show). Edited by the owner only.
     public_page = Column(JSONB, nullable=False, default=dict, server_default=sa_text("'{}'::jsonb"))
+    handle_changed_at = Column(DateTime, nullable=True)
     vendor_handle = Column(String(100), unique=True, nullable=False, index=True)  # @handle
     email = Column(String(255), unique=True, nullable=False, index=True)
     phone = Column(String(20))
@@ -130,6 +131,14 @@ class Vendor(Base):
         backref="connected_by",
         viewonly=True,
     )
+
+
+class ProfileHandleRedirect(Base):
+    __tablename__ = "profile_handle_redirects"
+    old_handle = Column(String(100), primary_key=True)
+    vendor_id = Column(UUID(as_uuid=True), ForeignKey("vendors.id", ondelete="CASCADE"), nullable=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=sa_text("now()"))
+    __table_args__ = (Index("idx_profile_handle_redirects_vendor", "vendor_id"),)
 
 
 class VendorProfile(Base):

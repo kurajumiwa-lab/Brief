@@ -18,10 +18,8 @@ Three properties are deliberate:
 
 * **Bounded.** Every adapter takes `limit` and asks the database for at most
   that many rows, ordered by `created_at DESC`. No adapter selects a table.
-* **Cursor-stable.** The cursor is `(created_at, id)` and is applied as a
-  *filter before ranking*, so page 2 can never repeat page 1 even though the
-  scores are recomputed per request. Ranking is not stable enough across
-  requests to page through; `(created_at, id)` is.
+* **Cursor-stable.** A deadline / creation / UUID key is applied in every
+  source before limits, and merged in that order. Scores remain explanatory.
 * **Dedupe.** `(kind, id)` is the identity, so an item reachable from two
   sources appears once.
 
@@ -32,13 +30,16 @@ ships exact coordinates it does not have.
 """
 
 import base64
+import binascii
 import json
 from datetime import datetime, timedelta
 from typing import Optional, Sequence
 
-from sqlalchemy import and_, or_, select
+from sqlalchemy import and_, or_, select, func, literal, DateTime
+from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.services.discovery_visibility import active_window, scheduled_event_window
 from app.models.events import Event
 from app.models.groups import VendorGroup
 from app.models.hustle import HustleJobCall
@@ -66,31 +67,49 @@ MAX_PAGE = 50
 
 # ── cursor ────────────────────────────────────────────────────────────────────
 
-def encode_cursor(created_at: datetime, item_id: str) -> str:
-    """Opaque, URL-safe. Not a security boundary — just a stable bookmark."""
-    raw = json.dumps({"t": created_at.isoformat(), "i": str(item_id)}, separators=(",", ":"))
+def encode_cursor(item: dict) -> str:
+    """Composite key in the exact same order as source SQL and the merge."""
+    deadline = item.get("expires_at") or item.get("starts_at")
+    raw = json.dumps({"v": 2, "b": deadline is not None, "d": deadline.isoformat() if deadline else None,
+                      "t": item["created_at"].isoformat(), "i": str(item["id"]), "s": item["__source"]}, separators=(",", ":"))
     return base64.urlsafe_b64encode(raw.encode()).decode().rstrip("=")
 
 
 def decode_cursor(cursor: Optional[str]) -> Optional[tuple]:
-    """→ (created_at, id) or None. A malformed cursor is ignored, not an error:
-    a bad bookmark should degrade to page one, not break the feed."""
-    if not cursor:
-        return None
+    if not cursor: return None
     try:
-        padded = cursor + "=" * (-len(cursor) % 4)
-        raw = json.loads(base64.urlsafe_b64decode(padded.encode()).decode())
-        return datetime.fromisoformat(raw["t"]), str(raw["i"])
-    except (ValueError, KeyError, TypeError, json.JSONDecodeError):
+        raw = json.loads(base64.urlsafe_b64decode(cursor + "=" * (-len(cursor) % 4)).decode())
+        if raw.get("v") != 2 or not isinstance(raw["b"], bool): return None
+        deadline = datetime.fromisoformat(raw["d"]) if raw["d"] else None
+        created = datetime.fromisoformat(raw["t"])
+        ident = UUID(raw["i"])
+        if (deadline is not None) != raw["b"] or created.tzinfo or (deadline and deadline.tzinfo) or not isinstance(raw["s"], str): return None
+        return deadline, created, ident, raw["s"]
+    except (ValueError, KeyError, TypeError, AttributeError, json.JSONDecodeError, UnicodeDecodeError, binascii.Error):
         return None
 
 
-def _before_cursor(created_at, item_id, pair):
-    """SQL for 'strictly older than the bookmark', ties broken by id."""
-    if pair is None:
-        return None
-    ts, ident = pair
-    return or_(created_at < ts, and_(created_at == ts, item_id < ident))
+def _page_query(query, created, ident, pair, limit, deadline=None):
+    deadline = deadline if deadline is not None else literal(None, type_=DateTime())
+    if pair is not None:
+        after_deadline, after_created, after_id, after_source = pair
+        older = or_(created < after_created, and_(created == after_created, or_(ident < after_id, and_(ident == after_id, literal(created.table.name > after_source)))))
+        if after_deadline is None:
+            condition = and_(deadline.is_(None), older)
+        else:
+            condition = or_(deadline.is_(None), deadline > after_deadline,
+                            and_(deadline == after_deadline, older))
+        query = query.where(condition)
+    return query.order_by(None).order_by(deadline.asc().nullslast(), created.desc(), ident.desc()).limit(limit)
+
+
+def urgency_key(item):
+    deadline = item.get("expires_at") or item.get("starts_at")
+    created = item.get("created_at") or datetime.min
+    delta = created - datetime.min
+    micros = (delta.days * 86400 + delta.seconds) * 1000000 + delta.microseconds
+    return (deadline is None, deadline or datetime.max, -micros,
+            -UUID(str(item["id"])).int, item["__source"])
 
 
 # ── normalisation ─────────────────────────────────────────────────────────────
@@ -146,7 +165,8 @@ def _item(**kw) -> dict:
 async def _posts(db, viewer, pair, limit, now):
     q = (
         select(OutsidePost)
-        .where(OutsidePost.status == "published", OutsidePost.moderation_status == "approved")
+        .where(OutsidePost.status == "published", OutsidePost.moderation_status == "approved",
+               active_window(now, starts_at=OutsidePost.starts_at, expires_at=OutsidePost.expires_at))
         # Community and private posts reach only their audience; the author
         # always sees their own. Everyone else gets public content only.
         .where(or_(
@@ -156,9 +176,7 @@ async def _posts(db, viewer, pair, limit, now):
         .order_by(OutsidePost.created_at.desc())
         .limit(limit)
     )
-    cond = _before_cursor(OutsidePost.created_at, OutsidePost.id, pair)
-    if cond is not None:
-        q = q.where(cond)
+    q = _page_query(q, OutsidePost.created_at, OutsidePost.id, pair, limit, func.coalesce(OutsidePost.expires_at, OutsidePost.starts_at))
     rows = (await db.execute(q)).scalars().all()
 
     out = []
@@ -195,7 +213,7 @@ def _event_item(ev, org) -> dict:
         title=ev.title, summary=ev.description, image=_first_image(ev.images),
         category=ev.event_type,
         location=ev.location, geo_lat=ev.geo_lat, geo_lng=ev.geo_lng,
-        created_at=ev.created_at, starts_at=ev.start_date, expires_at=ev.end_date,
+        created_at=ev.created_at, starts_at=ev.start_date, expires_at=ev.start_date + timedelta(hours=6),
         status=ev.status,
         # An entry fee is optional information, not a gate: `price_kes` is
         # only ever set when the organiser actually charged one.
@@ -213,13 +231,11 @@ async def _events(db, viewer, pair, limit, now):
     q = (
         select(Event, Vendor)
         .join(Vendor, Vendor.id == Event.organizer_id)
-        .where(Event.status.in_(["upcoming", "active"]), Vendor.fraud_suspended_at.is_(None))
+        .where(Event.status.in_(["upcoming", "active"]), Vendor.fraud_suspended_at.is_(None), Event.group_id.is_(None), Event.vendor_list_id.is_(None), scheduled_event_window(now, Event.start_date))
         .order_by(Event.created_at.desc())
         .limit(limit)
     )
-    cond = _before_cursor(Event.created_at, Event.id, pair)
-    if cond is not None:
-        q = q.where(cond)
+    q = _page_query(q, Event.created_at, Event.id, pair, limit, Event.start_date + timedelta(hours=6))
     rows = (await db.execute(q)).all()
     return [_event_item(ev, org) for ev, org in rows]
 
@@ -236,9 +252,7 @@ async def _listings(db, viewer, pair, limit, now):
         .order_by(StockItem.created_at.desc())
         .limit(limit)
     )
-    cond = _before_cursor(StockItem.created_at, StockItem.id, pair)
-    if cond is not None:
-        q = q.where(cond)
+    q = _page_query(q, StockItem.created_at, StockItem.id, pair, limit, None)
     rows = (await db.execute(q)).all()
 
     out = []
@@ -264,13 +278,11 @@ async def _tools(db, viewer, pair, limit, now):
     q = (
         select(ToolListing, Vendor)
         .join(Vendor, Vendor.id == ToolListing.vendor_id)
-        .where(ToolListing.is_available.is_(True), ToolListing.vendor_id != viewer.id)
+        .where(ToolListing.is_available.is_(True), ToolListing.vendor_id != viewer.id, active_window(now, expires_at=ToolListing.available_until))
         .order_by(ToolListing.created_at.desc())
         .limit(limit)
     )
-    cond = _before_cursor(ToolListing.created_at, ToolListing.id, pair)
-    if cond is not None:
-        q = q.where(cond)
+    q = _page_query(q, ToolListing.created_at, ToolListing.id, pair, limit, ToolListing.available_until)
     rows = (await db.execute(q)).all()
 
     out = []
@@ -308,9 +320,7 @@ async def _opportunities(db, viewer, pair, limit, now):
         .order_by(BusinessRequest.created_at.desc())
         .limit(limit)
     )
-    cond = _before_cursor(BusinessRequest.created_at, BusinessRequest.id, pair)
-    if cond is not None:
-        q = q.where(cond)
+    q = _page_query(q, BusinessRequest.created_at, BusinessRequest.id, pair, limit, None)
     rows = (await db.execute(q)).all()
 
     out = []
@@ -342,9 +352,7 @@ async def _callups(db, viewer, pair, limit, now):
         .order_by(HustleJobCall.created_at.desc())
         .limit(limit)
     )
-    cond = _before_cursor(HustleJobCall.created_at, HustleJobCall.id, pair)
-    if cond is not None:
-        q = q.where(cond)
+    q = _page_query(q, HustleJobCall.created_at, HustleJobCall.id, pair, limit, HustleJobCall.expires_at)
     rows = (await db.execute(q)).all()
 
     out = []
@@ -371,9 +379,7 @@ async def _communities(db, viewer, pair, limit, now):
         .order_by(VendorGroup.created_at.desc())
         .limit(limit)
     )
-    cond = _before_cursor(VendorGroup.created_at, VendorGroup.id, pair)
-    if cond is not None:
-        q = q.where(cond)
+    q = _page_query(q, VendorGroup.created_at, VendorGroup.id, pair, limit, None)
     rows = (await db.execute(q)).scalars().all()
 
     out = []
@@ -398,9 +404,7 @@ async def _collections(db, viewer, pair, limit, now):
         .order_by(VendorList.created_at.desc())
         .limit(limit)
     )
-    cond = _before_cursor(VendorList.created_at, VendorList.id, pair)
-    if cond is not None:
-        q = q.where(cond)
+    q = _page_query(q, VendorList.created_at, VendorList.id, pair, limit, None)
     rows = (await db.execute(q)).scalars().all()
 
     out = []
@@ -420,12 +424,10 @@ async def _people(db, viewer, pair, limit, now):
     q = (
         select(Vendor)
         .where(Vendor.id != viewer.id, Vendor.fraud_suspended_at.is_(None))
-        .order_by(Vendor.created_at.desc())
+        .order_by(Vendor.joined_at.desc())
         .limit(limit)
     )
-    cond = _before_cursor(Vendor.created_at, Vendor.id, pair)
-    if cond is not None:
-        q = q.where(cond)
+    q = _page_query(q, Vendor.joined_at, Vendor.id, pair, limit, None)
     rows = (await db.execute(q)).scalars().all()
 
     out = []
@@ -438,7 +440,7 @@ async def _people(db, viewer, pair, limit, now):
             # A person's location is only shown at the level they chose to
             # share; the exact pin never travels in a public card.
             location=v.physical_location, geo_lat=v.geo_lat, geo_lng=v.geo_lng,
-            created_at=v.created_at, status="published",
+            created_at=v.joined_at, status="published", owner=_owner(v),
             meta={"handle": v.vendor_handle, "role": getattr(v.current_role, "value", None),
                   "owner_id": str(v.id)},
         ))
@@ -453,18 +455,20 @@ async def _local_activities(db, viewer, pair, limit, now):
     q = (
         select(LocalActivity, Vendor)
         .join(Vendor, Vendor.id == LocalActivity.organizer_vendor_id)
-        .where(LocalActivity.lifecycle_status.not_in(["cancelled", "expired"]))
+        .where(LocalActivity.lifecycle_status.not_in(["cancelled", "expired"]),
+               active_window(now, starts_at=LocalActivity.starts_at, expires_at=LocalActivity.expires_at))
         .order_by(LocalActivity.created_at.desc())
         .limit(limit)
     )
-    cond = _before_cursor(LocalActivity.created_at, LocalActivity.id, pair)
-    if cond is not None:
-        q = q.where(cond)
+    q = _page_query(q, LocalActivity.created_at, LocalActivity.id, pair, limit, func.coalesce(LocalActivity.expires_at, LocalActivity.starts_at))
     rows = (await db.execute(q)).all()
 
     out = []
     for act, org in rows:
         if not await can_view_activity(db, act, viewer):
+            # Advance over inaccessible rows without ever returning their data.
+            out.append(_item(id=str(act.id), kind=act.posting_type, created_at=act.created_at,
+                             starts_at=act.starts_at, expires_at=act.expires_at, __excluded=True))
             continue
         pub_lat, pub_lng = public_coordinates(act.geo_lat, act.geo_lng, act.geo_precision, authorized_exact=False)
         out.append(_item(
@@ -481,7 +485,7 @@ async def _local_activities(db, viewer, pair, limit, now):
             geo_lng=pub_lng,
             created_at=act.created_at,
             starts_at=act.starts_at,
-            expires_at=act.ends_at,
+            expires_at=act.expires_at,
             status=act.lifecycle_status,
             visibility=act.visibility,
             price_kes=act.price_kes,
@@ -603,10 +607,17 @@ async def collect(db, viewer, *, kinds, pair, limit, now) -> list:
             rows = await SOURCES[src](db, viewer, pair, per_source, now)
         except Exception:  # noqa: BLE001 — a broken source degrades to empty
             continue
+        source_tables = {"local_activity": "local_activities", "post": OutsidePost.__tablename__,
+                         "event": Event.__tablename__, "listing": StockItem.__tablename__,
+                         "service": ToolListing.__tablename__, "rental": ToolListing.__tablename__,
+                         "opportunity": BusinessRequest.__tablename__, "callup": HustleJobCall.__tablename__,
+                         "community": VendorGroup.__tablename__, "collection": VendorList.__tablename__,
+                         "person": Vendor.__tablename__}
         for item in rows or []:
+            item["__source"] = source_tables[src]
             # `service`/`rental` come from one query; keep only what was asked for.
             if item["kind"] not in kinds:
-                continue
+                item["__excluded"] = True
             key = (item["kind"], item["id"])
             if key in seen:
                 continue
@@ -680,11 +691,38 @@ async def build_feed(db, viewer, *, kinds=DEFAULT_KINDS, lat=None, lng=None,
     limit = max(1, min(int(limit), MAX_PAGE))
     pair = decode_cursor(cursor)
 
-    items = await collect(db, viewer, kinds=kinds, pair=pair, limit=limit, now=now)
-    items = filter_blocked(items, await blocked_author_ids(db, viewer))
-    items = apply_radius(items, lat, lng, radius_km)
-    if query or category or has_price is not None:
-        items = search_filter(items, query, category, has_price)
+    # Scan successive ordered windows when radius/search/block filters remove
+    # candidates. Advancing the scan cursor only after consuming a whole window
+    # avoids skipping matching rows hidden behind filtered candidates.
+    items = []
+    scan_pair = pair
+    scan_marker = None
+    possibly_more = False
+    blocked = await blocked_author_ids(db, viewer)
+    for _ in range(20):
+        raw = await collect(db, viewer, kinds=kinds, pair=scan_pair, limit=limit, now=now)
+        if not raw:
+            possibly_more = False
+            break
+        raw.sort(key=urgency_key)
+        # Only consume a globally safe prefix. Items past this boundary may
+        # have unseen predecessors in a source whose own query hit its limit.
+        per_source = min(max(limit * PER_SOURCE_FACTOR, limit), PER_SOURCE_MAX)
+        raw = raw[:per_source]
+        owner_ids = {str((item.get("meta") or {}).get("owner_id") or (item.get("owner") or {}).get("id") or "") for item in raw}
+        owner_ids.discard("")
+        hidden_ids = {str(v.id) for v in (await db.execute(select(Vendor).where(Vendor.id.in_(owner_ids)))).scalars() if (v.public_page or {}).get("discoverable", True) is False} if owner_ids else set()
+        visible = [item for item in raw if not item.get("__excluded") and str((item.get("meta") or {}).get("owner_id") or (item.get("owner") or {}).get("id") or "") not in hidden_ids]
+        visible = apply_radius(filter_blocked(visible, blocked), lat, lng, radius_km)
+        if query or category or has_price is not None:
+            visible = search_filter(visible, query, category, has_price)
+        items.extend(visible)
+        scan_marker = raw[-1]
+        scan_pair = decode_cursor(encode_cursor(scan_marker))
+        per_source = min(max(limit * PER_SOURCE_FACTOR, limit), PER_SOURCE_MAX)
+        possibly_more = len(raw) >= per_source
+        if len(items) > limit or not possibly_more:
+            break
 
     from app.modules.outside.ranking import RankContext, rank
 
@@ -722,12 +760,13 @@ async def build_feed(db, viewer, *, kinds=DEFAULT_KINDS, lat=None, lng=None,
     )
 
     ranked = rank(items, ctx)
+    ranked.sort(key=lambda r: urgency_key(r.item))
     page = ranked[:limit]
 
     reactions = await viewer_reactions(db, viewer, [(r.item["kind"], r.item["id"]) for r in page])
     payload = []
     for r in page:
-        entry = dict(r.item)
+        entry = {k: v for k, v in r.item.items() if not k.startswith("__")}
         entry["score"] = r.score
         entry["reasons"] = r.reasons
         entry["reactions"] = reactions.get((r.item["kind"], r.item["id"]), {})
@@ -738,9 +777,12 @@ async def build_feed(db, viewer, *, kinds=DEFAULT_KINDS, lat=None, lng=None,
 
     next_cursor = None
     if len(ranked) > limit:
-        last = page[-1].item
-        if last.get("created_at"):
-            next_cursor = encode_cursor(last["created_at"], last["id"])
+        next_cursor = encode_cursor(page[-1].item)
+    elif possibly_more and scan_marker:
+        # A long run of filtered records can exceed the scan budget. The
+        # continuation advances past only records already examined.
+        next_cursor = encode_cursor(scan_marker)
+
 
     return {
         "items": payload,

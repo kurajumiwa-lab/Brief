@@ -173,6 +173,13 @@ async def register_vendor(data: VendorRegister, db: AsyncSession = Depends(get_d
     email = data.email.lower()
     validate_password(data.password)
 
+    from app.services.profile_handles import lock_namespace, RESERVED
+    from app.models.vendor import ProfileHandleRedirect
+    if handle in RESERVED:
+        raise HTTPException(400, "Handle is reserved")
+    await lock_namespace(db)
+    if await db.get(ProfileHandleRedirect, handle):
+        raise HTTPException(409, "HANDLE_TAKEN")
     existing = (await db.execute(
         select(Vendor).where((Vendor.email == email) | (Vendor.vendor_handle == handle))
     )).scalar_one_or_none()

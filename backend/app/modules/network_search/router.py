@@ -17,6 +17,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.services.discovery_visibility import discoverable
 from app.database import get_db
 from app.models.stock import StockItem
 from app.models.vendor import Vendor
@@ -49,6 +50,7 @@ async def search_network(
             StockItem.quantity_available >= 1,
             StockItem.vendor_id != vendor.id,
             Vendor.fraud_suspended_at.is_(None),
+            discoverable(Vendor),
             or_(
                 StockItem.name.icontains(term, autoescape=True),
                 StockItem.description.icontains(term, autoescape=True),
@@ -69,6 +71,7 @@ async def search_network(
         .where(
             Vendor.id != vendor.id,
             Vendor.fraud_suspended_at.is_(None),
+            discoverable(Vendor),
             or_(
                 Vendor.business_name.icontains(term, autoescape=True),
                 Vendor.vendor_handle.icontains(term, autoescape=True),

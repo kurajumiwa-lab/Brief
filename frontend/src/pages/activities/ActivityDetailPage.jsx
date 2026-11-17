@@ -324,6 +324,8 @@ export default function ActivityDetailPage() {
 
         <div>
           <h1 className="text-title-page font-bold text-ink-1">{activity.title}</h1>
+          {isGroupSourcing && activity.visibility === "public" && <a className="mt-2 inline-flex text-sm font-semibold text-brand-700 underline" target="_blank" rel="noopener noreferrer" href={`https://wa.me/?text=${encodeURIComponent(`${activity.title}
+${window.location.origin}/e/${activity.id}`)}`}>Share bulk buy on WhatsApp</a>}
           {activity.body && (
             <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-ink-2">
               {activity.body}

@@ -578,34 +578,21 @@ async def _bump_counter(db, kind, content_id, reaction, delta) -> Optional[int]:
 
 
 async def _register_for_event(db, vendor, event_id):
-    """Attending writes a real registration, respecting capacity."""
-    event = await db.get(Event, event_id)
-    if event is None:
-        return
-    exists = (await db.execute(
-        select(EventRegistration).where(EventRegistration.event_id == event_id,
-                                        EventRegistration.vendor_id == vendor.id)
-    )).scalar_one_or_none()
-    if exists:
-        return
-    if event.max_vendors and event.registered_count >= event.max_vendors:
-        return  # full: the reaction records interest, it does not invent a seat
-    db.add(EventRegistration(event_id=event_id, vendor_id=vendor.id,
-                             status="registered", registered_at=datetime.utcnow()))
-    event.registered_count = (event.registered_count or 0) + 1
+    # Use the same eligibility and capacity rules as the events endpoint.
+    from app.routes.events import _book
+    exists = (await db.execute(select(EventRegistration.id).where(EventRegistration.event_id == event_id, EventRegistration.vendor_id == vendor.id))).scalar_one_or_none()
+    if not exists:
+        await _book(db, event_id, vendor, commit=False)
 
 
 async def _unregister_from_event(db, vendor, event_id):
-    reg = (await db.execute(
-        select(EventRegistration).where(EventRegistration.event_id == event_id,
-                                        EventRegistration.vendor_id == vendor.id)
-    )).scalar_one_or_none()
-    if reg is None:
-        return
-    await db.delete(reg)
-    event = await db.get(Event, event_id)
-    if event and event.registered_count:
-        event.registered_count = max(event.registered_count - 1, 0)
+    from app.services.event_payments import cancel_booking
+    event = await db.get(Event, event_id, with_for_update=True)
+    reg = (await db.execute(select(EventRegistration).where(
+        EventRegistration.event_id == event_id, EventRegistration.vendor_id == vendor.id,
+    ))).scalar_one_or_none()
+    if event and reg:
+        await cancel_booking(db, event, reg)
 
 
 # ── location preference ───────────────────────────────────────────────────────
@@ -892,17 +879,17 @@ async def agenda(
         .limit(50)
     )).all()
     for reg, ev, org in event_rows:
-        confirmed = reg.status == "confirmed"
+        confirmed = reg.booking_status == "CONFIRMED"
         items.append(_agenda_item(
             record_id=str(reg.id), kind="event", title=ev.title,
             starts_at=ev.start_date, ends_at=ev.end_date, place=ev.location,
             price_kes=ev.entry_fee, capacity=ev.max_vendors,
             joined=ev.registered_count or 0,
-            state="confirmed" if confirmed else "joined",
-            status_label="Confirmed" if confirmed else "Registered",
+            state="confirmed" if reg.status == "confirmed" else "joined",
+            status_label="Confirmed" if reg.status == "confirmed" else "Registered",
             counterparty={"name": org.business_name, "handle": org.vendor_handle},
             to=f"/events?event={ev.id}",
-            passable=True,
+            passable=confirmed,
         ))
 
     booking_rows = (await db.execute(

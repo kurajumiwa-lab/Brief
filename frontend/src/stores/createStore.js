@@ -40,7 +40,7 @@ export const TYPE_FIELDS = {
     bodyPlaceholder: "e.g. Broken timber fence along compound edge, or looking for 3 neighbours to split a 2.5-tonne fodder lorry…",
   },
   scheduled: {
-    required: ["title"],
+    required: ["title", "starts_at"],
     fields: [
       "schedule_label", "starts_at", "ends_at", "capacity", "private_directions",
       "audience", "price_kes",
@@ -325,6 +325,11 @@ export const useCreateStore = create((set, get) => ({
           // legacy `listing` expects integer stock count.
           out[key] = isLedger ? n : Math.round(n);
         }
+        continue;
+      }
+      if (["starts_at", "ends_at", "expires_at"].includes(key)) {
+        const parsed = new Date(value);
+        if (!Number.isNaN(parsed.getTime())) out[key] = parsed.toISOString();
         continue;
       }
       if (key === "request_type" && value === "") continue;

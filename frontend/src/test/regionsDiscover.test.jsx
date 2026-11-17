@@ -82,15 +82,18 @@ async function renderRegions(path = "/regions") {
 }
 
 describe("1 · the discovery layout is back", () => {
-  it("opens on Discover with the old type row and one search", async () => {
+  it("opens with one single-select category strip and one search", async () => {
     await renderRegions();
     expect(await screen.findByRole("heading", { name: "Discover" })).toBeInTheDocument();
-    const nav = screen.getByRole("navigation", { name: /browse discovery/i });
-    for (const label of ["Goods", "People", "Services", "Equipment", "Map"]) {
-      expect(within(nav).getByRole("link", { name: label })).toBeInTheDocument();
+    const bar = screen.getByRole("group", { name: /browse by category/i });
+    for (const label of ["All", "Goods", "Services", "People", "Rentals", "Rounds & Events", "Spotted Sales"]) {
+      expect(within(bar).getByRole("button", { name: label })).toBeInTheDocument();
     }
+    expect(screen.queryByRole("navigation", { name: /browse discovery/i })).not.toBeInTheDocument();
     expect(screen.getByRole("searchbox", { name: /search everything/i })).toBeInTheDocument();
-    expect(screen.getByTestId("explore-categories")).toBeInTheDocument();
+    fireEvent.click(within(bar).getByRole("button", {name: "Services"}));
+    expect(within(bar).getByRole("button", {name: "Services"})).toHaveAttribute("aria-pressed", "true");
+    expect(within(bar).getByRole("button", {name: "All"})).toHaveAttribute("aria-pressed", "false");
     expect(screen.getByTestId("explore-more-filters")).toBeInTheDocument();
   });
 });
@@ -185,6 +188,6 @@ describe("5 · old entry points still drive the one feed", () => {
   it("maps the Goods tab to the goods filter", async () => {
     await renderRegions("/regions?filter=goods");
     await waitFor(() =>
-      expect(screen.getByTestId("explore-kind-listing")).toHaveAttribute("aria-pressed", "true"));
+      expect(within(screen.getByRole("group", {name: /browse by category/i})).getByRole("button", {name: "Goods"})).toHaveAttribute("aria-pressed", "true"));
   });
 });

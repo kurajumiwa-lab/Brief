@@ -42,6 +42,13 @@ class NotificationType(str, PyEnum):
     EVENT_REGISTRATION = "event_registration"  # A vendor registered for your event
     EVENT_REMINDER = "event_reminder"        # Upcoming event
     EVENT_HOST_UPDATE = "event_host_update"  # Host posted a photo or a message for your event
+    # Event payments & waitlist (spec §2–§3): user-declared M-Pesa evidence
+    # queues a 1-tap host confirmation; the pass only unlocks on CONFIRMED.
+    EVENT_PAYMENT_SUBMITTED = "event_payment_submitted"  # Host: confirm this M-Pesa note
+    EVENT_PAYMENT_CONFIRMED = "event_payment_confirmed"  # Your event pass is ready
+    EVENT_PAYMENT_REJECTED = "event_payment_rejected"    # Host could not accept that note
+    EVENT_WAITLIST_PROMOTED = "event_waitlist_promoted"  # A spot opened up; pay within the hold
+    EVENT_HOLD_EXPIRED = "event_hold_expired"            # Your unpaid hold lapsed
     # Stock
     STOCK_LOW = "stock_low"                  # Stock running low (POS sync / receipt)
     STOCK_VERIFIED = "stock_verified"        # A patron verified your batch
