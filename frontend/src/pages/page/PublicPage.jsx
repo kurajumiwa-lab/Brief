@@ -4,7 +4,8 @@ import PresetContent from "@/components/page/PresetContent";
 import Card, { CardHeader, CardTitle } from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import { PageSpinner } from "@/components/ui/Spinner";
-import { professionalAPI, apiError } from "@/lib/api";
+import SocialTrustCard from "@/components/social/SocialTrustCard";
+import { professionalAPI, socialTrustAPI, apiError } from "@/lib/api";
 import { num } from "@/lib/formatters";
 import { offersFor, verifiedOnly } from "./pageRules";
 
@@ -17,12 +18,18 @@ export default function PublicPage() {
   const { handle = "" } = useParams();
   const navigate = useNavigate();
   const [card, setCard] = useState(null);
+  const [trustCard, setTrustCard] = useState(null);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     let live = true;
     setCard(null);
+    setTrustCard(null);
     setError(null);
+    socialTrustAPI
+      ?.publicCard?.(handle)
+      ?.then((r) => { if (live) setTrustCard(r.data); })
+      ?.catch(() => { /* the page still works without its trust signals */ });
     professionalAPI.page(handle)
       .then((r) => { if (live && r.data.handle && r.data.handle !== handle.toLowerCase()) navigate(`/page/${r.data.handle}`, {replace:true}); else if (live) setCard(r.data); })
       .catch((e) => { if (live) setError(apiError(e, "This page is not available.")); });
@@ -48,6 +55,8 @@ export default function PublicPage() {
 
   return (
     <Shell>
+      {trustCard && <SocialTrustCard card={trustCard} className="mb-4" />}
+
       {/* Hero */}
       <section className="space-y-2">
         <h1 className="text-2xl font-semibold">{card.name || `@${card.handle}`}</h1>

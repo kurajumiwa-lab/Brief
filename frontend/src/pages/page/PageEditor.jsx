@@ -8,6 +8,7 @@ import Input from "@/components/ui/Input";
 import Textarea from "@/components/ui/Textarea";
 import { PageSpinner } from "@/components/ui/Spinner";
 import { toast } from "@/components/ui/Toast";
+import SocialTrustEditor from "@/components/social/SocialTrustEditor";
 import { professionalAPI, profileHandleAPI, apiError } from "@/lib/api";
 import { pageAddress, shareLinks } from "@/lib/pageShare";
 import { useAuthStore } from "@/stores/authStore";
@@ -172,6 +173,10 @@ export default function PageEditor() {
           <Button type="submit" variant="primary" disabled={saving}>{saving ? "Saving…" : "Save Page"}</Button>
         </div>
       </form>
+
+      <div className="mt-6">
+        <SocialTrustEditor />
+      </div>
     </main>
   );
 }

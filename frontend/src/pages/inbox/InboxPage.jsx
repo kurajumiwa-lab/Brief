@@ -8,6 +8,8 @@ import { toast } from "@/components/ui/Toast";
 import InboxTimeline from "@/components/inbox/InboxTimeline";
 import { receiptsAPI } from "@/lib/receiptsApi";
 import CorridorJuryCard from "@/components/spotted/CorridorJuryCard";
+import CorridorTaskBoard from "@/components/tasks/CorridorTaskBoard";
+import RoutineSharePrompt from "@/components/routines/RoutineSharePrompt";
 import TradePassModal from "@/components/inbox/TradePassModal";
 import VoucherRedeemCard from "@/components/receipts/VoucherRedeemCard";
 import { useOutsideStore } from "@/stores/outsideStore";
@@ -15,7 +17,8 @@ import { useChatStore } from "@/stores/chatStore";
 import { useStockStore } from "@/stores/stockStore";
 import { useAuthStore } from "@/stores/authStore";
 import { NOTIFICATION_ROUTES } from "@/config/constants";
-import { apiError, outsideAPI, eventAPI, spottedDealAPI } from "@/lib/api";
+import { apiError, outsideAPI, eventAPI, spottedDealAPI, corridorTaskAPI, recurringRoutineAPI } from "@/lib/api";
+import { DEFAULT_REGION, regionFromPlace } from "@/config/regions";
 import ledgerAPI from "@/lib/ledgerApi";
 import { relativeTime } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
@@ -73,6 +76,23 @@ export default function InboxPage() {
   const movements = useStockStore((s) => s.movements);
   const fetchMovements = useStockStore((s) => s.fetchMovements);
   const memberHandle = useAuthStore((s) => s.vendor?.vendor_handle);
+  const memberLocation = useAuthStore((s) => s.vendor?.physical_location);
+
+  const [taskData, setTaskData] = useState(null);
+  const [taskStatus, setTaskStatus] = useState("idle");
+  const [taskError, setTaskError] = useState("");
+  const loadTasks = useCallback(async () => {
+    setTaskStatus("loading");
+    try {
+      const { data } = await corridorTaskAPI.inbox(7);
+      setTaskData(data);
+      setTaskError("");
+    } catch (err) {
+      setTaskError(apiError(err, "The work board could not be loaded."));
+    } finally {
+      setTaskStatus("ready");
+    }
+  }, []);
 
   const [jury, setJury] = useState([]);
   const [hiddenDeals, setHiddenDeals] = useState([]);
@@ -103,15 +123,28 @@ export default function InboxPage() {
     }
   }, []);
 
+  const [sharePrompts, setSharePrompts] = useState([]);
+  const loadSharePrompts = useCallback(async () => {
+    try {
+      const { data } = await recurringRoutineAPI.mine();
+      setSharePrompts(data?.share_prompts || []);
+    } catch {
+      // A missing routine list must never hide the rest of the Inbox.
+      setSharePrompts([]);
+    }
+  }, []);
+
   useEffect(() => {
     loadSpottedInbox();
     receiptsAPI.ledger().then(r=>setDisputeReceipts(r.data.receipts || [])).catch(()=>{});
     eventAPI.paymentQueue().then(({ data }) => setPaymentQueue(data)).catch(() => {});
     loadActivity();
     loadAgenda();
+    loadTasks();
+    loadSharePrompts();
     fetchRooms({}).catch(() => {});
     fetchMovements({}).catch(() => {});
-  }, [loadActivity, loadAgenda, fetchRooms, fetchMovements, loadSpottedInbox]);
+  }, [loadActivity, loadAgenda, loadTasks, loadSharePrompts, fetchRooms, fetchMovements, loadSpottedInbox]);
 
   const confirmTrade = async (item) => {
     setConfirmingId(item.id);
@@ -172,6 +205,12 @@ export default function InboxPage() {
 
   const shown = filter === "all" ? rows : rows.filter((row) => row.kind === filter);
   const loading = activityStatus === "loading" && rows.length === 0;
+  const taskDays = useMemo(
+    () => (taskData?.days || []).filter((day) => day.available + day.claimed > 0).map((day) => day.date),
+    [taskData],
+  );
+  const viewerRegion = regionFromPlace(memberLocation)?.slug || DEFAULT_REGION.slug;
+  const viewerTown = String(memberLocation || "").split(",")[0].trim();
 
   return (
     <div className="mx-auto w-full max-w-2xl">
@@ -196,7 +235,22 @@ export default function InboxPage() {
           onOpenPass={setOpenPass}
           onConfirmTrade={confirmTrade}
           confirmingId={confirmingId}
+          taskDays={taskDays}
+          belowStrip={
+            <>
+              <RoutineSharePrompt prompts={sharePrompts} onShared={loadSharePrompts} />
+              <CorridorTaskBoard
+                data={taskData}
+                onChanged={loadTasks}
+                defaultRegion={viewerRegion}
+                town={viewerTown}
+              />
+            </>
+          }
         />
+        {taskStatus === "ready" && taskError && (
+          <p className="mt-1 px-1 text-[11px] text-ink-4">{taskError}</p>
+        )}
       </div>
 
       <div className="mt-4">

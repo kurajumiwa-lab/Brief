@@ -27,6 +27,11 @@ export default function InboxTimeline({
   onOpenPass,
   onConfirmTrade,
   confirmingId = null,
+  // 0066: dates that carry available or claimed corridor work. A second dot,
+  // emerald, so the week strip answers "where is there money this week?" as
+  // well as "where do I have to be?".
+  taskDays = [],
+  belowStrip = null,
 }) {
   const [selectedDate, setSelectedDate] = useState("ALL");
   const days = useMemo(() => agendaWeek(items), [items]);
@@ -84,20 +89,35 @@ export default function InboxTimeline({
                   {day.dayName}
                 </span>
                 <span className="mt-0.5 text-sm font-extrabold tabular-nums">{day.dayNum}</span>
-                <span
-                  className={cn(
-                    "mt-1 h-1.5 w-1.5 rounded-full",
-                    day.hasItems
-                      ? active ? "bg-brand-200" : "bg-brand-600"
-                      : "bg-transparent",
+                <span className="mt-1 flex items-center gap-0.5" aria-hidden="true">
+                  <span
+                    className={cn(
+                      "h-1.5 w-1.5 rounded-full",
+                      day.hasItems
+                        ? active ? "bg-brand-200" : "bg-brand-600"
+                        : "bg-transparent",
+                    )}
+                  />
+                  {taskDays.includes(day.key) && (
+                    <span
+                      data-testid="task-day-dot"
+                      title="Work available"
+                      className={cn(
+                        "h-1.5 w-1.5 rounded-full ring-1",
+                        active
+                          ? "bg-emerald-300 ring-emerald-200"
+                          : "bg-emerald-500 ring-emerald-200 dark:ring-emerald-900",
+                      )}
+                    />
                   )}
-                  aria-hidden="true"
-                />
+                </span>
               </button>
             );
           })}
         </div>
       </div>
+
+      {belowStrip}
 
       {loading && items.length === 0 ? (
         <div className="rounded-2xl border border-edge-1 bg-surface-1 px-4 py-6 text-center">

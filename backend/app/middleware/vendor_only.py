@@ -36,6 +36,12 @@ PUBLIC_READ_PREFIXES = ("/api/profiles/", "/api/og/events/", "/api/offers/public
                         "/api/offerings/of/",
                         # The public Page (/page/:handle): one read per business, no account.
                         "/api/professional/page/",
+                        # Social seller trust card: the page a TikTok/Facebook buyer
+                        # opens from a bio link. Read-only, GET only.
+                        "/api/social-trust/public/",
+                        # Corridor price ranges: market information, no seller
+                        # identities and no personal data. Read-only, GET only.
+                        "/api/corridors/",
                         # Receipt-network shop cards and merchant-funded deals:
                         # readable without an account, GET only. A claim, a claim
                         # of a voucher and redemption all still require a member.

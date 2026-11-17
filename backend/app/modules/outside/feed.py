@@ -509,6 +509,10 @@ async def _local_activities(db, viewer, pair, limit, now):
                     if act.capacity is not None else None
                 ),
                 "is_youth_opportunity": bool((act.permission_rules or {}).get("is_youth_opportunity")),
+                # 0067: a card can say "Weekly • Every Sat" without a join.
+                "recurring_label": act.recurrence_label,
+                "recurring_routine_id": (str(act.recurring_routine_id)
+                                         if act.recurring_routine_id else None),
                 "custody_mode": "non_custodial",
                 "owner_id": str(org.id),
             },
@@ -774,6 +778,11 @@ async def build_feed(db, viewer, *, kinds=DEFAULT_KINDS, lat=None, lng=None,
         entry["starts_at"] = _iso(r.item.get("starts_at"))
         entry["expires_at"] = _iso(r.item.get("expires_at"))
         payload.append(entry)
+
+    # 0069: a Fair Corridor Price badge is a read-time decoration from the
+    # hourly snapshot, never a stored property of the listing.
+    from app.modules.price_index import service as price_index_service
+    await price_index_service.decorate_items(db, payload)
 
     next_cursor = None
     if len(ranked) > limit:

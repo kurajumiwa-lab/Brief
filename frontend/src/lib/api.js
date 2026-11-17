@@ -1144,3 +1144,56 @@ export const postTradeRatingAPI = {
     api.get("/post-trade-ratings/status", { params: { subject_kind, subject_id } }),
   record: (body) => api.post("/post-trade-ratings", body),
 };
+
+// ── 0066: Work-From-Home corridor tasks ─────────────────────────────────────
+// Peer-to-peer M-Pesa payouts with a 5–8% platform fee ledger. The platform
+// holds no money; `signal_note` on every row says what the proof does not prove.
+export const corridorTaskAPI = {
+  inbox: (days = 7) => api.get("/tasks/inbox", { params: { days } }),
+  board: ({ region_slug, town, days = 7 } = {}) =>
+    api.get("/tasks/board", { params: { ...(region_slug ? { region_slug } : {}), ...(town ? { town } : {}), days } }),
+  mine: () => api.get("/tasks/mine"),
+  create: (body) => api.post("/tasks", body),
+  claim: (id) => api.post(`/tasks/${id}/claim`),
+  submitProof: (id, body) => api.post(`/tasks/${id}/proof`, body),
+  approve: (id) => api.post(`/tasks/${id}/approve`),
+  dispute: (id, note) => api.post(`/tasks/${id}/dispute`, { note }),
+  withdraw: (id) => api.post(`/tasks/${id}/withdraw`),
+};
+
+// ── 0067: recurring hustle routines ─────────────────────────────────────────
+// A routine publishes an ordinary local activity when its lead window opens.
+export const recurringRoutineAPI = {
+  mine: () => api.get("/routines"),
+  create: (body) => api.post("/routines", body),
+  update: (id, body) => api.patch(`/routines/${id}`, body),
+  remove: (id) => api.delete(`/routines/${id}`),
+  publish: (id) => api.post(`/routines/${id}/publish`),
+  markShared: (instanceId) => api.post(`/routines/instances/${instanceId}/shared`),
+};
+
+// ── 0068: social seller trust signals ───────────────────────────────────────
+// Bio-link matches, stock-in-hand photos and delivery reports are signals.
+// None of them awards standing credit; every payload carries its own caveat.
+export const socialTrustAPI = {
+  publicCard: (handle) => api.get(`/social-trust/public/${encodeURIComponent(String(handle).replace(/^@/, ""))}`),
+  me: () => api.get("/social-trust/me"),
+  saveLinks: (links) => api.put("/social-trust/links", { links }),
+  verifyBio: (platform) => api.post("/social-trust/verify-bio", { platform }),
+  challenge: () => api.get("/social-trust/challenge"),
+  publishStockProof: (body) => api.post("/social-trust/stock-proof", body),
+  deliveryReports: () => api.get("/social-trust/delivery-reports"),
+  reportDelivery: (body) => api.post("/social-trust/delivery-reports", body),
+  resolveDelivery: (id, note) => api.post(`/social-trust/delivery-reports/${id}/resolve`, { note }),
+};
+
+// ── 0069: live corridor price index ─────────────────────────────────────────
+// Public read: a 45-day interquartile range from confirmed local trades. The
+// endpoint is allowed to answer `{ available: false }`; callers must stay
+// silent rather than invent a number.
+export const corridorAPI = {
+  priceHint: (regionSlug, { category, town } = {}) =>
+    api.get(`/corridors/${regionSlug}/price-hint`, {
+      params: { category, ...(town ? { town } : {}) },
+    }),
+};

@@ -1,7 +1,7 @@
 import { SpottedDealCard } from "@/components/spotted/SpottedDealUI";
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { BadgeCheck, MapPin } from "lucide-react";
+import { BadgeCheck, MapPin, TrendingDown } from "lucide-react";
 import { kindLabel, momentumLabel, paletteFor, priceLabel } from "@/lib/categoryArt";
 import { ownerRank } from "@/lib/standing";
 import { cn } from "@/lib/utils";
@@ -108,12 +108,34 @@ export function RegionCard({ item }) {
           {item.title || kindLabel(item.kind)}
         </h3>
 
+        {(item.meta?.recurring_label || item.recurring_label) && (
+          <span
+            data-testid="region-card-recurring"
+            className="mt-1 inline-flex w-fit items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/15 dark:text-emerald-200"
+          >
+            {item.meta?.recurring_label || item.recurring_label}
+          </span>
+        )}
+
         <p className="mt-1 flex min-w-0 items-center gap-1 text-micro text-ink-4">
           <MapPin size={10} className="shrink-0" aria-hidden="true" />
           <span className="truncate">{place}</span>
           <span aria-hidden="true">•</span>
           <span className="shrink-0 font-semibold text-ink-2">{price}</span>
         </p>
+
+        {item.is_fair_corridor_price && (
+          <span
+            data-testid="region-card-fair-price"
+            title={`At or below the ${
+              item.corridor_scope_label || item.location || "corridor"
+            } median of KSh ${Number(item.corridor_median_kes || 0).toLocaleString()}`}
+            className="mt-1 inline-flex w-fit items-center gap-1 rounded-md border border-brand-200 bg-brand-50 px-1.5 py-0.5 text-[10px] font-bold text-brand-800 dark:border-brand-500/30 dark:bg-brand-500/15 dark:text-brand-200"
+          >
+            <TrendingDown size={11} aria-hidden="true" />
+            Fair Corridor Price
+          </span>
+        )}
 
         <div className="mt-auto pt-3">
           {momentum?.capacity > 0 ? (
