@@ -20,6 +20,9 @@ export default {
         brand: scale("brand", RAMP),
         // The heritage gold, kept for money, markets and vendor-stated prices.
         accent: scale("accent", RAMP),
+        // Merchandising only: a spotlit sale, a trending lane, a discount, or
+        // the Level 3+ verified badge. Never a status or a price claim.
+        hot: { DEFAULT: token("hot"), soft: token("hot-soft") },
         // Legacy name, cool slate value: identity, selected state, focus.
         orchid: scale("orchid", RAMP),
         // v2.18 (direction C). `tech` is confirmation and live state — the

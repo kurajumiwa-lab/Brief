@@ -52,6 +52,8 @@ import { canSellGoods } from "@/config/identity";
 // deep links, but no navigation points at them.
 const TodayPage = lazy(() => import("@/pages/home/TodayPage"));
 const RegionsPage = lazy(() => import("@/pages/regions/RegionsPage"));
+const DiscoverSectionPage = lazy(() => import("@/pages/discover/DiscoverSectionPage"));
+const DiscoverFavoritesPage = lazy(() => import("@/pages/discover/DiscoverFavoritesPage"));
 const ReceiptLedgerPage = lazy(() => import("@/pages/receipts/ReceiptLedgerPage"));
 const TradeProofsPage = lazy(() => import("@/pages/trades/TradeProofsPage"));
 const RegionsIndexPage = lazy(() => import("@/pages/regions/RegionsIndexPage"));
@@ -278,6 +280,11 @@ function AppRoutes() {
           <Route path="/" element={<TodayPage />} />
           <Route path="/home" element={<TodayPage />} />
           <Route path="/regions" element={<RegionsPage />} />
+          {/* Shareable smart-category doors. The section sets a default query;
+              /discover/favorites is local-only and has no server feed. */}
+          <Route path="/discover" element={<RegionsPage />} />
+          <Route path="/discover/favorites" element={<DiscoverFavoritesPage />} />
+          <Route path="/discover/:section" element={<DiscoverSectionPage />} />
           <Route path="/receipts" element={<ReceiptLedgerPage />} />
           <Route path="/trades/proofs" element={<TradeProofsPage />} />
           <Route path="/regions/all" element={<RegionsIndexPage />} />

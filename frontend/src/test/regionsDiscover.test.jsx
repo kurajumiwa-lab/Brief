@@ -51,6 +51,7 @@ vi.mock("@/lib/api", () => ({
     activity: vi.fn(() => ok({ groups: [], counts: {} })),
   },
   marketsAPI: { around: mocks.market, list: mocks.market },
+  serviceProviderAPI: { list: vi.fn(() => ok({ providers: [], count: 0, total: 0, limit: 24, filters: {}, note: "" })) },
   geoAPI: { geocode: vi.fn(() => ok({ lat: -0.095, lng: 34.77 })) },
   apiError: (_e, fallback) => fallback,
 }));
@@ -69,12 +70,14 @@ function LocationProbe() {
 
 async function renderRegions(path = "/regions") {
   const { default: RegionsPage } = await import("@/pages/regions/RegionsPage");
+  const { default: DiscoverSectionPage } = await import("@/pages/discover/DiscoverSectionPage");
   return render(
     <MemoryRouter initialEntries={[path]}>
       <Routes>
         <Route path="/regions" element={<RegionsPage />} />
         <Route path="/regions/all" element={<div>All regions directory</div>} />
         <Route path="/regions/:slug" element={<div>Region page</div>} />
+        <Route path="/discover/:section" element={<DiscoverSectionPage />} />
       </Routes>
       <LocationProbe />
     </MemoryRouter>,
@@ -86,15 +89,22 @@ describe("1 · the discovery layout is back", () => {
     await renderRegions();
     expect(await screen.findByRole("heading", { name: "Discover" })).toBeInTheDocument();
     const bar = screen.getByRole("group", { name: /browse by category/i });
-    for (const label of ["All", "Goods", "Services", "People", "Rentals", "Rounds & Events", "Spotted Sales"]) {
+    for (const label of ["All", "Goods", "Services", "People", "Rentals", "Rounds", "Spotted"]) {
       expect(within(bar).getByRole("button", { name: label })).toBeInTheDocument();
     }
     expect(screen.queryByRole("navigation", { name: /browse discovery/i })).not.toBeInTheDocument();
     expect(screen.getByRole("searchbox", { name: /search everything/i })).toBeInTheDocument();
     fireEvent.click(within(bar).getByRole("button", {name: "Services"}));
-    expect(within(bar).getByRole("button", {name: "Services"})).toHaveAttribute("aria-pressed", "true");
-    expect(within(bar).getByRole("button", {name: "All"})).toHaveAttribute("aria-pressed", "false");
-    expect(screen.getByTestId("explore-more-filters")).toBeInTheDocument();
+    await waitFor(() => {
+      const nextBar = screen.getByRole("group", { name: /browse by category/i });
+      expect(within(nextBar).getByRole("button", { name: "Services" })).toHaveAttribute("aria-pressed", "true");
+      expect(within(nextBar).getByRole("button", { name: "All" })).toHaveAttribute("aria-pressed", "false");
+    });
+    // The Services door is a provider directory: time, price, radius and the
+    // standing filter do not apply, so the screen does not show dead controls.
+    expect(screen.queryByTestId("explore-more-filters")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("regions-trust")).not.toBeInTheDocument();
+    expect(await screen.findByTestId("service-providers-empty")).toBeInTheDocument();
   });
 });
 

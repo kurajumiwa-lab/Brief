@@ -422,6 +422,7 @@ export const eventAPI = {
   confirmPayment: (id, registrationId) => api.post(`/events/${id}/confirm-payment/${registrationId}`),
   roster: (id) => api.get(`/events/${id}/roster`),
   create: (data) => api.post("/events/create", data),
+  updatePayment: (id, data) => api.patch(`/events/${id}/payment`, data),
   register: (id) => api.post(`/events/${id}/register`),
   cancelRegistration: (id) => api.post(`/events/${id}/cancel-registration`),
   setStatus: (id, status) => api.post(`/events/${id}/status`, null, { params: { status } }),
@@ -1057,6 +1058,11 @@ export const identityAPI = {
   opsVerifyAffiliation: (id, body) => api.post(`/identity/ops/affiliations/${id}/verify`, body || {}),
   opsVerifyLicence: (id, body) => api.post(`/identity/ops/licences/${id}/verify`, body || {}),
   opsReject: (kind, id, reason) => api.post(`/identity/ops/${kind}/${id}/reject`, { reason }),
+};
+
+/** Service directory: one card per provider, not one per service. */
+export const serviceProviderAPI = {
+  list: (params) => api.get("/service-providers", { params: noEmpty(params) }),
 };
 
 // ── Home office: a solo profile first, then team members by link or invite ──

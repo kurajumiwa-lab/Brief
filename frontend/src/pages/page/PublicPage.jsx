@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import PresetContent from "@/components/page/PresetContent";
+import PaymentTag from "@/components/page/PaymentTag";
 import Card, { CardHeader, CardTitle } from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import { PageSpinner } from "@/components/ui/Spinner";
@@ -71,6 +72,8 @@ export default function PublicPage() {
             : "No completed bookings yet."}
         </p>
       </section>
+
+      <PaymentTag tag={card.payment_tag} className="mt-4" />
 
       <PresetContent card={card} />
 

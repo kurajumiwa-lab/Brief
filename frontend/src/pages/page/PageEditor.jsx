@@ -140,7 +140,30 @@ export default function PageEditor() {
           <label className="flex gap-2 text-sm"><input type="checkbox" checked={form.show_whatsapp} onChange={toggle("show_whatsapp")} /> Show my number on my public Page for WhatsApp contact</label></div>
         </Card>
         <Card><CardHeader><CardTitle>Page preset</CardTitle></CardHeader><p className="text-xs text-ink-3 mb-3">Choose how your existing information is presented. Presets do not create services, stock or events.</p><div role="group" aria-label="Page preset" className="flex flex-wrap gap-2">{[["service","Service Provider"],["shop","Shop / Vendor"],["host","Event / Round Host"]].map(([value,label]) => <button type="button" key={value} aria-pressed={form.preset === value} onClick={() => setForm(f => ({...f,preset:value}))} className={`rounded-full border px-3 py-2 text-xs font-bold ${form.preset === value ? "bg-brand-700 text-white" : "border-edge-1"}`}>{label}</button>)}</div></Card>
-        {form.preset === "shop" && <Card><CardHeader><CardTitle>Public payment tag</CardTitle></CardHeader><p className="text-xs text-ink-3">Optional. This number and account reference will be public. Buyers should verify the recipient before paying.</p><label className="block text-sm mt-3">M-Pesa method<select className="w-full rounded border border-edge-1 p-2" value={form.payment_type} onChange={set("payment_type")}><option value="">Do not publish</option><option value="till">Till</option><option value="paybill">Paybill</option></select></label>{form.payment_type && <div className="mt-3 space-y-3"><Input label="Till / Paybill number" inputMode="numeric" value={form.payment_number} onChange={set("payment_number")} />{form.payment_type === "paybill" && <Input label="Account reference (optional)" value={form.payment_account} onChange={set("payment_account")} />}</div>}</Card>}
+        <Card>
+          <CardHeader><CardTitle>How customers pay you</CardTitle></CardHeader>
+          <p className="text-xs text-ink-3">
+            Optional. Publish your own Till or Paybill on the Page for shops and
+            services. An event asks for its own payment method when you publish it,
+            because each event has its own price. The money goes straight to you;
+            Home Office never collects or holds it, so a client should still check
+            the recipient before paying.
+          </p>
+          <label className="block text-sm mt-3">
+            M-Pesa method
+            <select className="w-full rounded border border-edge-1 p-2" value={form.payment_type} onChange={set("payment_type")}>
+              <option value="">Do not publish</option>
+              <option value="till">Till</option>
+              <option value="paybill">Paybill</option>
+            </select>
+          </label>
+          {form.payment_type && (
+            <div className="mt-3 space-y-3">
+              <Input label="Till / Paybill number" inputMode="numeric" value={form.payment_number} onChange={set("payment_number")} />
+              {form.payment_type === "paybill" && <Input label="Account reference (optional)" value={form.payment_account} onChange={set("payment_account")} />}
+            </div>
+          )}
+        </Card>
         <Card><CardHeader><CardTitle>Discovery preview</CardTitle></CardHeader><div className="w-40"><RegionCard item={{ kind: "person", id: vendor?.id || "preview", to: handle ? `/p/${handle}` : "#", title: form.display_name || "Your name", category: (vendor?.business_categories || [])[0], location: form.town, owner: { ...vendor, name: form.display_name, handle } }} /></div><label className="mt-3 flex gap-2 text-sm"><input type="checkbox" checked={form.discoverable} disabled={visibilitySaving} onChange={changeVisibility} /> Visible in Regions Discovery: {form.discoverable ? "ON" : "OFF"}</label><Link className="mt-2 inline-block text-sm underline" to="/regions">View live in Regions →</Link><p className="text-xs text-ink-3">Visibility updates immediately in the Regions feed. This is a profile-card preview; live results depend on filters and exclude your own listings.</p></Card>
         <Card>
           <CardHeader><CardTitle>Headline</CardTitle></CardHeader>

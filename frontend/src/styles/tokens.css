@@ -41,7 +41,7 @@
   color-scheme: light;
 
   /* ── Surfaces: neutral-cool so media carries the colour ───────────────── */
-  --surface-0: 245 247 246; /* page   #F5F7F6 */
+  --surface-0: 248 249 250; /* page   #F8F9FA — cool canvas, white cards pop */
   --surface-1: 255 255 255; /* card   #FFFFFF */
   --surface-2: 239 242 240; /* quiet field / hover */
   --surface-3: 229 234 231;
@@ -56,9 +56,9 @@
   --ink-inverse: 255 255 255;
 
   /* ── Edges ───────────────────────────────────────────────────────────── */
-  --edge-1: 227 232 229;
-  --edge-2: 208 216 211;
-  --edge-3: 184 194 189;
+  --edge-1: 234 236 239; /* #EAECEF — the one hairline */
+  --edge-2: 216 220 224;
+  --edge-3: 196 202 208;
 
   /* ── Brand: deep forest teal — infrastructure, identity, trust ───────── */
   --brand-50: 236 246 243;
@@ -68,7 +68,7 @@
   --brand-400: 66 158 138;
   --brand-500: 31 122 102;  /* #1F7A66 — the working teal */
   --brand-600: 16 60 53;    /* #103C35 — the primary. 10.4:1 with white */
-  --brand-700: 12 46 41;
+  --brand-700: 20 54 43;    /* #14362B — active pills, primary CTAs */
   --brand-800: 9 35 31;
   --brand-900: 6 25 22;
   --brand-950: 3 16 14;
@@ -125,6 +125,13 @@
   --orchid-900: 26 40 57;
   --orchid-950: 15 24 35;
 
+  /* ── Merchandising accents: warm terracotta and amber ──────────────────
+     Strictly for commercial intent — a spotlit sale, a trending lane, a
+     discount, or the Level 3+ verified badge. These are NOT status colours:
+     amber still means pending, and a Level 1–2 badge is never painted hot. */
+  --hot: 230 81 0;        /* #E65100 — terracotta */
+  --hot-soft: 255 237 229;
+
   /* ── Semantic status. Named by meaning, never by hue ─────────────────── */
   --ok: 25 167 131;      --ok-soft: 232 248 243;
   --warn: 180 83 9;      --warn-soft: 254 243 214;
@@ -132,7 +139,7 @@
   --info: 82 101 232;    --info-soft: 238 240 253;
 
   /* ── The deep-teal surface the hero and the network bands sit on ─────── */
-  --market-1: 16 60 53;  /* #103C35 */
+  --market-1: 20 54 43;  /* #14362B */
   --market-2: 8 35 30;   /* one step darker, for scrims */
 
   /* ── Spacing scale. New layout uses this and nothing else ───────────────
@@ -233,6 +240,9 @@
   --orchid-800: 46 72 100;
   --orchid-900: 32 50 70;
   --orchid-950: 18 29 41;
+
+  --hot: 255 138 76;
+  --hot-soft: 58 28 16;
 
   --ok: 61 190 156;      --ok-soft: 12 40 32;
   --warn: 232 168 56;    --warn-soft: 48 36 14;

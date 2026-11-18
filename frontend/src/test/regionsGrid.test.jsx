@@ -89,7 +89,7 @@ describe("Regions visual grid", () => {
 });
 
 describe("Regions intent and standing filters", () => {
-  it("says the honest zero state and can turn the standing filter off", () => {
+  it("falls back to Level 2+ when the strict standing door finds nothing", () => {
     render(
       <MemoryRouter>
         <ExplorePage
@@ -104,14 +104,37 @@ describe("Regions intent and standing filters", () => {
     );
 
     fireEvent.click(screen.getByTestId("regions-trust"));
+    const grid = screen.getByTestId("regions-grid");
+    expect(within(grid).getByText("School uniform tailoring")).toBeInTheDocument();
+    expect(within(grid).getByTestId("region-card-level")).toHaveTextContent("Lvl 2");
+    expect(screen.queryByTestId("explore-filtered-empty")).not.toBeInTheDocument();
+  });
+
+  it("shows the honest all-levels rail when even Level 2 has nothing", () => {
+    render(
+      <MemoryRouter>
+        <ExplorePage
+          regionAware
+          demo={{
+            items: [{ ...service, owner: { ...lowOwner, contact_exposed: false } }],
+            location: { label: "Kondele, Kisumu", radius_km: 15 },
+            region: REGION_BY_SLUG.nyanza,
+          }}
+        />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByTestId("regions-trust"));
     expect(screen.getByTestId("explore-filtered-empty")).toBeInTheDocument();
     expect(screen.getByText("No Level 3+ traders here yet")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Show every page" }));
-    expect(screen.getByText("School uniform tailoring")).toBeInTheDocument();
+    expect(
+      within(screen.getByTestId("regions-grid")).getByText("School uniform tailoring"),
+    ).toBeInTheDocument();
   });
 
-  it("offers intent chips and filters to Level 3+ without inventing a level", () => {
+  it("offers intent chips and never inflates a Level 2 trader to Level 3", () => {
     render(
       <MemoryRouter>
         <ExplorePage
@@ -126,9 +149,11 @@ describe("Regions intent and standing filters", () => {
       </MemoryRouter>,
     );
 
+    fireEvent.click(screen.getByTestId("explore-more-filters"));
     expect(screen.getByTestId("regions-intent-all")).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByText("Maize flour 2kg")).toBeInTheDocument();
-    expect(screen.getByText("School uniform tailoring")).toBeInTheDocument();
+    const grid = within(screen.getByTestId("regions-grid"));
+    expect(grid.getByText("Maize flour 2kg")).toBeInTheDocument();
+    expect(grid.getByText("School uniform tailoring")).toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId("regions-intent-offers"));
     expect(screen.getByTestId("regions-intent-offers")).toHaveAttribute("aria-pressed", "true");
@@ -136,7 +161,11 @@ describe("Regions intent and standing filters", () => {
 
     fireEvent.click(screen.getByTestId("regions-trust"));
     expect(screen.getByTestId("regions-trust")).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByText("Maize flour 2kg")).toBeInTheDocument();
-    expect(screen.queryByText("School uniform tailoring")).not.toBeInTheDocument();
+    const trusted = within(screen.getByTestId("regions-grid"));
+    expect(trusted.getByText("Maize flour 2kg")).toBeInTheDocument();
+    // Level 2 is shown as Level 2 when the strict door falls back; it is never
+    // rounded up to "verified".
+    const serviceCard = trusted.getByText("School uniform tailoring").closest("article");
+    expect(within(serviceCard).getByTestId("region-card-level")).toHaveTextContent("Lvl 2");
   });
 });

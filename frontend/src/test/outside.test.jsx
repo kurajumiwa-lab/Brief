@@ -118,6 +118,7 @@ vi.mock("@/lib/api", () => ({
     activity: vi.fn(() => ok(ACTIVITY)),
   },
   marketsAPI: { around: vi.fn(() => ok({ markets: [], wider: [], active_count: 0, inviting_count: 0 })) },
+  serviceProviderAPI: { list: vi.fn(() => ok({ providers: [], count: 0, total: 0, limit: 24, filters: {}, note: "" })) },
   geoAPI: { geocode: mocks.geocode },
   fileAPI: { upload: mocks.upload },
   apiError: (_e, fallback) => fallback,
@@ -266,7 +267,7 @@ describe("Unified creation", () => {
     const payload = mocks.create.mock.calls[0][0];
     expect(payload.content_type).toBe("event");
     expect(payload.title).toBe("House party on Saturday");
-    expect(payload.starts_at).toBe("2026-10-24T19:00");
+    expect(new Date(payload.starts_at).getTime()).toBe(new Date("2026-10-24T19:00").getTime());
     // The whole point: a party publishes with no price in the payload at all.
     expect(payload).not.toHaveProperty("price_kes");
     expect(payload).not.toHaveProperty("wholesale_price_kes");

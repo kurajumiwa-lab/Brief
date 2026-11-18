@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import {
-  ChevronDown, Compass, MapPin, RefreshCw, ShieldCheck, SlidersHorizontal, X,
+  BadgePercent, ChevronDown, Compass, MapPin, RefreshCw, ShieldCheck, SlidersHorizontal, X,
 } from "lucide-react";
 import Button from "@/components/ui/Button";
 import Chip from "@/components/ui/Chip";
@@ -14,7 +14,13 @@ import CategoryTiles from "@/components/explore/CategoryTiles";
 import RegionPicker from "@/components/regions/RegionPicker";
 import RegionsGrid from "@/components/regions/RegionsGrid";
 import { SpotDealModal } from "@/components/spotted/SpottedDealUI";
-import { spottedDealAPI } from "@/lib/api";
+import DiscoverCategoryStrip from "@/components/discover/DiscoverCategoryStrip";
+import SpotlightRail from "@/components/discover/SpotlightRail";
+import FeaturedGrid from "@/components/discover/FeaturedGrid";
+import FallbackRail, { ColdStartRail } from "@/components/discover/FallbackRail";
+import { MerchGrid } from "@/components/discover/MerchCard";
+import { favoritesEvent, loadFavorites } from "@/lib/discoverFavorites";
+import { outsideAPI, serviceProviderAPI, spottedDealAPI } from "@/lib/api";
 import {
   DEFAULT_REGION, REGION_BY_SLUG, regionFromPlace, regionLabel, regionPath,
 } from "@/config/regions";
@@ -23,28 +29,21 @@ import { ownerLevel } from "@/lib/standing";
 import { cn } from "@/lib/utils";
 
 /**
- * EXPLORE — one search across every content type, and almost none of it chrome.
+ * DISCOVER (and its older /explore skin).
  *
- * The screen used to open with a three-line introduction, a large location card
- * and two rows of identical pills: roughly 400 px of controls before a single
- * result, on a phone. Nothing was wrong with the *functionality* — it was all
- * real, it all worked — and that is exactly why the fix is presentation:
+ * The region-aware screen is a merchandising feed: one compact sticky header
+ * (name, region knob, search), a spotlight carousel, an icon category strip,
+ * an asymmetric Featured & Trending block, then a dense two-column grid.
+ * Filters did not disappear — time, price and intent moved behind one counted
+ * control, and the category tiles became shareable destinations.
  *
- *   · **One line of identity.** "Explore" and the place you are looking around,
- *     on the same row, as a pill you can press. The full location controls
- *     (GPS, typed area, layer, sharing) still exist — behind that pill, so they
- *     cost nothing until someone wants them.
- *   · **Radius on one line**, not a row of four large buttons.
- *   · **Categories get colour**, so the selector reads at a glance instead of
- *     being scanned word by word. Seven tiles, wrapping, never a carousel: a
- *     hidden category is a missing destination.
- *   · **What a person is doing** (Available, Wanted, Scheduled…) stays a quiet
- *     chip row, because it is a secondary axis, not the main one.
- *   · **Time and price** move behind "More filters", carrying a count when
- *     something is on. No filter was removed — only demoted.
+ * `/explore` keeps the original, quieter layout for callers that are not
+ * region-scoped: the same feed, the same cards, but no region knob and no
+ * merchandising rails.
  *
  * Search state still lives in the URL (`?q=`, `?kind=`, `?when=`, `?price=`,
- * `?radius=` via the location store), so Back still restores the results.
+ * `?trust=`, `?intent=`, `?public_sale=`), so Back and deep links restore the
+ * results.
  */
 
 const TYPE_FILTERS = [
@@ -109,6 +108,8 @@ const REGION_KEY = "brief-discovery-region";
 
 export default function ExplorePage({ regionAware = false, demo = null }) {
   const [params, setParams] = useSearchParams();
+  const { pathname } = useLocation();
+  const navigate = useNavigate();
   // Search scopes call it `search`; the field calls it `q`. Both land here.
   const q = params.get("q") || params.get("search") || "";
   const kind =
@@ -118,12 +119,23 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
   const when = params.get("when") || "";
   const price = params.get("price") || "";
   const intent = params.get("intent") || "";
-  const trust = params.get("trust") || "";
+  const minLevel = params.get("min_level");
+  const trust = params.get("trust") || (minLevel === "3" ? "3" : "");
+  const publicSale = params.get("public_sale") === "true";
+  const hasFilters = Boolean(kind || intent || trust || when || price);
+  // Services are people, not countable goods. That door gets its own read.
+  const isServices = regionAware && kind === "service";
 
   const [spotted, setSpotted] = useState([]);
   const spottedRequest = useRef(0);
   const [spottedError, setSpottedError] = useState("");
+  const [providers, setProviders] = useState([]);
+  const [providerStatus, setProviderStatus] = useState("idle");
+  const [providerError, setProviderError] = useState("");
+  const [providerReload, setProviderReload] = useState(0);
   const [spottedOpen, setSpottedOpen] = useState(false);
+  const [savedCount, setSavedCount] = useState(() => loadFavorites().length);
+  const [nearby, setNearby] = useState([]);
   const [placeOpen, setPlaceOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [savedRegion, setSavedRegion] = useState(() => {
@@ -152,17 +164,30 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
   const sentinel = useRef(null);
 
   const kinds = useMemo(() => {
+    if (isServices) return null;
     if (!regionAware) return kind ? [kind] : null;
     const category = REGION_CATEGORIES.find((option) => option.value === kind);
     const base = category?.kinds ?? (kind ? [kind] : null);
     const intentKinds = REGION_INTENTS.find((option) => option.value === intent)?.kinds || null;
     if (base && intentKinds) return base.filter((value) => intentKinds.includes(value));
     return base || intentKinds;
-  }, [kind, regionAware, intent]);
+  }, [kind, regionAware, intent, isServices]);
 
   useEffect(() => {
     if (!demo && !location) loadLocation();
   }, [demo, location, loadLocation]);
+
+  // The Saved tile shows how many cards this device holds. It is deliberately
+  // local: no server count, no owner notification.
+  useEffect(() => {
+    const refresh = () => setSavedCount(loadFavorites().length);
+    window.addEventListener(favoritesEvent, refresh);
+    window.addEventListener("storage", refresh);
+    return () => {
+      window.removeEventListener(favoritesEvent, refresh);
+      window.removeEventListener("storage", refresh);
+    };
+  }, []);
 
   const patchParams = useCallback((patch) => {
     const next = new URLSearchParams(params);
@@ -173,11 +198,50 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
     setParams(next, { replace: false });
   }, [params, setParams]);
 
+  // Category tiles are destinations, not local toggles: the main ones have a
+  // shareable section route, and the rest keep a URL-bound kind on /discover.
+  const selectCategory = useCallback((value) => {
+    const next = new URLSearchParams(params);
+    next.delete("kind");
+    next.delete("filter");
+    // Intent and public-sale belong to the previous category; carrying them
+    // into Goods/Services/Rounds would silently intersect two different doors.
+    next.delete("intent");
+    next.delete("public_sale");
+    const suffix = next.toString();
+    const section = { listing: "goods", service: "services", rental: "rentals" }[value];
+    if (section) {
+      navigate({ pathname: `/discover/${section}`, search: suffix ? `?${suffix}` : "" });
+      return;
+    }
+    if (value) next.set("kind", value);
+    navigate({ pathname: "/discover", search: next.toString() ? `?${next.toString()}` : "" });
+  }, [navigate, params]);
+
   // Reload whenever the URL state changes — which is also what makes the back
   // button restore the previous results.
   useEffect(() => {
-    if (!demo && (!kinds || kinds.length)) loadFeed({ kinds, query: q || null });
-  }, [demo, kinds, q, loadFeed, location?.radius_km]);
+    if (!demo && !isServices && (!kinds || kinds.length)) loadFeed({ kinds, query: q || null });
+  }, [demo, isServices, kinds, q, loadFeed, location?.radius_km]);
+
+  // COLD-START BACKFILL: nothing at the chosen radius is not the same as
+  // nothing nearby. We ask for 50 km only when the clean feed is empty, and we
+  // keep the result to Level 1–2 pages so the fallback never overclaims.
+  useEffect(() => {
+    if (!regionAware || demo || isServices || hasFilters || status !== "ready" || items.length) {
+      setNearby([]);
+      return undefined;
+    }
+    let live = true;
+    outsideAPI.search({ radius_km: 50, limit: 12 })
+      .then(({ data }) => {
+        if (!live) return;
+        const lowLevel = (data?.items || []).filter((item) => ownerLevel(item.owner) <= 2);
+        setNearby(lowLevel);
+      })
+      .catch(() => { if (live) setNearby([]); });
+    return () => { live = false; };
+  }, [regionAware, demo, isServices, hasFilters, status, items.length]);
 
   // Incremental loading: fetch the next page when the sentinel scrolls in.
   useEffect(() => {
@@ -215,6 +279,36 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
   }, [regionAware, demo, region?.slug, q]);
   useEffect(() => { loadSpotted(); }, [loadSpotted]);
 
+  // The Services door: one card per provider, filtered by the same corridor
+  // and search text. It never falls back to the mixed feed, because that is
+  // exactly the clutter this door exists to remove.
+  useEffect(() => {
+    if (!isServices || demo) {
+      setProviders([]);
+      setProviderStatus("idle");
+      setProviderError("");
+      return undefined;
+    }
+    let live = true;
+    setProviderStatus("loading");
+    setProviderError("");
+    serviceProviderAPI.list({ region_slug: region?.slug, q: q || null, limit: 30 })
+      .then(({ data }) => {
+        if (!live) return;
+        setProviders(Array.isArray(data?.providers) ? data.providers : []);
+        setProviderStatus("ready");
+      })
+      .catch(() => {
+        if (!live) return;
+        setProviders([]);
+        setProviderStatus("error");
+        setProviderError("Service providers could not be loaded.");
+      });
+    return () => { live = false; };
+  }, [isServices, demo, region?.slug, q, providerReload]);
+
+  const providerItems = useMemo(() => providers.map(providerToCard), [providers]);
+
   const chooseRegion = useCallback((next) => {
     try { localStorage.setItem(REGION_KEY, next.slug); } catch { /* private mode */ }
     setSavedRegion(next.slug);
@@ -224,92 +318,123 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
   const radius = Math.round(location?.radius_km ?? 15);
   const activeWhen = when ? WHEN_FILTERS.find((o) => o.value === when) : null;
   const activePrice = price === "free" ? "No price" : price === "priced" ? "Priced" : null;
-  const hiddenFilterCount = (when ? 1 : 0) + (price ? 1 : 0);
-  const hasFilters = Boolean(kind || intent || trust || when || price);
+  const hiddenFilterCount = (when ? 1 : 0) + (price ? 1 : 0) + (intent ? 1 : 0);
 
   const visibleItems = useMemo(() => {
     const ordinary = regionAware && kinds?.length === 0 ? [] : items;
-    const permitted = regionAware && trust === "3" ? ordinary.filter((item) => ownerLevel(item.owner) >= 3) : ordinary;
+    const strict = regionAware && trust === "3" ? ordinary.filter((item) => ownerLevel(item.owner) >= 3) : null;
+    // A strict Level 3+ door that finds fewer than four traders falls back to
+    // Level 2+, as the design contract says. It never silently calls a Level 2
+    // trader "verified": the card shows the real level.
+    const permitted = strict
+      ? (strict.length >= 4 ? strict : ordinary.filter((item) => ownerLevel(item.owner) >= 2))
+      : ordinary;
     // The strict standing filter excludes all community-spotted sales.
-    const includeSpotted = regionAware && !demo && (!kind || kind === "spotted") && !when && !price && trust !== "3" && (!intent || intent === "offers");
+    const includeSpotted = regionAware && !demo
+      && (!kind || kind === "spotted" || publicSale)
+      && (publicSale || (!when && !price && trust !== "3" && (!intent || intent === "offers")));
     return includeSpotted ? [...spotted, ...permitted] : permitted;
-  }, [items, regionAware, trust, intent, demo, kind, when, price, spotted, kinds]);
+  }, [items, regionAware, trust, intent, demo, kind, when, price, spotted, kinds, publicSale]);
+
+  const resultItems = isServices ? providerItems : visibleItems;
+  const featuredItems = useMemo(
+    () => resultItems.filter((item) => item.feed_kind !== "SPOTTED_DEAL").slice(0, 3),
+    [resultItems],
+  );
+  const standardItems = useMemo(
+    () => (featuredItems.length >= 3 ? resultItems.slice(3) : resultItems),
+    [resultItems, featuredItems.length],
+  );
+  const renderableStandard = standardItems.filter((item) => item.feed_kind !== "SPOTTED_DEAL");
+  const spottedStandard = standardItems.filter((item) => item.feed_kind === "SPOTTED_DEAL");
 
   const clearAll = () => patchParams({ kind: "", filter: "", intent: "", trust: "", when: "", price: "" });
 
   return (
     <div className="space-y-s3">
-      {/* ── one row of identity: the screen and the place ─────────────────── */}
-      <div className="flex items-center justify-between gap-2">
-        {/* The tab is "Discover" (v2.18): find vendors, suppliers, services and
-            products. The heading follows the tab — two names for one screen is
-            how a product starts to feel like two products. */}
-        <h1 className="text-title-section font-bold tracking-tight text-ink-1">Discover</h1>
-        {regionAware ? (
-          <RegionPicker
+      {regionAware ? (
+        <>
+          {/* ── compact, sticky discovery header ─────────────────────────── */}
+          <header
+            data-testid="discover-toolbar"
+            className="sticky top-[calc(var(--header-h)+0.25rem)] z-20 -mx-4 border-b border-edge-1/70 bg-surface-0/95 px-4 pb-2 pt-1 backdrop-blur sm:-mx-6 sm:px-6"
+          >
+            <div className="flex items-center justify-between gap-2">
+              <h1 className="text-title-section font-extrabold tracking-tight text-ink-1">Discover</h1>
+              <RegionPicker region={region} onSelect={chooseRegion} className="relative max-w-[70%]" />
+            </div>
+            {region && (
+              <div data-testid="region-context" className="mt-0.5 flex min-w-0 items-center gap-1.5 text-micro text-ink-4">
+                <MapPin size={10} className="shrink-0 text-brand-600 dark:text-brand-300" aria-hidden="true" />
+                <span className="truncate font-semibold text-ink-2">{regionLabel(region)}</span>
+                <span className="hidden truncate sm:inline">· {region.knownFor.slice(0, 3).join(" · ")}</span>
+                <Link to={regionPath(region)} className="ml-auto shrink-0 font-bold text-brand-700 hover:underline dark:text-brand-300">
+                  Open region
+                </Link>
+              </div>
+            )}
+            <div className="mt-2">
+              <SearchInput
+                value={q}
+                onChange={onSearch}
+                placeholder={isServices ? "Search services by name or trade…" : "Search goods, people, services…"}
+                aria-label="Search everything"
+              />
+            </div>
+          </header>
+
+          <SpotlightRail
+            items={isServices ? providerItems : items}
+            spotted={isServices ? [] : spotted}
             region={region}
-            onSelect={chooseRegion}
-            className="relative max-w-[70%]"
+            onSpotSale={isServices ? null : () => setSpottedOpen(true)}
           />
-        ) : (
-          <button
-            type="button"
-            onClick={() => setPlaceOpen((v) => !v)}
-            aria-expanded={placeOpen}
-            data-testid="explore-place"
-            className="inline-flex h-8 min-w-0 max-w-[60%] items-center gap-1 rounded-full border border-edge-1 bg-surface-1 px-2.5 text-2xs font-semibold text-ink-2 transition-colors hover:border-ink-4 hover:text-ink-1"
-          >
-            <MapPin size={12} className="shrink-0 text-brand-600 dark:text-brand-300" aria-hidden="true" />
-            <span className="truncate" data-testid="explore-place-label">{locationLabel(location)}</span>
-            <ChevronDown
-              size={12}
-              aria-hidden="true"
-              className={cn("shrink-0 text-ink-4 transition-transform", placeOpen && "rotate-180")}
-            />
-          </button>
-        )}
-      </div>
 
-      {/* ── the region the results belong to ───────────────────────────────
-          The region is a scope, not a market gate. Two lines say what this
-          corridor is known for and offer the one door that matters: its own
-          page. Markets are gone, so nothing here turns into a directory. */}
-      {regionAware && region && (
-        <section
-          aria-label="Region"
-          data-testid="region-context"
-          className="flex items-center gap-3 rounded-xl border border-edge-1 bg-surface-0 px-3 py-2.5"
-        >
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-700 dark:bg-brand-500/10 dark:text-brand-300">
-            <MapPin size={16} aria-hidden="true" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-xs font-bold text-ink-1">{regionLabel(region)}</p>
-            <p className="truncate text-micro text-ink-4">
-              {region.knownFor.slice(0, 3).join(" · ")}
+          <DiscoverCategoryStrip
+            value={kind}
+            onSelect={selectCategory}
+            savedCount={savedCount}
+            savedActive={pathname.startsWith("/discover/favorites")}
+          />
+
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-micro text-ink-4">
+              {isServices ? "One card per provider · every service on their Page" : "Offers, services, rounds and people around you"}
             </p>
+            {!isServices && (
+              <button type="button" onClick={() => setSpottedOpen(true)} className="inline-flex h-8 items-center gap-1 rounded-full border border-hot/30 bg-hot-soft px-2.5 text-micro font-bold text-hot">
+                <BadgePercent size={11} aria-hidden="true" /> Spot a public sale
+              </button>
+            )}
           </div>
-          <Link
-            to={regionPath(region)}
-            className="shrink-0 text-micro font-bold text-brand-700 hover:underline dark:text-brand-300"
-          >
-            Open region
-          </Link>
-        </section>
+        </>
+      ) : (
+        <>
+          <div className="flex items-center justify-between gap-2">
+            <h1 className="text-title-section font-bold tracking-tight text-ink-1">Discover</h1>
+            <button
+              type="button"
+              onClick={() => setPlaceOpen((v) => !v)}
+              aria-expanded={placeOpen}
+              data-testid="explore-place"
+              className="inline-flex h-8 min-w-0 max-w-[60%] items-center gap-1 rounded-full border border-edge-1 bg-surface-1 px-2.5 text-2xs font-semibold text-ink-2 transition-colors hover:border-ink-4 hover:text-ink-1"
+            >
+              <MapPin size={12} className="shrink-0 text-brand-600 dark:text-brand-300" aria-hidden="true" />
+              <span className="truncate" data-testid="explore-place-label">{locationLabel(location)}</span>
+              <ChevronDown size={12} aria-hidden="true" className={cn("shrink-0 text-ink-4 transition-transform", placeOpen && "rotate-180")} />
+            </button>
+          </div>
+
+          <nav aria-label="Browse the network" className="flex flex-wrap gap-2"><Link to="/offers" className="underline text-xs">Verified offers</Link><Link to="/browse?type=people" className="underline text-xs">Suppliers</Link></nav>
+
+          <SearchInput
+            value={q}
+            onChange={onSearch}
+            placeholder="Search goods, people, services…"
+            aria-label="Search everything"
+          />
+        </>
       )}
-
-      {!regionAware && <nav aria-label="Browse the network" className="flex flex-wrap gap-2"><Link to="/offers" className="underline text-xs">Verified offers</Link><Link to="/browse?type=people" className="underline text-xs">Suppliers</Link></nav>}
-
-      <SearchInput
-        value={q}
-        onChange={onSearch}
-        placeholder="Search goods, people, services…"
-        aria-label="Search everything"
-      />
-
-      {regionAware && <div role="group" aria-label="Browse by category" className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-        {REGION_CATEGORIES.map(option => <button key={option.value || "all"} type="button" aria-pressed={kind === option.value} onClick={() => patchParams({ kind: option.value, filter: "" })} className={cn("shrink-0 rounded-full border px-3 py-1.5 text-xs font-bold", kind === option.value ? "bg-brand-700 text-white border-brand-700" : "border-edge-1 bg-surface-0 text-ink-2")}>{option.label}</button>)}
-      </div>}
 
       {/* The full location controls, unchanged, one press away. In the region
           version the knob is a region, so GPS is not offered as a second,
@@ -320,10 +445,13 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
         </div>
       )}
 
-      {/* ── radius and the standing filter share one line ────────────────── */}
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      {/* ── radius and the standing filter share one line ──────────────────
+          Neither applies to the Services directory: it is filtered by the
+          provider's Page area, and standing is not a provider ranking. Showing
+          a control that changes nothing is worse than not showing it. */}
+      {!isServices && <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <span className="text-2xs text-ink-4">Discovery radius</span>
+          <span className="text-micro text-ink-4">Within</span>
           <div role="group" aria-label="Discovery radius" className="flex items-center gap-1">
             {RADII.map((option) => {
               const active = radius === option.value;
@@ -367,33 +495,13 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
             Lvl 3+ only
           </button>
         )}
-      </div>
+      </div>}
 
-      {/* ── what you are doing: the secondary axis, kept quiet ────────────── */}
-      {regionAware ? (
-        <div
-          role="group"
-          aria-label="Browse by intent"
-          className="-mt-1 flex flex-wrap items-center gap-1 overflow-visible"
-        >
-          {REGION_INTENTS.map((option) => (
-            <Chip
-              key={option.value || "all"}
-              size="sm"
-              active={intent === option.value}
-              onClick={() => patchParams({ intent: option.value })}
-              data-testid={`regions-intent-${option.value || "all"}`}
-            >
-              {option.label}
-            </Chip>
-          ))}
-        </div>
-      ) : (
-        <div
-          role="group"
-          aria-label="Discovery type"
-          className="-mt-1 flex flex-wrap items-center gap-1 overflow-visible"
-        >
+      {/* ── what you are doing: kept inside More filters on the region
+          screen, because the category strip already answers "what". Non-region
+          Explore keeps its own quiet type row. ───────────────────────────── */}
+      {!regionAware && (
+        <div role="group" aria-label="Discovery type" className="-mt-1 flex flex-wrap items-center gap-1 overflow-visible">
           {TYPE_FILTERS.map((option) => (
             <Chip
               key={option.value || "all"}
@@ -432,7 +540,7 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
       </section>}
 
       {/* ── everything else, behind one control that counts what is on ────── */}
-      <div className="rounded-xl border border-edge-1 bg-surface-1">
+      {!isServices && <div className="rounded-xl border border-edge-1 bg-surface-1">
         <button
           type="button"
           onClick={() => setFiltersOpen((v) => !v)}
@@ -461,6 +569,22 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
 
         {filtersOpen && (
           <div className="space-y-2 border-t border-edge-1 px-3 py-2.5" data-testid="explore-filter-panel">
+            {regionAware && (
+              <div role="group" aria-label="Browse by intent" className="flex flex-wrap items-center gap-1">
+                <span className="mr-1 w-12 shrink-0 text-micro text-ink-4">Use</span>
+                {REGION_INTENTS.map((option) => (
+                  <Chip
+                    key={option.value || "all"}
+                    size="sm"
+                    active={intent === option.value}
+                    onClick={() => patchParams({ intent: option.value })}
+                    data-testid={`regions-intent-${option.value || "all"}`}
+                  >
+                    {option.label}
+                  </Chip>
+                ))}
+              </div>
+            )}
             <div className="flex flex-wrap items-center gap-1">
               <span className="mr-1 w-12 shrink-0 text-micro text-ink-4">Time</span>
               {WHEN_FILTERS.map((option) => (
@@ -491,58 +615,212 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
                 Priced
               </Chip>
             </div>
+            {(hiddenFilterCount > 0 || trust) && (
+              <button
+                type="button"
+                data-testid="explore-clear-all"
+                onClick={clearAll}
+                className="inline-flex h-7 items-center gap-1 rounded-full px-2 text-micro font-bold text-ink-3 hover:bg-surface-2 hover:text-ink-1"
+              >
+                <X size={11} aria-hidden="true" /> Clear all filters
+              </button>
+            )}
           </div>
         )}
-      </div>
+      </div>}
 
       {!regionAware && (
         /* A strip, not a card wall: markets were the old scope. */
         <MarketStrip limit={2} />
       )}
 
-      {regionAware && !demo && <><button type="button" onClick={() => setSpottedOpen(true)} className="rounded-xl border border-amber-400 px-3 py-2 text-xs font-bold">Spot a public sale</button><SpotDealModal region={region?.slug} open={spottedOpen} onClose={() => setSpottedOpen(false)} onCreated={loadSpotted} />{spottedError && <p role="alert" className="text-xs text-rose-700">{spottedError}</p>}</>}
+      {regionAware && !isServices && (
+        <>
+          {!demo && (
+            <SpotDealModal
+              region={region?.slug}
+              open={spottedOpen}
+              onClose={() => setSpottedOpen(false)}
+              onCreated={loadSpotted}
+            />
+          )}
+          {spottedError && <p role="alert" className="text-xs text-rose-700">{spottedError}</p>}
+        </>
+      )}
       {/* ── results ───────────────────────────────────────────────────────── */}
-      <section aria-live="polite" aria-busy={status === "loading"} className="space-y-3">
-        {status === "loading" && !items.length ? (
-          <FeedSkeleton regionAware={regionAware} />
-        ) : status === "error" ? (
-          <ErrorPanel onRetry={() => loadFeed({ kinds, query: q || null, force: true })} message={error} />
-        ) : visibleItems.length === 0 && (!items.length || (regionAware && kinds?.length === 0)) ? (
-          <EmptyPanel query={q} />
-        ) : visibleItems.length === 0 ? (
-          <FilteredEmpty
-            onClear={() => patchParams({ trust: "" })}
-            hasMore={Boolean(cursor)}
-            onMore={loadMore}
-          />
-        ) : (
-          <>
-            <p className="text-2xs text-ink-4" data-testid="explore-count">
-              {visibleItems.length} {visibleItems.length === 1 ? "thing" : "things"}
-              {q ? ` matching “${q}”` : ""}
-              {location?.radius_km ? ` within ${radius} km` : ""}
-              {regionAware && region ? ` · ${regionLabel(region)}` : ""}
-            </p>
-            {regionAware ? (
-              <RegionsGrid items={visibleItems} onSpottedChanged={loadSpotted} />
+      {isServices ? (
+        <ServiceProvidersPanel
+          status={providerStatus}
+          error={providerError}
+          items={providerItems}
+          query={q}
+          region={region}
+          onRetry={() => setProviderReload((n) => n + 1)}
+        />
+      ) : (
+        <section aria-live="polite" aria-busy={status === "loading"} className="space-y-3">
+          {status === "loading" && !items.length ? (
+            <FeedSkeleton regionAware={regionAware} />
+          ) : status === "error" ? (
+            <ErrorPanel onRetry={() => loadFeed({ kinds, query: q || null, force: true })} message={error} />
+          ) : visibleItems.length === 0 && nearby.length > 0 ? (
+            <ColdStartRail
+              items={nearby}
+              region={region}
+              radius={radius}
+              onSavedChanged={() => setSavedCount(loadFavorites().length)}
+            />
+          ) : visibleItems.length === 0 && (!items.length || (regionAware && kinds?.length === 0)) ? (
+            <EmptyPanel query={q} />
+          ) : visibleItems.length === 0 ? (
+            regionAware && trust === "3" ? (
+              <FallbackRail
+                items={items}
+                region={region}
+                onShowEveryPage={() => patchParams({ trust: "", min_level: "" })}
+                onSavedChanged={() => setSavedCount(loadFavorites().length)}
+              />
             ) : (
-              <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {visibleItems.map((item) => (
-                  <li key={`${item.kind}:${item.id}`}>
-                    <ContentCard item={item} onReact={toggleReaction} className="h-full" />
-                  </li>
-                ))}
-              </ul>
-            )}
-            <div ref={sentinel} className="h-4" aria-hidden="true" />
-            {status === "loading_more" && <p className="py-3 text-center text-2xs text-ink-4">Loading more…</p>}
-            {!cursor && visibleItems.length > 4 && (
-              <p className="py-3 text-center text-2xs text-ink-4">That's everything in this radius.</p>
-            )}
-          </>
-        )}
-      </section>
+              <FilteredEmpty
+                onClear={clearAll}
+                hasMore={Boolean(cursor)}
+                onMore={loadMore}
+              />
+            )
+          ) : (
+            <>
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-2xs text-ink-4" data-testid="explore-count">
+                  {resultItems.length} {resultItems.length === 1 ? "thing" : "things"}
+                  {q ? ` matching “${q}”` : ""}
+                  {location?.radius_km ? ` within ${radius} km` : ""}
+                  {regionAware && region ? ` · ${regionLabel(region)}` : ""}
+                </p>
+                {regionAware && (
+                  <span className="shrink-0 text-micro font-semibold text-ink-4">Live feed</span>
+                )}
+              </div>
+
+              {regionAware && (
+                <FeaturedGrid
+                  items={featuredItems}
+                  viewAllTo={region?.slug ? `/discover?feed=trending&region=${region.slug}` : "/discover?feed=trending"}
+                  onSavedChanged={() => setSavedCount(loadFavorites().length)}
+                />
+              )}
+
+              {regionAware ? (
+                <MerchGrid
+                  items={renderableStandard}
+                  onSavedChanged={() => setSavedCount(loadFavorites().length)}
+                />
+              ) : (
+                <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {visibleItems.map((item) => (
+                    <li key={`${item.kind}:${item.id}`}>
+                      <ContentCard item={item} onReact={toggleReaction} className="h-full" />
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {regionAware && spottedStandard.length > 0 && (
+                <section aria-labelledby="discover-spotted-heading" className="space-y-2">
+                  <div>
+                    <h2 id="discover-spotted-heading" className="text-title-section font-extrabold text-ink-1">
+                      Spotted public sales
+                    </h2>
+                    <p className="text-micro text-ink-4">Community-reported, walked to and confirmed on the ground.</p>
+                  </div>
+                  <MerchGrid
+                    items={spottedStandard}
+                    onSavedChanged={() => setSavedCount(loadFavorites().length)}
+                  />
+                </section>
+              )}
+
+              <div ref={sentinel} className="h-4" aria-hidden="true" />
+              {status === "loading_more" && <p className="py-3 text-center text-2xs text-ink-4">Loading more…</p>}
+              {!cursor && resultItems.length > 4 && (
+                <p className="py-3 text-center text-2xs text-ink-4">That's everything in this radius.</p>
+              )}
+            </>
+          )}
+        </section>
+      )}
     </div>
+  );
+}
+
+/** A provider row, shaped like every other Regions card.
+ *
+ * The card is one provider, never one service. The offering names travel in
+ * `summary`/`meta` for the tests and for any richer card renderer; the visible
+ * price is the provider's own starting price, not an invented average.
+ */
+export function providerToCard(provider) {
+  const offerings = Array.isArray(provider?.offerings) ? provider.offerings : [];
+  const names = offerings.map((o) => o.name).filter(Boolean);
+  return {
+    kind: "provider",
+    id: provider.id,
+    to: provider.handle ? `/p/${provider.handle}` : "#",
+    title: provider.name || (provider.handle ? `@${provider.handle}` : "Service provider"),
+    summary: names.slice(0, 4).join(" · "),
+    category: provider.domains?.[0] || provider.categories?.[0] || "service",
+    location: provider.area || null,
+    price_kes: provider.starting_price_kes ?? null,
+    owner: provider.owner || null,
+    counts: {},
+    meta: {
+      service_count: provider.service_count || names.length,
+      service_names: names,
+      starting_price_unit: provider.starting_price_unit || null,
+      is_bookable: Boolean(provider.is_bookable),
+    },
+  };
+}
+
+function ServiceProvidersPanel({ status, error, items, query, region, onRetry }) {
+  if (status === "loading" || status === "idle") {
+    return <FeedSkeleton regionAware />;
+  }
+  if (status === "error") {
+    return <ErrorPanel onRetry={onRetry} message={error} />;
+  }
+  if (!items.length) {
+    return (
+      <section
+        data-testid="service-providers-empty"
+        className="rounded-2xl border border-dashed border-edge-2 bg-surface-0 p-6 text-center"
+      >
+        <h2 className="text-sm font-bold text-ink-1">No service providers here yet</h2>
+        <p className="mx-auto mt-1 max-w-md text-sm text-ink-3">
+          {query
+            ? `Nothing matched “${query}” in this corridor.`
+            : `Nobody in ${region?.name || "this corridor"} has published a bookable service yet.`}
+          {" "}Services are listed one provider at a time, so a page needs at least one
+          service before it appears here.
+        </p>
+        <Link
+          to="/you/page"
+          className="mt-4 inline-flex h-10 items-center gap-1 rounded-lg bg-brand-700 px-4 text-xs font-bold text-white hover:bg-brand-800"
+        >
+          Publish your own service <Compass size={13} aria-hidden="true" />
+        </Link>
+      </section>
+    );
+  }
+  return (
+    <section aria-live="polite" className="space-y-3" data-testid="service-providers">
+      <p className="text-2xs text-ink-4">
+        {items.length} service provider{items.length === 1 ? "" : "s"}
+        {query ? ` matching “${query}”` : ""}
+        {region ? ` · ${regionLabel(region)}` : ""}
+        {" "}· one card per provider
+      </p>
+      <RegionsGrid items={items} />
+    </section>
   );
 }
 

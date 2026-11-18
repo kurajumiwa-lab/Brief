@@ -72,3 +72,100 @@ async def test_expiry_promotes_oldest_and_does_not_overbook(client):
     assert third.json()['my_registration']['waitlist_position'] == 1
     first = await client.get(url, headers=ah)
     assert first.json()['my_booking_status'] == 'EXPIRED'
+
+
+async def test_a_price_without_a_rail_cannot_issue_a_pass(client):
+    """The bug: a priced event with no payment method confirmed every guest."""
+    host, guest = [await _register(client, name, ['food']) for name in ('norailhost', 'norailguest')]
+    h, gh = (_auth(x['access_token']) for x in (host, guest))
+    start = datetime.utcnow() + timedelta(days=2)
+    created = await client.post('/api/events/create', headers=h, json={
+        'title': 'Priced but no rail', 'start_date': start.isoformat(),
+        'end_date': (start + timedelta(hours=2)).isoformat(), 'entry_fee': 500,
+    })
+    assert created.status_code == 422, created.text
+    assert 'pay' in created.text.lower()
+
+
+async def test_legacy_priced_event_without_a_rail_refuses_booking(client):
+    """Old rows exist. They are not free events; they are unfinished ones."""
+    from uuid import UUID
+    from app.database import async_session
+    from app.models.events import Event
+    host, guest = [await _register(client, name, ['food']) for name in ('legacyhost', 'legacyguest')]
+    h, gh = (_auth(x['access_token']) for x in (host, guest))
+    start = datetime.utcnow() + timedelta(days=2)
+    created = await client.post('/api/events/create', headers=h, json={
+        'title': 'Legacy priced', 'start_date': start.isoformat(),
+        'end_date': (start + timedelta(hours=2)).isoformat(), 'entry_fee': 0,
+    })
+    eid = created.json()['event_id']
+    async with async_session() as db:
+        ev = await db.get(Event, UUID(eid))
+        ev.entry_fee = 500
+        await db.commit()
+    booked = await client.post(f'/api/events/{eid}/register', headers=gh)
+    assert booked.status_code == 409, booked.text
+    assert 'payment method' in booked.text.lower()
+    detail = await client.get(f'/api/events/{eid}', headers=h)
+    assert detail.json()['payment_ready'] is False
+
+
+async def test_cash_booking_is_host_confirmed_and_issues_the_pass(client):
+    host, guest = [await _register(client, name, ['food']) for name in ('cashhost', 'cashguest')]
+    h, gh = (_auth(x['access_token']) for x in (host, guest))
+    start = datetime.utcnow() + timedelta(days=2)
+    created = await client.post('/api/events/create', headers=h, json={
+        'title': 'Cash workshop', 'start_date': start.isoformat(),
+        'end_date': (start + timedelta(hours=3)).isoformat(), 'entry_fee': 400,
+        'payment_method': 'CASH',
+    })
+    assert created.status_code == 201, created.text
+    eid = created.json()['event_id']
+    url = f'/api/events/{eid}'
+    booked = await client.post(url + '/register', headers=gh)
+    assert booked.status_code == 200, booked.text
+    assert booked.json()['booking_status'] == 'PENDING_PAYMENT'
+    rid = booked.json()['registration']['id']
+    queue = await client.get('/api/events/payment-queue', headers=h)
+    row = next(x for x in queue.json() if x['registration_id'] == rid)
+    assert row['cash_due'] is True and row['payment_method'] == 'CASH'
+    assert (await client.post(url + '/submit-payment', headers=gh,
+                              json={'raw_text': 'UKG8X2Y4Z1 Confirmed. Ksh 400.00'})).status_code == 409
+    confirmed = await client.post(url + f'/confirm-payment/{rid}', headers=h)
+    assert confirmed.status_code == 200, confirmed.text
+    assert confirmed.json()['pass_code'].startswith('HO-')
+    agenda = await client.get('/api/outside/agenda', headers=gh)
+    item = next(x for x in agenda.json()['items'] if x['kind'] == 'event' and x['title'] == 'Cash workshop')
+    assert item['passable'] and item['pass_code'] == confirmed.json()['pass_code']
+
+
+async def test_organiser_can_add_a_paybill_after_publishing(client):
+    host, guest = [await _register(client, name, ['food']) for name in ('payedit', 'payeditguest')]
+    h, gh = (_auth(x['access_token']) for x in (host, guest))
+    start = datetime.utcnow() + timedelta(days=2)
+    created = await client.post('/api/events/create', headers=h, json={
+        'title': 'Pay later', 'start_date': start.isoformat(),
+        'end_date': (start + timedelta(hours=3)).isoformat(), 'entry_fee': 0,
+    })
+    eid = created.json()['event_id']
+    updated = await client.patch(f'/api/events/{eid}/payment', headers=h, json={
+        'entry_fee': 750, 'payment_method': 'PAYBILL', 'payment_number': '522522',
+        'payment_account': 'WORKSHOP', 'payment_recipient_name': 'Host Ltd',
+    })
+    assert updated.status_code == 200, updated.text
+    body = updated.json()
+    assert body['entry_fee'] == 750 and body['payment_method'] == 'PAYBILL'
+    assert body['payment_account'] == 'WORKSHOP' and body['payment_ready'] is True
+    booked = await client.post(f'/api/events/{eid}/register', headers=gh)
+    assert booked.json()['booking_status'] == 'PENDING_PAYMENT'
+    # A guest cannot edit the organiser's rail.
+    assert (await client.patch(f'/api/events/{eid}/payment', headers=gh, json={
+        'entry_fee': 1, 'payment_method': 'CASH',
+    })).status_code == 404
+    # And an organiser cannot edit a priced event back into "no rail".
+    stripped = await client.patch(f'/api/events/{eid}/payment', headers=h, json={
+        'entry_fee': 750, 'payment_method': None,
+    })
+    assert stripped.status_code == 422, stripped.text
+    assert 'pay' in stripped.text.lower()

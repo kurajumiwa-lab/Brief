@@ -66,6 +66,32 @@ async def test_one_person_creates_a_home_office_that_starts_private(client):
     assert body["contact"] is None  # hidden unless the owner chose a way to be contacted
 
 
+async def test_office_detail_names_the_public_page_and_the_next_steps(client):
+    """The office is the private workroom; the Page is the public front door."""
+    handle, owner, vid = await _register(client, "officepage")
+    oid = await _office(client, owner)
+    detail = await client.get(f"/api/office/offices/{oid}", headers=owner)
+    assert detail.status_code == 200, detail.text
+    body = detail.json()
+    assert body["page"]["handle"] == handle
+    assert body["page"]["url"] == f"/p/{handle}"
+    assert body["page"]["published"] is True
+    assert body["page"]["preset"] == "service"
+    setup = body["setup"]
+    assert setup["page_ready"] is True
+    assert setup["shelf_ready"] is False
+    assert setup["service_count"] == 0 and setup["stock_count"] == 0
+    assert setup["team_ready"] is False  # one person is a complete office
+    # A real service makes the shelf step true; nothing is invented.
+    made = await client.post("/api/schedule/services", headers=owner, json={
+        "name": "Home haircut", "duration_minutes": 45, "price_kes": 500,
+        "delivery_home": True, "domain": "personal_care_beauty",
+    })
+    assert made.status_code == 201, made.text
+    setup = (await client.get(f"/api/office/offices/{oid}", headers=owner)).json()["setup"]
+    assert setup["shelf_ready"] is True and setup["service_count"] == 1
+
+
 async def test_contact_is_shown_only_when_the_owner_chose_it(client):
     from app.models.vendor import Vendor
     handle, owner, vid = await _register(client, "phoneowner")

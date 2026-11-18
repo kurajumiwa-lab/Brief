@@ -164,6 +164,94 @@ def office_summary(o: Office, role: Optional[str] = None) -> dict:
             "visibility": o.visibility}
 
 
+async def page_snapshot(db: AsyncSession, office: Office) -> dict:
+    """The public Page this office owns, as its members need to see it.
+
+    The office is private; the Page is public. This is the one place that says
+    so in data, so the office screen can link to the real front door instead of
+    treating the office itself as a shop.
+    """
+    owner = await db.get(Vendor, office.owner_vendor_id)
+    stored = dict(getattr(owner, "public_page", None) or {}) if owner else {}
+    handle = (getattr(owner, "vendor_handle", None) or "").strip() or None
+    live = bool(handle and getattr(owner, "business_name", None))
+    payment_ready = bool(stored.get("payment_type") and stored.get("payment_number"))
+    return {
+        "handle": handle,
+        "url": f"/p/{handle}" if handle else None,
+        "published": live,
+        "discoverable": stored.get("discoverable", True) is not False,
+        "preset": stored.get("preset") or "service",
+        "payment_ready": payment_ready,
+    }
+
+
+async def setup_snapshot(db: AsyncSession, office: Office) -> dict:
+    """Counts behind the four "what next" steps. Facts, never a percentage.
+
+    A person with one quiet service and no team is not "50% set up" — the
+    checklist says which real thing is missing, and people are optional.
+    """
+    from sqlalchemy import func as sa_func
+
+    from app.models.events import Event
+    from app.models.stock import StockItem
+    from app.modules.schedule.models import AvailabilityRule, BookableService
+
+    owner = await db.get(Vendor, office.owner_vendor_id)
+    stored = dict(getattr(owner, "public_page", None) or {}) if owner else {}
+    handle = (getattr(owner, "vendor_handle", None) or "").strip() or None
+    page_ready = bool(handle and getattr(owner, "business_name", None))
+    payment_ready = bool(stored.get("payment_type") and stored.get("payment_number"))
+    preset = stored.get("preset") or "service"
+
+    services = int((await db.execute(
+        select(sa_func.count(BookableService.id)).where(
+            BookableService.vendor_id == office.owner_vendor_id,
+            BookableService.is_active.is_(True),
+            BookableService.archived_at.is_(None),
+        )
+    )).scalar() or 0)
+    stock = int((await db.execute(
+        select(sa_func.count(StockItem.id)).where(
+            StockItem.vendor_id == office.owner_vendor_id,
+            StockItem.archived_at.is_(None),
+        )
+    )).scalar() or 0)
+    events = int((await db.execute(
+        select(sa_func.count(Event.id)).where(
+            Event.organizer_id == office.owner_vendor_id,
+            Event.status.in_(("upcoming", "active")),
+        )
+    )).scalar() or 0)
+    hours = int((await db.execute(
+        select(sa_func.count(AvailabilityRule.id)).where(
+            AvailabilityRule.vendor_id == office.owner_vendor_id,
+        )
+    )).scalar() or 0)
+    members = int((await db.execute(
+        select(sa_func.count(OfficeMember.id)).where(
+            OfficeMember.office_id == office.id,
+            OfficeMember.status == "active",
+        )
+    )).scalar() or 0)
+
+    return {
+        "page_ready": page_ready,
+        # A host's "shelf" is their public rounds/events, not stock.
+        "shelf_ready": bool(services or stock or (preset == "host" and events)),
+        "hours_ready": bool(hours or (office.hours_text or "").strip()),
+        "payment_ready": payment_ready,
+        "team_ready": members > 1,
+        "service_count": services,
+        "stock_count": stock,
+        "event_count": events,
+        "hours_count": hours,
+        "active_members": members,
+        "preset": preset,
+    }
+
+
 async def public_office(db: AsyncSession, office_id: uuid.UUID) -> dict:
     office = await get_office(db, office_id)
     if office.visibility != "public":

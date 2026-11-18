@@ -88,7 +88,9 @@ async def public_page(handle: str, db: AsyncSession = Depends(get_db)):
     # A phone number is public only after an explicit Page opt-in.
     card["whatsapp_phone"] = vendor.phone if (vendor.public_page or {}).get("show_whatsapp") else None
     page = page_settings.view(vendor.public_page)
-    card["payment_tag"] = {"type": page["payment_type"], "number": page["payment_number"], "account": page["payment_account"]} if card["preset"] == "shop" and page["payment_type"] and page["payment_number"] else None
+    # A service provider or host can publish a Till/Paybill too; the rail is
+    # the owner's own and money never passes through the platform.
+    card["payment_tag"] = {"type": page["payment_type"], "number": page["payment_number"], "account": page["payment_account"]} if page["payment_type"] and page["payment_number"] else None
     card["preset_content"] = await preset_content.content(db, vendor, card["preset"], card["sections"].get("offers", True))
     return card
 

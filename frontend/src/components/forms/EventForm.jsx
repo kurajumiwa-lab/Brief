@@ -12,6 +12,15 @@ import { Check } from "./GroupForm";
 
 const toISO = (local) => (local ? new Date(local).toISOString() : null);
 
+export const PAYMENT_OPTIONS = [
+  { value: "", label: "No payment (free)" },
+  { value: "CASH", label: "Cash to the organiser" },
+  { value: "TILL", label: "M-Pesa Buy Goods Till" },
+  { value: "PAYBILL", label: "M-Pesa Paybill" },
+  { value: "POCHI", label: "M-Pesa Pochi" },
+  { value: "SEND_MONEY", label: "M-Pesa Send Money" },
+];
+
 export default function EventForm({ onDone, onCancel, groups = [], lists = [] }) {
   const create = useEventStore((s) => s.create);
   const [form, setForm] = useState({
@@ -27,6 +36,17 @@ export default function EventForm({ onDone, onCancel, groups = [], lists = [] })
     if (!form.title.trim()) return toast.error("Give the event a title");
     if (!form.start_date || !form.end_date) return toast.error("Start and end are required");
     if (new Date(form.end_date) < new Date(form.start_date)) return toast.error("It can't end before it starts");
+    const fee = form.entry_fee === "" ? 0 : Number(form.entry_fee);
+    if (!Number.isFinite(fee) || fee < 0) return toast.error("Enter the entry fee as a number, or leave it empty for free");
+    if (fee > 0 && !form.payment_method) {
+      return toast.error("Add how guests pay you — Till, Paybill, phone, or cash to you");
+    }
+    if (fee > 0 && form.payment_method !== "CASH" && !form.payment_number.trim()) {
+      return toast.error("Enter the Till, Paybill or phone number guests should pay");
+    }
+    if (fee <= 0 && form.payment_method) {
+      return toast.error("Set an entry fee, or choose the free option");
+    }
     setBusy(true);
     try {
       const vendor_requirements = {};
@@ -44,7 +64,11 @@ export default function EventForm({ onDone, onCancel, groups = [], lists = [] })
         is_virtual: form.is_virtual,
         entry_fee: form.entry_fee === "" ? 0 : Number(form.entry_fee),
         meeting_point: form.meeting_point || null, departure_time: form.departure_time || null, inclusions: splitList(form.inclusions), checklist: splitList(form.checklist),
-        payment_method: form.payment_method || null, payment_number: form.payment_number || null, payment_account: form.payment_account || null, payment_recipient_name: form.payment_recipient_name || null, hold_ttl_minutes: Number(form.hold_ttl_minutes),
+        payment_method: form.payment_method || null,
+        payment_number: form.payment_method && form.payment_method !== "CASH" ? form.payment_number.trim() : null,
+        payment_account: form.payment_method === "PAYBILL" ? form.payment_account.trim() || null : null,
+        payment_recipient_name: form.payment_recipient_name.trim() || null,
+        hold_ttl_minutes: Number(form.hold_ttl_minutes),
         vendor_requirements,
         group_id: form.group_id || null,
         vendor_list_id: form.vendor_list_id || null,
@@ -70,15 +94,51 @@ export default function EventForm({ onDone, onCancel, groups = [], lists = [] })
         <Input label="Starts" type="datetime-local" required value={form.start_date} onChange={set("start_date")} />
         <Input label="Ends" type="datetime-local" required value={form.end_date} onChange={set("end_date")} min={form.start_date || undefined} />
         <Input label="Max businesses" type="number" min="1" value={form.max_vendors} onChange={set("max_vendors")} placeholder="50" />
-        <Input label="Entry fee" type="number" min="0" step="any" prefix="KES" value={form.entry_fee} onChange={set("entry_fee")} placeholder="0" />
       </div>
+
+      <section className="rounded-xl border border-edge-1 bg-surface-1 p-4" aria-labelledby="event-payment-heading">
+        <h3 id="event-payment-heading" className="text-sm font-semibold text-ink-1">Tickets &amp; payment</h3>
+        <p className="mt-0.5 text-micro leading-relaxed text-ink-4">
+          Money goes directly to you. Home Office never collects or holds it, and a
+          guest's pass only unlocks when you confirm the payment (or the cash).
+        </p>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <Input label="Entry fee" type="number" min="0" step="any" prefix="KES" value={form.entry_fee} onChange={set("entry_fee")} placeholder="0" />
+          <Select label="How guests pay you" value={form.payment_method} onChange={set("payment_method")} options={PAYMENT_OPTIONS} />
+        </div>
+        {form.payment_method === "CASH" && (
+          <p className="mt-2 rounded-lg bg-surface-2 p-2 text-micro text-ink-3">
+            Cash bookings hold a seat until you mark the cash received in your Inbox.
+            No M-Pesa note is needed.
+          </p>
+        )}
+        {form.payment_method && form.payment_method !== "CASH" && (
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <Input
+              label={form.payment_method === "PAYBILL" ? "Paybill number" : form.payment_method === "TILL" ? "Till number" : "M-Pesa phone number"}
+              required
+              inputMode="numeric"
+              value={form.payment_number}
+              onChange={set("payment_number")}
+            />
+            {form.payment_method === "PAYBILL" && (
+              <Input label="Account reference" value={form.payment_account} onChange={set("payment_account")} placeholder="e.g. WORKSHOP" />
+            )}
+            <Input label="Recipient name (shown to guests)" value={form.payment_recipient_name} onChange={set("payment_recipient_name")} />
+            <Input label="Hold minutes before an unpaid seat is released" type="number" min="5" max="10080" value={form.hold_ttl_minutes} onChange={set("hold_ttl_minutes")} />
+          </div>
+        )}
+        {Number(form.entry_fee || 0) > 0 && !form.payment_method && (
+          <p role="alert" className="mt-2 text-xs font-semibold text-amber-700 dark:text-amber-300">
+            A priced event needs a payment method. Choose Till, Paybill, phone, or cash.
+          </p>
+        )}
+      </section>
       <div className="grid sm:grid-cols-2 gap-3">
         <Input label="Meeting point" value={form.meeting_point} onChange={set("meeting_point")} />
         <Input label="Departure time" value={form.departure_time} onChange={set("departure_time")} placeholder="06:30 AM" />
         <Input label="Inclusions" value={form.inclusions} onChange={set("inclusions")} placeholder="Transport, water" />
         <Input label="Checklist" value={form.checklist} onChange={set("checklist")} placeholder="ID, hiking shoes" />
-        <Select label="Payment method" value={form.payment_method} onChange={set("payment_method")} placeholder="Pay on arrival / free" options={["FREE", "TILL", "PAYBILL", "POCHI", "SEND_MONEY"].map(value => ({ value, label: value.replace("_", " ") }))} />
-        {form.payment_method && form.payment_method !== "FREE" && <><Input label="Payment number" required value={form.payment_number} onChange={set("payment_number")} /><Input label="Recipient name" value={form.payment_recipient_name} onChange={set("payment_recipient_name")} />{form.payment_method === "PAYBILL" && <Input label="Paybill account" value={form.payment_account} onChange={set("payment_account")} />}<Input label="Hold minutes" type="number" min="5" max="10080" value={form.hold_ttl_minutes} onChange={set("hold_ttl_minutes")} /></>}
       </div>
       <div className="grid sm:grid-cols-2 gap-3">
         <Input label="Required categories" value={form.required_categories} onChange={set("required_categories")} placeholder="vegetables, fruit" hint="Only businesses trading these can register" />
