@@ -42,6 +42,19 @@ export default {
         // is what makes a light UI readable in daylight and in forced-colours.
         edge: scale("edge", [1, 2, 3]),
         ink: { ...scale("ink", [1, 2, 3, 4]), inverse: token("ink-inverse") },
+        // Discovery shopfront: warm paper, plum ink, tomato action. Scoped to
+        // merchandising surfaces so trade screens keep their own language.
+        mk: {
+          cream: token("mk-cream"),
+          warm: token("mk-warm"),
+          card: token("mk-card"),
+          ink: token("mk-ink"),
+          "ink-soft": token("mk-ink-soft"),
+          orange: token("mk-orange"),
+          "orange-soft": token("mk-orange-soft"),
+          line: token("mk-line"),
+          green: token("mk-green"),
+        },
       },
       fontFamily: {
         sans: ["Inter var", "Inter", "system-ui", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "sans-serif"],

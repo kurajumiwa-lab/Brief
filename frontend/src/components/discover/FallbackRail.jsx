@@ -15,17 +15,17 @@ export default function FallbackRail({ items = [], region = null, onShowEveryPag
   const label = region ? regionLabel(region) : "this area";
   return (
     <section data-testid="explore-filtered-empty" className="space-y-3">
-      <div className="rounded-xl border border-edge-1 bg-surface-1 p-3 text-sm text-ink-1">
+      <div className="rounded-2xl border border-mk-line bg-mk-card p-4 text-sm text-mk-ink">
         <p className="font-extrabold">No Level 3+ traders here yet</p>
-        <p className="mt-0.5 text-xs">
+        <p className="mt-0.5 text-xs text-mk-ink-soft">
           Level 3 means at least one completed trade on record. The strict filter found none in {label}.
         </p>
         <div className="mt-2 flex flex-wrap gap-2">
-          <button type="button" onClick={onShowEveryPage} className="inline-flex h-9 items-center rounded-lg bg-brand-700 px-3 text-micro font-bold text-white">
+          <button type="button" onClick={onShowEveryPage} className="inline-flex h-9 items-center rounded-lg bg-mk-ink px-3 text-micro font-bold text-mk-cream">
             Show every page
           </button>
           {onWiden && (
-            <button type="button" onClick={onWiden} className="inline-flex h-9 items-center rounded-lg border border-edge-2 px-3 text-micro font-bold text-ink-2">
+            <button type="button" onClick={onWiden} className="inline-flex h-9 items-center rounded-lg border border-mk-line px-3 text-micro font-bold text-mk-ink">
               Widen to 50 km
             </button>
           )}
@@ -36,8 +36,8 @@ export default function FallbackRail({ items = [], region = null, onShowEveryPag
         <div>
           <div className="mb-2 flex items-end justify-between gap-2">
             <div>
-              <h2 className="text-title-section font-extrabold text-ink-1">Popular in {label} <span className="font-semibold text-ink-4">(all levels)</span></h2>
-              <p className="text-micro text-ink-4">Active now. A level is shown as it is, never rounded up.</p>
+              <h2 className="text-xl font-black text-mk-ink">Popular in {label} <span className="font-semibold text-mk-ink-soft">(all levels)</span></h2>
+              <p className="text-micro text-mk-ink-soft">Active now. A level is shown as it is, never rounded up.</p>
             </div>
           </div>
           <div className="no-scrollbar -mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
@@ -73,17 +73,17 @@ export function ColdStartRail({ items = [], region = null, radius = 15, onSavedC
   if (!items.length) return null;
   return (
     <section data-testid="discover-cold-start" className="space-y-3">
-      <div className="rounded-xl border border-edge-1 bg-surface-1 p-3">
-        <p className="text-sm font-extrabold text-ink-1">Quiet within {radius} km</p>
-        <p className="mt-0.5 text-xs text-ink-3">
+      <div className="rounded-2xl border border-mk-line bg-mk-card p-4">
+        <p className="text-sm font-extrabold text-mk-ink">Quiet within {radius} km</p>
+        <p className="mt-0.5 text-xs text-mk-ink-soft">
           Showing active pages nearby, up to 50 km. Each card says how far away it is.
         </p>
       </div>
       <div>
-        <h2 className="text-title-section font-extrabold text-ink-1">
-          Popular in {label} <span className="font-semibold text-ink-4">(all levels)</span>
+        <h2 className="text-xl font-black text-mk-ink">
+          Popular in {label} <span className="font-semibold text-mk-ink-soft">(all levels)</span>
         </h2>
-        <p className="text-micro text-ink-4">Level 1–2 pages, shown as they are — never rounded up.</p>
+        <p className="text-micro text-mk-ink-soft">Level 1–2 pages, shown as they are — never rounded up.</p>
         <div className="no-scrollbar -mx-4 mt-2 flex snap-x gap-3 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
           {items.map((item) => (
             <div key={`${item.kind}:${item.id}`} className="w-[46%] min-w-[150px] shrink-0 snap-start sm:w-[220px]">

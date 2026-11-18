@@ -15,6 +15,11 @@ import RegionPicker from "@/components/regions/RegionPicker";
 import RegionsGrid from "@/components/regions/RegionsGrid";
 import { SpotDealModal } from "@/components/spotted/SpottedDealUI";
 import DiscoverCategoryStrip from "@/components/discover/DiscoverCategoryStrip";
+import MarketplaceHero from "@/components/discover/MarketplaceHero";
+import TrustStrip from "@/components/discover/TrustStrip";
+import DealRail from "@/components/discover/DealRail";
+import ShopToolbar from "@/components/discover/ShopToolbar";
+import MarketplaceBand from "@/components/discover/MarketplaceBand";
 import SpotlightRail from "@/components/discover/SpotlightRail";
 import FeaturedGrid from "@/components/discover/FeaturedGrid";
 import FallbackRail, { ColdStartRail } from "@/components/discover/FallbackRail";
@@ -135,6 +140,7 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
   const [nearby, setNearby] = useState([]);
   const [placeOpen, setPlaceOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [sort, setSort] = useState("popular");
   const [savedRegion, setSavedRegion] = useState(() => {
     try { return localStorage.getItem(REGION_KEY); } catch { return null; }
   });
@@ -207,13 +213,17 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
     next.delete("public_sale");
     const suffix = next.toString();
     const section = { listing: "goods", service: "services", rental: "rentals" }[value];
-    if (section) {
+    // `/regions` keeps its own path: `/regions/goods` would be read as a region
+    // slug. There the same door is a URL-bound kind, not a section route.
+    const onRegions = pathname.startsWith("/regions");
+    if (section && !onRegions) {
       navigate({ pathname: `/discover/${section}`, search: suffix ? `?${suffix}` : "" });
       return;
     }
     if (value) next.set("kind", value);
-    navigate({ pathname: "/discover", search: next.toString() ? `?${next.toString()}` : "" });
-  }, [navigate, params]);
+    const target = onRegions ? "/regions" : "/discover";
+    navigate({ pathname: target, search: next.toString() ? `?${next.toString()}` : "" });
+  }, [navigate, params, pathname]);
 
   // Reload whenever the URL state changes — which is also what makes the back
   // button restore the previous results.
@@ -349,40 +359,130 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
   const renderableStandard = standardItems.filter((item) => item.feed_kind !== "SPOTTED_DEAL");
   const spottedStandard = standardItems.filter((item) => item.feed_kind === "SPOTTED_DEAL");
 
+  // Sort is an ordering of the page already fetched, never a second request.
+  // Items without a price stay at the end rather than pretending to be free.
+  const sortedStandard = useMemo(() => {
+    const rows = [...renderableStandard];
+    if (sort === "price_low" || sort === "price_high") {
+      const direction = sort === "price_low" ? 1 : -1;
+      rows.sort((a, b) => {
+        const av = a.price_kes == null ? null : Number(a.price_kes);
+        const bv = b.price_kes == null ? null : Number(b.price_kes);
+        if (av == null && bv == null) return 0;
+        if (av == null) return 1;
+        if (bv == null) return -1;
+        return (av - bv) * direction;
+      });
+    } else if (sort === "newest") {
+      rows.sort((a, b) => String(b.created_at || "").localeCompare(String(a.created_at || "")));
+    }
+    return rows;
+  }, [renderableStandard, sort]);
+
+  const saleItems = useMemo(
+    () => resultItems.filter((item) => item.price_kes != null || item.feed_kind === "SPOTTED_DEAL").slice(0, 8),
+    [resultItems],
+  );
+
   const clearAll = () => patchParams({ kind: "", filter: "", intent: "", trust: "", when: "", price: "" });
+  const scrollToShop = () => {
+    if (typeof document === "undefined") return;
+    document.getElementById("shop-all-heading")?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+  };
+
+  // Shared by the shopfront Filters door and the quieter /explore panel, so the
+  // two screens never drift into different filter sets.
+  const filterControls = (
+    <>
+      {regionAware && (
+        <div role="group" aria-label="Browse by intent" className="flex flex-wrap items-center gap-1">
+          <span className="mr-1 w-12 shrink-0 text-micro text-mk-ink-soft">Use</span>
+          {REGION_INTENTS.map((option) => (
+            <Chip
+              key={option.value || "all"}
+              size="sm"
+              active={intent === option.value}
+              onClick={() => patchParams({ intent: option.value })}
+              data-testid={`regions-intent-${option.value || "all"}`}
+            >
+              {option.label}
+            </Chip>
+          ))}
+        </div>
+      )}
+      <div className="flex flex-wrap items-center gap-1">
+        <span className="mr-1 w-12 shrink-0 text-micro text-mk-ink-soft">Time</span>
+        {WHEN_FILTERS.map((option) => (
+          <Chip
+            key={option.value || "anytime"}
+            size="sm"
+            active={when === option.value}
+            onClick={() => patchParams({ when: option.value })}
+          >
+            {option.label}
+          </Chip>
+        ))}
+      </div>
+      <div className="flex flex-wrap items-center gap-1">
+        <span className="mr-1 w-12 shrink-0 text-micro text-mk-ink-soft">Price</span>
+        <Chip size="sm" active={price === "free"} onClick={() => patchParams({ price: price === "free" ? "" : "free" })}>
+          No price
+        </Chip>
+        <Chip size="sm" active={price === "priced"} onClick={() => patchParams({ price: price === "priced" ? "" : "priced" })}>
+          Priced
+        </Chip>
+      </div>
+      {(hiddenFilterCount > 0 || trust) && (
+        <button
+          type="button"
+          data-testid="explore-clear-all"
+          onClick={clearAll}
+          className="inline-flex h-7 items-center gap-1 rounded-full px-2 text-micro font-bold text-ink-3 hover:bg-surface-2 hover:text-ink-1"
+        >
+          <X size={11} aria-hidden="true" /> Clear all filters
+        </button>
+      )}
+    </>
+  );
 
   return (
-    <div className="space-y-s3">
+    <div className={cn("space-y-s3", regionAware && "-mx-4 bg-mk-cream px-4 pb-10 pt-3 text-mk-ink sm:-mx-6 sm:px-6")}>
       {regionAware ? (
         <>
-          {/* ── compact, sticky discovery header ─────────────────────────── */}
+          {/* ── the shopfront header: region, promise, one search ─────────── */}
           <header
             data-testid="discover-toolbar"
-            className="sticky top-[calc(var(--header-h)+0.25rem)] z-20 -mx-4 border-b border-edge-1/70 bg-surface-0/95 px-4 pb-2 pt-1 backdrop-blur sm:-mx-6 sm:px-6"
+            className="sticky top-[calc(var(--header-h)+0.25rem)] z-20 border-b border-mk-line/80 bg-mk-cream/95 pb-2.5 pt-2 backdrop-blur"
           >
+            <h1 className="sr-only">Discover</h1>
             <div className="flex items-center justify-between gap-2">
-              <h1 className="text-title-section font-extrabold tracking-tight text-ink-1">Discover</h1>
-              <RegionPicker region={region} onSelect={chooseRegion} className="relative max-w-[70%]" />
+              <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-mk-orange">Brief marketplace</p>
+              <RegionPicker region={region} onSelect={chooseRegion} className="relative max-w-[68%]" />
             </div>
             {region && (
-              <div data-testid="region-context" className="mt-0.5 flex min-w-0 items-center gap-1.5 text-micro text-ink-4">
-                <MapPin size={10} className="shrink-0 text-brand-600 dark:text-brand-300" aria-hidden="true" />
-                <span className="truncate font-semibold text-ink-2">{regionLabel(region)}</span>
+              <div data-testid="region-context" className="mt-1 flex min-w-0 items-center gap-1.5 text-[11px] text-mk-ink-soft">
+                <MapPin size={11} className="shrink-0 text-mk-orange" aria-hidden="true" />
+                <span className="truncate font-extrabold text-mk-ink">{regionLabel(region)}</span>
                 <span className="hidden truncate sm:inline">· {region.knownFor.slice(0, 3).join(" · ")}</span>
-                <Link to={regionPath(region)} className="ml-auto shrink-0 font-bold text-brand-700 hover:underline dark:text-brand-300">
+                <Link to={regionPath(region)} className="ml-auto shrink-0 font-extrabold text-mk-ink hover:text-mk-orange">
                   Open region
                 </Link>
               </div>
             )}
-            <div className="mt-2">
-              <SearchInput
-                value={q}
-                onChange={onSearch}
-                placeholder={isServices ? "Search services by name or trade…" : "Search goods, services and rentals…"}
-                aria-label="Search everything"
-              />
-            </div>
           </header>
+
+          <MarketplaceHero
+            region={region}
+            onShopSale={() => {
+              patchParams({ kind: "listing", intent: "offers", public_sale: "true" });
+              window.setTimeout(scrollToShop, 0);
+            }}
+            onBrowseAll={() => {
+              clearAll();
+              window.setTimeout(scrollToShop, 0);
+            }}
+          />
+          <TrustStrip />
 
           <SpotlightRail
             items={isServices ? providerItems : items}
@@ -391,23 +491,44 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
             onSpotSale={isServices ? null : () => setSpottedOpen(true)}
           />
 
-          <DiscoverCategoryStrip
-            value={kind}
-            onSelect={selectCategory}
-            savedCount={savedCount}
-            savedActive={pathname.startsWith("/discover/favorites")}
-          />
+          <section aria-labelledby="discover-departments-heading" className="space-y-3">
+            <div className="flex items-end justify-between gap-3">
+              <div>
+                <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-mk-orange">Shop by department</p>
+                <h2 id="discover-departments-heading" className="mt-1 text-2xl font-black tracking-tight text-mk-ink">
+                  Popular categories
+                </h2>
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                <Link to="/regions/all" className="text-[11px] font-extrabold text-mk-ink hover:text-mk-orange">
+                  View all
+                </Link>
+                {!isServices && (
+                  <button
+                    type="button"
+                    onClick={() => setSpottedOpen(true)}
+                    className="inline-flex h-9 items-center gap-1 rounded-full border border-mk-line bg-mk-card px-3 text-[11px] font-extrabold text-mk-ink hover:border-mk-orange hover:text-mk-orange"
+                  >
+                    <BadgePercent size={12} aria-hidden="true" /> Spot a sale
+                  </button>
+                )}
+              </div>
+            </div>
+            <DiscoverCategoryStrip
+              value={kind}
+              onSelect={selectCategory}
+              savedCount={savedCount}
+              savedActive={pathname.startsWith("/discover/favorites")}
+              items={items}
+            />
+          </section>
 
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-micro text-ink-4">
-              {isServices ? "One card per provider · every service on their Page" : "Offers, services, rentals and rounds around you"}
-            </p>
-            {!isServices && (
-              <button type="button" onClick={() => setSpottedOpen(true)} className="inline-flex h-8 items-center gap-1 rounded-full border border-hot/30 bg-hot-soft px-2.5 text-micro font-bold text-hot">
-                <BadgePercent size={11} aria-hidden="true" /> Spot a public sale
-              </button>
-            )}
-          </div>
+          {!isServices && (
+            <DealRail
+              items={saleItems}
+              viewAllTo={`${pathname.startsWith("/regions") ? "/regions" : "/discover"}?kind=listing&public_sale=true${region?.slug ? `&region=${region.slug}` : ""}`}
+            />
+          )}
         </>
       ) : (
         <>
@@ -426,7 +547,7 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
             </button>
           </div>
 
-          <nav aria-label="Browse the network" className="flex flex-wrap gap-2"><Link to="/offers" className="underline text-xs">Verified offers</Link><Link to="/network?tab=suggested" className="underline text-xs">People</Link></nav>
+          <nav aria-label="Browse the network" className="flex flex-wrap gap-2"><Link to="/offers" className="underline text-xs">Verified offers</Link><Link to="/browse?type=people" className="underline text-xs">Suppliers</Link></nav>
 
           <SearchInput
             value={q}
@@ -450,7 +571,7 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
           Neither applies to the Services directory: it is filtered by the
           provider's Page area, and standing is not a provider ranking. Showing
           a control that changes nothing is worse than not showing it. */}
-      {!isServices && <div className="flex flex-wrap items-center justify-between gap-2">
+      {!isServices && !regionAware && <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <span className="text-micro text-ink-4">Within</span>
           <div role="group" aria-label="Discovery radius" className="flex items-center gap-1">
@@ -477,25 +598,6 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
             })}
           </div>
         </div>
-        {regionAware && (
-          <button
-            type="button"
-            aria-pressed={trust === "3"}
-            aria-label="Only Level 3 or higher traders"
-            title="Only pages with a completed trade record (Level 3+)"
-            onClick={() => patchParams({ trust: trust === "3" ? "" : "3" })}
-            data-testid="regions-trust"
-            className={cn(
-              "inline-flex h-7 items-center gap-1 rounded-full border px-2.5 text-micro font-bold transition-colors",
-              trust === "3"
-                ? "border-brand-700 bg-brand-700 text-white"
-                : "border-edge-1 bg-surface-1 text-ink-3 hover:border-edge-2 hover:text-ink-1",
-            )}
-          >
-            <ShieldCheck size={12} aria-hidden="true" />
-            Lvl 3+ only
-          </button>
-        )}
       </div>}
 
       {/* ── what you are doing: kept inside More filters on the region
@@ -540,95 +642,43 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
         <CategoryTiles value={kind} onSelect={(value) => patchParams({ kind: value, filter: "", intent: "" })} />
       </section>}
 
-      {/* ── everything else, behind one control that counts what is on ────── */}
-      {!isServices && <div className="rounded-xl border border-edge-1 bg-surface-1">
-        <button
-          type="button"
-          onClick={() => setFiltersOpen((v) => !v)}
-          aria-expanded={filtersOpen}
-          data-testid="explore-more-filters"
-          className="flex w-full items-center gap-2 px-3 py-2 text-left text-2xs font-semibold text-ink-2"
-        >
-          <SlidersHorizontal size={13} className="text-ink-4" aria-hidden="true" />
-          More filters
-          {hiddenFilterCount > 0 && (
-            <span className="rounded-full bg-brand-600 px-1.5 text-micro font-bold text-white dark:bg-brand-500">
-              {hiddenFilterCount}
-            </span>
-          )}
-          {hiddenFilterCount > 0 && (
-            <span className="truncate font-normal text-ink-4">
-              {[activeWhen?.label, activePrice].filter(Boolean).join(" · ")}
-            </span>
-          )}
-          <ChevronDown
-            size={13}
-            aria-hidden="true"
-            className={cn("ml-auto shrink-0 text-ink-4 transition-transform", filtersOpen && "rotate-180")}
-          />
-        </button>
+      {/* ── /explore keeps its quiet, counted filter panel. The shopfront uses
+          the same controls inside ShopToolbar, so there is one filter set. ── */}
+      {!regionAware && !isServices && (
+        <div className="rounded-xl border border-edge-1 bg-surface-1">
+          <button
+            type="button"
+            onClick={() => setFiltersOpen((v) => !v)}
+            aria-expanded={filtersOpen}
+            data-testid="explore-more-filters"
+            className="flex w-full items-center gap-2 px-3 py-2 text-left text-2xs font-semibold text-ink-2"
+          >
+            <SlidersHorizontal size={13} className="text-ink-4" aria-hidden="true" />
+            More filters
+            {hiddenFilterCount > 0 && (
+              <span className="rounded-full bg-brand-600 px-1.5 text-micro font-bold text-white dark:bg-brand-500">
+                {hiddenFilterCount}
+              </span>
+            )}
+            {hiddenFilterCount > 0 && (
+              <span className="truncate font-normal text-ink-4">
+                {[activeWhen?.label, activePrice].filter(Boolean).join(" · ")}
+              </span>
+            )}
+            <ChevronDown
+              size={13}
+              aria-hidden="true"
+              className={cn("ml-auto shrink-0 text-ink-4 transition-transform", filtersOpen && "rotate-180")}
+            />
+          </button>
 
-        {filtersOpen && (
-          <div className="space-y-2 border-t border-edge-1 px-3 py-2.5" data-testid="explore-filter-panel">
-            {regionAware && (
-              <div role="group" aria-label="Browse by intent" className="flex flex-wrap items-center gap-1">
-                <span className="mr-1 w-12 shrink-0 text-micro text-ink-4">Use</span>
-                {REGION_INTENTS.map((option) => (
-                  <Chip
-                    key={option.value || "all"}
-                    size="sm"
-                    active={intent === option.value}
-                    onClick={() => patchParams({ intent: option.value })}
-                    data-testid={`regions-intent-${option.value || "all"}`}
-                  >
-                    {option.label}
-                  </Chip>
-                ))}
-              </div>
-            )}
-            <div className="flex flex-wrap items-center gap-1">
-              <span className="mr-1 w-12 shrink-0 text-micro text-ink-4">Time</span>
-              {WHEN_FILTERS.map((option) => (
-                <Chip
-                  key={option.value || "anytime"}
-                  size="sm"
-                  active={when === option.value}
-                  onClick={() => patchParams({ when: option.value })}
-                >
-                  {option.label}
-                </Chip>
-              ))}
+          {filtersOpen && (
+            <div className="space-y-2 border-t border-edge-1 px-3 py-2.5" data-testid="explore-filter-panel">
+              {filterControls}
             </div>
-            <div className="flex flex-wrap items-center gap-1">
-              <span className="mr-1 w-12 shrink-0 text-micro text-ink-4">Price</span>
-              <Chip
-                size="sm"
-                active={price === "free"}
-                onClick={() => patchParams({ price: price === "free" ? "" : "free" })}
-              >
-                No price
-              </Chip>
-              <Chip
-                size="sm"
-                active={price === "priced"}
-                onClick={() => patchParams({ price: price === "priced" ? "" : "priced" })}
-              >
-                Priced
-              </Chip>
-            </div>
-            {(hiddenFilterCount > 0 || trust) && (
-              <button
-                type="button"
-                data-testid="explore-clear-all"
-                onClick={clearAll}
-                className="inline-flex h-7 items-center gap-1 rounded-full px-2 text-micro font-bold text-ink-3 hover:bg-surface-2 hover:text-ink-1"
-              >
-                <X size={11} aria-hidden="true" /> Clear all filters
-              </button>
-            )}
-          </div>
-        )}
-      </div>}
+          )}
+        </div>
+      )}
 
       {!regionAware && (
         /* A strip, not a card wall: markets were the old scope. */
@@ -648,6 +698,43 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
           {spottedError && <p role="alert" className="text-xs text-rose-700">{spottedError}</p>}
         </>
       )}
+      {regionAware && !isServices && (
+        <ShopToolbar
+          query={q}
+          onSearch={onSearch}
+          categories={REGION_CATEGORIES.map(({ value, label }) => ({ value, label }))}
+          category={kind}
+          onCategory={selectCategory}
+          sort={sort}
+          onSort={setSort}
+          onReset={clearAll}
+          filtersOpen={filtersOpen}
+          onToggleFilters={() => setFiltersOpen((v) => !v)}
+          hiddenFilterCount={hiddenFilterCount}
+          countText={`${resultItems.length} ${resultItems.length === 1 ? "product" : "products"}${q ? ` matching “${q}”` : ""}${location?.radius_km ? ` · within ${radius} km` : ""}${region ? ` · ${regionLabel(region)}` : ""}`}
+          trustControl={(
+            <button
+              type="button"
+              aria-pressed={trust === "3"}
+              aria-label="Only Level 3 or higher traders"
+              title="Only pages with a completed trade record (Level 3+)"
+              onClick={() => patchParams({ trust: trust === "3" ? "" : "3" })}
+              data-testid="regions-trust"
+              className={cn(
+                "inline-flex h-7 items-center gap-1 rounded-full border px-2.5 text-[10px] font-extrabold transition-colors",
+                trust === "3"
+                  ? "border-mk-ink bg-mk-ink text-mk-cream"
+                  : "border-mk-line bg-mk-cream text-mk-ink-soft hover:border-mk-ink/40 hover:text-mk-ink",
+              )}
+            >
+              <ShieldCheck size={11} aria-hidden="true" /> Lvl 3+ only
+            </button>
+          )}
+        >
+          {filterControls}
+        </ShopToolbar>
+      )}
+
       {/* ── results ───────────────────────────────────────────────────────── */}
       {isServices ? (
         <ServiceProvidersPanel
@@ -690,17 +777,15 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
             )
           ) : (
             <>
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-2xs text-ink-4" data-testid="explore-count">
-                  {resultItems.length} {resultItems.length === 1 ? "thing" : "things"}
-                  {q ? ` matching “${q}”` : ""}
-                  {location?.radius_km ? ` within ${radius} km` : ""}
-                  {regionAware && region ? ` · ${regionLabel(region)}` : ""}
-                </p>
-                {regionAware && (
-                  <span className="shrink-0 text-micro font-semibold text-ink-4">Live feed</span>
-                )}
-              </div>
+              {!regionAware && (
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-2xs text-ink-4" data-testid="explore-count">
+                    {resultItems.length} {resultItems.length === 1 ? "thing" : "things"}
+                    {q ? ` matching “${q}”` : ""}
+                    {location?.radius_km ? ` within ${radius} km` : ""}
+                  </p>
+                </div>
+              )}
 
               {regionAware && (
                 <FeaturedGrid
@@ -712,7 +797,7 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
 
               {regionAware ? (
                 <MerchGrid
-                  items={renderableStandard}
+                  items={sortedStandard}
                   onSavedChanged={() => setSavedCount(loadFavorites().length)}
                 />
               ) : (
@@ -728,10 +813,11 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
               {regionAware && spottedStandard.length > 0 && (
                 <section aria-labelledby="discover-spotted-heading" className="space-y-2">
                   <div>
-                    <h2 id="discover-spotted-heading" className="text-title-section font-extrabold text-ink-1">
+                    <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-mk-orange">Community reports</p>
+                    <h2 id="discover-spotted-heading" className="mt-1 text-2xl font-black tracking-tight text-mk-ink">
                       Spotted public sales
                     </h2>
-                    <p className="text-micro text-ink-4">Community-reported, walked to and confirmed on the ground.</p>
+                    <p className="text-[11px] text-mk-ink-soft">Walked to, seen and confirmed on the ground.</p>
                   </div>
                   <MerchGrid
                     items={spottedStandard}
@@ -749,6 +835,8 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
           )}
         </section>
       )}
+
+      {regionAware && <MarketplaceBand />}
     </div>
   );
 }
@@ -793,10 +881,10 @@ function ServiceProvidersPanel({ status, error, items, query, region, onRetry })
     return (
       <section
         data-testid="service-providers-empty"
-        className="rounded-2xl border border-dashed border-edge-2 bg-surface-0 p-6 text-center"
+        className="rounded-2xl border border-dashed border-mk-line bg-mk-card p-6 text-center"
       >
-        <h2 className="text-sm font-bold text-ink-1">No service providers here yet</h2>
-        <p className="mx-auto mt-1 max-w-md text-sm text-ink-3">
+        <h2 className="text-sm font-bold text-mk-ink">No service providers here yet</h2>
+        <p className="mx-auto mt-1 max-w-md text-sm text-mk-ink-soft">
           {query
             ? `Nothing matched “${query}” in this corridor.`
             : `Nobody in ${region?.name || "this corridor"} has published a bookable service yet.`}
@@ -805,7 +893,7 @@ function ServiceProvidersPanel({ status, error, items, query, region, onRetry })
         </p>
         <Link
           to="/you/page"
-          className="mt-4 inline-flex h-10 items-center gap-1 rounded-lg bg-brand-700 px-4 text-xs font-bold text-white hover:bg-brand-800"
+          className="mt-4 inline-flex h-10 items-center gap-1 rounded-lg bg-mk-ink px-4 text-xs font-extrabold text-mk-cream hover:bg-mk-ink/90"
         >
           Publish your own service <Compass size={13} aria-hidden="true" />
         </Link>
@@ -814,7 +902,7 @@ function ServiceProvidersPanel({ status, error, items, query, region, onRetry })
   }
   return (
     <section aria-live="polite" className="space-y-3" data-testid="service-providers">
-      <p className="text-2xs text-ink-4">
+      <p className="text-2xs text-mk-ink-soft">
         {items.length} service provider{items.length === 1 ? "" : "s"}
         {query ? ` matching “${query}”` : ""}
         {region ? ` · ${regionLabel(region)}` : ""}
@@ -832,8 +920,8 @@ function FeedSkeleton({ regionAware = false }) {
       aria-label="Loading results"
     >
       {[0, 1, 2, 3, 4, 5].map((i) => (
-        <li key={i} className="overflow-hidden rounded-card border border-edge-1 bg-surface-1">
-          <Skeleton className="aspect-[4/3] w-full rounded-none" />
+        <li key={i} className="overflow-hidden rounded-2xl border border-mk-line bg-mk-card">
+          <Skeleton className="aspect-square w-full rounded-none bg-mk-warm" />
           <div className="space-y-2 p-4">
             <Skeleton className="h-4 w-3/4" />
             <Skeleton className="h-3 w-1/2" />
@@ -849,10 +937,10 @@ function ErrorPanel({ onRetry, message }) {
   return (
     <div
       data-testid="explore-error"
-      className="rounded-card-lg border border-edge-1 bg-surface-1 p-6 text-center shadow-xs"
+      className="rounded-2xl border border-mk-line bg-mk-card p-6 text-center shadow-xs"
     >
-      <p className="text-sm font-semibold text-ink-1">{message || "That didn't load."}</p>
-      <p className="mt-1 text-xs text-ink-3">The rest of the app is fine — this is just this list.</p>
+      <p className="text-sm font-semibold text-mk-ink">{message || "That didn't load."}</p>
+      <p className="mt-1 text-xs text-mk-ink-soft">The rest of the app is fine — this is just this list.</p>
       <Button className="mt-4" variant="secondary" icon={RefreshCw} onClick={onRetry}>
         Try again
       </Button>
@@ -864,9 +952,9 @@ function FilteredEmpty({ onClear, hasMore = false, onMore }) {
   return (
     <div
       data-testid="explore-filtered-empty"
-      className="rounded-card-lg border border-edge-1 bg-surface-1 p-6 text-center shadow-xs"
+      className="rounded-2xl border border-mk-line bg-mk-card p-6 text-center shadow-xs"
     >
-      <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-surface-2 text-ink-4">
+      <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-mk-warm text-mk-orange">
         <ShieldCheck size={22} aria-hidden="true" />
       </span>
       <h2 className="mt-3 text-title-section font-semibold text-ink-1">

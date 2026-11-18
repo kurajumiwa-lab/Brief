@@ -132,6 +132,21 @@
   --hot: 230 81 0;        /* #E65100 — terracotta */
   --hot-soft: 255 237 229;
 
+  /* ── Marketplace merchandising palette ─────────────────────────────────
+     A warm, editorial shopfront used by the discovery feed: cream paper,
+     near-black plum ink, and one tomato-orange action. It is deliberately
+     separate from the trade greens so a merchandising surface can feel like
+     a catalogue without repainting the whole app. */
+  --mk-cream: 250 247 242;
+  --mk-warm: 244 238 230;
+  --mk-card: 255 255 255;
+  --mk-ink: 31 22 50;       /* #1F1632 */
+  --mk-ink-soft: 92 82 104;
+  --mk-orange: 232 85 47;   /* #E8552F */
+  --mk-orange-soft: 255 236 228;
+  --mk-line: 232 226 218;
+  --mk-green: 37 211 102;   /* WhatsApp-style affirmation, used sparingly */
+
   /* ── Semantic status. Named by meaning, never by hue ─────────────────── */
   --ok: 25 167 131;      --ok-soft: 232 248 243;
   --warn: 180 83 9;      --warn-soft: 254 243 214;
@@ -211,6 +226,15 @@
   --edge-1: 38 46 41;
   --edge-2: 53 63 56;
   --edge-3: 75 87 79;
+
+  --mk-cream: 20 15 28;
+  --mk-warm: 32 25 42;
+  --mk-card: 27 21 37;
+  --mk-ink: 247 242 234;
+  --mk-ink-soft: 199 188 210;
+  --mk-orange: 255 122 80;
+  --mk-orange-soft: 58 34 28;
+  --mk-line: 53 43 67;
 
   --brand-50: 12 34 30;
   --brand-100: 16 48 42;

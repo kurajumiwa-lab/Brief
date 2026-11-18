@@ -25,6 +25,7 @@ export default function MobileTabBar() {
   const vendor = useAuthStore((s) => s.vendor);
   const activity = useOutsideStore((s) => s.activity);
   const { pathname } = useLocation();
+  const isDiscovery = pathname === "/regions" || pathname.startsWith("/regions/") || pathname.startsWith("/discover");
 
   // Unread notifications, plus rooms that had a message today — the same two
   // numbers the Activity screen shows, so the badge never disagrees with it.
@@ -40,7 +41,10 @@ export default function MobileTabBar() {
   return (
     <nav
       aria-label="Primary mobile"
-      className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-surface-0 border-t border-edge-1 shadow-md pb-safe"
+      className={cn(
+        "lg:hidden fixed bottom-0 inset-x-0 z-40 border-t shadow-md pb-safe",
+        isDiscovery ? "border-mk-line bg-mk-card" : "border-edge-1 bg-surface-0",
+      )}
     >
       <ul className="flex items-stretch">
         {PRIMARY_TABS.map((item) => {
@@ -92,7 +96,9 @@ export default function MobileTabBar() {
                 className={({ isActive }) =>
                   cn(
                     "relative flex flex-col items-center justify-center gap-1 min-h-16 py-2 text-2xs font-semibold transition-colors",
-                    active || isActive ? "text-brand-800 dark:text-brand-300" : "text-ink-4 hover:text-ink-2"
+                    active || isActive
+                      ? isDiscovery ? "text-mk-orange" : "text-brand-800 dark:text-brand-300"
+                      : "text-ink-4 hover:text-ink-2"
                   )
                 }
               >

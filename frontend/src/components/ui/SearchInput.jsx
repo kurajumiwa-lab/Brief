@@ -4,7 +4,7 @@ import { cn, debounce } from "@/lib/utils";
 import { fieldBase } from "./Input";
 
 /** Controlled-looking search box that debounces `onChange`. */
-export default function SearchInput({ value = "", onChange, placeholder = "Search…", delay = 300, className, autoFocus, size = "md", "aria-label": ariaLabel }) {
+export default function SearchInput({ value = "", onChange, placeholder = "Search…", delay = 300, className, inputClassName, autoFocus, size = "md", "aria-label": ariaLabel }) {
   const [text, setText] = useState(value);
   useEffect(() => setText(value), [value]);
 
@@ -27,7 +27,7 @@ export default function SearchInput({ value = "", onChange, placeholder = "Searc
         autoFocus={autoFocus}
         onChange={(e) => update(e.target.value)}
         placeholder={placeholder}
-        className={cn(fieldBase, size === "lg" ? "h-12 text-base" : "h-10", "pl-10 pr-9")}
+        className={cn(fieldBase, size === "lg" ? "h-12 text-base" : "h-10", "pl-10 pr-9", inputClassName)}
       />
       {text && (
         <button

@@ -45,12 +45,12 @@ export function RegionCard({ item }) {
   return (
     <Link
       to={item.to || "#"}
-      className="group flex h-full flex-col overflow-hidden rounded-2xl border border-edge-1 bg-surface-1 shadow-xs transition-[border-color,transform] duration-2 hover:-translate-y-0.5 hover:border-edge-3 focus-visible:ring-2 focus-visible:ring-brand-500"
+      className="group flex h-full flex-col overflow-hidden rounded-2xl border border-mk-line bg-mk-card transition-[border-color,transform,box-shadow] duration-2 hover:-translate-y-0.5 hover:border-mk-ink/25 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-brand-500"
       data-testid={`content-card-${item.kind}`}
       data-region-card="true"
     >
       <div
-        className="relative aspect-[4/3] w-full overflow-hidden bg-surface-2"
+        className="relative aspect-square w-full overflow-hidden bg-mk-warm"
         data-testid="region-card-art"
         data-fallback={hasImage ? "false" : "true"}
       >
@@ -72,7 +72,7 @@ export function RegionCard({ item }) {
           </div>
         )}
 
-        <span className="absolute left-2 top-2 rounded-full bg-black/45 px-2 py-1 text-[10px] font-bold text-white backdrop-blur">
+        <span className="absolute left-2 top-2 rounded-full border border-mk-line bg-mk-card/95 px-2 py-1 text-[10px] font-extrabold text-mk-ink backdrop-blur">
           {kindLabel(item.kind)}
         </span>
         {(claimStatus === "probationary" || claimStatus === "verified") && (
@@ -92,8 +92,8 @@ export function RegionCard({ item }) {
           className={cn(
             "absolute right-2 top-2 inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-extrabold",
             rank.level >= 3
-              ? "bg-brand-700 text-white"
-              : "bg-white/95 text-ink-2 backdrop-blur",
+              ? "bg-mk-orange text-white"
+              : "bg-mk-card/95 text-mk-ink backdrop-blur",
           )}
           title={`${rank.label} · Lvl ${rank.level}`}
           data-testid="region-card-level"
@@ -104,7 +104,7 @@ export function RegionCard({ item }) {
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col p-3">
-        <h3 className="line-clamp-2 text-sm font-extrabold leading-snug text-ink-1">
+        <h3 className="line-clamp-2 text-sm font-extrabold leading-snug text-mk-ink">
           {item.title || kindLabel(item.kind)}
         </h3>
 
@@ -126,12 +126,16 @@ export function RegionCard({ item }) {
           </span>
         )}
 
-        <p className="mt-1 flex min-w-0 items-center gap-1 text-micro text-ink-4">
-          <MapPin size={10} className="shrink-0" aria-hidden="true" />
-          <span className="truncate">{place}</span>
-          <span aria-hidden="true">•</span>
-          <span className="shrink-0 font-semibold text-ink-2">{price}</span>
-        </p>
+        <div className="mt-2 rounded-xl border border-mk-line bg-mk-cream p-2">
+          <p className="flex min-w-0 items-center gap-1 text-[10px] font-bold uppercase tracking-[0.06em] text-mk-ink-soft">
+            <MapPin size={9} className="shrink-0" aria-hidden="true" />
+            <span className="truncate normal-case tracking-normal">{place}</span>
+          </p>
+          <div className="mt-1.5 flex items-center justify-between gap-2 rounded-lg bg-mk-orange px-2 py-1.5 text-white">
+            <span className="truncate text-sm font-black tabular-nums">{price}</span>
+            <span className="shrink-0 rounded-md bg-white/20 px-1.5 py-0.5 text-[10px] font-extrabold">Lvl {rank.level}</span>
+          </div>
+        </div>
 
         {item.is_fair_corridor_price && (
           <span
@@ -149,20 +153,20 @@ export function RegionCard({ item }) {
         <div className="mt-auto pt-3">
           {momentum?.capacity > 0 ? (
             <>
-              <div className="flex items-center justify-between gap-2 text-[10px] font-bold text-ink-3">
+              <div className="flex items-center justify-between gap-2 text-[10px] font-bold text-mk-ink-soft">
                 <span data-testid="region-card-momentum">{momentum.text}</span>
-                <span className="text-ink-4">{Math.max(momentum.capacity - momentum.joined, 0)} left</span>
+                <span>{Math.max(momentum.capacity - momentum.joined, 0)} left</span>
               </div>
-              <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-surface-3">
+              <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-mk-warm">
                 <div
-                  className="h-full rounded-full bg-brand-600"
+                  className="h-full rounded-full bg-mk-orange"
                   style={{ width: `${Math.min(Math.max(Math.round((momentum.joined / momentum.capacity) * 100), 4), 100)}%` }}
                   aria-hidden="true"
                 />
               </div>
             </>
           ) : (
-            <div className="flex items-center justify-between gap-1 text-[10px] text-ink-4">
+            <div className="flex items-center justify-between gap-1 text-[10px] text-mk-ink-soft">
               <span className="truncate">
                 {item.owner?.handle ? `/p/${item.owner.handle}` : "Page not published"}
               </span>

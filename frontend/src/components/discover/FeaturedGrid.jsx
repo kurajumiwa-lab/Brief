@@ -16,16 +16,16 @@ export default function FeaturedGrid({ items = [], viewAllTo = null, onSavedChan
     <section aria-labelledby="discover-featured-heading" data-testid="discover-featured" className="space-y-2">
       <div className="flex items-end justify-between gap-2">
         <div>
-          <h2 id="discover-featured-heading" className="flex items-center gap-1.5 text-title-section font-extrabold text-ink-1">
-            <span className="grid h-6 w-6 place-items-center rounded-full bg-hot-soft text-hot">
-              <Flame size={13} aria-hidden="true" />
-            </span>
+          <p className="flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-[0.18em] text-mk-orange">
+            <Flame size={11} aria-hidden="true" /> Trending now
+          </p>
+          <h2 id="discover-featured-heading" className="mt-1 text-2xl font-black tracking-tight text-mk-ink">
             Featured &amp; Trending
           </h2>
-          <p className="mt-0.5 text-micro text-ink-4">Closest, soonest and most active — never paid placement.</p>
+          <p className="mt-0.5 text-[11px] text-mk-ink-soft">Closest, soonest and most active — never paid placement.</p>
         </div>
         {viewAllTo && (
-          <Link to={viewAllTo} className="shrink-0 text-micro font-bold text-brand-700 hover:underline dark:text-brand-300">
+          <Link to={viewAllTo} className="shrink-0 text-[11px] font-extrabold text-mk-ink hover:text-mk-orange">
             View all
           </Link>
         )}
