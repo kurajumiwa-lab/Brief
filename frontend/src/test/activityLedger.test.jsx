@@ -54,6 +54,7 @@ vi.mock("@/lib/api", () => ({
   },
   outsideAPI: {
     create: mocks.outsideCreate,
+    remove: mocks.apiDelete,
     location: vi.fn(() => ok(mocks.outsideState.location)),
     activity: vi.fn(() => ok(mocks.outsideState.activity)),
   },
@@ -396,6 +397,37 @@ describe("Four-type publishing", () => {
     });
   });
 
+  it("refuses to publish an Available offer without the good, service or rental it belongs to", async () => {
+    const CreatePage = (await import("@/pages/create/CreatePage")).default;
+    renderAt("/create?type=available&ledger=1", <CreatePage />);
+
+    // The offer is anchored before anything can be published.
+    expect(await screen.findByTestId("create-primary-category")).toBeInTheDocument();
+    fireEvent.change(screen.getByTestId("create-title"), {
+      target: { value: "Bicycle repair at my stall" },
+    });
+    fireEvent.change(screen.getByTestId("create-body"), {
+      target: { value: "Brakes, gears and punctures fixed while you wait in Kisii town." },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /Publish available/i }));
+    expect(await screen.findByText(/Needs:.*primary_category/i)).toBeInTheDocument();
+    expect(mocks.outsideCreate).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByTestId("create-primary-category"), {
+      target: { value: "service" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Publish available/i }));
+
+    await waitFor(() => expect(mocks.outsideCreate).toHaveBeenCalledTimes(1));
+    expect(mocks.outsideCreate.mock.calls[0][0]).toMatchObject({
+      content_type: "available",
+      posting_type: "available",
+      use_ledger: true,
+      primary_category: "service",
+    });
+  });
+
   it("shows mandatory youth supervision fields with server-valid age/domain defaults", async () => {
     const CreatePage = (await import("@/pages/create/CreatePage")).default;
     renderAt("/create?type=opportunity&ledger=1", <CreatePage />);
@@ -409,6 +441,29 @@ describe("Four-type publishing", () => {
     expect(screen.getByTestId("youth-permitted-domain")).toHaveValue("garden_help");
     expect(screen.getByTestId("youth-supervisor-name")).toBeInTheDocument();
     expect(screen.getByText(/Server-enforced safety rules/i)).toBeInTheDocument();
+  });
+});
+
+describe("Publisher removal", () => {
+  it("lets the author remove their own activity and asks before doing it", async () => {
+    mocks.authState.vendor = ME;
+    mocks.authState.token = "tok";
+    mocks.apiDelete.mockResolvedValue(ok({ ok: true, removed: false, retired: true }));
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+
+    const ActivityDetailPage = (await import("@/pages/activities/ActivityDetailPage")).default;
+    render(
+      <MemoryRouter initialEntries={["/activities/act-1"]}>
+        <Routes>
+          <Route path="/activities/:id" element={<ActivityDetailPage />} />
+          <Route path="/regions" element={<div>Discover</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(await screen.findByTestId("activity-delete"));
+    expect(window.confirm).toHaveBeenCalled();
+    await waitFor(() => expect(mocks.apiDelete).toHaveBeenCalledWith("wanted", "act-1"));
   });
 });
 

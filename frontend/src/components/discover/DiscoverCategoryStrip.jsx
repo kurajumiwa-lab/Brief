@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { BadgePercent, CalendarDays, Heart, LayoutGrid, Package, Truck, Users, Wrench } from "lucide-react";
+import { BadgePercent, CalendarDays, Heart, LayoutGrid, Package, Truck, Wrench } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
@@ -14,7 +14,6 @@ const CATEGORIES = [
   { key: "all", label: "All", value: "", Icon: LayoutGrid, tone: "bg-surface-2 text-ink-2 dark:bg-surface-3 dark:text-ink-2" },
   { key: "goods", label: "Goods", value: "listing", Icon: Package, tone: "bg-[#E8F2EC] text-[#276A49] dark:bg-[#17332A] dark:text-[#A9D9BF]" },
   { key: "services", label: "Services", value: "service", Icon: Truck, tone: "bg-[#E6EFEA] text-[#2F6650] dark:bg-[#16302A] dark:text-[#A6D3BF]" },
-  { key: "people", label: "People", value: "person", Icon: Users, tone: "bg-[#EEF3F0] text-[#375F51] dark:bg-[#1C2C26] dark:text-[#B7D3C8]" },
   { key: "rentals", label: "Rentals", value: "rental", Icon: Wrench, tone: "bg-[#F1F3F2] text-[#4A6259] dark:bg-[#202A26] dark:text-[#BDCCC5]" },
   { key: "rounds", label: "Rounds", value: "rounds", Icon: CalendarDays, tone: "bg-[#F6F1E8] text-[#7A5A22] dark:bg-[#2E2718] dark:text-[#E6C98E]" },
   { key: "spotted", label: "Spotted", value: "spotted", Icon: BadgePercent, tone: "bg-hot-soft text-hot" },

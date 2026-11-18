@@ -129,7 +129,15 @@ describe("1 · spotlight and featured merchandising", () => {
     expect(within(featured).getAllByTestId("region-card-distance")).toHaveLength(3);
     expect(within(featured).getAllByTestId("region-card-distance")[0]).toHaveTextContent("1.2 km");
     // The three featured items leave the dense grid rather than repeating there.
-    expect(within(screen.getByTestId("regions-grid")).getAllByTestId(/^content-card-/)).toHaveLength(2);
+    // The person record no longer comes to Discover at all: five fixtures minus
+    // a person minus three featured leaves exactly one dense card.
+    expect(within(screen.getByTestId("regions-grid")).getAllByTestId(/^content-card-/)).toHaveLength(1);
+  });
+
+  it("asks the server for one category only instead of filtering a mixed feed on screen", async () => {
+    await renderDiscover("/discover?kind=event");
+    await waitFor(() => expect(mocks.feed).toHaveBeenCalledWith(expect.objectContaining({ kinds: ["event"] })));
+    expect(screen.queryByTestId("discover-category-person")).not.toBeInTheDocument();
   });
 
   it("does not fake a featured grid with fewer than three items", async () => {

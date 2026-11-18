@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft, BookmarkPlus, CalendarDays, CheckCircle2, Clock, Compass,
-  Banknote, Lock, MapPin, RefreshCw, Repeat, ShieldCheck, Unlock,
+  Banknote, Lock, MapPin, RefreshCw, Repeat, ShieldCheck, Trash2, Unlock,
 } from "lucide-react";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
@@ -11,7 +11,7 @@ import Select from "@/components/ui/Select";
 import Textarea from "@/components/ui/Textarea";
 import Skeleton from "@/components/ui/Skeleton";
 import { toast } from "@/components/ui/Toast";
-import { apiError } from "@/lib/api";
+import { apiError, outsideAPI } from "@/lib/api";
 import { ledgerAPI } from "@/lib/ledgerApi";
 import {
   LEDGER_STAGES, SETTLEMENT_METHODS, TEMPLATE_LABELS,
@@ -44,6 +44,7 @@ export default function ActivityDetailPage() {
   const [alternatives, setAlternatives] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   // Response form state
   const [respBody, setRespBody] = useState("");
@@ -110,6 +111,24 @@ export default function ActivityDetailPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  const onDelete = useCallback(async () => {
+    if (!activity) return;
+    const ok = window.confirm(
+      "Remove this activity? It disappears from Discover and search. Responses and bookings already recorded keep their history.",
+    );
+    if (!ok) return;
+    setDeleting(true);
+    try {
+      await outsideAPI.remove(activity.posting_type || "available", activity.id);
+      toast.success("Activity removed");
+      navigate("/regions");
+    } catch (err) {
+      toast.error(apiError(err, "Could not remove this activity."));
+    } finally {
+      setDeleting(false);
+    }
+  }, [activity, navigate]);
 
   if (loading) {
     return (
@@ -302,7 +321,20 @@ export default function ActivityDetailPage() {
         <Link to="/explore" className="inline-flex items-center gap-1.5 text-xs font-semibold text-ink-3 hover:text-ink-1">
           <ArrowLeft size={14} aria-hidden="true" /> Back to Explore
         </Link>
-        <span className="text-micro text-ink-4">Local Activity Ledger</span>
+        <div className="flex items-center gap-2">
+          <span className="text-micro text-ink-4">Local Activity Ledger</span>
+          {isOwner && (
+            <button
+              type="button"
+              onClick={onDelete}
+              disabled={deleting}
+              data-testid="activity-delete"
+              className="inline-flex h-8 items-center gap-1 rounded-full border border-edge-2 px-2.5 text-micro font-bold text-ink-3 transition-colors hover:border-danger/40 hover:bg-danger-soft hover:text-danger disabled:opacity-50"
+            >
+              <Trash2 size={12} aria-hidden="true" /> {deleting ? "Removing…" : "Delete"}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* ── 1. Activity Header ───────────────────────────────────────────── */}
@@ -310,6 +342,12 @@ export default function ActivityDetailPage() {
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant={pBadge.variant} size="sm">{pBadge.label}</Badge>
           <Badge variant="gray" size="sm">{tplLabel}</Badge>
+          {activity.template_fields?.primary_category && (
+            <Badge variant="brand" size="sm">
+              {activity.template_fields.primary_category.charAt(0).toUpperCase()}
+              {activity.template_fields.primary_category.slice(1)} offer
+            </Badge>
+          )}
           {activity.owner?.account_kind && (
             <Badge variant="blue" size="sm">
               {ACCOUNT_KIND_LABELS[activity.owner.account_kind] || activity.owner.account_kind}

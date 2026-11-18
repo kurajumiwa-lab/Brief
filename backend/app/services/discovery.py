@@ -298,6 +298,12 @@ async def discover(
         if not reasons:
             reasons.append("active in the network")
 
+        profile = profiles.get(c.id)
+        capacity = dict(getattr(profile, "supply_capacity", None) or {}) if profile else {}
+        chat_identity = capacity.get("chat_identity") or {}
+        avatar_url = capacity.get("avatar_url") or chat_identity.get("avatar_url")
+        logo_url = getattr(profile, "logo_url", None) or chat_identity.get("logo_url")
+
         results.append({
             "vendor_id": str(c.id),
             "vendor_handle": c.vendor_handle,
@@ -305,6 +311,10 @@ async def discover(
             "business_categories": c.business_categories or [],
             "current_role": c.current_role.value,
             "physical_location": c.physical_location,
+            # The face the person chose. Home renders this as a circular avatar;
+            # a business without a photo falls back to a neutral silhouette.
+            "avatar_url": avatar_url or None,
+            "logo_url": logo_url or None,
             "network_score": c.network_score,
             "parasitism_index": c.parasitism_index,
             "fulfillment_rate": rate,

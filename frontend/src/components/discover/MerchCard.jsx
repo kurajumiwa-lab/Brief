@@ -32,21 +32,29 @@ const CTA = {
 
 function priceWithUnit(item) {
   const base = priceLabel(item.price_kes);
-  const unit = item.meta?.unit || item.meta?.starting_price_unit;
+  const unit = item.meta?.unit || item.meta?.starting_price_unit || item.meta?.price_unit;
   if (base === "Open" || !unit) return base;
   return `${base} / ${unit}`;
 }
 
 export default function MerchCard({ item, featured = false, onSavedChanged }) {
   const [saved, setSaved] = useState(() => isFavorite(item));
-  const palette = paletteFor(item);
+  const primaryCategory = item.meta?.primary_category || null;
+  // An Available posting is an offer; it belongs to a good, service or rental.
+  // The card says which one instead of presenting "Offer" as a category.
+  const offerKind = { goods: "listing", service: "service", rental: "rental" }[primaryCategory];
+  const cardKind = offerKind || item.kind;
+  const cardLabel = primaryCategory
+    ? `${primaryCategory.charAt(0).toUpperCase()}${primaryCategory.slice(1)} offer`
+    : kindLabel(item.kind);
+  const palette = paletteFor(offerKind ? { ...item, kind: offerKind } : item);
   const Icon = palette.Icon;
   const rank = ownerRank(item.owner);
   const place = String(item.location || item.area_name || "").split(",")[0] || "Near you";
   const trades = Number(item.owner?.movements_completed || 0) + Number(item.owner?.confirmed_trade_proofs || 0);
   const momentum = momentumLabel(item);
   const serviceCount = item.meta?.service_count || 0;
-  const cta = CTA[item.kind] || "Open";
+  const cta = primaryCategory === "service" ? "Enquire" : (CTA[item.kind] || "Open");
 
   function save(event) {
     event.preventDefault();
@@ -89,7 +97,7 @@ export default function MerchCard({ item, featured = false, onSavedChanged }) {
           </div>
         )}
 
-        <CategoryPill kind={item.kind} label={kindLabel(item.kind)} className="absolute left-2 top-2 z-20 shadow-xs" />
+        <CategoryPill kind={cardKind} label={cardLabel} className="absolute left-2 top-2 z-20 shadow-xs" />
 
         {item.distance_km != null && (
           <span

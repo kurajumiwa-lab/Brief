@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   ArrowDownToLine, CalendarClock, FileText, Globe, HeartHandshake, MapPin,
-  MessageSquare, Package, Pencil, Plug, Scale, ShieldCheck, Truck,
+  MessageSquare, Package, Pencil, Plug, Scale, ShieldCheck, Trash2, Truck,
 } from "lucide-react";
 import Avatar from "@/components/ui/Avatar";
 import Badge from "@/components/ui/Badge";
@@ -22,7 +22,7 @@ import { ReliabilityMeter, TrustRow } from "@/components/trust/TrustSignals";
 import { useAuthStore } from "@/stores/authStore";
 import { useChatStore } from "@/stores/chatStore";
 import { useStockStore } from "@/stores/stockStore";
-import { stockAPI, vendorAPI, apiError } from "@/lib/api";
+import { outsideAPI, stockAPI, vendorAPI, apiError } from "@/lib/api";
 import { currency, num, relativeTime, shortDate } from "@/lib/formatters";
 import { numOrNull } from "@/lib/utils";
 import { QUALITY_STATUSES } from "@/config/constants";
@@ -86,6 +86,20 @@ export default function ListingPage() {
   }, [load]);
 
   const own = !!item && me?.vendor_handle === item.vendor_handle;
+
+  const removeListing = async () => {
+    if (!item || !window.confirm("Remove this line from the network? Buyers stop seeing it; past sourcing requests keep their history.")) return;
+    setBusy(true);
+    try {
+      await outsideAPI.remove("listing", item.id);
+      toast.success("Removed from the network");
+      navigate("/regions");
+    } catch (err) {
+      toast.error(apiError(err, "Could not remove this listing."));
+    } finally {
+      setBusy(false);
+    }
+  };
   const available = item?.quantity_available ?? 0;
   const min = item?.min_order_quantity || 1;
   const out = available <= 0;
@@ -307,6 +321,9 @@ export default function ListingPage() {
                 <p className="text-xs text-ink-3">This is your own line. The network sees it {item.visible_to_network ? "right now" : "only when you make it visible"}.</p>
                 <Button fullWidth icon={Pencil} onClick={() => navigate("/stock")}>
                   Manage on my shelf
+                </Button>
+                <Button fullWidth variant="dangerGhost" icon={Trash2} data-testid="listing-remove" onClick={removeListing}>
+                  Remove from the network
                 </Button>
               </div>
             ) : (

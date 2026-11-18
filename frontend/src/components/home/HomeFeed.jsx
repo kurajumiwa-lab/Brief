@@ -4,6 +4,7 @@ import { ArrowRight, ClipboardCheck, Compass, RefreshCw, Search, Store } from "l
 import CuratedShelf from "./CuratedShelf";
 import ReferralBanner from "./ReferralBanner";
 import DiscoveryShortcuts from "./DiscoveryShortcuts";
+import PeopleRail from "./PeopleRail";
 import LocationPrompt from "./LocationPrompt";
 import WhatDoYouDo from "@/components/onboarding/WhatDoYouDo";
 import { ONBOARDING_ACTIVITIES_ENABLED } from "@/config/flags";
@@ -83,6 +84,7 @@ export default function HomeFeed({ onSource, className }) {
       <LocationPrompt />
       <LocationBar />
       <DiscoveryShortcuts />
+      <PeopleRail />
 
       {SHELVES_BEFORE_BANNER.map((shelf) => (
         <CuratedShelf key={shelf.key} shelf={shelf} state={shelves[shelf.key]} onSource={onSource} />

@@ -476,6 +476,23 @@ async def _notify_matching_people(
     return len(recipient_ids)
 
 
+PRIMARY_OFFER_CATEGORIES = ("goods", "service", "rental")
+
+# An "Available" posting is an offer, not a category of its own. Every offer is
+# attached to what is actually being offered, so Discover can show it under
+# Goods, Services or Rentals. Older clients that do not send the field are
+# inferred from the template instead of being rejected mid-publish.
+PRIMARY_BY_TEMPLATE = {
+    "repair_artisan": "service",
+    "community_learning": "service",
+    "travelling_round": "service",
+    "tool_lending": "rental",
+    "agricultural_produce_fodder": "goods",
+    "collection_point": "goods",
+    "group_sourcing": "goods",
+}
+
+
 async def create_activity(db: AsyncSession, organizer: Vendor, payload: dict) -> dict:
     """Create a LocalActivity, validate youth/privacy rules, and notify watchers."""
     posting_type = (payload.get("posting_type") or "").strip().lower()
@@ -505,6 +522,12 @@ async def create_activity(db: AsyncSession, organizer: Vendor, payload: dict) ->
     if template not in ACTIVITY_TEMPLATES:
         template = "general"
 
+    primary_category = (payload.get("primary_category") or "").strip().lower()
+    if primary_category and primary_category not in PRIMARY_OFFER_CATEGORIES:
+        raise HTTPException(422, "primary_category must be goods, service or rental.")
+    if posting_type == "available" and not primary_category:
+        primary_category = PRIMARY_BY_TEMPLATE.get(template, "goods")
+
     starts_at = parse_dt(payload.get("starts_at"), "starts_at")
     ends_at = parse_dt(payload.get("ends_at"), "ends_at")
     expires_at = parse_dt(payload.get("expires_at"), "expires_at")
@@ -527,9 +550,12 @@ async def create_activity(db: AsyncSession, organizer: Vendor, payload: dict) ->
         "target_quantity", "estimated_unit_price_kes", "dropoff_area",
         "subject_or_skill", "learner_group", "host_background", "materials_note",
         "age_band", "permitted_domain", "supervisor_name", "supervisor_role", "learning_takeaway",
+        "primary_category",
     ):
         if k in payload and payload[k] not in (None, ""):
             template_fields.setdefault(k, payload[k])
+    if posting_type == "available":
+        template_fields["primary_category"] = primary_category
 
     try:
         permission_rules = validate_youth_safety(

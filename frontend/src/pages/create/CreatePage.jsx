@@ -776,6 +776,20 @@ function Field({
   const options = FIELD_OPTIONS[field];
 
   switch (field) {
+    case "primary_category":
+      return (
+        <Select
+          label="What is this offer attached to?"
+          required={required}
+          options={options || []}
+          placeholder="Choose Goods, Services or Rentals"
+          value={draft.primary_category || ""}
+          onChange={(e) => setField("primary_category", e.target.value)}
+          hint="An offer is not a standalone category. Choosing the thing it belongs to puts it under Goods, Services or Rentals in Discover."
+          data-testid="create-primary-category"
+        />
+      );
+
     case "title":
       return (
         <Input

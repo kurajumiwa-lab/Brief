@@ -66,7 +66,6 @@ const REGION_CATEGORIES = [
   { value: "", label: "All", kinds: null },
   { value: "listing", label: "Goods", kinds: ["listing"] },
   { value: "service", label: "Services", kinds: ["service", "available"] },
-  { value: "person", label: "People", kinds: ["person"] },
   { value: "rental", label: "Rentals", kinds: ["rental"] },
   { value: "rounds", label: "Rounds & Events", kinds: ["scheduled", "event"] },
   { value: "spotted", label: "Spotted Sales", kinds: [] },
@@ -94,12 +93,10 @@ const KIND_FILTERS = [
   { value: "listing", label: "Goods" },
   { value: "service", label: "Services" },
   { value: "rental", label: "Rentals" },
-  { value: "person", label: "People" },
 ];
 
 const FILTER_KIND = {
   goods: "listing",
-  people: "person",
   services: "service",
   equipment: "rental",
 };
@@ -321,7 +318,11 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
   const hiddenFilterCount = (when ? 1 : 0) + (price ? 1 : 0) + (intent ? 1 : 0);
 
   const visibleItems = useMemo(() => {
-    const ordinary = regionAware && kinds?.length === 0 ? [] : items;
+    // People live on the Home feed now. Discover is about what is on offer,
+    // not a directory of faces; person records are filtered even when the
+    // search endpoint returns them in its default kind set.
+    const sourceItems = regionAware ? items.filter((item) => item.kind !== "person") : items;
+    const ordinary = regionAware && kinds?.length === 0 ? [] : sourceItems;
     const strict = regionAware && trust === "3" ? ordinary.filter((item) => ownerLevel(item.owner) >= 3) : null;
     // A strict Level 3+ door that finds fewer than four traders falls back to
     // Level 2+, as the design contract says. It never silently calls a Level 2
@@ -377,7 +378,7 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
               <SearchInput
                 value={q}
                 onChange={onSearch}
-                placeholder={isServices ? "Search services by name or trade…" : "Search goods, people, services…"}
+                placeholder={isServices ? "Search services by name or trade…" : "Search goods, services and rentals…"}
                 aria-label="Search everything"
               />
             </div>
@@ -399,7 +400,7 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
 
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-micro text-ink-4">
-              {isServices ? "One card per provider · every service on their Page" : "Offers, services, rounds and people around you"}
+              {isServices ? "One card per provider · every service on their Page" : "Offers, services, rentals and rounds around you"}
             </p>
             {!isServices && (
               <button type="button" onClick={() => setSpottedOpen(true)} className="inline-flex h-8 items-center gap-1 rounded-full border border-hot/30 bg-hot-soft px-2.5 text-micro font-bold text-hot">
@@ -425,12 +426,12 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
             </button>
           </div>
 
-          <nav aria-label="Browse the network" className="flex flex-wrap gap-2"><Link to="/offers" className="underline text-xs">Verified offers</Link><Link to="/browse?type=people" className="underline text-xs">Suppliers</Link></nav>
+          <nav aria-label="Browse the network" className="flex flex-wrap gap-2"><Link to="/offers" className="underline text-xs">Verified offers</Link><Link to="/network?tab=suggested" className="underline text-xs">People</Link></nav>
 
           <SearchInput
             value={q}
             onChange={onSearch}
-            placeholder="Search goods, people, services…"
+            placeholder="Search goods, services and rentals…"
             aria-label="Search everything"
           />
         </>

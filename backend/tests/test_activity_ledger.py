@@ -640,3 +640,80 @@ async def test_inbox_agenda_promotes_a_pledge_to_a_confirmed_booking(client):
     assert confirmed["pass_code"].startswith("HO-")
     # The booking replaces its pledge; the same round cannot appear twice.
     assert not any(row["kind"] == "round" and row["record_id"] == joined.json()["id"] for row in rows)
+
+
+# ── An offer is never standalone: it hangs off a good, service or rental ──────
+
+async def test_available_offer_attaches_to_primary_category_and_scopes_feed(client):
+    seller, _ = await _register(
+        client, display_name="Kemunto", account_kind="household", geo=KISII,
+        categories=["bike repair"],
+    )
+    created = await client.post("/api/ledger/activities", json={
+        "posting_type": "available",
+        "title": "Bicycle repair at my stall",
+        "body": "Brakes, gears and punctures fixed while you wait in Kisii town.",
+        "primary_category": "service",
+        "price_kes": 300,
+        "area_name": "Kisii",
+    }, headers=seller)
+    assert created.status_code == 201, created.text
+    offer = created.json()
+    assert offer["template_fields"]["primary_category"] == "service"
+
+    # The same offer is only in the Services shelf, never underneath Goods.
+    service_feed = (await client.get(
+        "/api/outside/feed", params={"kinds": "service"}, headers=seller
+    )).json()
+    assert offer["id"] in [item["id"] for item in service_feed["items"]]
+    goods = await client.post("/api/ledger/activities", json={
+        "posting_type": "available",
+        "title": "Two crates of tomatoes",
+        "body": "Fresh tomatoes from the shamba, picked this morning.",
+        "primary_category": "goods",
+        "price_kes": 250,
+        "area_name": "Kisii",
+    }, headers=seller)
+    assert goods.status_code == 201, goods.text
+    goods_feed = (await client.get(
+        "/api/outside/feed", params={"kinds": "listing"}, headers=seller
+    )).json()
+    goods_ids = [item["id"] for item in goods_feed["items"]]
+    assert goods.json()["id"] in goods_ids
+    assert offer["id"] not in goods_ids
+    assert goods.json()["id"] not in [item["id"] for item in service_feed["items"]]
+
+    bad = await client.post("/api/ledger/activities", json={
+        "posting_type": "available",
+        "title": "Mystery offer",
+        "body": "An offer with no real category.",
+        "primary_category": "miscellaneous",
+    }, headers=seller)
+    assert bad.status_code == 422
+
+
+async def test_author_can_remove_their_own_activity_and_a_stranger_cannot(client):
+    owner, _ = await _register(client, display_name="Nyarangi", account_kind="household", geo=KISII)
+    stranger, _ = await _register(client, display_name="Odhiambo", account_kind="person", geo=KISII)
+
+    created = await client.post("/api/ledger/activities", json={
+        "posting_type": "available",
+        "title": "Nursing care visits in Kisii",
+        "body": "Home nursing support, KSH 500 per visit.",
+        "primary_category": "service",
+        "price_kes": 500,
+        "area_name": "Kisii",
+    }, headers=owner)
+    assert created.status_code == 201, created.text
+    activity_id = created.json()["id"]
+
+    denied = await client.delete(f"/api/outside/content/available/{activity_id}", headers=stranger)
+    assert denied.status_code == 403
+
+    removed = await client.delete(f"/api/outside/content/available/{activity_id}", headers=owner)
+    assert removed.status_code == 200, removed.text
+    assert removed.json()["removed"] is False
+    assert removed.json()["retired"] is True
+
+    feed = (await client.get("/api/outside/feed", params={"kinds": "available"}, headers=owner)).json()
+    assert activity_id not in [item["id"] for item in feed["items"]]

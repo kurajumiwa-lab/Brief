@@ -447,6 +447,23 @@ async def _people(db, viewer, pair, limit, now):
     return out
 
 
+def _primary_offer_category(act) -> Optional[str]:
+    """The good/service/rental an offer hangs off.
+
+    Rows written before the anchor existed are read through the same rule the
+    publisher now sees, so old offers land under one category instead of
+    floating as a standalone "Available".
+    """
+    from app.modules.ledger.service import PRIMARY_BY_TEMPLATE
+
+    primary = (act.template_fields or {}).get("primary_category")
+    if primary:
+        return primary
+    if act.posting_type == "available":
+        return PRIMARY_BY_TEMPLATE.get(act.inferred_template, "goods")
+    return None
+
+
 async def _local_activities(db, viewer, pair, limit, now):
     from app.modules.ledger.models import LocalActivity
     from app.modules.ledger.privacy import public_coordinates
@@ -491,14 +508,15 @@ async def _local_activities(db, viewer, pair, limit, now):
             price_kes=act.price_kes,
             is_commercial=bool(act.price_kes is not None and act.price_kes > 0),
             owner={
-                "id": str(org.id),
-                "handle": org.vendor_handle,
-                "name": org.business_name,
+                **_owner(org),
                 "account_kind": getattr(org, "account_kind", None) or "business",
             },
             counts={"responses": act.response_count or 0, "booked": act.spots_confirmed or 0},
             meta={
                 "posting_type": act.posting_type,
+                # An offer is never its own category: it belongs to a Good, a
+                # Service or a Rental. Old rows simply have no value here.
+                "primary_category": _primary_offer_category(act),
                 "inferred_template": act.inferred_template,
                 "lifecycle_status": act.lifecycle_status,
                 "schedule_label": act.schedule_label,
@@ -542,9 +560,9 @@ KIND_TO_SOURCE = {
     "scheduled": ["local_activity"],
     "post": ["post"],
     "event": ["event"],
-    "listing": ["listing"],
-    "service": ["service"],
-    "rental": ["rental"],
+    "listing": ["listing", "local_activity"],
+    "service": ["service", "local_activity"],
+    "rental": ["rental", "local_activity"],
     "opportunity": ["local_activity", "opportunity", "callup"],
     "community": ["community"],
     "collection": ["collection"],
@@ -590,6 +608,17 @@ async def viewer_reactions(db, viewer, keys: Sequence[tuple]) -> dict:
     return out
 
 
+PRIMARY_CATEGORY_TO_KIND = {"goods": "listing", "service": "service", "rental": "rental"}
+
+
+def _item_matches_kinds(item: dict, kinds) -> bool:
+    if item.get("kind") in kinds:
+        return True
+    primary = (item.get("meta") or {}).get("primary_category")
+    mapped = PRIMARY_CATEGORY_TO_KIND.get(str(primary or "").lower())
+    return bool(mapped and mapped in kinds)
+
+
 async def collect(db, viewer, *, kinds, pair, limit, now) -> list:
     """Run the requested source adapters and return one deduped candidate list.
 
@@ -619,8 +648,10 @@ async def collect(db, viewer, *, kinds, pair, limit, now) -> list:
                          "person": Vendor.__tablename__}
         for item in rows or []:
             item["__source"] = source_tables[src]
-            # `service`/`rental` come from one query; keep only what was asked for.
-            if item["kind"] not in kinds:
+            # `service`/`rental` come from one query; keep only what was asked
+            # for. An Available offer also matches the primary category it is
+            # attached to (good → listing, service → service, rental → rental).
+            if not _item_matches_kinds(item, kinds):
                 item["__excluded"] = True
             key = (item["kind"], item["id"])
             if key in seen:
