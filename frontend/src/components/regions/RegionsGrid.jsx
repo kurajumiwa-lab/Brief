@@ -117,6 +117,15 @@ export function RegionCard({ item }) {
           </span>
         )}
 
+        {item.kind === "provider" && item.meta?.service_count > 0 && (
+          <span
+            data-testid="region-card-service-count"
+            className="mt-1 inline-flex w-fit items-center gap-1 rounded-full border border-edge-1 bg-surface-2 px-1.5 py-0.5 text-[10px] font-bold text-ink-3"
+          >
+            {item.meta.service_count} service{item.meta.service_count === 1 ? "" : "s"}
+          </span>
+        )}
+
         <p className="mt-1 flex min-w-0 items-center gap-1 text-micro text-ink-4">
           <MapPin size={10} className="shrink-0" aria-hidden="true" />
           <span className="truncate">{place}</span>

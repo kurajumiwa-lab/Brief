@@ -51,6 +51,7 @@ vi.mock("@/lib/api", () => ({
     activity: vi.fn(() => ok({ groups: [], counts: {} })),
   },
   marketsAPI: { around: mocks.market, list: mocks.market },
+  serviceProviderAPI: { list: vi.fn(() => ok({ providers: [], count: 0, total: 0, limit: 24, filters: {}, note: "" })) },
   geoAPI: { geocode: vi.fn(() => ok({ lat: -0.095, lng: 34.77 })) },
   apiError: (_e, fallback) => fallback,
 }));
@@ -94,7 +95,11 @@ describe("1 · the discovery layout is back", () => {
     fireEvent.click(within(bar).getByRole("button", {name: "Services"}));
     expect(within(bar).getByRole("button", {name: "Services"})).toHaveAttribute("aria-pressed", "true");
     expect(within(bar).getByRole("button", {name: "All"})).toHaveAttribute("aria-pressed", "false");
-    expect(screen.getByTestId("explore-more-filters")).toBeInTheDocument();
+    // The Services door is a provider directory: time, price, radius and the
+    // standing filter do not apply, so the screen does not show dead controls.
+    expect(screen.queryByTestId("explore-more-filters")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("regions-trust")).not.toBeInTheDocument();
+    expect(await screen.findByTestId("service-providers-empty")).toBeInTheDocument();
   });
 });
 

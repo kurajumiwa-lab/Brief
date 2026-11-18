@@ -6,7 +6,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field, model_validator
-from sqlalchemy import select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.discovery_visibility import scheduled_event_window, discoverable
@@ -71,17 +71,28 @@ class EventCreate(BaseModel):
             raise ValueError("end_date must not be before start_date")
         if self.event_type not in EVENT_TYPES:
             raise ValueError(f"event_type must be one of {sorted(EVENT_TYPES)}")
-        if self.payment_method is not None:
-            method = self.payment_method.strip().upper()
-            if method not in PAYMENT_METHODS:
-                raise ValueError(f"payment_method must be one of {sorted(PAYMENT_METHODS)}")
-            self.payment_method = method
-        if self.payment_method in ("TILL", "PAYBILL", "POCHI", "SEND_MONEY") and not (self.payment_number or "").strip():
-            raise ValueError("payment_number is required when a payment method is set")
-        if self.payment_method != "PAYBILL":
-            self.payment_account = None
+        self.payment_method, self.payment_number, self.payment_account = _clean_payment(
+            self.entry_fee, self.payment_method, self.payment_number, self.payment_account,
+        )
         self.inclusions = [str(x).strip()[:120] for x in (self.inclusions or []) if str(x).strip()][:20]
         self.checklist = [str(x).strip()[:120] for x in (self.checklist or []) if str(x).strip()][:20]
+        return self
+
+
+class EventPaymentIn(BaseModel):
+    """Organiser edits the price and the rail guests pay through."""
+    entry_fee: float = Field(0, ge=0)
+    payment_method: Optional[str] = None
+    payment_number: Optional[str] = Field(default=None, max_length=32)
+    payment_account: Optional[str] = Field(default=None, max_length=64)
+    payment_recipient_name: Optional[str] = Field(default=None, max_length=120)
+    hold_ttl_minutes: int = Field(120, ge=5, le=10080)
+
+    @model_validator(mode="after")
+    def _payment(self):
+        self.payment_method, self.payment_number, self.payment_account = _clean_payment(
+            self.entry_fee, self.payment_method, self.payment_number, self.payment_account,
+        )
         return self
 
 
@@ -105,6 +116,40 @@ class RejectPaymentIn(BaseModel):
 def _naive_utc(dt: datetime) -> datetime:
     """Normalise any datetime to naive UTC so it fits TIMESTAMP WITHOUT TIME ZONE."""
     return dt.astimezone(timezone.utc).replace(tzinfo=None) if dt.tzinfo else dt
+
+
+def _clean_payment(entry_fee: float, method: Optional[str], number: Optional[str],
+                   account: Optional[str]) -> tuple[Optional[str], Optional[str], Optional[str]]:
+    """The one payment rule, used by create and by the organiser's edit.
+
+    Money never touches the platform. A priced event must name a rail the
+    organiser owns; a free event must not pretend to have one.
+    """
+    method = (method or "").strip().upper() or None
+    if method and method not in PAYMENT_METHODS:
+        raise ValueError(f"payment_method must be one of {sorted(PAYMENT_METHODS)}")
+    number = (number or "").strip() or None
+    account = (account or "").strip() or None
+    fee = float(entry_fee or 0)
+
+    if method == "CASH":
+        # Cash is paid to the organiser in person; there is no number to copy.
+        if fee <= 0:
+            raise ValueError("Set an entry fee, or choose the free option — cash with no fee collects nothing.")
+        return "CASH", None, None
+    if method == "FREE":
+        if fee > 0:
+            raise ValueError("A priced event needs a payment method; choose Till, Paybill, phone or cash.")
+        return "FREE", None, None
+    if fee > 0 and method is None:
+        raise ValueError("Add how guests pay you (Till, Paybill, phone or cash) before publishing a priced event.")
+    if fee <= 0 and method in event_payments.PAID_METHODS:
+        raise ValueError("Set an entry fee, or choose the free option — a payment method with no fee collects nothing.")
+    if method in event_payments.PAID_METHODS and not number:
+        raise ValueError("Enter the Till, Paybill or phone number guests should pay.")
+    if method != "PAYBILL":
+        account = None
+    return method, number, account
 
 
 def _registration_out(r: Optional[EventRegistration]) -> Optional[dict]:
@@ -175,6 +220,8 @@ def _event_out(
         "inclusions": e.inclusions or [],
         "checklist": e.checklist or [],
         "payment_method": e.payment_method,
+        "payment_ready": event_payments.payment_problem(e) is None,
+        "payment_problem": event_payments.payment_problem(e),
         "payment_number": e.payment_number,
         "payment_account": e.payment_account,
         "payment_recipient_name": e.payment_recipient_name,
@@ -303,21 +350,32 @@ async def payment_queue(
     vendor: Vendor = Depends(get_current_vendor),
     db: AsyncSession = Depends(get_db),
 ):
-    """Submitted M-Pesa notes waiting on *my* confirmation — the Inbox queue.
+    """Payments waiting on *my* confirmation — the Inbox queue.
 
-    Only events I organise, only PAYMENT_SUBMITTED bookings. Each row carries
-    the parsed risk flags so the host decides in one tap; the raw SMS note
-    is included because the host needs it to verify against their Till.
+    Only events I organise: a submitted M-Pesa note, or a live cash booking on
+    a cash event. Each row carries the parsed risk flags (or `cash_due`) so the
+    host decides in one tap; the raw SMS note is included because the host
+    needs it to verify against their Till.
     """
+    # A lapsed cash hold is not waiting for the host any more; expire first so
+    # the queue is what is actually actionable.
+    await event_payments.expire_stale_holds(db)
+    await db.commit()
     rows = (await db.execute(
         select(EventRegistration, Event, Vendor)
         .join(Event, Event.id == EventRegistration.event_id)
         .join(Vendor, Vendor.id == EventRegistration.vendor_id)
         .where(
             Event.organizer_id == vendor.id,
-            EventRegistration.booking_status == "PAYMENT_SUBMITTED",
+            or_(
+                EventRegistration.booking_status == "PAYMENT_SUBMITTED",
+                and_(
+                    EventRegistration.booking_status == "PENDING_PAYMENT",
+                    Event.payment_method == "CASH",
+                ),
+            ),
         )
-        .order_by(EventRegistration.mpesa_submitted_at.asc())
+        .order_by(EventRegistration.mpesa_submitted_at.asc().nulls_first())
     )).all()
     return [{
         "event_id": str(ev.id),
@@ -327,6 +385,8 @@ async def payment_queue(
         "vendor_id": str(v.id),
         "vendor_handle": v.vendor_handle,
         "business_name": v.business_name,
+        "payment_method": ev.payment_method,
+        "cash_due": (ev.payment_method or "").upper() == "CASH",
         "mpesa_code": r.mpesa_code,
         "mpesa_amount": float(r.mpesa_amount) if r.mpesa_amount is not None else None,
         "mpesa_recipient_matched": r.mpesa_recipient_matched,
@@ -376,6 +436,33 @@ async def get_event(
     await db.commit()
     mine = await _my_registrations(db, vendor.id)
     return _event_out(e, v, mine.get(e.id), await event_payments.counts(db, e))
+
+
+@router.patch("/{event_id}/payment")
+async def update_event_payment(
+    event_id: UUID,
+    data: EventPaymentIn,
+    vendor: Vendor = Depends(get_current_vendor),
+    db: AsyncSession = Depends(get_db),
+):
+    """Organiser edits their own price and payment rail, including after
+    publishing. Existing bookings keep the state they already reached; new
+    bookings use the new rail. The platform still never holds the money."""
+    event = await db.get(Event, event_id, with_for_update=True)
+    if not event or event.organizer_id != vendor.id:
+        raise HTTPException(404, "Event not found")
+    if event.status in ("completed", "cancelled"):
+        raise HTTPException(409, f"Event is {event.status}; payment details can no longer change")
+    event.entry_fee = data.entry_fee
+    event.payment_method = data.payment_method
+    event.payment_number = data.payment_number
+    event.payment_account = data.payment_account
+    event.payment_recipient_name = (data.payment_recipient_name or "").strip() or None
+    event.hold_ttl_minutes = data.hold_ttl_minutes
+    await db.commit()
+    await db.refresh(event)
+    mine = await _my_registrations(db, vendor.id)
+    return _event_out(event, vendor, mine.get(event.id), await event_payments.counts(db, event))
 
 
 @router.get("/{event_id}/registrations")
@@ -442,6 +529,12 @@ async def _book(db: AsyncSession, event_id: UUID, vendor: Vendor, *, commit: boo
         if not ok and event.organizer_id != vendor.id:
             raise HTTPException(403, "This event is for members of its group")
 
+    # A price without a rail is an unfinished event, not a free one. Refuse the
+    # booking so no pass is issued that the organiser did not agree to.
+    problem = event_payments.payment_problem(event)
+    if problem:
+        raise HTTPException(409, problem)
+
     req = event.vendor_requirements or {}
     wanted = [c.lower() for c in req.get("categories", [])]
     if wanted and not ({c.lower() for c in (vendor.business_categories or [])} & set(wanted)):
@@ -462,9 +555,13 @@ async def _book(db: AsyncSession, event_id: UUID, vendor: Vendor, *, commit: boo
     if commit:
         await db.commit()
     current = await event_payments.counts(db, event)
+    cash = (event.payment_method or "").upper() == "CASH"
     messages = {
         "CONFIRMED": f"Registered for '{event.title}' — your pass is ready",
-        "PENDING_PAYMENT": f"Spot held for '{event.title}' — pay via M-Pesa to confirm",
+        "PENDING_PAYMENT": (
+            f"Spot held for '{event.title}' — pay the organiser in cash to confirm"
+            if cash else f"Spot held for '{event.title}' — pay via M-Pesa to confirm"
+        ),
         "WAITLISTED": f"You're #{reg.waitlist_position} on the waiting list for '{event.title}'",
     }
     return {
@@ -536,10 +633,14 @@ async def confirm_event_payment(
     vendor: Vendor = Depends(get_current_vendor),
     db: AsyncSession = Depends(get_db),
 ):
-    """Host confirms a submitted M-Pesa note. Unlocks the HO-84K pass."""
+    """Host confirms a submitted M-Pesa note, or marks cash received.
+    Unlocks the HO-84K pass; a lapsed hold is not resurrected."""
     event = await db.get(Event, event_id, with_for_update=True)
     if not event or event.organizer_id != vendor.id:
         raise HTTPException(404, "Event not found")
+    # The hold may have lapsed since the host's screen loaded. Expire first so
+    # a stale tap cannot issue a second pass for a seat that was released.
+    await event_payments.expire_stale_holds(db, event_id=event_id)
     try:
         reg = await event_payments.confirm_payment(db, event, registration_id)
     except HTTPException:
@@ -547,7 +648,9 @@ async def confirm_event_payment(
         raise
     await db.commit()
     return {
-        "message": "Payment confirmed — pass unlocked",
+        "message": ("Cash marked received — pass unlocked"
+                    if (event.payment_method or "").upper() == "CASH"
+                    else "Payment confirmed — pass unlocked"),
         "booking_status": reg.booking_status,
         "registration": _registration_out(reg),
         "pass_code": event_payments.pass_code_for(reg.id),

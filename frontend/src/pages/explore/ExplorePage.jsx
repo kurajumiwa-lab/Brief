@@ -14,7 +14,7 @@ import CategoryTiles from "@/components/explore/CategoryTiles";
 import RegionPicker from "@/components/regions/RegionPicker";
 import RegionsGrid from "@/components/regions/RegionsGrid";
 import { SpotDealModal } from "@/components/spotted/SpottedDealUI";
-import { spottedDealAPI } from "@/lib/api";
+import { serviceProviderAPI, spottedDealAPI } from "@/lib/api";
 import {
   DEFAULT_REGION, REGION_BY_SLUG, regionFromPlace, regionLabel, regionPath,
 } from "@/config/regions";
@@ -119,10 +119,16 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
   const price = params.get("price") || "";
   const intent = params.get("intent") || "";
   const trust = params.get("trust") || "";
+  // Services are people, not countable goods. That door gets its own read.
+  const isServices = regionAware && kind === "service";
 
   const [spotted, setSpotted] = useState([]);
   const spottedRequest = useRef(0);
   const [spottedError, setSpottedError] = useState("");
+  const [providers, setProviders] = useState([]);
+  const [providerStatus, setProviderStatus] = useState("idle");
+  const [providerError, setProviderError] = useState("");
+  const [providerReload, setProviderReload] = useState(0);
   const [spottedOpen, setSpottedOpen] = useState(false);
   const [placeOpen, setPlaceOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -152,13 +158,14 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
   const sentinel = useRef(null);
 
   const kinds = useMemo(() => {
+    if (isServices) return null;
     if (!regionAware) return kind ? [kind] : null;
     const category = REGION_CATEGORIES.find((option) => option.value === kind);
     const base = category?.kinds ?? (kind ? [kind] : null);
     const intentKinds = REGION_INTENTS.find((option) => option.value === intent)?.kinds || null;
     if (base && intentKinds) return base.filter((value) => intentKinds.includes(value));
     return base || intentKinds;
-  }, [kind, regionAware, intent]);
+  }, [kind, regionAware, intent, isServices]);
 
   useEffect(() => {
     if (!demo && !location) loadLocation();
@@ -176,8 +183,8 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
   // Reload whenever the URL state changes — which is also what makes the back
   // button restore the previous results.
   useEffect(() => {
-    if (!demo && (!kinds || kinds.length)) loadFeed({ kinds, query: q || null });
-  }, [demo, kinds, q, loadFeed, location?.radius_km]);
+    if (!demo && !isServices && (!kinds || kinds.length)) loadFeed({ kinds, query: q || null });
+  }, [demo, isServices, kinds, q, loadFeed, location?.radius_km]);
 
   // Incremental loading: fetch the next page when the sentinel scrolls in.
   useEffect(() => {
@@ -214,6 +221,36 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
     catch { if (request === spottedRequest.current) { setSpotted([]); setSpottedError("Spotted sales could not be loaded."); } }
   }, [regionAware, demo, region?.slug, q]);
   useEffect(() => { loadSpotted(); }, [loadSpotted]);
+
+  // The Services door: one card per provider, filtered by the same corridor
+  // and search text. It never falls back to the mixed feed, because that is
+  // exactly the clutter this door exists to remove.
+  useEffect(() => {
+    if (!isServices || demo) {
+      setProviders([]);
+      setProviderStatus("idle");
+      setProviderError("");
+      return undefined;
+    }
+    let live = true;
+    setProviderStatus("loading");
+    setProviderError("");
+    serviceProviderAPI.list({ region_slug: region?.slug, q: q || null, limit: 30 })
+      .then(({ data }) => {
+        if (!live) return;
+        setProviders(Array.isArray(data?.providers) ? data.providers : []);
+        setProviderStatus("ready");
+      })
+      .catch(() => {
+        if (!live) return;
+        setProviders([]);
+        setProviderStatus("error");
+        setProviderError("Service providers could not be loaded.");
+      });
+    return () => { live = false; };
+  }, [isServices, demo, region?.slug, q, providerReload]);
+
+  const providerItems = useMemo(() => providers.map(providerToCard), [providers]);
 
   const chooseRegion = useCallback((next) => {
     try { localStorage.setItem(REGION_KEY, next.slug); } catch { /* private mode */ }
@@ -303,7 +340,7 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
       <SearchInput
         value={q}
         onChange={onSearch}
-        placeholder="Search goods, people, services…"
+        placeholder={isServices ? "Search services by name or trade…" : "Search goods, people, services…"}
         aria-label="Search everything"
       />
 
@@ -320,8 +357,11 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
         </div>
       )}
 
-      {/* ── radius and the standing filter share one line ────────────────── */}
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      {/* ── radius and the standing filter share one line ──────────────────
+          Neither applies to the Services directory: it is filtered by the
+          provider's Page area, and standing is not a provider ranking. Showing
+          a control that changes nothing is worse than not showing it. */}
+      {!isServices && <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <span className="text-2xs text-ink-4">Discovery radius</span>
           <div role="group" aria-label="Discovery radius" className="flex items-center gap-1">
@@ -367,10 +407,10 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
             Lvl 3+ only
           </button>
         )}
-      </div>
+      </div>}
 
       {/* ── what you are doing: the secondary axis, kept quiet ────────────── */}
-      {regionAware ? (
+      {!isServices && regionAware ? (
         <div
           role="group"
           aria-label="Browse by intent"
@@ -388,7 +428,7 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
             </Chip>
           ))}
         </div>
-      ) : (
+      ) : !isServices ? (
         <div
           role="group"
           aria-label="Discovery type"
@@ -406,7 +446,7 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
             </Chip>
           ))}
         </div>
-      )}
+      ) : null}
 
       {/* ── categories, in colour, wrapping into as many rows as needed ───── */}
       {!regionAware && <section aria-labelledby="explore-categories-heading" className="space-y-1.5">
@@ -432,7 +472,7 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
       </section>}
 
       {/* ── everything else, behind one control that counts what is on ────── */}
-      <div className="rounded-xl border border-edge-1 bg-surface-1">
+      {!isServices && <div className="rounded-xl border border-edge-1 bg-surface-1">
         <button
           type="button"
           onClick={() => setFiltersOpen((v) => !v)}
@@ -493,15 +533,25 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
             </div>
           </div>
         )}
-      </div>
+      </div>}
 
       {!regionAware && (
         /* A strip, not a card wall: markets were the old scope. */
         <MarketStrip limit={2} />
       )}
 
-      {regionAware && !demo && <><button type="button" onClick={() => setSpottedOpen(true)} className="rounded-xl border border-amber-400 px-3 py-2 text-xs font-bold">Spot a public sale</button><SpotDealModal region={region?.slug} open={spottedOpen} onClose={() => setSpottedOpen(false)} onCreated={loadSpotted} />{spottedError && <p role="alert" className="text-xs text-rose-700">{spottedError}</p>}</>}
+      {regionAware && !demo && !isServices && <><button type="button" onClick={() => setSpottedOpen(true)} className="rounded-xl border border-amber-400 px-3 py-2 text-xs font-bold">Spot a public sale</button><SpotDealModal region={region?.slug} open={spottedOpen} onClose={() => setSpottedOpen(false)} onCreated={loadSpotted} />{spottedError && <p role="alert" className="text-xs text-rose-700">{spottedError}</p>}</>}
       {/* ── results ───────────────────────────────────────────────────────── */}
+      {isServices ? (
+        <ServiceProvidersPanel
+          status={providerStatus}
+          error={providerError}
+          items={providerItems}
+          query={q}
+          region={region}
+          onRetry={() => setProviderReload((n) => n + 1)}
+        />
+      ) : (
       <section aria-live="polite" aria-busy={status === "loading"} className="space-y-3">
         {status === "loading" && !items.length ? (
           <FeedSkeleton regionAware={regionAware} />
@@ -542,7 +592,80 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
           </>
         )}
       </section>
+      )}
     </div>
+  );
+}
+
+/** A provider row, shaped like every other Regions card.
+ *
+ * The card is one provider, never one service. The offering names travel in
+ * `summary`/`meta` for the tests and for any richer card renderer; the visible
+ * price is the provider's own starting price, not an invented average.
+ */
+export function providerToCard(provider) {
+  const offerings = Array.isArray(provider?.offerings) ? provider.offerings : [];
+  const names = offerings.map((o) => o.name).filter(Boolean);
+  return {
+    kind: "provider",
+    id: provider.id,
+    to: provider.handle ? `/p/${provider.handle}` : "#",
+    title: provider.name || (provider.handle ? `@${provider.handle}` : "Service provider"),
+    summary: names.slice(0, 4).join(" · "),
+    category: provider.domains?.[0] || provider.categories?.[0] || "service",
+    location: provider.area || null,
+    price_kes: provider.starting_price_kes ?? null,
+    owner: provider.owner || null,
+    counts: {},
+    meta: {
+      service_count: provider.service_count || names.length,
+      service_names: names,
+      starting_price_unit: provider.starting_price_unit || null,
+      is_bookable: Boolean(provider.is_bookable),
+    },
+  };
+}
+
+function ServiceProvidersPanel({ status, error, items, query, region, onRetry }) {
+  if (status === "loading" || status === "idle") {
+    return <FeedSkeleton regionAware />;
+  }
+  if (status === "error") {
+    return <ErrorPanel onRetry={onRetry} message={error} />;
+  }
+  if (!items.length) {
+    return (
+      <section
+        data-testid="service-providers-empty"
+        className="rounded-2xl border border-dashed border-edge-2 bg-surface-0 p-6 text-center"
+      >
+        <h2 className="text-sm font-bold text-ink-1">No service providers here yet</h2>
+        <p className="mx-auto mt-1 max-w-md text-sm text-ink-3">
+          {query
+            ? `Nothing matched “${query}” in this corridor.`
+            : `Nobody in ${region?.name || "this corridor"} has published a bookable service yet.`}
+          {" "}Services are listed one provider at a time, so a page needs at least one
+          service before it appears here.
+        </p>
+        <Link
+          to="/you/page"
+          className="mt-4 inline-flex h-10 items-center gap-1 rounded-lg bg-brand-700 px-4 text-xs font-bold text-white hover:bg-brand-800"
+        >
+          Publish your own service <Compass size={13} aria-hidden="true" />
+        </Link>
+      </section>
+    );
+  }
+  return (
+    <section aria-live="polite" className="space-y-3" data-testid="service-providers">
+      <p className="text-2xs text-ink-4">
+        {items.length} service provider{items.length === 1 ? "" : "s"}
+        {query ? ` matching “${query}”` : ""}
+        {region ? ` · ${regionLabel(region)}` : ""}
+        {" "}· one card per provider
+      </p>
+      <RegionsGrid items={items} />
+    </section>
   );
 }
 

@@ -184,8 +184,14 @@ async def test_shop_payment_tag_is_explicit_and_validated(client):
     assert saved.status_code == 200, saved.text
     page = (await client.get(f'/api/professional/page/{handle}')).json()
     assert page['payment_tag'] == {'type':'paybill','number':'123456','account':'SHOP01'}
+    # A host or service provider can publish their own rail too; the tag is
+    # not tied to the shop preset.
     await client.put('/api/professional/me/page', headers=h, json={'preset':'host'})
-    assert (await client.get(f'/api/professional/page/{handle}')).json()['payment_tag'] is None
+    assert (await client.get(f'/api/professional/page/{handle}')).json()['payment_tag'] == {
+        'type':'paybill','number':'123456','account':'SHOP01',
+    }
+    await client.put('/api/professional/me/page', headers=h, json={'preset':'service'})
+    assert (await client.get(f'/api/professional/page/{handle}')).json()['payment_tag']['number'] == '123456'
     await client.put('/api/professional/me/page', headers=h, json={'payment_type':None})
     assert (await client.get('/api/professional/me/page',headers=h)).json()['payment_number'] is None
 

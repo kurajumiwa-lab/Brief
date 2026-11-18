@@ -13,6 +13,10 @@ import { initials } from "@/lib/utils";
  * bottom of the screen: who am I here, and what do I send to somebody? The
  * answer now sits under the greeting, with the one action that matters — pass
  * the page into a WhatsApp thread.
+ *
+ * They are NOT the same identity. The Page is the public front door a customer
+ * opens; the office is the private workroom only members see. The labels say
+ * so, because the old copy let the two read as one thing.
  */
 export default function IdentityStrip({ name, page = {}, institution = null }) {
   const [copied, setCopied] = useState(false);
@@ -58,7 +62,7 @@ export default function IdentityStrip({ name, page = {}, institution = null }) {
           {initials(name || "You")}
         </span>
         <div className="min-w-0 flex-1">
-          <p className="eyebrow">Your page</p>
+          <p className="eyebrow">Public page</p>
           <p className="truncate text-sm font-extrabold text-ink-1">{name}</p>
           <p className="mt-0.5 truncate text-micro text-ink-4">
             {published ? url.replace(/^https?:\/\//, "") : "Not published yet"}
@@ -111,10 +115,12 @@ export default function IdentityStrip({ name, page = {}, institution = null }) {
         <div className="flex items-center gap-2.5 border-t border-edge-1 bg-surface-0 px-4 py-3">
           <Building2 size={15} className="shrink-0 text-ink-4" aria-hidden="true" />
           <div className="min-w-0 flex-1">
-            <p className="text-micro text-ink-4">Home office</p>
+            <p className="text-micro text-ink-4">Private office</p>
             <p className="truncate text-xs font-bold text-ink-1">{institution.name}</p>
           </div>
-          <span className="hidden truncate text-micro text-ink-4 sm:block">{institution.line}</span>
+          <span className="hidden truncate text-micro text-ink-4 sm:block">
+            {institution.line} · only your team sees this
+          </span>
           <Link
             to="/office"
             className="inline-flex shrink-0 items-center gap-1 text-micro font-bold text-brand-700 hover:underline dark:text-brand-400"

@@ -16,7 +16,7 @@ import { toast } from "@/components/ui/Toast";
 import { useConfirm } from "@/components/ui/ConfirmDialog";
 import EventPaymentCard from "@/components/events/EventPaymentCard";
 import WhatsAppRosterButton from "@/components/events/WhatsAppRosterButton";
-import EventForm from "@/components/forms/EventForm";
+import EventForm, { PAYMENT_OPTIONS } from "@/components/forms/EventForm";
 import { EVENT_HUB_ENABLED } from "@/config/flags";
 import { useEventStore } from "@/stores/eventStore";
 import { useGroupStore } from "@/stores/groupStore";
@@ -229,6 +229,94 @@ export default function EventsPage() {
   );
 }
 
+/** The organiser's own price + rail. Money goes to them, never to us. */
+function EventPaymentEditor({ event, onSaved }) {
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [form, setForm] = useState({
+    entry_fee: event.entry_fee ?? 0,
+    payment_method: event.payment_method || "",
+    payment_number: event.payment_number || "",
+    payment_account: event.payment_account || "",
+    payment_recipient_name: event.payment_recipient_name || "",
+    hold_ttl_minutes: event.hold_ttl_minutes || 120,
+  });
+  useEffect(() => {
+    setForm({
+      entry_fee: event.entry_fee ?? 0,
+      payment_method: event.payment_method || "",
+      payment_number: event.payment_number || "",
+      payment_account: event.payment_account || "",
+      payment_recipient_name: event.payment_recipient_name || "",
+      hold_ttl_minutes: event.hold_ttl_minutes || 120,
+    });
+  }, [event.id, event.entry_fee, event.payment_method, event.payment_number, event.payment_account, event.payment_recipient_name, event.hold_ttl_minutes]);
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  const save = async () => {
+    const fee = Number(form.entry_fee || 0);
+    if (!Number.isFinite(fee) || fee < 0) return toast.error("Enter the entry fee as a number");
+    if (fee > 0 && !form.payment_method) return toast.error("Choose how guests pay you");
+    if (fee > 0 && form.payment_method !== "CASH" && !form.payment_number.trim()) {
+      return toast.error("Enter the Till, Paybill or phone number");
+    }
+    if (fee <= 0 && form.payment_method) return toast.error("Set an entry fee, or choose the free option");
+    setBusy(true);
+    try {
+      const { data } = await eventAPI.updatePayment(event.id, {
+        entry_fee: fee,
+        payment_method: form.payment_method || null,
+        payment_number: form.payment_method && form.payment_method !== "CASH" ? form.payment_number.trim() : null,
+        payment_account: form.payment_method === "PAYBILL" ? form.payment_account.trim() || null : null,
+        payment_recipient_name: form.payment_recipient_name.trim() || null,
+        hold_ttl_minutes: Number(form.hold_ttl_minutes) || 120,
+      });
+      onSaved?.(data);
+      toast.success("Payment details saved");
+      setOpen(false);
+    } catch (err) {
+      toast.error(apiError(err, "Couldn't save the payment details"));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <section data-testid="event-payment-editor" className="rounded-xl border border-edge-1 bg-surface-1 p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <p className="text-xs font-bold text-ink-1">Price &amp; payment</p>
+          <p className="text-2xs text-ink-4">
+            {event.entry_fee > 0
+              ? `${currency(event.entry_fee)} · ${event.payment_method ? event.payment_method.replace("_", " ") : "no method"}`
+              : "Free event"}
+          </p>
+        </div>
+        <Button size="sm" variant="outline" onClick={() => setOpen((v) => !v)}>
+          {open ? "Close" : "Edit"}
+        </Button>
+      </div>
+      {open && (
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <Input label="Entry fee" type="number" min="0" step="any" prefix="KES" value={form.entry_fee} onChange={set("entry_fee")} />
+          <Select label="How guests pay" value={form.payment_method} onChange={set("payment_method")} options={PAYMENT_OPTIONS} />
+          {form.payment_method && form.payment_method !== "CASH" && (
+            <>
+              <Input label={form.payment_method === "PAYBILL" ? "Paybill number" : form.payment_method === "TILL" ? "Till number" : "Phone number"} inputMode="numeric" value={form.payment_number} onChange={set("payment_number")} />
+              {form.payment_method === "PAYBILL" && <Input label="Account reference" value={form.payment_account} onChange={set("payment_account")} />}
+              <Input label="Recipient name" value={form.payment_recipient_name} onChange={set("payment_recipient_name")} />
+              <Input label="Hold minutes" type="number" min="5" max="10080" value={form.hold_ttl_minutes} onChange={set("hold_ttl_minutes")} />
+            </>
+          )}
+          <div className="sm:col-span-2">
+            <Button size="sm" loading={busy} onClick={save}>Save payment details</Button>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
 /** vendor_requirements is a dict: { categories: [...], other: [...], anything: value } */
 export function requirementChips(req) {
   if (!req || typeof req !== "object") return [];
@@ -318,10 +406,20 @@ function EventDrawer({ event: ev, onClose, organiser, onStatus, onPatch, onBook 
             {requirementChips(ev.vendor_requirements).length > 0 && <Row k="Requirements" v={requirementChips(ev.vendor_requirements).join(", ")} />}
           </dl>
 
+          {organiser && ev.entry_fee > 0 && ev.payment_ready === false && (
+            <p role="alert" className="rounded-xl border border-amber-400/60 bg-amber-50 p-3 text-xs font-semibold text-amber-900 dark:bg-amber-500/10 dark:text-amber-100">
+              This event has a price but no usable payment method, so guests cannot book.
+              {" "}{ev.payment_problem || "Add your Till, Paybill, phone or cash option below."}
+            </p>
+          )}
+
           {ev.meeting_point && <p className="text-sm">Meeting point: {ev.meeting_point}{ev.departure_time && ` · ${ev.departure_time}`}</p>}
           {ev.inclusions?.length > 0 && <p className="text-sm">Includes: {ev.inclusions.join(", ")}</p>}
           {ev.checklist?.length > 0 && <p className="text-sm">Bring: {ev.checklist.join(", ")}</p>}
           {!organiser && ev.status !== "cancelled" && ev.status !== "completed" && <EventPaymentCard event={ev} registration={ev.my_registration} onBook={() => onBook(ev)} onSubmitMpesa={async (sms) => { try { await eventAPI.submitPayment(ev.id, sms); const { data } = await eventAPI.get(ev.id); useEventStore.getState().patch(ev.id, data); onPatch?.(data); toast.success("Note submitted for organiser review"); } catch (err) { toast.error(apiError(err)); } }} />}
+          {organiser && (
+            <EventPaymentEditor event={ev} onSaved={(next) => onPatch?.(next)} />
+          )}
           {organiser && !ev.group_id && !ev.vendor_list_id && <WhatsAppRosterButton event={ev} />}
           {EVENT_HUB_ENABLED && (
             <Link to={`/event/${ev.id}`} className="inline-flex items-center text-sm font-medium text-brand-700 hover:underline dark:text-brand-300">

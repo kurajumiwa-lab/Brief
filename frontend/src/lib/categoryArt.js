@@ -30,7 +30,7 @@ const KEYWORDS = [
 ];
 
 const KIND_DEFAULT = {
-  event: 1, scheduled: 2, wanted: 4, service: 4, rental: 4,
+  event: 1, scheduled: 2, wanted: 4, service: 4, provider: 4, rental: 4,
   opportunity: 3, community: 3, post: 3,
 };
 
@@ -44,7 +44,8 @@ export function paletteFor(item = {}) {
 
 const KIND_LABEL = {
   available: "Offer", listing: "Offer", wanted: "Wanted", scheduled: "Round",
-  event: "Event", service: "Service", rental: "Rental", opportunity: "Opportunity",
+  event: "Event", service: "Service", provider: "Service", rental: "Rental",
+  opportunity: "Opportunity",
   post: "Post", community: "Community", collection: "Collection", person: "Person",
 };
 

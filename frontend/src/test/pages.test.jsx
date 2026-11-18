@@ -32,7 +32,8 @@ vi.mock("@/lib/api", () => {
   return {
   routineAPI: { today: () => new Promise(() => {}), catalogue: () => new Promise(() => {}) },
   credentialsAPI: { mine: () => new Promise(() => {}), forMember: () => new Promise(() => {}) },
-  professionalAPI: { card: () => new Promise(() => {}) },
+  professionalAPI: { card: () => new Promise(() => {}), page: vi.fn(() => ok({ handle: "mama_mboga", preset: "shop", payment_tag: { type: "till", number: "123456" }, preset_content: { shops: [], catalog: [], offers: [], rounds: [] } })) },
+    socialTrustAPI: { publicCard: vi.fn(() => Promise.reject(new Error("no trust card in this fixture"))) },
     default: {},
     apiError,
     authAPI: { login: vi.fn(() => ok({ access_token: "tok" })), register: vi.fn(() => ok({})) },
@@ -560,6 +561,9 @@ describe("Business Control Centre, Stock Visibility, Shop Front & Gallery Photos
     // A handle is an address. The page shows it as a subdomain a person can
     // say out loud, and never makes the handle the identity.
     expect(screen.getByTestId("page-address")).toHaveTextContent("mama_mboga.vendorworld.ke");
+    // The owner's own Till is published on the canonical /p/ Page too, not
+    // only on the legacy /page/ route.
+    expect(screen.getByTestId("page-payment-tag")).toBeInTheDocument();
     expect(screen.queryByRole("navigation", { name: /shop navigation/i })).not.toBeInTheDocument();
   });
 

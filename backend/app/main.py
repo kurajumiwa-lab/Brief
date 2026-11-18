@@ -32,6 +32,7 @@ from app.modules.routines import sweep as routine_sweep
 from app.modules.social_trust import router as social_trust_routes
 from app.modules.price_index import router as price_index_routes
 from app.modules.price_index import sweep as price_index_sweep
+from app.modules.service_directory import router as service_directory_routes
 from app.modules.trade import router as requests_routes
 from app.modules.orders.router import router as orders_routes
 from app.modules.runs import router as runs_routes
@@ -280,6 +281,8 @@ app.include_router(social_trust_routes.alias_router, prefix="/api/profile", tags
 app.include_router(social_trust_routes.alias_router, prefix="/api/social-proof", tags=["Social Seller Trust"])
 # 0069 — live corridor price index: 45-day median/IQR from confirmed local trades.
 app.include_router(price_index_routes.router, prefix="/api/corridors", tags=["Corridor Price Index"])
+# Services are a separate door: one card per provider, never one per service.
+app.include_router(service_directory_routes.router, prefix="/api/service-providers", tags=["Service Directory"])
 app.include_router(pos_bridge.router, prefix="/api/pos", tags=["POS Bridge"])
 # v2.1
 app.include_router(news_routes.router, prefix="/api/news", tags=["Market News"])

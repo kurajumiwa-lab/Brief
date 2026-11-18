@@ -696,9 +696,9 @@ export default function MePage() {
           <Select
             label="Who can view home shelf items"
             options={[
+              { value: "neighbours", label: "My neighbours (nearby members)" },
               { value: "saved_contacts", label: "Saved local contacts only" },
-              { value: "neighbourhood", label: "My neighbourhood" },
-              { value: "everyone", label: "Everyone" },
+              { value: "by_appointment", label: "By appointment only" },
             ]}
             value={storefront.audience || "saved_contacts"}
             onChange={(e) => setStorefront((s) => ({ ...s, audience: e.target.value }))}

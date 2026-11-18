@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import PresetContent from "@/components/page/PresetContent";
+import PaymentTag from "@/components/page/PaymentTag";
 import PortfolioView from "@/components/you/PortfolioView";
 import SocialTrustCard from "@/components/social/SocialTrustCard";
 import { PageSpinner } from "@/components/ui/Spinner";
@@ -113,6 +114,7 @@ export default function PortfolioPage() {
       <div className="mx-auto max-w-2xl px-4">
         {trustCard && <SocialTrustCard card={trustCard} className="mt-4" />}
         {pageCard?.whatsapp_phone && /^\+254[17]\d{8}$/.test(pageCard.whatsapp_phone) && <a className="mt-4 inline-block rounded-xl bg-[#128C4A] px-4 py-2 text-sm font-bold text-white" href={`https://wa.me/${pageCard.whatsapp_phone.slice(1)}`} target="_blank" rel="noreferrer">{pageCard.preset === "service" ? "Book / Request Slot on WhatsApp" : "Chat on WhatsApp"}</a>}
+        <PaymentTag tag={pageCard?.payment_tag} className="mt-4" />
         <PresetContent card={pageCard} />
       </div>
       <PortfolioView

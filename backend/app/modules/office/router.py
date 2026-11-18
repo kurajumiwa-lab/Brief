@@ -129,7 +129,11 @@ async def detail(office_id: uuid.UUID, vendor: Vendor = Depends(get_current_vend
         _fail(exc)
     events = await svc.events_of(db, vendor, office_id)
     return {**svc.office_summary(office, me.role), "members": await svc.members_of(db, office_id),
-            "events": [_event_out(e) for e in events], "roles": list(ROLES), "contact_modes": list(CONTACT_MODES)}
+            "events": [_event_out(e) for e in events], "roles": list(ROLES), "contact_modes": list(CONTACT_MODES),
+            # The office is the private workroom; the Page is the public front
+            # door. Both snapshots are facts, not a completion percentage.
+            "page": await svc.page_snapshot(db, office),
+            "setup": await svc.setup_snapshot(db, office)}
 
 
 @router.post("/offices/{office_id}/invites/account", status_code=201)

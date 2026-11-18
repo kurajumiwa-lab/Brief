@@ -34,19 +34,42 @@ from app.models.vendor import Vendor
 from app.services.mpesa_parser import parse_mpesa_sms
 from app.services.notification_service import create_notification
 
+# Every method that takes money, including cash paid to the host in person.
+# The platform never receives or holds any of it.
+PAID_METHODS = ("TILL", "PAYBILL", "POCHI", "SEND_MONEY", "CASH")
 HOLD_STATUSES = ("PENDING_PAYMENT", "PAYMENT_SUBMITTED")
 ACTIVE_BOOKING_STATUSES = ("PENDING_PAYMENT", "PAYMENT_SUBMITTED", "CONFIRMED", "WAITLISTED")
 
 
 def is_paid_event(event: Event) -> bool:
-    """A paid event needs an explicit M-Pesa rail *and* a non-zero fee.
+    """A priced event with a usable rail. Money always goes to the organiser.
 
-    Events created before this feature have a fee but no rail; treating
-    those as paid would suddenly gate seats that were instant. They stay
-    free (pay on arrival) until the organiser sets a Till/Paybill.
+    A fee with no rail is NOT a free event: it is an unfinished event. The
+    booking path refuses it rather than handing out a pass the organiser never
+    agreed to (`payment_problem` says exactly what is missing).
     """
     method = (event.payment_method or "FREE").upper()
-    return method in ("TILL", "PAYBILL", "POCHI", "SEND_MONEY") and float(event.entry_fee or 0) > 0
+    if float(event.entry_fee or 0) <= 0:
+        return False
+    if method not in PAID_METHODS:
+        return False
+    if method == "CASH":
+        return True
+    return bool((event.payment_number or "").strip())
+
+
+def payment_problem(event: Event) -> Optional[str]:
+    """Why a priced event cannot take a booking yet, or None when it can."""
+    if float(event.entry_fee or 0) <= 0:
+        return None
+    method = (event.payment_method or "FREE").upper()
+    if method not in PAID_METHODS:
+        return ("This event has an entry fee but no payment method. The organiser "
+                "must add a Till, Paybill, phone number or cash option before guests can book.")
+    if method != "CASH" and not (event.payment_number or "").strip():
+        return ("This event has an entry fee but no payment number. The organiser "
+                "must add their Till, Paybill or phone number before guests can book.")
+    return None
 
 
 def capacity(event: Event) -> int:
@@ -191,8 +214,11 @@ async def promote_waitlist(db: AsyncSession, event: Event, now: Optional[datetim
         await create_notification(
             db, head.vendor_id, NotificationType.EVENT_WAITLIST_PROMOTED,
             f"A spot opened up: {event.title}",
-            (f"Your spot is held for {int(event.hold_ttl_minutes or 120)} minutes — pay via M-Pesa to confirm it."
-             if is_paid_event(event) else "Your spot is confirmed. Your pass is ready in Inbox."),
+            (("Your spot is held for "
+              f"{int(event.hold_ttl_minutes or 120)} minutes — pay the organiser in cash to confirm it.")
+             if (event.payment_method or "").upper() == "CASH"
+             else (f"Your spot is held for {int(event.hold_ttl_minutes or 120)} minutes — pay via M-Pesa to confirm it."
+                   if is_paid_event(event) else "Your spot is confirmed. Your pass is ready in Inbox.")),
             sender_id=event.organizer_id,
             data={"event_id": str(event.id), "registration_id": str(head.id)},
         )
@@ -235,8 +261,11 @@ async def expire_stale_holds(
             await create_notification(
                 db, reg.vendor_id, NotificationType.EVENT_HOLD_EXPIRED,
                 f"Your hold for {event.title} expired",
-                "The payment window closed without a submitted M-Pesa note. "
-                "If a seat is still free you can book again.",
+                ("The cash payment window closed before the organiser marked it received. "
+                 "If a seat is still free you can book again."
+                 if (event.payment_method or "").upper() == "CASH"
+                 else "The payment window closed without a submitted M-Pesa note. "
+                      "If a seat is still free you can book again."),
                 sender_id=event.organizer_id,
                 data={"event_id": str(event.id), "registration_id": str(reg.id)},
             )
@@ -255,7 +284,8 @@ async def book_spot(
 
     The caller has already checked the event is bookable and the vendor has
     no live registration. Free events confirm at once; paid events hold a
-    seat for `hold_ttl_minutes` awaiting an M-Pesa note.
+    seat for `hold_ttl_minutes` awaiting either an M-Pesa note or the host
+    marking cash received.
     """
     now = now or datetime.utcnow()
     # A dead hold must free its seat before we decide who gets one.
@@ -324,6 +354,8 @@ async def submit_payment(
     )).scalar_one_or_none()
     if reg is None:
         raise HTTPException(404, "No booking for that event — reserve a spot first")
+    if (event.payment_method or "").upper() == "CASH":
+        raise HTTPException(409, "This event is paid in cash to the organiser. They will mark it received; no M-Pesa note is needed.")
     if reg.booking_status == "PAYMENT_SUBMITTED":
         raise HTTPException(409, "Payment already submitted — waiting for the host to confirm")
     if reg.booking_status != "PENDING_PAYMENT":
@@ -390,12 +422,18 @@ async def submit_payment(
 async def confirm_payment(
     db: AsyncSession, event: Event, registration_id: UUID,
 ) -> EventRegistration:
-    """Host confirms a submitted note. This is the only path to CONFIRMED
-    for a paid event, and the only moment the Trade Pass unlocks."""
+    """Host confirms a submitted M-Pesa note, or marks a cash booking received.
+    This is the only path to CONFIRMED for a paid event, and the only moment
+    the Trade Pass unlocks."""
     reg = await db.get(EventRegistration, registration_id)
     if reg is None or reg.event_id != event.id:
         raise HTTPException(404, "Booking not found")
-    if reg.booking_status != "PAYMENT_SUBMITTED":
+    cash = (event.payment_method or "").upper() == "CASH"
+    # A note submitted before the organiser switched the event to cash is still
+    # a booking waiting on them; marking it received is the honest resolution.
+    if cash and reg.booking_status not in ("PENDING_PAYMENT", "PAYMENT_SUBMITTED"):
+        raise HTTPException(409, "That cash booking is not waiting to be marked received")
+    if not cash and reg.booking_status != "PAYMENT_SUBMITTED":
         raise HTTPException(409, "That booking is not waiting for payment confirmation")
     reg.booking_status = "CONFIRMED"
     reg.status = "confirmed"
@@ -405,7 +443,8 @@ async def confirm_payment(
     await create_notification(
         db, reg.vendor_id, NotificationType.EVENT_PAYMENT_CONFIRMED,
         f"Confirmed: {event.title}",
-        "The host confirmed your M-Pesa payment. Your Trade Pass is ready in Inbox.",
+        ("The organiser marked your cash payment received. Your Trade Pass is ready in Inbox."
+         if cash else "The host confirmed your M-Pesa payment. Your Trade Pass is ready in Inbox."),
         sender_id=event.organizer_id,
         data={"event_id": str(event.id), "registration_id": str(reg.id)},
     )

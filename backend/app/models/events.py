@@ -12,8 +12,10 @@ from app.database import Base
 # Event payment rails (spec §1A). FREE means no M-Pesa tag is shown and a
 # booking is confirmed at once; the other four all render the 1-tap copyable
 # tag. POCHI/SEND_MONEY are phone-number rails, TILL/PAYBILL are business
-# numbers — the distinction only changes the label the client shows.
-PAYMENT_METHODS = ("TILL", "PAYBILL", "POCHI", "SEND_MONEY", "FREE")
+# numbers — the distinction only changes the label the client shows. CASH is a
+# host-confirmed, off-platform payment: the guest pays the organiser directly
+# and the host marks it received, exactly like a submitted M-Pesa note.
+PAYMENT_METHODS = ("TILL", "PAYBILL", "POCHI", "SEND_MONEY", "CASH", "FREE")
 
 # Paid vs. waitlist state machine (spec §3). `booking_status` is the payment
 # state; the legacy `status` column stays as the attendance state so every
@@ -44,7 +46,7 @@ class Event(Base):
     __tablename__ = "events"
     __table_args__ = (
         CheckConstraint(
-            "payment_method IS NULL OR payment_method IN ('TILL','PAYBILL','POCHI','SEND_MONEY','FREE')",
+            "payment_method IS NULL OR payment_method IN ('TILL','PAYBILL','POCHI','SEND_MONEY','CASH','FREE')",
             name="ck_events_payment_method",
         ),
         CheckConstraint(
@@ -86,7 +88,7 @@ class Event(Base):
 
     # 1-tap copyable M-Pesa tag (spec §1A). payment_number is the Till/Paybill/
     # phone number; payment_account is the Paybill account reference only.
-    payment_method = Column(String(24))  # TILL | PAYBILL | POCHI | SEND_MONEY | FREE
+    payment_method = Column(String(24))  # TILL | PAYBILL | POCHI | SEND_MONEY | CASH | FREE
     payment_number = Column(String(32))  # e.g. "1897219"
     payment_account = Column(String(64))  # e.g. "HIKE26" (Paybill only)
     payment_recipient_name = Column(String(120))  # e.g. "Wallace Chege"
