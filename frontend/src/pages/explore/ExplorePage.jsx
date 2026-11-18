@@ -16,7 +16,7 @@ import RegionsGrid from "@/components/regions/RegionsGrid";
 import { SpotDealModal } from "@/components/spotted/SpottedDealUI";
 import DiscoverCategoryStrip from "@/components/discover/DiscoverCategoryStrip";
 import MarketplaceHero from "@/components/discover/MarketplaceHero";
-import TrustStrip from "@/components/discover/TrustStrip";
+import HowBriefWorks from "@/components/discover/HowBriefWorks";
 import DealRail from "@/components/discover/DealRail";
 import ShopToolbar from "@/components/discover/ShopToolbar";
 import MarketplaceBand from "@/components/discover/MarketplaceBand";
@@ -36,9 +36,9 @@ import { cn } from "@/lib/utils";
 /**
  * DISCOVER (and its older /explore skin).
  *
- * The region-aware screen is a merchandising feed: one compact sticky header
- * (name, region knob, search), a spotlight carousel, an icon category strip,
- * an asymmetric Featured & Trending block, then a dense two-column grid.
+ * The region-aware screen is a merchandising feed: a region masthead, one
+ * sticky search with quick filters, a spotlight carousel, an icon category
+ * strip, an asymmetric Featured & Trending block, then a dense grid.
  * Filters did not disappear — time, price and intent moved behind one counted
  * control, and the category tiles became shareable destinations.
  *
@@ -74,6 +74,15 @@ const REGION_CATEGORIES = [
   { value: "rental", label: "Rentals", kinds: ["rental"] },
   { value: "rounds", label: "Rounds & Events", kinds: ["scheduled", "event"] },
   { value: "spotted", label: "Spotted Sales", kinds: [] },
+];
+
+/** The chips under the sticky search; each one is a real feed category. */
+const QUICK_FILTERS = [
+  { value: "rounds", label: "Events" },
+  { value: "listing", label: "Goods" },
+  { value: "service", label: "Services" },
+  { value: "rental", label: "Rentals" },
+  { value: "spotted", label: "Spotted sales" },
 ];
 
 const WHEN_FILTERS = [
@@ -140,6 +149,7 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
   const [nearby, setNearby] = useState([]);
   const [placeOpen, setPlaceOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [worksOpen, setWorksOpen] = useState(false);
   const [sort, setSort] = useState("popular");
   const [savedRegion, setSavedRegion] = useState(() => {
     try { return localStorage.getItem(REGION_KEY); } catch { return null; }
@@ -384,7 +394,15 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
     [resultItems],
   );
 
-  const clearAll = () => patchParams({ kind: "", filter: "", intent: "", trust: "", when: "", price: "" });
+  // Reset also clears the sticky search and the sale/trending doors. Leaving
+  // any of them in the URL made "Reset" look like it had done nothing.
+  const clearAll = () => {
+    setSort("popular");
+    patchParams({
+      kind: "", filter: "", intent: "", trust: "", min_level: "", when: "", price: "",
+      public_sale: "", q: "", search: "", feed: "",
+    });
+  };
   const scrollToShop = () => {
     if (typeof document === "undefined") return;
     document.getElementById("shop-all-heading")?.scrollIntoView?.({ behavior: "smooth", block: "start" });
@@ -449,26 +467,66 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
     <div className={cn("space-y-s3", regionAware && "-mx-4 bg-mk-cream px-4 pb-10 pt-3 text-mk-ink sm:-mx-6 sm:px-6")}>
       {regionAware ? (
         <>
-          {/* ── the shopfront header: region, promise, one search ─────────── */}
+          {/* ── the region masthead scrolls; the search bar below sticks ───── */}
+          <div data-testid="discover-masthead" className="flex items-center justify-between gap-2">
+            <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-mk-orange">Brief marketplace</p>
+            <RegionPicker region={region} onSelect={chooseRegion} className="relative max-w-[68%]" />
+          </div>
+          {region && (
+            <div data-testid="region-context" className="flex min-w-0 items-center gap-1.5 text-[11px] text-mk-ink-soft">
+              <MapPin size={11} className="shrink-0 text-mk-orange" aria-hidden="true" />
+              <span className="truncate font-extrabold text-mk-ink">{regionLabel(region)}</span>
+              <span className="hidden truncate sm:inline">· {region.knownFor.slice(0, 3).join(" · ")}</span>
+              <Link to={regionPath(region)} className="ml-auto shrink-0 font-extrabold text-mk-ink hover:text-mk-orange">
+                Open region
+              </Link>
+            </div>
+          )}
+
           <header
             data-testid="discover-toolbar"
-            className="sticky top-[calc(var(--header-h)+0.25rem)] z-20 border-b border-mk-line/80 bg-mk-cream/95 pb-2.5 pt-2 backdrop-blur"
+            className="sticky top-[var(--header-h)] z-30 border-y border-mk-line/70 bg-mk-cream/80 px-1 py-2 shadow-[0_10px_24px_-22px_rgba(31,22,50,0.7)] backdrop-blur-md supports-[backdrop-filter]:bg-mk-cream/65"
           >
             <h1 className="sr-only">Discover</h1>
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-mk-orange">Brief marketplace</p>
-              <RegionPicker region={region} onSelect={chooseRegion} className="relative max-w-[68%]" />
+            <SearchInput
+              value={q}
+              onChange={onSearch}
+              placeholder="Search goods, services, events…"
+              aria-label="Search everything"
+              size="lg"
+              className="[&_svg]:text-mk-ink-soft"
+              inputClassName="rounded-xl border-mk-line bg-mk-card text-mk-ink shadow-sm placeholder:text-mk-ink-soft/80 focus:border-mk-orange"
+            />
+            <div
+              role="group"
+              aria-label="Quick filters"
+              data-testid="discover-quick-filters"
+              className="no-scrollbar mt-2 flex items-center gap-1.5 overflow-x-auto pb-0.5"
+            >
+              <span className="shrink-0 pr-0.5 text-[10px] font-extrabold uppercase tracking-[0.1em] text-mk-ink-soft">
+                Try
+              </span>
+              {QUICK_FILTERS.map(({ value, label }) => {
+                const active = kind === value || (value === "rounds" && kind === "event");
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    aria-pressed={active}
+                    data-testid={`discover-quick-${value}`}
+                    onClick={() => selectCategory(active ? "" : value)}
+                    className={cn(
+                      "inline-flex h-8 shrink-0 items-center rounded-full border px-3 text-[11px] font-extrabold transition-colors",
+                      active
+                        ? "border-mk-ink bg-mk-ink text-mk-cream"
+                        : "border-mk-line bg-mk-card text-mk-ink hover:border-mk-orange hover:text-mk-orange",
+                    )}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
             </div>
-            {region && (
-              <div data-testid="region-context" className="mt-1 flex min-w-0 items-center gap-1.5 text-[11px] text-mk-ink-soft">
-                <MapPin size={11} className="shrink-0 text-mk-orange" aria-hidden="true" />
-                <span className="truncate font-extrabold text-mk-ink">{regionLabel(region)}</span>
-                <span className="hidden truncate sm:inline">· {region.knownFor.slice(0, 3).join(" · ")}</span>
-                <Link to={regionPath(region)} className="ml-auto shrink-0 font-extrabold text-mk-ink hover:text-mk-orange">
-                  Open region
-                </Link>
-              </div>
-            )}
           </header>
 
           <MarketplaceHero
@@ -481,8 +539,9 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
               clearAll();
               window.setTimeout(scrollToShop, 0);
             }}
+            onHowItWorks={() => setWorksOpen(true)}
           />
-          <TrustStrip />
+          <HowBriefWorks open={worksOpen} onClose={() => setWorksOpen(false)} />
 
           <SpotlightRail
             items={isServices ? providerItems : items}
@@ -701,7 +760,6 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
       {regionAware && !isServices && (
         <ShopToolbar
           query={q}
-          onSearch={onSearch}
           categories={REGION_CATEGORIES.map(({ value, label }) => ({ value, label }))}
           category={kind}
           onCategory={selectCategory}

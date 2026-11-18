@@ -1,4 +1,4 @@
-import { ArrowRight, BadgePercent, Sparkles } from "lucide-react";
+import { ArrowRight, BadgePercent, HelpCircle, Sparkles } from "lucide-react";
 import { regionLabel } from "@/config/regions";
 
 /**
@@ -8,12 +8,12 @@ import { regionLabel } from "@/config/regions";
  * promise, two doors, and the region named quietly underneath. The copy stays
  * honest — "around you", never a discount or verification we cannot prove.
  */
-export default function MarketplaceHero({ region, onShopSale, onBrowseAll }) {
+export default function MarketplaceHero({ region, onShopSale, onBrowseAll, onHowItWorks }) {
   const place = region ? regionLabel(region) : "around you";
   return (
     <section
       data-testid="discover-hero"
-      className="relative overflow-hidden rounded-3xl border border-mk-line bg-mk-cream px-5 py-7 text-center sm:px-10 sm:py-10"
+      className="relative overflow-hidden rounded-3xl border border-mk-line bg-mk-cream px-5 py-6 text-center sm:px-10 sm:py-9"
     >
       <span
         className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-mk-orange/10 blur-2xl"
@@ -37,7 +37,7 @@ export default function MarketplaceHero({ region, onShopSale, onBrowseAll }) {
         price, the distance and the trade record on every card.
       </p>
 
-      <div className="relative mx-auto mt-6 grid max-w-md gap-2.5 sm:grid-cols-2">
+      <div className="relative mx-auto mt-5 grid max-w-md gap-2.5 sm:grid-cols-2">
         <button
           type="button"
           onClick={onShopSale}
@@ -57,9 +57,21 @@ export default function MarketplaceHero({ region, onShopSale, onBrowseAll }) {
         </button>
       </div>
 
-      <p className="relative mt-4 text-[11px] font-medium text-mk-ink-soft/80">
-        Ranked by proximity, timing and real activity. Never paid placement.
-      </p>
+      <div className="relative mt-3 flex flex-wrap items-center justify-center gap-1.5">
+        <p className="text-[11px] font-medium text-mk-ink-soft/80">
+          Ranked by proximity, timing and real activity. Never paid placement.
+        </p>
+        <button
+          type="button"
+          onClick={onHowItWorks}
+          aria-haspopup="dialog"
+          aria-label="How Brief works"
+          data-testid="discover-how-it-works-button"
+          className="relative grid h-6 w-6 place-items-center rounded-full border border-mk-line bg-mk-card text-mk-ink-soft transition-colors after:absolute after:-inset-2.5 hover:border-mk-orange hover:text-mk-orange focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mk-orange"
+        >
+          <HelpCircle size={13} aria-hidden="true" />
+        </button>
+      </div>
     </section>
   );
 }

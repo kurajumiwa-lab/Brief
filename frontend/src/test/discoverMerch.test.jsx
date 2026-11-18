@@ -140,12 +140,61 @@ describe("1 · spotlight and featured merchandising", () => {
     expect(within(hero).getByText(/Great finds/i)).toBeInTheDocument();
     expect(within(hero).getByText(/Better deals/i)).toBeInTheDocument();
     expect(within(hero).getByRole("button", { name: /shop sale items/i })).toBeInTheDocument();
-    expect(screen.getByText("No paid placement")).toBeInTheDocument();
+    expect(within(hero).getByText(/never paid placement/i)).toBeInTheDocument();
+    // The old 2×2 trust wall is gone; the four facts live behind the ? button.
+    expect(screen.queryByLabelText("How this marketplace works")).not.toBeInTheDocument();
+    fireEvent.click(within(hero).getByTestId("discover-how-it-works-button"));
+    const works = await screen.findByRole("dialog", { name: /how brief works/i });
+    expect(within(works).getByText("No paid placement")).toBeInTheDocument();
+    expect(within(works).getByText("Trade on record")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Popular categories" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Shop all products" })).toBeInTheDocument();
     expect(screen.getByLabelText("Filter by category")).toBeInTheDocument();
     expect(screen.getByLabelText("Sort products")).toBeInTheDocument();
-    expect(screen.getByRole("searchbox", { name: /search everything/i })).toBeInTheDocument();
+    // One live search, and it lives in the bar that sticks under the app header.
+    const toolbar = screen.getByTestId("discover-toolbar");
+    expect(toolbar.className).toMatch(/sticky/);
+    expect(within(toolbar).getByRole("searchbox", { name: /search everything/i })).toBeInTheDocument();
+  });
+
+  it("turns the quick chips into real URL filters, with no duplicate search", async () => {
+    await renderDiscover();
+    const chips = await screen.findByTestId("discover-quick-filters");
+    expect(screen.getAllByRole("searchbox", { name: /search everything/i })).toHaveLength(1);
+
+    fireEvent.click(within(chips).getByRole("button", { name: "Events" }));
+    await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("kind=rounds"));
+    expect(screen.getByTestId("discover-quick-rounds")).toHaveAttribute("aria-pressed", "true");
+
+    fireEvent.click(screen.getByTestId("discover-quick-rounds"));
+    await waitFor(() => expect(screen.getByTestId("location").textContent).not.toContain("kind=rounds"));
+    expect(screen.getByTestId("discover-quick-rounds")).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("clears the sticky search and sale door together when the shelf resets", async () => {
+    await renderDiscover("/discover?q=rice&kind=listing&public_sale=true");
+    const search = await screen.findByRole("searchbox", { name: /search everything/i });
+    expect(search).toHaveValue("rice");
+
+    fireEvent.click(screen.getByRole("button", { name: "Reset" }));
+    await waitFor(() => expect(search).toHaveValue(""));
+    const location = screen.getByTestId("location").textContent;
+    expect(location).not.toContain("q=rice");
+    expect(location).not.toContain("public_sale=true");
+    expect(location).not.toContain("kind=listing");
+  });
+
+  it("melts the top-pick flyer, place and price into one full-bleed poster", async () => {
+    await renderDiscover();
+    const spotlight = await screen.findByTestId("discover-spotlight");
+    const poster = within(spotlight).getByTestId("spotlight-poster");
+    expect(poster).toHaveAttribute("data-poster", "true");
+    expect(within(poster).getByText(/featured round/i)).toBeInTheDocument();
+    expect(within(poster).getByText("Kisumu Music Round")).toBeInTheDocument();
+    expect(within(poster).getByText("Kisumu")).toBeInTheDocument();
+    // The event flyer may carry its own total, so the live price is explicitly a floor.
+    expect(within(poster).getByText("From KSh 200")).toBeInTheDocument();
+    expect(within(poster).getByRole("link", { name: /see event/i })).toHaveAttribute("href", "/events/e-1");
   });
 
   it("turns the hero sale door into the same URL-bound filter as the category strip", async () => {
