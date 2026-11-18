@@ -754,14 +754,26 @@ export const searchAPI = {
 // ── Outside (v4) — location-aware discovery ────────────────────────────────
 // One feed, one search, one creation endpoint. Every call reads records the
 // other modules already own; Outside adds no parallel inventory of its own.
+/** The outside endpoints expect `kinds=a,b`, never a serialized array.
+ *
+ * The previous spread put `kinds` back after joining it, so axios sent
+ * `kinds[]=listing`; FastAPI ignored that and every category returned the full
+ * mixed feed. One helper, used by both feed and search, keeps the contract.
+ */
+export function outsideParams(params = {}) {
+  const { kinds, ...rest } = params || {};
+  return noEmpty({
+    ...rest,
+    kinds: Array.isArray(kinds) ? kinds.join(",") : kinds,
+  });
+}
+
 export const outsideAPI = {
   /** Shelf manifest — names, sources, radii and empty states as data. */
   shelves: (keys) => api.get("/outside/shelves", { params: noEmpty({ keys: Array.isArray(keys) ? keys.join(",") : keys }) }),
   /** One ranked page. `cursor` comes from the previous response. */
-  feed: (params) => api.get("/outside/feed", { params: noEmpty({ kinds: Array.isArray(params?.kinds) ? params.kinds.join(",") : undefined, ...params }) }),
-  search: (params) => api.get("/outside/search", {
-    params: noEmpty({ kinds: Array.isArray(params?.kinds) ? params.kinds.join(",") : undefined, ...params }),
-  }),
+  feed: (params) => api.get("/outside/feed", { params: outsideParams(params) }),
+  search: (params) => api.get("/outside/search", { params: outsideParams(params) }),
   /** THE one publishing call. `content_type` decides which fields are read. */
   create: (body) => api.post("/outside/content", body),
   detail: (kind, id) => api.get(`/outside/content/${kind}/${id}`),

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
   Plus, Wrench, Truck, MapPin, Star, CalendarCheck, CalendarDays, Power, Warehouse,
-  Package, Store, Hotel, Box, Snowflake, Route, Info, 
+  Package, Store, Hotel, Box, Snowflake, Route, Info, Trash2,
 } from "lucide-react";
 import Tabs from "@/components/ui/Tabs";
 import Button from "@/components/ui/Button";
@@ -23,7 +23,7 @@ import BookingPanel from "@/components/tools/BookingPanel";
 import { useToolStore } from "@/stores/toolStore";
 import { useAuthStore } from "@/stores/authStore";
 import { TOOL_CATEGORIES, PRICE_UNITS } from "@/config/constants";
-import { apiError, toolAPI } from "@/lib/api";
+import { apiError, outsideAPI, toolAPI } from "@/lib/api";
 import { currency, dayLabel, num } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 
@@ -100,6 +100,21 @@ export default function ToolsPage() {
   }, [deepLinkId, deepLinkOpened, tools, loading]);
 
   const toggle = (t) => setAvailability(t.id, !t.is_available).catch((e) => toast.error(apiError(e)));
+
+  // A publisher can always take their own listing down. The server retires the
+  // row (archived + unavailable) so bookings keep their history.
+  const removeTool = async (t) => {
+    if (!window.confirm(`Remove "${t.title}"? It will disappear from Browse and Discover. Bookings already made keep their history.`)) return;
+    const kind = ["warehouse", "cold_storage", "popup_shop", "equipment"].includes(t.category) ? "rental" : "service";
+    try {
+      await outsideAPI.remove(kind, t.id);
+      toast.success("Listing removed");
+      setInspecting(null);
+      await Promise.allSettled([fetchMine(), fetchTools({ category, search })]);
+    } catch (e) {
+      toast.error(apiError(e, "Could not remove this listing."));
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -272,7 +287,7 @@ export default function ToolsPage() {
         ) : (
           <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
             {mine.map((t) => (
-              <ToolCard key={t.id} tool={t} mine onDetails={setInspecting} onToggle={toggle} />
+              <ToolCard key={t.id} tool={t} mine onDetails={setInspecting} onToggle={toggle} onRemove={removeTool} />
             ))}
           </div>
         ))}
@@ -311,6 +326,7 @@ export default function ToolsPage() {
           setInspecting(null);
           setBooking(t);
         }}
+        onRemove={removeTool}
       />
       <BookShipmentModal courier={shipping} open={!!shipping} onClose={() => setShipping(null)} onDone={() => setTab("shipments")} />
     </div>
@@ -323,7 +339,7 @@ export default function ToolsPage() {
  * rate and billing period, relevant facility features, availability status,
  * and viewing (`Details`) or booking-request (`Book`) action.
  */
-function ToolCard({ tool: t, mine, onBook, onDetails, onToggle }) {
+function ToolCard({ tool: t, mine, onBook, onDetails, onToggle, onRemove }) {
   const cat = TOOL_CATEGORIES.find((c) => c.value === t.category);
   const Icon = (cat && ICONS[cat.icon]) || Warehouse;
   const bookable = ["warehouse", "cold_storage", "popup_shop", "hotel_sourcing"].includes(t.category);
@@ -447,9 +463,16 @@ function ToolCard({ tool: t, mine, onBook, onDetails, onToggle }) {
           )}
           <div className="flex items-center gap-1.5 ml-auto">
             {mine ? (
-              <Button size="xs" variant={t.is_available ? "ghost" : "secondary"} icon={Power} onClick={() => onToggle(t)}>
-                {t.is_available ? "Mark unavailable" : "Make available"}
-              </Button>
+              <>
+                <Button size="xs" variant={t.is_available ? "ghost" : "secondary"} icon={Power} onClick={() => onToggle(t)}>
+                  {t.is_available ? "Mark unavailable" : "Make available"}
+                </Button>
+                {onRemove && (
+                  <Button size="xs" variant="ghost" icon={Trash2} data-testid={`tool-remove-${t.id}`} onClick={() => onRemove(t)}>
+                    Remove
+                  </Button>
+                )}
+              </>
             ) : bookable ? (
               <Button size="xs" icon={CalendarCheck} onClick={() => onBook(t)} disabled={!t.is_available}>
                 Book
@@ -462,7 +485,7 @@ function ToolCard({ tool: t, mine, onBook, onDetails, onToggle }) {
   );
 }
 
-function FacilityDetailsModal({ tool, mine, onClose, onBook }) {
+function FacilityDetailsModal({ tool, mine, onClose, onBook, onRemove }) {
   const [calendar, setCalendar] = useState(null);
   const bookable = tool && ["warehouse", "cold_storage", "popup_shop", "hotel_sourcing"].includes(tool.category);
 
@@ -497,6 +520,11 @@ function FacilityDetailsModal({ tool, mine, onClose, onBook }) {
           <Button variant="ghost" onClick={onClose}>
             Close
           </Button>
+          {mine && onRemove && (
+            <Button variant="danger" icon={Trash2} data-testid="tool-remove-detail" onClick={() => onRemove(tool)}>
+              Remove listing
+            </Button>
+          )}
           {!mine && bookable && (
             <Button icon={CalendarCheck} disabled={!tool.is_available} onClick={() => onBook?.(tool)}>
               Request booking

@@ -490,6 +490,21 @@ async def delete_content(
         row.status = "cancelled"
     elif kind == "listing":
         row.visible_to_network = False
+    elif kind in ("available", "wanted", "scheduled"):
+        # A local activity is cancelled, not erased: responses and bookings
+        # that reference it keep their history, while every feed and search
+        # stops showing it. The author can publish again without a tombstone.
+        row.lifecycle_status = "cancelled"
+    elif kind == "opportunity":
+        from app.modules.ledger.models import LocalActivity
+
+        if isinstance(row, LocalActivity):
+            row.lifecycle_status = "cancelled"
+        else:
+            raise HTTPException(409, "This request is closed from its own management screen.")
+    elif kind in ("service", "rental"):
+        row.archived_at = datetime.utcnow()
+        row.is_available = False
     else:
         raise HTTPException(409, f"A {kind} is retired from its own management screen.")
     await db.commit()
@@ -1006,6 +1021,16 @@ async def _authorised_row(db, vendor, kind, content_id):
         if row is None or not await can_view_activity(db, row, vendor):
             return None, False
         return row, str(row.organizer_vendor_id) == str(vendor.id)
+
+    if kind in ("service", "rental"):
+        from app.models.tools import ToolListing
+
+        row = await db.get(ToolListing, content_id)
+        if row is None:
+            return None, False
+        if row.archived_at is not None and str(row.vendor_id) != str(vendor.id):
+            return None, False
+        return row, str(row.vendor_id) == str(vendor.id)
 
     if kind == "opportunity":
         row = await db.get(BusinessRequest, content_id)

@@ -89,7 +89,7 @@ describe("1 · the discovery layout is back", () => {
     await renderRegions();
     expect(await screen.findByRole("heading", { name: "Discover" })).toBeInTheDocument();
     const bar = screen.getByRole("group", { name: /browse by category/i });
-    for (const label of ["All", "Goods", "Services", "People", "Rentals", "Rounds", "Spotted"]) {
+    for (const label of ["All", "Goods", "Services", "Rentals", "Rounds", "Spotted"]) {
       expect(within(bar).getByRole("button", { name: label })).toBeInTheDocument();
     }
     expect(screen.queryByRole("navigation", { name: /browse discovery/i })).not.toBeInTheDocument();

@@ -149,7 +149,7 @@ export const isPrimaryActive = (item, pathname, vendorHandle) => {
 
 /** What a person can publish. Four doors, not six tabs. */
 export const PRIMARY_POSTING_TYPES = [
-  { value: "available", label: "Available", icon: Package, hint: "Goods, a service, a skill or a tool to lend" },
+  { value: "available", label: "Available", icon: Package, hint: "An offer attached to a good, a service or a rental" },
   { value: "wanted", label: "Wanted", icon: Wrench, hint: "Ask for a fundi, a repair, a group buy or local help" },
   { value: "scheduled", label: "Scheduled", icon: CalendarDays, hint: "A round, a session or a collection window" },
   { value: "opportunity", label: "Opportunity", icon: ClipboardList, hint: "Work, an apprenticeship or a youth task" },
@@ -195,7 +195,7 @@ export const JOB_TILES = [
 /** Legacy aliases. The region screen is where these now point. */
 export const DISCOVERY_SHORTCUTS = [
   { to: "/regions?filter=goods", label: "Goods", icon: Package },
-  { to: "/regions?filter=people", label: "People", icon: Users },
+  { to: "/network?tab=suggested", label: "People", icon: Users },
   { to: "/regions?filter=services", label: "Services", icon: Wrench },
   { to: "/regions?filter=equipment", label: "Equipment", icon: Truck },
   { to: "/regions?filter=opportunities", label: "Opportunities", icon: ClipboardList },
@@ -203,7 +203,7 @@ export const DISCOVERY_SHORTCUTS = [
 
 export const BROWSE_NAV = [
   { to: "/regions?filter=goods", label: "Goods", icon: Package },
-  { to: "/regions?filter=people", label: "People", icon: Users },
+  { to: "/network?tab=suggested", label: "People", icon: Users },
   { to: "/regions?filter=services", label: "Services", icon: Wrench },
   { to: "/regions?filter=equipment", label: "Equipment", icon: Truck },
   { to: "/map", label: "Map", icon: Map },
@@ -213,7 +213,7 @@ export const EXPLORE_NAV = [
   { to: "/regions", label: "Everything", icon: Compass },
   { to: "/regions?filter=goods", label: "Goods", icon: Package },
   { to: "/regions?filter=services", label: "Services", icon: Wrench },
-  { to: "/regions?filter=people", label: "People", icon: Users },
+  { to: "/network?tab=suggested", label: "People", icon: Users },
   { to: "/map", label: "Map", icon: Map },
 ];
 
@@ -221,7 +221,6 @@ export const EXPLORE_NAV = [
 export const SEARCH_SCOPES = [
   { value: "stock", label: "Goods", to: (q) => `/regions?filter=goods&search=${encodeURIComponent(q)}`, icon: Package },
   { value: "vendors", label: "Pages", to: (q) => `/regions?search=${encodeURIComponent(q)}`, icon: Store },
-  { value: "people", label: "People", to: (q) => `/regions?filter=people&search=${encodeURIComponent(q)}`, icon: UserRound },
   { value: "services", label: "Services", to: (q) => `/regions?filter=services&search=${encodeURIComponent(q)}`, icon: Wrench },
   { value: "rentals", label: "Rentals", to: (q) => `/regions?filter=equipment&search=${encodeURIComponent(q)}`, icon: Truck },
 ];

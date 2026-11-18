@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Building2 } from "lucide-react";
+import { Building2, UserRound } from "lucide-react";
 import { cn, initials } from "@/lib/utils";
 import { mediaUrl } from "@/lib/media";
 
@@ -56,6 +56,7 @@ export default function Avatar({
   businessName,
   personalName,
   mode,
+  fallback = "initials",
 }) {
   const effectiveMode = mode || (logoSrc && src ? "combined" : logoSrc ? "business_logo" : "default");
   const isBusinessPrimary = effectiveMode === "business_logo" || effectiveMode === "business_with_role";
@@ -103,15 +104,18 @@ export default function Avatar({
       ) : (
         <div
           className={cn(
-            "flex items-center justify-center font-bold text-white select-none",
+            "flex items-center justify-center font-bold select-none",
+            fallback === "neutral"
+              ? "border border-edge-1 bg-surface-2 text-ink-4"
+              : "text-white",
             sizeCls,
             shapeCls,
-            hue(primaryLabel || name),
+            fallback === "neutral" ? "" : hue(primaryLabel || name),
             ring && "ring-2 ring-brand-500 ring-offset-2 ring-offset-surface-0"
           )}
           aria-hidden="true"
         >
-          {initials(primaryLabel || name)}
+          {fallback === "neutral" ? <UserRound size={18} /> : initials(primaryLabel || name)}
         </div>
       )}
 

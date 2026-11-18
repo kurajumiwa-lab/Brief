@@ -22,10 +22,10 @@ export const LEDGER_PRIMARY_TYPES = new Set(["available", "wanted", "scheduled"]
 export const TYPE_FIELDS = {
   // ── 4 Primary Local Activity Ledger posting types ─────────────────────────
   available: {
-    required: ["title"],
+    required: ["title", "primary_category"],
     fields: [
-      "quantity", "unit", "schedule_label", "private_directions", "use_home_storefront",
-      "starts_at", "expires_at", "audience", "price_kes",
+      "primary_category", "quantity", "unit", "schedule_label", "private_directions",
+      "use_home_storefront", "starts_at", "expires_at", "audience", "price_kes",
     ],
     bodyLabel: "What are you offering or sharing?",
     bodyPlaceholder: "e.g. Fence & gate repair around Kisii, 15 bales of Napier grass, or a wheelbarrow neighbours can borrow…",
@@ -150,11 +150,17 @@ export const FIELD_OPTIONS = {
     "units", "bales", "kg", "tonnes", "trays", "sacks", "crates", "pieces",
     "boxes", "litres", "metres", "cartons", "days",
   ].map((u) => ({ value: u, label: u })),
+  primary_category: [
+    { value: "goods", label: "A good — something you sell, lend or give away" },
+    { value: "service", label: "A service — a skill, repair or professional help" },
+    { value: "rental", label: "A rental — equipment, space or transport by the day" },
+  ],
 };
 
 const blank = () => ({
   content_type: "post",
   use_ledger: false,
+  primary_category: "",
   title: "",
   body: "",
   category: "",
