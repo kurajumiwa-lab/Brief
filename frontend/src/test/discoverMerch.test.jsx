@@ -134,6 +134,37 @@ describe("1 · spotlight and featured merchandising", () => {
     expect(within(screen.getByTestId("regions-grid")).getAllByTestId(/^content-card-/)).toHaveLength(1);
   });
 
+  it("opens like a shopfront: hero, trust strip, departments and a shop toolbar", async () => {
+    await renderDiscover();
+    const hero = await screen.findByTestId("discover-hero");
+    expect(within(hero).getByText(/Great finds/i)).toBeInTheDocument();
+    expect(within(hero).getByText(/Better deals/i)).toBeInTheDocument();
+    expect(within(hero).getByRole("button", { name: /shop sale items/i })).toBeInTheDocument();
+    expect(screen.getByText("No paid placement")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Popular categories" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Shop all products" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Filter by category")).toBeInTheDocument();
+    expect(screen.getByLabelText("Sort products")).toBeInTheDocument();
+    expect(screen.getByRole("searchbox", { name: /search everything/i })).toBeInTheDocument();
+  });
+
+  it("turns the hero sale door into the same URL-bound filter as the category strip", async () => {
+    await renderDiscover();
+    const hero = await screen.findByTestId("discover-hero");
+    fireEvent.click(within(hero).getByRole("button", { name: /shop sale items/i }));
+    await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("public_sale=true"));
+    expect(screen.getByTestId("location").textContent).toContain("kind=listing");
+    expect(screen.getByTestId("location").textContent).toContain("intent=offers");
+  });
+
+  it("gives every product card a share action and a real price plate", async () => {
+    await renderDiscover();
+    const grid = await screen.findByTestId("regions-grid");
+    const card = within(grid).getAllByTestId(/^content-card-/)[0];
+    expect(within(card).getByTestId("region-card-share")).toBeInTheDocument();
+    expect(within(card).getByTestId("region-card-level")).toBeInTheDocument();
+  });
+
   it("asks the server for one category only instead of filtering a mixed feed on screen", async () => {
     await renderDiscover("/discover?kind=event");
     await waitFor(() => expect(mocks.feed).toHaveBeenCalledWith(expect.objectContaining({ kinds: ["event"] })));

@@ -43,9 +43,19 @@ export default function AppHeader() {
     ) + (activity?.counts?.rooms_active_today || 0);
 
   const isHome = pathname === "/";
+  // The shopfront keeps one warm chrome across its header, so the catalogue
+  // does not open under a cool grey bar that belongs to the trade screens.
+  const isDiscovery = pathname === "/regions" || pathname.startsWith("/regions/") || pathname.startsWith("/discover");
 
   return (
-    <header className="sticky top-0 z-40 border-b border-edge-1 bg-surface-0/95 shadow-xs backdrop-blur supports-[backdrop-filter]:bg-surface-0/85">
+    <header
+      className={cn(
+        "sticky top-0 z-40 border-b shadow-xs backdrop-blur",
+        isDiscovery
+          ? "border-mk-line bg-mk-cream/95 supports-[backdrop-filter]:bg-mk-cream/85"
+          : "border-edge-1 bg-surface-0/95 supports-[backdrop-filter]:bg-surface-0/85",
+      )}
+    >
       <div className="container-app">
         <div className="flex items-center gap-2.5" style={{ height: "var(--header-h)" }}>
           <button
