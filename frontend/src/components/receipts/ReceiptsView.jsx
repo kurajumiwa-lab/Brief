@@ -229,10 +229,17 @@ export default function ReceiptsView({ receipts = [], points = 0, region = null,
               shopkeeper&apos;s phone — never cash. The code is issued with the
               voucher, so it still opens in a shop with no signal.
             </p>
-            <Button as={Link} to="/referrals" variant="secondary" size="sm" icon={ArrowRight}
-              className="mt-3">
-              Fund a verified referral campaign
-            </Button>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button as={Link} to="/referrals" variant="secondary" size="sm" icon={ArrowRight}>
+                Fund a verified referral campaign
+              </Button>
+              <Button as={Link} to="/merchant" variant="secondary" size="sm" icon={Store}>
+                Merchant dashboard
+              </Button>
+              <Button as={Link} to="/receipt-rewards" variant="secondary" size="sm" icon={QrCode}>
+                Priority receipt scan
+              </Button>
+            </div>
           </div>
         </div>
       </section>

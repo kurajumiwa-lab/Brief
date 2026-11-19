@@ -21,7 +21,10 @@ from sqlalchemy.dialects.postgresql import JSONB, UUID
 
 from app.database import Base
 
-TASK_TYPES = ("DELIVERY_HANDOFF", "DEAL_SPOT_CHECK", "MERCHANT_ONBOARD", "ERRAND_PICKUP")
+TASK_TYPES = (
+    "DELIVERY_HANDOFF", "DEAL_SPOT_CHECK", "MERCHANT_ONBOARD", "ERRAND_PICKUP",
+    "QR_DISTRIBUTION", "CUSTOMER_ACQUISITION",
+)
 TASK_STATUSES = ("OPEN", "CLAIMED", "PROOF_SUBMITTED", "COMPLETED", "EXPIRED", "DISPUTED")
 
 TASK_TYPE_LABELS = {
@@ -29,6 +32,8 @@ TASK_TYPE_LABELS = {
     "DEAL_SPOT_CHECK": "Shop check",
     "MERCHANT_ONBOARD": "Merchant onboarding",
     "ERRAND_PICKUP": "Errand pickup",
+    "QR_DISTRIBUTION": "QR distribution",
+    "CUSTOMER_ACQUISITION": "Customer acquisition",
 }
 
 STATUS_LABELS = {
@@ -47,6 +52,8 @@ FEE_PCT = {
     "ERRAND_PICKUP": 5,
     "DEAL_SPOT_CHECK": 7,
     "MERCHANT_ONBOARD": 8,
+    "QR_DISTRIBUTION": 5,
+    "CUSTOMER_ACQUISITION": 8,
 }
 
 # A claim auto-releases after this many hours so a stalled assignee cannot sit
@@ -58,7 +65,8 @@ class CorridorTask(Base):
     __tablename__ = "corridor_tasks"
     __table_args__ = (
         CheckConstraint(
-            "task_type IN ('DELIVERY_HANDOFF','DEAL_SPOT_CHECK','MERCHANT_ONBOARD','ERRAND_PICKUP')",
+            "task_type IN ('DELIVERY_HANDOFF','DEAL_SPOT_CHECK','MERCHANT_ONBOARD',"
+            "'ERRAND_PICKUP','QR_DISTRIBUTION','CUSTOMER_ACQUISITION')",
             name="ck_corridor_task_type",
         ),
         CheckConstraint(
@@ -67,7 +75,7 @@ class CorridorTask(Base):
         ),
         CheckConstraint("worker_payout_kes > 0", name="ck_corridor_task_payout_positive"),
         CheckConstraint("platform_fee_kes >= 0", name="ck_corridor_task_fee_nonnegative"),
-        CheckConstraint("fee_pct >= 5 AND fee_pct <= 8", name="ck_corridor_task_fee_pct"),
+        CheckConstraint("fee_pct >= 0 AND fee_pct <= 25", name="ck_corridor_task_fee_pct"),
         CheckConstraint("min_standing_level BETWEEN 1 AND 4", name="ck_corridor_task_min_standing"),
         CheckConstraint("assignee_user_id IS NULL OR assignee_user_id <> creator_user_id",
                         name="ck_corridor_task_not_self_assigned"),

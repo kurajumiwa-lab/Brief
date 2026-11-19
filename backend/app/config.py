@@ -121,6 +121,31 @@ class Settings(BaseSettings):
     # Future fee engine. Off by default: fee rules are read and reported but
     # never applied to a transaction until this is switched on.
     FEES_ENABLED: bool = False
+
+    # Town-wide commerce (receipt rewards, referral exchange, scout work).
+    # These are merchant-funded surfaces, not platform payouts.
+    # Commercial rates are percentages and live in the `commerce_settings`
+    # table so an operator can change them at runtime. These values seed the
+    # table on first read and are the fallback if it is unavailable. Collection
+    # still honours FREE_FOR_NOW: the quote is shown, but no fee is charged.
+    TOWN_CAMPAIGN_FEE_PCT: float = 2.0
+    TOWN_LEAD_FEE_PCT: float = 6.0
+    TOWN_CREDIT_EXPIRY_DAYS: int = 365
+    # A receipt photo may be stored only when the uploader has consented. The
+    # OCR text is kept separately from the image so analytics can run on the
+    # text without retaining a photograph of someone's shopping.
+    TOWN_RECEIPT_PHOTO_CONSENT_REQUIRED: bool = True
+    # A pasted M-Pesa message is a signal, never proof. This threshold is the
+    # number of independent signals needed before the admin surface labels a
+    # task payment "confirmed" rather than "reported".
+    TOWN_TASK_PAYMENT_SIGNAL_THRESHOLD: int = 2
+    # Ceiling on a sponsored referral bid, as a percentage of the listing's
+    # bounty. Keeps the exchange from becoming a pure auction for attention.
+    TOWN_MAX_SPONSOR_OF_BOUNTY_PCT: float = 100.0
+    # Betting/gaming referrals carry advertising and age-gate obligations. They
+    # stay off until counsel has reviewed the category policy; the rest of the
+    # index works without them.
+    TOWN_BETTING_CATEGORY_ENABLED: bool = False
     # Service providers (service-providers plan, Phase 3). Off by default: while off, the front
     # doors list a provider's services whether or not they have opening hours, as before. On, a
     # provider's services count toward a front door only when they have opening hours set.

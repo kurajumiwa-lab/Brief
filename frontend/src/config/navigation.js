@@ -105,7 +105,7 @@ const REGION_ROOTS = [
 
 /** Inbox absorbs everything waiting on a person or on someone else. */
 const INBOX_ROOTS = [
-  "/inbox", "/activity", "/activities", "/work", "/orders", "/chat", "/tasks",
+  "/inbox", "/activity", "/activities", "/work", "/orders", "/chat", "/tasks", "/scout",
   "/locks", "/tools", "/payments", "/logistics", "/calendar", "/book", "/mail",
   "/requests",
 ];
@@ -114,7 +114,7 @@ const INBOX_ROOTS = [
 const YOU_ROOTS = [
   "/you", "/me", "/stock", "/analytics", "/pos", "/brief", "/passport", "/growth",
   "/billing", "/enterprise", "/governance", "/ops", "/membership", "/office",
-  "/referrals",
+  "/referrals", "/referral-index", "/merchant", "/receipt-rewards",
   "/more", "/settings", "/legal", "/storefront", "/desk", "/today",
 ];
 
@@ -258,6 +258,10 @@ export const SETTINGS_GROUPS = [
       { to: "/locks", label: "Market locks", icon: ShoppingCart },
       { to: "/tasks", label: "Tasks", icon: ListChecks },
       { to: "/referrals", label: "Referral network", icon: Users },
+      { to: "/referral-index", label: "Referral index", icon: Users },
+      { to: "/receipt-rewards", label: "Receipt rewards", icon: Receipt },
+      { to: "/scout", label: "Scout work", icon: ListChecks },
+      { to: "/merchant", label: "Merchant dashboard", icon: Store },
       { to: "/growth", label: "Growth planner", icon: Sparkles },
       { to: "/pos", label: "POS bridge", icon: ScanLine },
       { to: "/integrations", label: "Records & links", icon: FolderOpen },
@@ -277,6 +281,7 @@ export const SETTINGS_GROUPS = [
     title: "Operators",
     items: [
       { to: "/ops", label: "Ops console", icon: SlidersHorizontal, quiet: true },
+      { to: "/ops/commerce", label: "Commerce moderation", icon: SlidersHorizontal, quiet: true },
       { to: "/storefront/inbox", label: "Enquiry inbox", icon: Inbox, quiet: true },
       { to: "/market-data", label: "Market data", icon: BarChart3, quiet: true },
       { to: "/intake", label: "Intake", icon: ScanLine, quiet: true },

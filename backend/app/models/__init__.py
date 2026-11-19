@@ -109,6 +109,11 @@ __all__ = [
     "CorridorTask", "CorridorTaskFee", "RecurringRoutine", "RecurringRoutineInstance",
     "SocialBioCheck", "StockInHandProof", "SellerDeliveryReport",
     "ReferralCampaign", "ReferralLink", "Referral",
+    "ReceiptItem", "MerchantRewardPolicy", "MerchantCreditAccount", "MerchantCreditEntry",
+    "MerchantCreditPurchase", "ReceiptRedemption", "ReferralListing", "ReferralShareLink",
+    "ReferralClick", "ReferralBounty", "ReferralConversion", "DisputeCase", "TrustSnapshot",
+    "ScoutTaskRating", "TaskPaymentConfirmation", "PlatformFeeEntry", "CommerceSetting",
+    "MerchantAnalyticsSubscription",
 ]
 
 from app.models.receipts import (
@@ -145,6 +150,13 @@ from app.modules.trust.models import (  # noqa: F401
 )
 
 from app.modules.referrals.models import ReferralCampaign, ReferralLink, Referral  # noqa: F401
+from app.modules.town.models import (  # noqa: F401
+    CommerceSetting, DisputeCase, MerchantAnalyticsSubscription, MerchantCreditAccount,
+    MerchantCreditEntry, MerchantCreditPurchase, MerchantRewardPolicy, PlatformFeeEntry,
+    ReceiptItem, ReceiptRedemption, ReferralBounty, ReferralClick, ReferralConversion,
+    ReferralListing, ReferralShareLink, ScoutTaskRating, TaskPaymentConfirmation,
+    TrustSnapshot,
+)
 
 # Spotted sales schema is registered for migrations/parity, but not exposed yet.
 from app.models.spotted_deals import SpottedDeal, SpottedDealFlag, SpottedDealSeenTap, SpottedDealCooldown, SpottedDealJuryAssignment, SpottedOptOutAttempt  # noqa: F401,E402

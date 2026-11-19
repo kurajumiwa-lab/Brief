@@ -45,8 +45,9 @@ from app.services import trade_proofs as trade_proof_service
 from app.services.notification_service import create_notification
 from app.services.og_cards import invite_card
 from app.services.receipt_rewards import (
-    clean_region, clean_text, is_valid_pin, parse_date, parse_receipt_payload,
-    receipt_key, receipt_value, voucher_code, voucher_code_matches,
+    clean_region, clean_text, is_valid_pin, normalise_voucher_code, parse_date,
+    parse_receipt_payload, receipt_key, receipt_value, voucher_code,
+    voucher_code_matches,
 )
 
 log = logging.getLogger("brief.receipts")
@@ -1629,6 +1630,26 @@ async def redeem_voucher(
     # A redemption is the only real signal that a shop has customers. Check the
     # 14-day / 3-customer rule here so a finished probation promotes promptly.
     await _touch_claim_state(db, merchant, now)
+    # The commercial ledger records the settled obligation. The code itself is
+    # hashed: a redemption table must never become a list of usable codes.
+    try:
+        from app.modules.town import credits as town_credits
+        from app.modules.town.models import ReceiptRedemption
+
+        db.add(ReceiptRedemption(
+            voucher_id=voucher.id,
+            merchant_id=merchant.id,
+            vendor_id=voucher.vendor_id,
+            value_kes=int(voucher.value_kes),
+            code_hash=hashlib.sha256(normalise_voucher_code(body.code).encode()).hexdigest(),
+            redeemed_by_vendor_id=vendor.id,
+            receipt_id=voucher.used_on_receipt_id,
+        ))
+        await town_credits.redeem_outstanding(
+            db, merchant_id=merchant.id, value_kes=int(voucher.value_kes),
+        )
+    except Exception:  # pragma: no cover - never lose a valid redemption
+        log.exception("town redemption record failed for voucher %s", voucher.id)
     await db.commit()
     await db.refresh(voucher)
     return {
