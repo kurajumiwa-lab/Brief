@@ -28,6 +28,7 @@ from app.models.groups import GroupMembership, VendorGroup
 from app.models.notification import NotificationType
 from app.models.vendor import Vendor
 from app.modules.growth import rules as growth_rules
+from app.modules.pulse.service import round_tiers
 from app.routes.auth import get_current_vendor
 from app.services.notification_service import create_notification, notify_many
 
@@ -92,6 +93,9 @@ def _request_out(r: CollectiveSourcingRequest, organizer: Vendor, group: VendorG
         } if my_pledge and my_pledge.status != "withdrawn" else None,
         "i_organise": r.organizer_vendor_id == me.id,
         "can_manage": can_manage,
+        # The 1–4 / 5–14 / 15–20 ladder is derived from the live pledge total,
+        # so the progress bar and the unlocked price can never disagree.
+        "round": round_tiers(r.current_pledged_quantity, r.target_price_per_unit),
     }
 
 

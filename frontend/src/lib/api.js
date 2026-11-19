@@ -1092,6 +1092,11 @@ export const officeAPI = {
   setVisibility: (id, visibility) => api.patch(`/office/offices/${id}/visibility`, { visibility }),
   publicProfile: (id) => api.get(`/office/public/offices/${id}`),
   acceptLink: (body) => api.post("/office/links/accept", body),
+  saved: (id, scope = "all") => api.get(`/office/offices/${id}/saved`, { params: { scope } }),
+  saveItem: (id, body) => api.post(`/office/offices/${id}/saved`, body),
+  updateSaved: (id, itemId, body) => api.patch(`/office/offices/${id}/saved/${itemId}`, body),
+  deleteSaved: (id, itemId) => api.delete(`/office/offices/${id}/saved/${itemId}`),
+  publicSaved: (id) => api.get(`/office/public/offices/${id}/saved`),
 };
 
 /** Event hub (Phase 8): meeting point, host gallery, host–attendee messages. Behind EVENT_HUB_ENABLED. */

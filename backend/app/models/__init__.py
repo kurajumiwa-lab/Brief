@@ -13,7 +13,9 @@ from app.models.tools import (
 )
 from app.models.bookings import ToolBooking, BOOKING_KINDS, BOOKING_STATUSES, KIND_FROM_CATEGORY
 from app.models.routing import RoutePlan, RouteStop, ROUTE_STATUSES
-from app.models.events import Event, EventRegistration
+from app.models.events import (  # noqa: F401
+    Event, EventMpesaCode, EventPassResale, EventRegistration,
+)
 from app.models.pos_bridge import POSConnection, POSSyncLog
 from app.models.notification import Notification, NotificationType
 from app.models.performance import VendorPerformance
@@ -150,6 +152,15 @@ from app.modules.trust.models import (  # noqa: F401
 )
 
 from app.modules.referrals.models import ReferralCampaign, ReferralLink, Referral  # noqa: F401
+from app.modules.event_desk.models import (  # noqa: F401
+    EventVendorQuote, EventVendorRequest, RateCardPackage, VendorRateCard,
+)
+from app.modules.office.models import (  # noqa: F401
+    Office, OfficeEvent, OfficeMember, OfficeSavedItem,
+)
+from app.modules.leads.models import LeadEvent  # noqa: F401
+from app.modules.pulse.models import FlashDrop, FlashDropClaim  # noqa: F401
+
 from app.modules.town.models import (  # noqa: F401
     CommerceSetting, DisputeCase, MerchantAnalyticsSubscription, MerchantCreditAccount,
     MerchantCreditEntry, MerchantCreditPurchase, MerchantRewardPolicy, PlatformFeeEntry,

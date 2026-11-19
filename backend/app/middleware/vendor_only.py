@@ -34,8 +34,13 @@ PUBLIC_READ_PREFIXES = ("/api/profiles/", "/api/og/events/", "/api/offers/public
                         "/api/blueprints", "/api/trust/public", "/api/office/public/",
                         # Offerings a person shows the network: visible rows only, GET only.
                         "/api/offerings/of/",
+                        # A published event-vendor rate card: public read, GET only.
+                        "/api/event-desk/public/rate-cards/",
                         # The public Page (/page/:handle): one read per business, no account.
                         "/api/professional/page/",
+                        # Pulse windows and live drops are browsable before sign-in.
+                        # Claiming a drop is a POST and still needs a member.
+                        "/api/pulse",
                         # Social seller trust card: the page a TikTok/Facebook buyer
                         # opens from a bio link. Read-only, GET only.
                         "/api/social-trust/public/",

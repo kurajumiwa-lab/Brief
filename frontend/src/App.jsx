@@ -120,6 +120,9 @@ const ToolsPage = lazy(() => import("@/pages/tools/ToolsPage"));
 const EventShareRedirect = lazy(() => import("@/pages/events/EventShareRedirect"));
 const EventsPage = lazy(() => import("@/pages/events/EventsPage"));
 const EventHubPage = lazy(() => import("@/pages/events/EventHubPage"));
+const EventDeskPage = lazy(() => import("@/pages/events/EventDeskPage"));
+const RateCardPage = lazy(() => import("@/pages/events/RateCardPage"));
+const PublicRateCardPage = lazy(() => import("@/pages/events/PublicRateCardPage"));
 const POSBridge = lazy(() => import("@/pages/pos/POSBridge"));
 const Analytics = lazy(() => import("@/pages/analytics/Analytics"));
 const Ops = lazy(() => import("@/pages/ops/Ops"));
@@ -243,6 +246,8 @@ function AppRoutes() {
       <Route path="/offers" element={<OffersBrowsePage />} />
       {/* The public Page: a mini site per business. No account needed to read it. */}
       <Route path="/page/:handle" element={<PublicPage />} />
+      {/* The event vendor rate card is public, like a Page. No account needed to read it. */}
+      <Route path="/rate-card/:handle" element={<PublicRateCardPage />} />
       {/* A customer scanned a receipt from a shop with no page. Public, so the
           link in a WhatsApp group works before anyone installs anything. */}
       <Route path="/invite/:slug" element={<InviteShopPage />} />
@@ -386,6 +391,8 @@ function AppRoutes() {
           <Route path="/groups" element={<Groups />} />
           <Route path="/events" element={<EventsPage />} />
           <Route path="/event/:eventId" element={<EventHubPage />} />
+          <Route path="/events/desk" element={<EventDeskPage />} />
+          <Route path="/rate-card" element={<RateCardPage />} />
           <Route path="/lists" element={<VendorLists />} />
           <Route path="/locks" element={<MarketLocks />} />
 

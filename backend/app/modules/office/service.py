@@ -13,11 +13,14 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from sqlalchemy import or_, select, update
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.vendor import Vendor
-from app.modules.office.models import CONTACT_MODES, ROLES, Office, OfficeEvent, OfficeMember
+from app.modules.office.models import (
+    CONTACT_MODES, ROLES, SAVE_PRIVACY, SAVE_TARGET_KINDS, Office, OfficeEvent, OfficeMember,
+    OfficeSavedItem,
+)
 from app.modules.trust.service import audit
 
 LINK_TTL = timedelta(days=7)
@@ -439,3 +442,240 @@ def ics_for(office: Office, events: list[OfficeEvent]) -> str:
         lines.append("END:VEVENT")
     lines.append("END:VCALENDAR")
     return "\r\n".join(lines) + "\r\n"
+
+
+# ── saved items: vault / family / public ─────────────────────────────────────
+
+def _saved_url(value: Optional[str]) -> Optional[str]:
+    v = (value or "").strip()
+    if not v:
+        return None
+    if len(v) > 500:
+        raise OfficeError("That link is too long.", 422)
+    if not (v.startswith("/") or v.startswith("https://")):
+        raise OfficeError("Links must be a path on this site or start with https://.", 422)
+    return v
+
+
+def _saved_out(item: OfficeSavedItem, saved_by_name: str, viewer: Vendor, office: Office) -> dict:
+    can_edit = item.saved_by == viewer.id
+    return {
+        "id": str(item.id),
+        "target_kind": item.target_kind,
+        "target_id": str(item.target_id) if item.target_id else None,
+        "target_label": item.target_label,
+        "target_url": item.target_url,
+        "privacy": item.privacy,
+        "private_note": item.private_note if can_edit or item.privacy != "vault_private" else None,
+        "saved_by": saved_by_name,
+        "saved_by_me": can_edit,
+        "can_edit": can_edit,
+        # The owner can take a public recommendation off their own front door.
+        "can_remove": can_edit or (office.owner_vendor_id == viewer.id and item.privacy == "public_showcase"),
+        "created_at": item.created_at.isoformat() if item.created_at else None,
+    }
+
+
+def _saved_public_out(item: OfficeSavedItem, saved_by_name: str) -> dict:
+    """Public rows never carry a private note or an account id."""
+    return {
+        "id": str(item.id),
+        "target_kind": item.target_kind,
+        "target_id": str(item.target_id) if item.target_id else None,
+        "target_label": item.target_label,
+        "target_url": item.target_url,
+        "saved_by": saved_by_name,
+        "created_at": item.created_at.isoformat() if item.created_at else None,
+    }
+
+
+async def _saved_membership(db: AsyncSession, office_id: uuid.UUID, vendor: Vendor) -> tuple[Office, OfficeMember]:
+    office = await get_office(db, office_id)
+    member = await require_active(db, office_id, vendor)
+    return office, member
+
+
+async def saved_items(db: AsyncSession, vendor: Vendor, office_id: uuid.UUID, *,
+                      scope: str = "all") -> dict:
+    office, _ = await _saved_membership(db, office_id, vendor)
+    if scope not in ("all", "mine", "shared", "public", "vault"):
+        raise OfficeError("Choose a valid saved-items view.", 422)
+    base = select(OfficeSavedItem, Vendor).join(Vendor, Vendor.id == OfficeSavedItem.saved_by).where(
+        OfficeSavedItem.office_id == office_id,
+    )
+    if scope == "mine":
+        base = base.where(OfficeSavedItem.saved_by == vendor.id)
+    elif scope == "vault":
+        base = base.where(OfficeSavedItem.saved_by == vendor.id,
+                          OfficeSavedItem.privacy == "vault_private")
+    elif scope == "shared":
+        base = base.where(OfficeSavedItem.privacy.in_(("family_shared", "public_showcase")))
+    elif scope == "public":
+        base = base.where(OfficeSavedItem.privacy == "public_showcase")
+    else:
+        # "all" is the safe union: everything I saved plus things shared with the
+        # office. Another member's vault is never in this query.
+        base = base.where(or_(
+            OfficeSavedItem.saved_by == vendor.id,
+            OfficeSavedItem.privacy.in_(("family_shared", "public_showcase")),
+        ))
+    rows = (await db.execute(base.order_by(OfficeSavedItem.created_at.desc()).limit(300))).all()
+    items = [_saved_out(item, owner.business_name, vendor, office) for item, owner in rows]
+
+    count_rows = (await db.execute(
+        select(OfficeSavedItem.privacy, OfficeSavedItem.saved_by, func.count(OfficeSavedItem.id))
+        .where(OfficeSavedItem.office_id == office_id)
+        .group_by(OfficeSavedItem.privacy, OfficeSavedItem.saved_by)
+    )).all()
+    counts = {"mine": 0, "vault": 0, "shared": 0, "public": 0}
+    for privacy, saved_by, n in count_rows:
+        if saved_by == vendor.id:
+            counts["mine"] += int(n)
+            if privacy == "vault_private":
+                counts["vault"] += int(n)
+        if privacy in ("family_shared", "public_showcase"):
+            counts["shared"] += int(n)
+        if privacy == "public_showcase":
+            counts["public"] += int(n)
+    return {
+        "items": items,
+        "counts": counts,
+        "privacy_options": [
+            {"value": "vault_private", "label": "My vault", "hint": "Only you can see this."},
+            {"value": "family_shared", "label": "Home office", "hint": "Active members can see this."},
+            {"value": "public_showcase", "label": "Public Page", "hint": "Anyone can see this recommendation."},
+        ],
+        "can_feature_public": office.owner_vendor_id == vendor.id,
+        "is_public_office": office.visibility == "public",
+    }
+
+
+async def save_item(db: AsyncSession, vendor: Vendor, office_id: uuid.UUID, *,
+                    target_kind: str, target_id: Optional[uuid.UUID], target_label: str,
+                    target_url: Optional[str], privacy: str, private_note: Optional[str],
+                    target_handle: Optional[str] = None) -> tuple[OfficeSavedItem, bool]:
+    office, _ = await _saved_membership(db, office_id, vendor)
+    if target_kind not in SAVE_TARGET_KINDS:
+        raise OfficeError("Choose a valid kind of saved item.", 422)
+    if privacy not in SAVE_PRIVACY:
+        raise OfficeError("Choose vault, home office or public privacy.", 422)
+    if privacy == "public_showcase" and office.owner_vendor_id != vendor.id:
+        raise OfficeError("Only the office owner can feature an item on the public Page.", 403)
+
+    label = (target_label or "").strip()
+    url = _saved_url(target_url)
+    target_vendor = None
+    if target_kind == "vendor":
+        if target_id:
+            target_vendor = await db.get(Vendor, target_id)
+        elif (target_handle or "").strip():
+            target_vendor = (await db.execute(
+                select(Vendor).where(Vendor.vendor_handle == target_handle.strip().lstrip("@").lower())
+            )).scalar_one_or_none()
+        if target_vendor is None:
+            raise OfficeError("That business was not found.", 404)
+        target_id = target_vendor.id
+        label = label or target_vendor.business_name
+        url = url or f"/p/{target_vendor.vendor_handle}"
+    if not label:
+        raise OfficeError("Give this saved item a name.", 422)
+    if len(label) > 160:
+        raise OfficeError("That name is too long.", 422)
+    note = (private_note or "").strip()[:2000] or None
+
+    existing = None
+    if target_id:
+        existing = (await db.execute(
+            select(OfficeSavedItem).where(
+                OfficeSavedItem.office_id == office_id,
+                OfficeSavedItem.saved_by == vendor.id,
+                OfficeSavedItem.target_kind == target_kind,
+                OfficeSavedItem.target_id == target_id,
+            )
+        )).scalar_one_or_none()
+    if existing:
+        existing.target_label = label
+        existing.target_url = url
+        existing.privacy = privacy
+        existing.private_note = note
+        existing.updated_at = _now()
+        await db.flush()
+        await audit(db, vendor, "saved_item_updated", "office", office_id, None,
+                    {"saved_item_id": str(existing.id), "privacy": privacy})
+        return existing, False
+
+    item = OfficeSavedItem(
+        office_id=office_id, saved_by=vendor.id, target_kind=target_kind,
+        target_id=target_id, target_label=label, target_url=url,
+        privacy=privacy, private_note=note, created_at=_now(), updated_at=_now(),
+    )
+    db.add(item)
+    await db.flush()
+    await audit(db, vendor, "saved_item_added", "office", office_id, None,
+                {"saved_item_id": str(item.id), "privacy": privacy, "kind": target_kind})
+    return item, True
+
+
+async def update_saved(db: AsyncSession, vendor: Vendor, office_id: uuid.UUID, item_id: uuid.UUID, *,
+                       privacy: Optional[str] = None, private_note: Optional[str] = None,
+                       target_label: Optional[str] = None) -> OfficeSavedItem:
+    office, _ = await _saved_membership(db, office_id, vendor)
+    item = await db.get(OfficeSavedItem, item_id)
+    if item is None or item.office_id != office_id:
+        raise OfficeError("That saved item was not found.", 404)
+    if item.saved_by != vendor.id:
+        raise OfficeError("Only the person who saved this can change it.", 403)
+    if privacy is not None:
+        if privacy not in SAVE_PRIVACY:
+            raise OfficeError("Choose vault, home office or public privacy.", 422)
+        if privacy == "public_showcase" and office.owner_vendor_id != vendor.id:
+            raise OfficeError("Only the office owner can feature an item on the public Page.", 403)
+        item.privacy = privacy
+    if private_note is not None:
+        item.private_note = private_note.strip()[:2000] or None
+    if target_label is not None:
+        label = target_label.strip()
+        if not label or len(label) > 160:
+            raise OfficeError("Give this saved item a name of up to 160 characters.", 422)
+        item.target_label = label
+    item.updated_at = _now()
+    await db.flush()
+    await audit(db, vendor, "saved_item_updated", "office", office_id, None,
+                {"saved_item_id": str(item.id), "privacy": item.privacy})
+    return item
+
+
+async def delete_saved(db: AsyncSession, vendor: Vendor, office_id: uuid.UUID, item_id: uuid.UUID) -> None:
+    office, _ = await _saved_membership(db, office_id, vendor)
+    item = await db.get(OfficeSavedItem, item_id)
+    if item is None or item.office_id != office_id:
+        raise OfficeError("That saved item was not found.", 404)
+    if item.saved_by != vendor.id and not (
+            office.owner_vendor_id == vendor.id and item.privacy == "public_showcase"):
+        raise OfficeError("Only the person who saved this can remove it.", 403)
+    await db.delete(item)
+    await db.flush()
+    await audit(db, vendor, "saved_item_removed", "office", office_id, None,
+                {"saved_item_id": str(item_id), "privacy": item.privacy})
+
+
+async def public_saved(db: AsyncSession, office_id: uuid.UUID) -> dict:
+    office = await get_office(db, office_id)
+    if office.visibility != "public":
+        raise OfficeError("That office was not found.", 404)
+    rows = (await db.execute(
+        select(OfficeSavedItem, Vendor)
+        .join(Vendor, Vendor.id == OfficeSavedItem.saved_by)
+        .where(
+            OfficeSavedItem.office_id == office_id,
+            OfficeSavedItem.privacy == "public_showcase",
+        )
+        .order_by(OfficeSavedItem.created_at.desc())
+        .limit(100)
+    )).all()
+    return {
+        "office_id": str(office.id),
+        "items": [_saved_public_out(item, owner.vendor_handle or owner.business_name) for item, owner in rows],
+        "note": "Only items the owner chose to feature are shown here.",
+    }
+

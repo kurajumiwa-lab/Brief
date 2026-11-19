@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import OfficePage from "@/pages/office/OfficePage";
 
@@ -8,6 +8,10 @@ const mocks = vi.hoisted(() => ({
   detail: vi.fn(),
   calendar: vi.fn(),
   create: vi.fn(),
+  saved: vi.fn(),
+  saveItem: vi.fn(),
+  updateSaved: vi.fn(),
+  deleteSaved: vi.fn(),
 }));
 
 vi.mock("@/lib/api", () => ({
@@ -20,6 +24,10 @@ vi.mock("@/lib/api", () => ({
     inviteLink: vi.fn(),
     removeMember: vi.fn(),
     addEvent: vi.fn(),
+    saved: mocks.saved,
+    saveItem: mocks.saveItem,
+    updateSaved: mocks.updateSaved,
+    deleteSaved: mocks.deleteSaved,
   },
   apiError: (_err, fallback) => fallback,
 }));
@@ -59,6 +67,7 @@ const detail = {
 
 describe("Home office model", () => {
   it("says the office is private, links the public Page, and gives the next steps", async () => {
+    mocks.saved.mockResolvedValue({ data: { items: [], counts: {}, can_feature_public: true } });
     mocks.mine.mockResolvedValue({ data: { offices: [{ id: "office-1", name: detail.name, my_role: "owner" }] } });
     mocks.detail.mockResolvedValue({ data: detail });
 
@@ -84,6 +93,7 @@ describe("Home office model", () => {
   });
 
   it("does not pretend a page exists when the handle is missing", async () => {
+    mocks.saved.mockResolvedValue({ data: { items: [], counts: {}, can_feature_public: true } });
     mocks.mine.mockResolvedValue({ data: { offices: [{ id: "office-1", name: detail.name, my_role: "owner" }] } });
     mocks.detail.mockResolvedValue({
       data: {
@@ -97,5 +107,36 @@ describe("Home office model", () => {
     await waitFor(() => expect(screen.getByText("Not ready yet")).toBeInTheDocument());
     expect(screen.getByTestId("office-step-page")).toHaveAttribute("data-done", "false");
     expect(screen.getByText("Create page")).toBeInTheDocument();
+  });
+
+  it("shows the three privacy zones and defaults a new save to the vault", async () => {
+    mocks.mine.mockResolvedValue({ data: { offices: [{ id: "office-1", name: detail.name, my_role: "owner" }] } });
+    mocks.detail.mockResolvedValue({ data: detail });
+    mocks.saved.mockResolvedValue({
+      data: {
+        items: [{
+          id: "s1", target_kind: "external", target_label: "Private clinic",
+          target_url: "https://example.com/clinic", privacy: "vault_private",
+          private_note: "Only me", saved_by: "Amina", saved_by_me: true,
+          can_edit: true, can_remove: true,
+        }],
+        counts: { mine: 1, vault: 1, shared: 0, public: 0 },
+        can_feature_public: true,
+      },
+    });
+
+    render(<MemoryRouter><OfficePage /></MemoryRouter>);
+    await waitFor(() => expect(screen.getByTestId("saved-items-panel")).toBeInTheDocument());
+    expect(await screen.findByText("Private clinic")).toBeInTheDocument();
+    expect(screen.getByText("Vault 1")).toBeInTheDocument();
+    expect(screen.getByText(/Only me/)).toBeInTheDocument();
+    expect(screen.getByText(/The vault is private/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /Save something/i }));
+    const privacy = screen.getByLabelText(/Who can see this/i);
+    expect(privacy).toHaveValue("vault_private");
+    expect(screen.getAllByRole("option", { name: "My vault — only me" }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("option", { name: "Home office — active members" }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("option", { name: "Public Page — anyone" }).length).toBeGreaterThan(0);
   });
 });

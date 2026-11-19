@@ -77,18 +77,20 @@ def capacity(event: Event) -> int:
     return int(event.max_vendors or 0)
 
 
-def pass_code_for(registration_id: UUID) -> str:
+def pass_code_for(registration_id: UUID, rotation: int = 0) -> str:
     """The HO-84K reference for a registration — mirrors the agenda's code.
 
-    Derived from the record id and the server secret so it never changes
-    between reloads. It is a reference the host reads against the member's
-    name, not a cryptographic proof.
+    Derived from the record id, the rotation and the server secret. The
+    rotation is bumped by an atomic resale handover, so the seller's old code
+    stops matching while a reload on either side stays stable. It is a
+    reference the host reads against the member's name, not a payment proof.
     """
     from app.services.receipt_rewards import VOUCHER_CODE_ALPHABET, VOUCHER_CODE_PREFIX
 
-    digest = hmac.new(
-        settings.SECRET_KEY.encode(), f"pass:{registration_id}".encode(), hashlib.sha256,
-    ).digest()
+    # Rotation 0 keeps the legacy derivation, so a deploy does not silently
+    # invalidate every pass already in someone's Inbox.
+    token = f"pass:{registration_id}" if not rotation else f"pass:{registration_id}:{int(rotation)}"
+    digest = hmac.new(settings.SECRET_KEY.encode(), token.encode(), hashlib.sha256).digest()
     suffix = "".join(VOUCHER_CODE_ALPHABET[b % len(VOUCHER_CODE_ALPHABET)] for b in digest[:3])
     return f"{VOUCHER_CODE_PREFIX}{suffix}"
 

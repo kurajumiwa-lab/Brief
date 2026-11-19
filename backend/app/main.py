@@ -375,6 +375,21 @@ from app.modules.office.notices_router import router as notices_router  # noqa: 
 app.include_router(notices_router, prefix="/api/office/notices", tags=["Fluid Teams"])
 from app.modules.event_hub.router import router as event_hub_router  # noqa: E402
 app.include_router(event_hub_router, prefix="/api/event-hub", tags=["Event hub"])
+
+# Event vendor desk: rate cards, structured broadcasts, quotes and bookings.
+# Money stays direct; the public router only serves a published rate card.
+from app.modules.event_desk.router import router as event_desk_router, public as event_desk_public  # noqa: E402
+app.include_router(event_desk_router, prefix="/api/event-desk", tags=["Event vendor desk"])
+app.include_router(event_desk_public, prefix="/api/event-desk", tags=["Event vendor desk"])
+# Verified lead ledger: one handshake per person per target, a 5 KES fair
+# contribution and a 1 KES direct scout bounty. Brief never holds the money.
+from app.modules.leads.router import router as leads_router  # noqa: E402
+app.include_router(leads_router, prefix="/api/leads", tags=["Lead ledger"])
+# Pulse windows and inventory-capped flash drops. Windows change the feed skin,
+# never a price; a drop claim reserves one unit for direct payment.
+from app.modules.pulse.router import router as pulse_router, public as pulse_public  # noqa: E402
+app.include_router(pulse_router, prefix="/api/pulse", tags=["Market pulse"])
+app.include_router(pulse_public, prefix="/api/pulse", tags=["Market pulse"])
 from app.modules.trust.router import customer as trust_customer  # noqa: E402
 app.include_router(trust_customer, prefix="/api/trust/customer", tags=["MarketTrust (customers)"])
 
