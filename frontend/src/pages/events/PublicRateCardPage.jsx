@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { ArrowRight, ExternalLink, MapPin, ShieldCheck, Wallet } from "lucide-react";
 import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
@@ -8,6 +8,7 @@ import { PageSpinner } from "@/components/ui/Spinner";
 import { EVENT_VENDOR_CATEGORIES } from "@/config/constants";
 import { apiError } from "@/lib/api";
 import { eventDeskAPI } from "@/lib/eventDeskApi";
+import { leadAPI } from "@/lib/leadApi";
 import { formatKes } from "@/lib/receipts";
 
 const labelFor = (value) => EVENT_VENDOR_CATEGORIES.find((c) => c.value === value)?.label || value;
@@ -15,6 +16,7 @@ const labelFor = (value) => EVENT_VENDOR_CATEGORIES.find((c) => c.value === valu
 /** A public rate card. Readable before sign-up; no phone number or email here. */
 export default function PublicRateCardPage() {
   const { handle = "" } = useParams();
+  const [search] = useSearchParams();
   const [card, setCard] = useState(null);
   const [error, setError] = useState(null);
 
@@ -59,7 +61,16 @@ export default function PublicRateCardPage() {
             )}
           </div>
           <Button as={Link} to={`/events/desk?category=${encodeURIComponent(card.event_categories?.[0] || "")}`}
-                  size="sm" icon={ArrowRight}>Ask for a quote</Button>
+                  size="sm" icon={ArrowRight}
+                  onClick={() => {
+                    // The tap is a verified handshake once the signed-in person
+                    // acts. Anonymous readers simply get the desk.
+                    if (!card.vendor?.id) return;
+                    leadAPI.record({
+                      target_kind: "vendor", target_id: card.vendor.id, action: "quote",
+                      scout_code: search.get("ref") || null,
+                    }).catch(() => {});
+                  }}>Ask for a quote</Button>
         </div>
         <p className="text-base text-ink-2 leading-relaxed">{card.headline}</p>
         {card.summary && <p className="text-sm text-ink-3 leading-relaxed whitespace-pre-line">{card.summary}</p>}

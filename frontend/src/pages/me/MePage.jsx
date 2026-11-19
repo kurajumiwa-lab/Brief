@@ -19,6 +19,7 @@ import { CIRCLES_TRUSTED_ENABLED, CREDENTIALS_ENABLED } from "@/config/flags";
 import CredentialsSection from "@/components/credentials/CredentialsSection";
 import CirclesPanel from "@/components/circles/CirclesPanel";
 import AddTrustedContact from "@/components/relationships/AddTrustedContact";
+import LeadLedgerPanel from "@/components/leads/LeadLedgerPanel";
 import { ACCOUNT_KINDS, TEMPLATE_LABELS } from "@/lib/inference";
 import { useAuthStore } from "@/stores/authStore";
 import { useStockStore } from "@/stores/stockStore";
@@ -646,6 +647,8 @@ export default function MePage() {
             </div>
           )}
         </section>
+
+        <LeadLedgerPanel />
 
         {/* Flagged (Phase 7): add a trusted contact by handle, and follow circles. */}
         {CIRCLES_TRUSTED_ENABLED && <AddTrustedContact onSaved={loadLedger} />}
