@@ -1166,6 +1166,20 @@ export const postTradeRatingAPI = {
 // ── 0066: Work-From-Home corridor tasks ─────────────────────────────────────
 // Peer-to-peer M-Pesa payouts with a 5–8% platform fee ledger. The platform
 // holds no money; `signal_note` on every row says what the proof does not prove.
+// ── 0071: referral engine ───────────────────────────────────────────────────
+// A code is an introduction, not a purchase. `claim` attaches the invitation
+// and leaves it pending until the receipt engine qualifies it.
+export const referralAPI = {
+  campaigns: (region) => api.get("/referrals/campaigns", { params: noEmpty({ region }) }),
+  overview: () => api.get("/referrals/me"),
+  publicCode: (code) => api.get(`/referrals/public/codes/${encodeURIComponent(code)}`),
+  createCampaign: (body) => api.post("/referrals/campaigns", body),
+  setStatus: (id, status) => api.post(`/referrals/campaigns/${id}/status`, { status }),
+  link: (id) => api.post(`/referrals/campaigns/${id}/link`),
+  claim: (code) => api.post("/referrals/claim", { code }),
+  markPaid: (id, note) => api.post(`/referrals/${id}/paid`, { note }),
+};
+
 export const corridorTaskAPI = {
   inbox: (days = 7) => api.get("/tasks/inbox", { params: { days } }),
   board: ({ region_slug, town, days = 7 } = {}) =>

@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { Link } from "react-router-dom";
 import {
   ArrowRight, BadgePercent, MessageCircle, QrCode, Receipt, ScanLine, ShieldCheck, Store,
   Wallet,
@@ -228,6 +229,10 @@ export default function ReceiptsView({ receipts = [], points = 0, region = null,
               shopkeeper&apos;s phone — never cash. The code is issued with the
               voucher, so it still opens in a shop with no signal.
             </p>
+            <Button as={Link} to="/referrals" variant="secondary" size="sm" icon={ArrowRight}
+              className="mt-3">
+              Fund a verified referral campaign
+            </Button>
           </div>
         </div>
       </section>

@@ -596,11 +596,30 @@ async def submit_receipt(
         await db.rollback()
         raise HTTPException(409, "That receipt is already in the ledger. One receipt, one reward.")
     await db.refresh(receipt)
+
+    # A referral is a second economic engine on the same evidence. This runs in
+    # its own transaction after the receipt is already saved: a failing referral
+    # lookup must never discard a valid receipt.
+    referral = None
+    receipt_id = receipt.id
+    try:
+        from app.modules.referrals import service as referral_service
+
+        referral = await referral_service.qualify_verified_receipt(
+            db, receipt=receipt, buyer=vendor,
+        )
+        await db.commit()
+    except Exception:  # pragma: no cover - defensive, and never loses the receipt
+        await db.rollback()
+        log.exception("referral qualification failed for receipt %s", receipt_id)
+
+    await db.refresh(receipt)
     balance = await _points_balance(db, vendor.id, now)
     return {
         "receipt": _receipt_out(receipt),
         "points_awarded": receipt.points,
         "balance": balance,
+        "referral": referral,
         "message": (
             "Recorded. A typed receipt earns no points."
             if status == "manual"

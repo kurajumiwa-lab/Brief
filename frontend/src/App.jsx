@@ -55,6 +55,8 @@ const RegionsPage = lazy(() => import("@/pages/regions/RegionsPage"));
 const DiscoverSectionPage = lazy(() => import("@/pages/discover/DiscoverSectionPage"));
 const DiscoverFavoritesPage = lazy(() => import("@/pages/discover/DiscoverFavoritesPage"));
 const ReceiptLedgerPage = lazy(() => import("@/pages/receipts/ReceiptLedgerPage"));
+const ReferralsPage = lazy(() => import("@/pages/referrals/ReferralsPage"));
+const ReferralLandingPage = lazy(() => import("@/pages/referrals/ReferralLandingPage"));
 const TradeProofsPage = lazy(() => import("@/pages/trades/TradeProofsPage"));
 const RegionsIndexPage = lazy(() => import("@/pages/regions/RegionsIndexPage"));
 const RegionPage = lazy(() => import("@/pages/regions/RegionPage"));
@@ -221,6 +223,10 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/auth" element={<AuthPage />} />
+      {/* A referral link is shared in WhatsApp and must open before sign-up.
+          The page stores the code, then sends the visitor through auth with
+          `state.from` pointing back at the claim. */}
+      <Route path="/r/:code" element={<ReferralLandingPage />} />
       {/* Dev-only living spec for the redesign. See pages/preview/PreviewPage. */}
       <Route path="/preview" element={<PreviewPage />} />
       {/* Public storefront (v2.14): catalogue, tiers, trial — readable without
@@ -286,6 +292,7 @@ function AppRoutes() {
           <Route path="/discover/favorites" element={<DiscoverFavoritesPage />} />
           <Route path="/discover/:section" element={<DiscoverSectionPage />} />
           <Route path="/receipts" element={<ReceiptLedgerPage />} />
+          <Route path="/referrals" element={<ReferralsPage />} />
           <Route path="/trades/proofs" element={<TradeProofsPage />} />
           <Route path="/regions/all" element={<RegionsIndexPage />} />
           <Route path="/regions/:slug" element={<RegionPage />} />

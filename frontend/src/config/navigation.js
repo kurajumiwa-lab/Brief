@@ -114,6 +114,7 @@ const INBOX_ROOTS = [
 const YOU_ROOTS = [
   "/you", "/me", "/stock", "/analytics", "/pos", "/brief", "/passport", "/growth",
   "/billing", "/enterprise", "/governance", "/ops", "/membership", "/office",
+  "/referrals",
   "/more", "/settings", "/legal", "/storefront", "/desk", "/today",
 ];
 
@@ -256,6 +257,7 @@ export const SETTINGS_GROUPS = [
       { to: "/lists", label: "Lists", icon: List },
       { to: "/locks", label: "Market locks", icon: ShoppingCart },
       { to: "/tasks", label: "Tasks", icon: ListChecks },
+      { to: "/referrals", label: "Referral network", icon: Users },
       { to: "/growth", label: "Growth planner", icon: Sparkles },
       { to: "/pos", label: "POS bridge", icon: ScanLine },
       { to: "/integrations", label: "Records & links", icon: FolderOpen },
