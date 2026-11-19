@@ -55,6 +55,14 @@ const RegionsPage = lazy(() => import("@/pages/regions/RegionsPage"));
 const DiscoverSectionPage = lazy(() => import("@/pages/discover/DiscoverSectionPage"));
 const DiscoverFavoritesPage = lazy(() => import("@/pages/discover/DiscoverFavoritesPage"));
 const ReceiptLedgerPage = lazy(() => import("@/pages/receipts/ReceiptLedgerPage"));
+const ReferralsPage = lazy(() => import("@/pages/referrals/ReferralsPage"));
+const ReferralLandingPage = lazy(() => import("@/pages/referrals/ReferralLandingPage"));
+const ReceiptRewardsPage = lazy(() => import("@/pages/town/ReceiptRewardsPage"));
+const ReferralIndexPage = lazy(() => import("@/pages/town/ReferralIndexPage"));
+const ReferralShareLandingPage = lazy(() => import("@/pages/town/ReferralShareLandingPage"));
+const ScoutMarketplacePage = lazy(() => import("@/pages/town/ScoutMarketplacePage"));
+const MerchantCommercePage = lazy(() => import("@/pages/town/MerchantCommercePage"));
+const CommerceOpsPage = lazy(() => import("@/pages/town/CommerceOpsPage"));
 const TradeProofsPage = lazy(() => import("@/pages/trades/TradeProofsPage"));
 const RegionsIndexPage = lazy(() => import("@/pages/regions/RegionsIndexPage"));
 const RegionPage = lazy(() => import("@/pages/regions/RegionPage"));
@@ -221,6 +229,11 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/auth" element={<AuthPage />} />
+      {/* A referral link is shared in WhatsApp and must open before sign-up.
+          The page stores the code, then sends the visitor through auth with
+          `state.from` pointing back at the claim. */}
+      <Route path="/r/:code" element={<ReferralLandingPage />} />
+      <Route path="/referral-index/go/:code" element={<ReferralShareLandingPage />} />
       {/* Dev-only living spec for the redesign. See pages/preview/PreviewPage. */}
       <Route path="/preview" element={<PreviewPage />} />
       {/* Public storefront (v2.14): catalogue, tiers, trial — readable without
@@ -286,6 +299,12 @@ function AppRoutes() {
           <Route path="/discover/favorites" element={<DiscoverFavoritesPage />} />
           <Route path="/discover/:section" element={<DiscoverSectionPage />} />
           <Route path="/receipts" element={<ReceiptLedgerPage />} />
+          <Route path="/receipt-rewards" element={<ReceiptRewardsPage />} />
+          <Route path="/referrals" element={<ReferralsPage />} />
+          <Route path="/referral-index" element={<ReferralIndexPage />} />
+          <Route path="/scout" element={<ScoutMarketplacePage />} />
+          <Route path="/merchant" element={<MerchantCommercePage />} />
+          <Route path="/ops/commerce" element={<CommerceOpsPage />} />
           <Route path="/trades/proofs" element={<TradeProofsPage />} />
           <Route path="/regions/all" element={<RegionsIndexPage />} />
           <Route path="/regions/:slug" element={<RegionPage />} />

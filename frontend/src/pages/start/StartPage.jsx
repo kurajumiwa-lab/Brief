@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import StartView from "@/components/start/StartView";
 import { useAuthStore } from "@/stores/authStore";
 import { useIdentityStore } from "@/stores/identityStore";
@@ -12,6 +12,8 @@ import { useIdentityStore } from "@/stores/identityStore";
  */
 export default function StartPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const from = location.state?.from && location.state.from !== "/" ? location.state.from : null;
   const vendor = useAuthStore((s) => s.vendor);
   const identity = useIdentityStore();
   const loadIdentity = useIdentityStore((s) => s.load);
@@ -28,7 +30,7 @@ export default function StartPage() {
     try {
       await setAll({ intent, capabilities });
       if (affiliation?.name) await claimAffiliation(affiliation);
-      navigate(intent === "explore" ? "/" : "/you/page", { replace: true });
+      navigate(from || (intent === "explore" ? "/" : "/you/page"), { replace: true });
     } finally {
       setSaving(false);
     }
@@ -44,7 +46,7 @@ export default function StartPage() {
         saving={saving}
         error={identity.error}
         onSave={handleSave}
-        onSkip={() => navigate("/", { replace: true })}
+        onSkip={() => navigate(from || "/", { replace: true })}
       />
     </div>
   );

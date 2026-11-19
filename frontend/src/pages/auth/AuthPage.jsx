@@ -127,7 +127,9 @@ export default function AuthPage() {
           hide_exact_location: Boolean(form.hide_exact_location),
         });
         justJoined.current = true;
-        navigate("/start", { replace: true });
+        // Carry a referral link through onboarding. StartPage normally sends
+        // people to their page or home; with `from` it returns to the invite.
+        navigate("/start", { replace: true, state: from && from !== "/" ? { from } : undefined });
         toast.success("You're in. One question next.");
       }
     } catch (err) {

@@ -21,7 +21,7 @@ from datetime import datetime
 
 from sqlalchemy import (
     Boolean, CheckConstraint, Column, DateTime, ForeignKey, Index, Integer, String, Text,
-    UniqueConstraint,
+    UniqueConstraint, text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import relationship
@@ -128,6 +128,16 @@ class Receipt(Base):
     raw_payload = Column(Text, nullable=True)
     dedupe_key = Column(String(300), nullable=False)
     region = Column(String(80), nullable=True)
+    # A photograph is evidence, not a dataset. The OCR text/line items live in
+    # `receipt_items`; the image URL is kept only when the uploader consented.
+    photo_url = Column(String(1000), nullable=True)
+    ocr_engine = Column(String(32), nullable=True)
+    extraction = Column(JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb"))
+    items_total_kes = Column(Integer, nullable=True)
+    fraud_flags = Column(JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb"))
+    # How much of this reward was actually covered by merchant prepaid credit.
+    # A zero here means the points are a record, not a redeemable obligation.
+    reward_funded_kes = Column(Integer, nullable=False, default=0, server_default="0")
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
     merchant = relationship("ReceiptMerchant", back_populates="receipts")

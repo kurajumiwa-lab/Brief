@@ -26,6 +26,9 @@ from app.modules.catalog import router as catalog_routes
 from app.modules.intake import router as intake_routes
 from app.modules.enterprise import router as enterprise_routes
 from app.modules.growth import router as growth_routes
+from app.modules.referrals import router as referral_routes
+from app.modules.town import router as town_routes
+from app.modules.town import ops_router as town_ops_routes
 from app.modules.corridor_tasks import router as corridor_task_routes
 from app.modules.routines import router as routine_routes
 from app.modules.routines import sweep as routine_sweep
@@ -272,6 +275,9 @@ app.include_router(events.router, prefix="/api/events", tags=["Events"])
 app.include_router(spotted_deals.router, prefix="/api/spotted-deals", tags=["Spotted Deals"])
 # 0066 — Work-From-Home corridor tasks: peer-to-peer payouts, fee ledger, no custody.
 app.include_router(corridor_task_routes.router, prefix="/api/tasks", tags=["WFH Task Board"])
+app.include_router(referral_routes.router, prefix="/api/referrals", tags=["Referral network"])
+app.include_router(town_routes.router, prefix="/api/town", tags=["Town commerce"])
+app.include_router(town_ops_routes.router, prefix="/api/ops/commerce", tags=["Town commerce (ops)"])
 # 0067 — recurring hustle routines: weekly market days, clinics, bulk-buy rounds.
 app.include_router(routine_routes.router, prefix="/api/routines", tags=["Recurring Routines"])
 # 0068 — social seller signals: bio-link checks, stock-in-hand, delivery reports.

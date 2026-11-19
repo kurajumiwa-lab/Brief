@@ -26,6 +26,8 @@ const TYPE_TONE = {
   ERRAND_PICKUP: "bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300",
   DEAL_SPOT_CHECK: "bg-amber-50 text-amber-800 dark:bg-amber-500/15 dark:text-amber-200",
   MERCHANT_ONBOARD: "bg-amber-50 text-amber-800 dark:bg-amber-500/15 dark:text-amber-200",
+  QR_DISTRIBUTION: "bg-orchid-50 text-orchid-700 dark:bg-orchid-500/15 dark:text-orchid-300",
+  CUSTOMER_ACQUISITION: "bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300",
 };
 
 const STATUS_TONE = {
@@ -456,6 +458,8 @@ function TaskComposer({ open, onClose, onCreated, defaultRegion, town }) {
             <option value="DEAL_SPOT_CHECK">Shop check</option>
             <option value="MERCHANT_ONBOARD">Merchant onboarding</option>
             <option value="ERRAND_PICKUP">Errand pickup</option>
+            <option value="QR_DISTRIBUTION">QR distribution</option>
+            <option value="CUSTOMER_ACQUISITION">Customer acquisition</option>
           </select>
         </label>
         <label className="block text-xs font-semibold text-ink-2">

@@ -46,7 +46,14 @@ PUBLIC_READ_PREFIXES = ("/api/profiles/", "/api/og/events/", "/api/offers/public
                         # readable without an account, GET only. A claim, a claim
                         # of a voucher and redemption all still require a member.
                         "/api/receipts/merchants", "/api/receipts/offers",
-                        "/api/receipts/invites")
+                        "/api/receipts/invites",
+                        # A referral link arrives in WhatsApp. Opening it needs no
+                        # account; claiming it is a POST and stays behind auth.
+                        "/api/referrals/public/",
+                        # The referral index is browsable before sign-in. Its
+                        # share-link landing records a click; claiming is a POST
+                        # and stays behind auth.
+                        "/api/town/referral-index/public/")
 
 OFFICE_OPEN_POST = ("/api/office/links/accept",)
 

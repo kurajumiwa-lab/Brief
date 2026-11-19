@@ -66,17 +66,23 @@ def money(value) -> Decimal:
     return Decimal(str(value)).quantize(MONEY, rounding=ROUND_HALF_UP)
 
 
-def fee_pct_for(task_type: str) -> Decimal:
-    return Decimal(str(FEE_PCT[task_type]))
+async def fee_pct_for(db: AsyncSession, task_type: str) -> Decimal:
+    """Read the disclosed percentage from runtime settings, never a constant."""
+    from app.modules.town import config as town_config
+
+    key = town_config.SCOUT_FEE_KEYS.get(task_type)
+    if key is None:
+        return Decimal(str(FEE_PCT[task_type]))
+    return await town_config.get_pct(db, key)
 
 
-def fee_for(payout: Decimal, task_type: str) -> Decimal:
+async def fee_for(db: AsyncSession, payout: Decimal, task_type: str) -> Decimal:
     """Deterministic commission. Same inputs, same fee, every time.
 
     The worker's payout is what the card promises; the fee is charged to the
     creator on top, so the worker never sees a deduction they did not agree to.
     """
-    return money(payout * fee_pct_for(task_type) / Decimal("100"))
+    return money(payout * await fee_pct_for(db, task_type) / Decimal("100"))
 
 
 def normalise_code(value) -> str:
@@ -266,7 +272,8 @@ async def create_task(db: AsyncSession, vendor: Vendor, **payload) -> CorridorTa
     _ensure_live_person(vendor)
     clean = validate_new_task(**payload)
     now = now_utc()
-    fee = fee_for(clean["payout"], clean["task_type"])
+    fee_pct = await fee_pct_for(db, clean["task_type"])
+    fee = money(clean["payout"] * fee_pct / Decimal("100"))
     task = CorridorTask(
         creator_user_id=vendor.id,
         region_slug=clean["region_slug"],
@@ -278,7 +285,7 @@ async def create_task(db: AsyncSession, vendor: Vendor, **payload) -> CorridorTa
         due_at=clean["due_at"],
         worker_payout_kes=clean["payout"],
         platform_fee_kes=fee,
-        fee_pct=fee_pct_for(clean["task_type"]),
+        fee_pct=fee_pct,
         payment_tag_snapshot={},
         status="OPEN",
         min_standing_level=clean["min_standing_level"],

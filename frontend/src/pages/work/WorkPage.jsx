@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ClipboardList, Megaphone, Receipt, ListChecks, Lock, CalendarDays, Truck,
-  ChevronRight, 
+  ChevronRight, UserPlus,
 } from "lucide-react";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
@@ -66,6 +66,8 @@ export default function WorkPage() {
           badge={awaiting || null} />
         <WorkLink to="/tasks" icon={ListChecks} label="Tasks & jobs"
           sub="Hustle contracts and job calls" />
+        <WorkLink to="/referrals" icon={UserPlus} label="Referral network"
+          sub="Introduce a new customer; verify with a receipt" />
         <WorkLink to="/locks" icon={Lock} label="Market locks"
           sub="Daily group-buy windows" />
         <WorkLink to="/tools" icon={Truck} label="Rentals & delivery"

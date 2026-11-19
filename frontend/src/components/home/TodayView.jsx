@@ -4,6 +4,7 @@ import {
 } from "lucide-react";
 import { RankChip, RankMark } from "@/components/identity/Rank";
 import ReceiptScanCard from "@/components/receipts/ReceiptScanCard";
+import TownDoors from "@/components/home/TownDoors";
 import HappeningShelf from "@/components/home/HappeningShelf";
 import IdentityStrip from "@/components/home/IdentityStrip";
 
@@ -112,6 +113,8 @@ export default function TodayView({
       {/* Receipts live in the feed, not behind a settings door: the value of a
           receipt is highest while the person is still in the shop. */}
       <ReceiptScanCard />
+
+      <TownDoors />
 
       {unread > 0 && (
         <Link
