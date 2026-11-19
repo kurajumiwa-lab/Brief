@@ -153,6 +153,9 @@ from app.modules.referrals.models import ReferralCampaign, ReferralLink, Referra
 from app.modules.event_desk.models import (  # noqa: F401
     EventVendorQuote, EventVendorRequest, RateCardPackage, VendorRateCard,
 )
+from app.modules.office.models import (  # noqa: F401
+    Office, OfficeEvent, OfficeMember, OfficeSavedItem,
+)
 
 from app.modules.town.models import (  # noqa: F401
     CommerceSetting, DisputeCase, MerchantAnalyticsSubscription, MerchantCreditAccount,

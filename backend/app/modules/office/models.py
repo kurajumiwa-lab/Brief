@@ -8,7 +8,7 @@ profile, which the person must accept. Nothing here holds money.
 import uuid
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, Column, DateTime, ForeignKey, Index, String, text
+from sqlalchemy import CheckConstraint, Column, DateTime, ForeignKey, Index, String, Text, text
 from sqlalchemy.dialects.postgresql import UUID
 
 from app.database import Base
@@ -174,3 +174,45 @@ class OfficeNotice(Base):
     created_at = Column(TS, nullable=False, default=datetime.utcnow)
     updated_at = Column(TS, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
     edited_at = Column(TS, nullable=True)
+
+
+SAVE_PRIVACY = ("public_showcase", "family_shared", "vault_private")
+SAVE_TARGET_KINDS = ("vendor", "listing", "event", "offer", "service", "external")
+
+
+class OfficeSavedItem(Base):
+    """A saved person, listing or link with an explicit privacy zone.
+
+    The safe default is `vault_private`. A family member can never read another
+    member's vault row, and the public endpoint never receives a private note.
+    The office owner may remove a `public_showcase` row from their own front
+    door, but cannot read or edit anyone else's vault.
+    """
+
+    __tablename__ = "office_saved_items"
+    __table_args__ = (
+        CheckConstraint(_in("privacy", SAVE_PRIVACY), name="ck_office_saved_items_privacy"),
+        CheckConstraint(_in("target_kind", SAVE_TARGET_KINDS), name="ck_office_saved_items_kind"),
+        CheckConstraint("length(btrim(target_label)) > 0", name="ck_office_saved_items_label"),
+        CheckConstraint(
+            "target_url IS NULL OR target_url LIKE '/%' OR target_url LIKE 'https://%'",
+            name="ck_office_saved_items_url",
+        ),
+        Index("ix_office_saved_items_office_privacy", "office_id", "privacy"),
+        Index("ix_office_saved_items_saved_by", "saved_by", "created_at"),
+    )
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    office_id = Column(UUID(as_uuid=True), ForeignKey("offices.id", ondelete="CASCADE"),
+                       nullable=False, index=True)
+    saved_by = Column(UUID(as_uuid=True), ForeignKey("vendors.id", ondelete="CASCADE"),
+                      nullable=False)
+    target_kind = Column(String(20), nullable=False, default="external", server_default="external")
+    target_id = Column(UUID(as_uuid=True), nullable=True)
+    target_label = Column(String(160), nullable=False)
+    target_url = Column(String(500), nullable=True)
+    privacy = Column(String(20), nullable=False, default="vault_private",
+                     server_default="vault_private")
+    private_note = Column(Text, nullable=True)
+    created_at = Column(TS, nullable=False, default=datetime.utcnow)
+    updated_at = Column(TS, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)

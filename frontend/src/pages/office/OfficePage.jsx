@@ -9,6 +9,7 @@ import Input from "@/components/ui/Input";
 import { officeAPI, apiError } from "@/lib/api";
 import { FLUID_TEAMS_ENABLED } from "@/config/flags";
 import { NoticeBoard, PartnerPanel } from "@/components/office/TeamsPanels";
+import SavedItemsPanel from "@/components/office/SavedItemsPanel";
 
 const ROLE_LABELS = {
   editor: "Editor (can invite and add events)",
@@ -147,6 +148,7 @@ export default function OfficePage() {
           </section>
 
           <OfficeFrontDoor page={detail.page} office={detail} />
+          <SavedItemsPanel officeId={detail.id} role={detail.my_role} />
           <OfficeNextSteps setup={detail.setup} page={detail.page} />
           <OfficePeople detail={detail} onRun={run} />
 

@@ -62,6 +62,22 @@ class LinkAcceptIn(BaseModel):
     display_name: str = Field(..., min_length=2, max_length=60)
 
 
+class SavedItemIn(BaseModel):
+    target_kind: str = Field("external", max_length=20)
+    target_id: Optional[uuid.UUID] = None
+    target_handle: Optional[str] = Field(None, max_length=100)
+    target_label: str = Field("", max_length=160)
+    target_url: Optional[str] = Field(None, max_length=500)
+    privacy: str = Field("vault_private", max_length=20)
+    private_note: Optional[str] = Field(None, max_length=2000)
+
+
+class SavedItemPatchIn(BaseModel):
+    privacy: Optional[str] = Field(None, max_length=20)
+    private_note: Optional[str] = Field(None, max_length=2000)
+    target_label: Optional[str] = Field(None, max_length=160)
+
+
 class EventIn(BaseModel):
     activity: str = Field(..., min_length=2, max_length=80)
     title: str = Field(..., min_length=2, max_length=160)
@@ -220,7 +236,72 @@ async def calendar(office_id: uuid.UUID, vendor: Vendor = Depends(get_current_ve
                     headers={"Content-Disposition": f'attachment; filename="{office.name[:40]}.ics"'})
 
 
+@router.get("/offices/{office_id}/saved")
+async def saved_items(office_id: uuid.UUID, scope: str = "all",
+                      vendor: Vendor = Depends(get_current_vendor), db: AsyncSession = Depends(get_db)):
+    try:
+        return await svc.saved_items(db, vendor, office_id, scope=scope)
+    except svc.OfficeError as exc:
+        _fail(exc)
+
+
+@router.post("/offices/{office_id}/saved", status_code=201)
+async def save_item(office_id: uuid.UUID, body: SavedItemIn,
+                    vendor: Vendor = Depends(get_current_vendor), db: AsyncSession = Depends(get_db)):
+    try:
+        item, created = await svc.save_item(
+            db, vendor, office_id, target_kind=body.target_kind, target_id=body.target_id,
+            target_handle=body.target_handle, target_label=body.target_label,
+            target_url=body.target_url, privacy=body.privacy, private_note=body.private_note,
+        )
+        await db.commit()
+    except svc.OfficeError as exc:
+        await db.rollback()
+        _fail(exc)
+    return {"created": created, "item": await _saved_json(db, item, vendor, office_id)}
+
+
+@router.patch("/offices/{office_id}/saved/{item_id}")
+async def update_saved(office_id: uuid.UUID, item_id: uuid.UUID, body: SavedItemPatchIn,
+                       vendor: Vendor = Depends(get_current_vendor), db: AsyncSession = Depends(get_db)):
+    try:
+        item = await svc.update_saved(db, vendor, office_id, item_id, privacy=body.privacy,
+                                      private_note=body.private_note, target_label=body.target_label)
+        await db.commit()
+    except svc.OfficeError as exc:
+        await db.rollback()
+        _fail(exc)
+    return {"item": await _saved_json(db, item, vendor, office_id)}
+
+
+@router.delete("/offices/{office_id}/saved/{item_id}", status_code=204)
+async def delete_saved(office_id: uuid.UUID, item_id: uuid.UUID,
+                       vendor: Vendor = Depends(get_current_vendor), db: AsyncSession = Depends(get_db)):
+    try:
+        await svc.delete_saved(db, vendor, office_id, item_id)
+        await db.commit()
+    except svc.OfficeError as exc:
+        await db.rollback()
+        _fail(exc)
+    return Response(status_code=204)
+
+
+async def _saved_json(db, item, vendor, office_id):
+    # The item was just written; re-read the safe list shape so the caller
+    # cannot accidentally receive another member's note.
+    data = await svc.saved_items(db, vendor, office_id, scope="all")
+    return next((x for x in data["items"] if x["id"] == str(item.id)), None)
+
+
 # ── public ────────────────────────────────────────────────────────────────────
+
+@public.get("/public/offices/{office_id}/saved")
+async def public_saved(office_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
+    try:
+        return await svc.public_saved(db, office_id)
+    except svc.OfficeError as exc:
+        _fail(exc)
+
 
 @public.get("/public/offices/{office_id}")
 async def public_profile(office_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
