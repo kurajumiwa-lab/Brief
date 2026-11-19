@@ -375,6 +375,12 @@ from app.modules.office.notices_router import router as notices_router  # noqa: 
 app.include_router(notices_router, prefix="/api/office/notices", tags=["Fluid Teams"])
 from app.modules.event_hub.router import router as event_hub_router  # noqa: E402
 app.include_router(event_hub_router, prefix="/api/event-hub", tags=["Event hub"])
+
+# Event vendor desk: rate cards, structured broadcasts, quotes and bookings.
+# Money stays direct; the public router only serves a published rate card.
+from app.modules.event_desk.router import router as event_desk_router, public as event_desk_public  # noqa: E402
+app.include_router(event_desk_router, prefix="/api/event-desk", tags=["Event vendor desk"])
+app.include_router(event_desk_public, prefix="/api/event-desk", tags=["Event vendor desk"])
 from app.modules.trust.router import customer as trust_customer  # noqa: E402
 app.include_router(trust_customer, prefix="/api/trust/customer", tags=["MarketTrust (customers)"])
 

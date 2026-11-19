@@ -41,6 +41,26 @@ export const EVENT_TYPES = [
   { value: "popup_market", label: "Popup Market" },
   { value: "workshop", label: "Workshop" },
   { value: "auction", label: "Auction" },
+  { value: "wedding", label: "Wedding" },
+  { value: "ceremony", label: "Ceremony" },
+  { value: "corporate_event", label: "Corporate Event" },
+  { value: "conference", label: "Conference" },
+  { value: "party", label: "Party" },
+];
+
+// backend/app/modules/event_desk/models.py · EVENT_VENDOR_CATEGORIES
+export const EVENT_VENDOR_CATEGORIES = [
+  { value: "catering", label: "Catering" },
+  { value: "decor", label: "Decor & styling" },
+  { value: "photography", label: "Photography & video" },
+  { value: "sound_lighting", label: "Sound & lighting" },
+  { value: "venue", label: "Venue" },
+  { value: "transport", label: "Transport" },
+  { value: "security", label: "Security" },
+  { value: "mc", label: "MC & entertainment" },
+  { value: "makeup", label: "Makeup & beauty" },
+  { value: "staffing", label: "Staffing" },
+  { value: "other", label: "Other" },
 ];
 
 // backend/app/config.py · ALLOWED_POS_SYSTEMS  (mode from services/pos_sync.py)

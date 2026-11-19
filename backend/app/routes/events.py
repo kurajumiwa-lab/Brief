@@ -23,7 +23,7 @@ from app.services.notification_service import create_notification, notify_many
 
 router = APIRouter()
 
-EVENT_TYPES = {"networking", "trade_show", "sourcing_trip", "popup_market", "workshop", "market_day", "trade_fair", "auction"}
+EVENT_TYPES = {"networking", "trade_show", "sourcing_trip", "popup_market", "workshop", "market_day", "trade_fair", "auction", "wedding", "ceremony", "corporate_event", "conference", "party"}
 
 
 def _slugify(value: str) -> str:

@@ -150,6 +150,10 @@ from app.modules.trust.models import (  # noqa: F401
 )
 
 from app.modules.referrals.models import ReferralCampaign, ReferralLink, Referral  # noqa: F401
+from app.modules.event_desk.models import (  # noqa: F401
+    EventVendorQuote, EventVendorRequest, RateCardPackage, VendorRateCard,
+)
+
 from app.modules.town.models import (  # noqa: F401
     CommerceSetting, DisputeCase, MerchantAnalyticsSubscription, MerchantCreditAccount,
     MerchantCreditEntry, MerchantCreditPurchase, MerchantRewardPolicy, PlatformFeeEntry,

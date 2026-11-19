@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { CalendarDays, Plus, MapPin, Users, Video, Ticket, Check, X, ClipboardList, Crown, DoorOpen, BarChart3 } from "lucide-react";
+import { CalendarDays, Plus, MapPin, Users, Video, Ticket, Check, X, ClipboardList, Crown, DoorOpen, BarChart3, Store, Wallet } from "lucide-react";
 import Tabs from "@/components/ui/Tabs";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
@@ -115,9 +115,17 @@ export default function EventsPage() {
           <h2 className="text-xl font-semibold text-ink-1 tracking-tight">Events</h2>
           <p className="text-xs text-ink-4">Sourcing trips, market days, trade fairs and workshops — organised by patrons and groups, attended by businesses.</p>
         </div>
-        <Button size="sm" icon={Plus} onClick={() => setCreating(true)}>
-          New event
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button as={Link} to="/rate-card" size="sm" variant="secondary" icon={Wallet}>
+            Rate card
+          </Button>
+          <Button as={Link} to="/events/desk" size="sm" variant="secondary" icon={Store}>
+            Event desk
+          </Button>
+          <Button size="sm" icon={Plus} onClick={() => setCreating(true)}>
+            New event
+          </Button>
+        </div>
       </div>
 
       <Tabs tabs={TABS} value={tab} onChange={setTab} />
