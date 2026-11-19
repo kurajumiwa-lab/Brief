@@ -8,14 +8,14 @@ contact detail depends on `get_current_vendor`.
 from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models.vendor import Vendor
-from app.modules.event_desk import service
+from app.modules.event_desk import resale, service
 from app.modules.event_desk.schemas import (
-    PackagesIn, QuoteIn, QuoteStatusIn, RateCardIn, RequestIn, RequestStatusIn,
+    PackagesIn, PassResaleIn, QuoteIn, QuoteStatusIn, RateCardIn, RequestIn, RequestStatusIn,
 )
 from app.routes.auth import get_current_vendor
 
@@ -111,3 +111,90 @@ async def set_quote_status(quote_id: UUID, data: QuoteStatusIn,
     result = await service.set_quote_status(db, vendor, quote_id, data.status)
     await db.commit()
     return {"message": f"Quote {data.status}", "quote": result}
+
+@router.get("/resale/eligible")
+async def resale_eligible(vendor: Vendor = Depends(get_current_vendor), db: AsyncSession = Depends(get_db)):
+    return await resale.eligible_passes(db, vendor)
+
+
+@router.get("/resale/board")
+async def resale_board(vendor: Vendor = Depends(get_current_vendor), db: AsyncSession = Depends(get_db)):
+    return await resale.board(db, vendor)
+
+
+@router.get("/resale/mine")
+async def resale_mine(vendor: Vendor = Depends(get_current_vendor), db: AsyncSession = Depends(get_db)):
+    return await resale.mine(db, vendor)
+
+
+@router.post("/resale/list", status_code=201)
+async def resale_list(data: PassResaleIn, vendor: Vendor = Depends(get_current_vendor),
+                      db: AsyncSession = Depends(get_db)):
+    try:
+        result = await resale.list_pass(db, vendor, data.registration_id,
+                                        price_kes=data.price_kes, note=data.note)
+        await db.commit()
+    except HTTPException:
+        await db.rollback()
+        raise
+    return {"message": "Pass listed", "listing": result}
+
+
+@router.get("/resale/{resale_id}")
+async def resale_detail(resale_id: UUID, vendor: Vendor = Depends(get_current_vendor),
+                        db: AsyncSession = Depends(get_db)):
+    return await resale.detail(db, vendor, resale_id)
+
+
+@router.post("/resale/{resale_id}/claim")
+async def resale_claim(resale_id: UUID, vendor: Vendor = Depends(get_current_vendor),
+                       db: AsyncSession = Depends(get_db)):
+    try:
+        result = await resale.claim(db, vendor, resale_id)
+        await db.commit()
+    except HTTPException:
+        await db.rollback()
+        raise
+    return {"message": "Pass claimed — agree payment directly with the seller", "listing": result}
+
+
+@router.post("/resale/{resale_id}/release")
+async def resale_release(resale_id: UUID, vendor: Vendor = Depends(get_current_vendor),
+                         db: AsyncSession = Depends(get_db)):
+    try:
+        result = await resale.release(db, vendor, resale_id)
+        await db.commit()
+    except HTTPException:
+        await db.rollback()
+        raise
+    return {"message": "Claim released", "listing": result}
+
+
+@router.post("/resale/{resale_id}/cancel")
+async def resale_cancel(resale_id: UUID, vendor: Vendor = Depends(get_current_vendor),
+                        db: AsyncSession = Depends(get_db)):
+    try:
+        result = await resale.cancel(db, vendor, resale_id)
+        await db.commit()
+    except HTTPException:
+        await db.rollback()
+        raise
+    return {"message": "Listing cancelled", "listing": result}
+
+
+@router.post("/resale/{resale_id}/handover")
+async def resale_handover(resale_id: UUID, vendor: Vendor = Depends(get_current_vendor),
+                          db: AsyncSession = Depends(get_db)):
+    try:
+        result = await resale.confirm_handover(db, vendor, resale_id)
+        await db.commit()
+    except HTTPException:
+        await db.rollback()
+        raise
+    return {
+        "message": ("Handover complete — the buyer has a fresh pass"
+                    if result["status"] == "completed"
+                    else "Confirmation recorded — waiting for the other side"),
+        "listing": result,
+    }
+

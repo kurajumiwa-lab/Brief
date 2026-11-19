@@ -22,4 +22,15 @@ export const eventDeskAPI = {
   submitQuote: (requestId, data) => api.post(`/event-desk/requests/${requestId}/quotes`, data),
   myQuotes: () => api.get("/event-desk/quotes/mine"),
   setQuoteStatus: (quoteId, status) => api.post(`/event-desk/quotes/${quoteId}/status`, { status }),
+
+  // Second-hand passes. The buyer and seller settle directly; the API only
+  // records the claim and performs the atomic pass swap after both confirm.
+  resaleEligible: () => api.get("/event-desk/resale/eligible"),
+  resaleBoard: () => api.get("/event-desk/resale/board"),
+  resaleMine: () => api.get("/event-desk/resale/mine"),
+  resaleList: (data) => api.post("/event-desk/resale/list", data),
+  resaleClaim: (id) => api.post(`/event-desk/resale/${id}/claim`),
+  resaleRelease: (id) => api.post(`/event-desk/resale/${id}/release`),
+  resaleCancel: (id) => api.post(`/event-desk/resale/${id}/cancel`),
+  resaleHandover: (id) => api.post(`/event-desk/resale/${id}/handover`),
 };

@@ -161,15 +161,20 @@ def _registration_out(r: Optional[EventRegistration]) -> Optional[dict]:
         "booking_status": r.booking_status,
         "waitlist_position": r.waitlist_position,
         "hold_expires_at": r.hold_expires_at.isoformat() if r.hold_expires_at else None,
-        "mpesa_code": r.mpesa_code,
-        "mpesa_amount": float(r.mpesa_amount) if r.mpesa_amount is not None else None,
-        "mpesa_recipient_matched": r.mpesa_recipient_matched,
-        "mpesa_submitted_at": r.mpesa_submitted_at.isoformat() if r.mpesa_submitted_at else None,
+        # A resold pass is held by someone who did not send the original
+        # M-Pesa note. The seller's reference is not theirs to see.
+        "mpesa_code": None if (r.pass_rotation or 0) else r.mpesa_code,
+        "mpesa_amount": (None if (r.pass_rotation or 0)
+                         else float(r.mpesa_amount) if r.mpesa_amount is not None else None),
+        "mpesa_recipient_matched": None if (r.pass_rotation or 0) else r.mpesa_recipient_matched,
+        "mpesa_submitted_at": (None if (r.pass_rotation or 0)
+                               else r.mpesa_submitted_at.isoformat() if r.mpesa_submitted_at else None),
+        "transferred": bool(r.pass_rotation or 0),
         "registered_at": r.registered_at.isoformat() if r.registered_at else None,
         "checked_in_at": r.checked_in_at.isoformat() if r.checked_in_at else None,
         # The pass code only exists once CONFIRMED — the same code the Inbox
         # agenda derives, so the two screens can never disagree.
-        "pass_code": event_payments.pass_code_for(r.id) if r.booking_status == "CONFIRMED" else None,
+        "pass_code": event_payments.pass_code_for(r.id, r.pass_rotation) if r.booking_status == "CONFIRMED" else None,
     }
 
 
@@ -653,7 +658,7 @@ async def confirm_event_payment(
                     else "Payment confirmed — pass unlocked"),
         "booking_status": reg.booking_status,
         "registration": _registration_out(reg),
-        "pass_code": event_payments.pass_code_for(reg.id),
+        "pass_code": event_payments.pass_code_for(reg.id, reg.pass_rotation),
     }
 
 

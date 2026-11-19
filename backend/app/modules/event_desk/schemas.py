@@ -157,3 +157,9 @@ class QuoteIn(BaseModel):
 class QuoteStatusIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
     status: Literal["shortlisted", "accepted", "declined", "withdrawn"]
+
+
+class PassResaleIn(BaseModel):
+    registration_id: UUID
+    price_kes: int = Field(0, ge=0, le=1000000)
+    note: Optional[str] = Field(None, max_length=500)

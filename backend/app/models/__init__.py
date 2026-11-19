@@ -13,7 +13,9 @@ from app.models.tools import (
 )
 from app.models.bookings import ToolBooking, BOOKING_KINDS, BOOKING_STATUSES, KIND_FROM_CATEGORY
 from app.models.routing import RoutePlan, RouteStop, ROUTE_STATUSES
-from app.models.events import Event, EventRegistration
+from app.models.events import (  # noqa: F401
+    Event, EventMpesaCode, EventPassResale, EventRegistration,
+)
 from app.models.pos_bridge import POSConnection, POSSyncLog
 from app.models.notification import Notification, NotificationType
 from app.models.performance import VendorPerformance

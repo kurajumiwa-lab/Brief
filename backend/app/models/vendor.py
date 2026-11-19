@@ -107,6 +107,9 @@ class Vendor(Base):
     # movements because that counter is recomputed from `stock_movements`; a
     # shop receipt is a different kind of proof, not a movement to rewrite.
     confirmed_trade_proofs = Column(Integer, default=0, nullable=False, server_default="0")
+    # Completed second-hand pass handovers. Counted for both parties only when
+    # the swap is atomic and both sides have confirmed.
+    resale_trades = Column(Integer, default=0, nullable=False, server_default="0")
     parasitism_index = Column(Float, default=0.0, nullable=False)  # Mutual benefit score
 
     # POS Integration

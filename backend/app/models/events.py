@@ -149,6 +149,10 @@ class EventRegistration(Base):
     mpesa_raw_note = Column(Text)
     mpesa_submitted_at = Column(DateTime)
     mpesa_recipient_matched = Column(Boolean)
+    # Resale rotates the pass. The code remains an HMAC of the registration id,
+    # but including the rotation means the seller's old code stops matching the
+    # agenda the moment the buyer is minted a fresh one.
+    pass_rotation = Column(Integer, nullable=False, default=0, server_default="0")
 
     event = relationship("Event", back_populates="registrations")
     vendor = relationship("Vendor")
@@ -158,3 +162,46 @@ class EventMpesaCode(Base):
     __tablename__ = "event_mpesa_codes"
     code = Column(String(16), primary_key=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
+PASS_RESALE_STATUSES = ("listed", "claimed", "completed", "cancelled")
+
+
+class EventPassResale(Base):
+    """A confirmed pass re-listed for a second-hand buyer.
+
+    One row per registration: the DB unique constraint is the double-listing
+    lock. Money is settled directly between seller and buyer (M-Pesa, MTN,
+    cash or an SMS hash); this table records the handover, never the funds.
+    """
+
+    __tablename__ = "event_pass_resales"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('listed','claimed','completed','cancelled')",
+            name="ck_event_pass_resales_status",
+        ),
+        CheckConstraint("price_kes >= 0", name="ck_event_pass_resales_price"),
+        UniqueConstraint("registration_id", name="uq_event_pass_resales_registration"),
+        Index("ix_event_pass_resales_event_status", "event_id", "status"),
+        Index("ix_event_pass_resales_seller", "seller_id", "status"),
+        Index("ix_event_pass_resales_buyer", "buyer_id", "status"),
+    )
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    event_id = Column(UUID(as_uuid=True), ForeignKey("events.id", ondelete="CASCADE"), nullable=False)
+    registration_id = Column(
+        UUID(as_uuid=True), ForeignKey("event_registrations.id", ondelete="CASCADE"), nullable=False,
+    )
+    seller_id = Column(UUID(as_uuid=True), ForeignKey("vendors.id", ondelete="CASCADE"), nullable=False)
+    buyer_id = Column(UUID(as_uuid=True), ForeignKey("vendors.id", ondelete="SET NULL"), nullable=True)
+    price_kes = Column(Integer, nullable=False, default=0, server_default="0")
+    note = Column(Text, nullable=True)
+    status = Column(String(16), nullable=False, default="listed", server_default="listed")
+    claimed_at = Column(DateTime, nullable=True)
+    seller_confirmed_at = Column(DateTime, nullable=True)
+    buyer_confirmed_at = Column(DateTime, nullable=True)
+    completed_at = Column(DateTime, nullable=True)
+    cancelled_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)

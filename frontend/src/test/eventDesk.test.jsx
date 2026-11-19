@@ -19,6 +19,14 @@ const mocks = vi.hoisted(() => ({
   submitQuote: vi.fn(),
   myQuotes: vi.fn(),
   setQuoteStatus: vi.fn(),
+  resaleEligible: vi.fn(),
+  resaleBoard: vi.fn(),
+  resaleMine: vi.fn(),
+  resaleList: vi.fn(),
+  resaleClaim: vi.fn(),
+  resaleRelease: vi.fn(),
+  resaleCancel: vi.fn(),
+  resaleHandover: vi.fn(),
   mine: vi.fn(),
   confirm: vi.fn(),
 }));
@@ -85,6 +93,9 @@ describe("Event vendor desk", () => {
     mocks.openRequests.mockResolvedValue({ data: { requests: [], categories: [] } });
     mocks.myRequests.mockResolvedValue({ data: { requests: [] } });
     mocks.myQuotes.mockResolvedValue({ data: { quotes: [] } });
+    mocks.resaleEligible.mockResolvedValue({ data: { passes: [] } });
+    mocks.resaleBoard.mockResolvedValue({ data: { listings: [] } });
+    mocks.resaleMine.mockResolvedValue({ data: { sales: [], purchases: [] } });
     mocks.mine.mockResolvedValue({ data: [] });
   });
 
@@ -163,5 +174,37 @@ describe("Event vendor desk", () => {
     expect(screen.getByText("Ceremony decor")).toBeInTheDocument();
     expect(screen.getByText(/Self-reported means/i)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Ask for a quote/i })).toBeInTheDocument();
+  });
+
+  it("re-lists a confirmed pass and shows the direct-settlement rule", async () => {
+    mocks.resaleEligible.mockResolvedValue({
+      data: {
+        passes: [{
+          registration_id: "reg-1", id: "e1", title: "Rooftop listening session",
+          start_date: "2026-11-28T18:00:00", end_date: "2026-11-28T22:00:00",
+          location: "Kisumu, Milimani", pass_code: "HO-ABC", price_paid: 1000,
+          max_price_kes: 1000, resale: null, can_list: true,
+        }],
+      },
+    });
+    mocks.resaleList.mockResolvedValue({ data: { listing: { id: "rs1" } } });
+
+    render(<MemoryRouter><EventDeskPage /></MemoryRouter>);
+    await screen.findByRole("tab", { name: /Pass resale/i });
+    fireEvent.click(screen.getByRole("tab", { name: /Pass resale/i }));
+
+    expect(await screen.findByText("Passes you can re-list")).toBeInTheDocument();
+    expect(screen.getByText(/HO-ABC/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /List for resale/i }));
+
+    const price = await screen.findByLabelText(/Your price/i);
+    expect(price).toHaveValue(1000);
+    expect(screen.getByText(/The buyer only gets a valid pass/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /^List pass$/i }));
+
+    await waitFor(() => expect(mocks.resaleList).toHaveBeenCalled());
+    expect(mocks.resaleList.mock.calls[0][0]).toMatchObject({
+      registration_id: "reg-1", price_kes: 1000,
+    });
   });
 });

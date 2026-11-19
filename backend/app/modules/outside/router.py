@@ -811,7 +811,7 @@ AGENDA_RESPONSE_TYPES = {"group_pledge", "round_stop_request", "learning_enrolme
 AGENDA_BOOKING_STATUSES = {"agreed", "in_progress", "organizer_completed", "participant_completed"}
 
 
-def _agenda_code(record_id: str) -> str:
+def _agenda_code(record_id: str, rotation: int = 0) -> str:
     """A fixed, human-readable reference for a pass.
 
     It is derived from the record and the server secret so it never changes
@@ -821,9 +821,8 @@ def _agenda_code(record_id: str) -> str:
     """
     from app.services.receipt_rewards import VOUCHER_CODE_ALPHABET, VOUCHER_CODE_PREFIX
 
-    digest = hmac.new(
-        settings.SECRET_KEY.encode(), f"pass:{record_id}".encode(), hashlib.sha256,
-    ).digest()
+    token = f"pass:{record_id}" if not rotation else f"pass:{record_id}:{int(rotation)}"
+    digest = hmac.new(settings.SECRET_KEY.encode(), token.encode(), hashlib.sha256).digest()
     suffix = "".join(VOUCHER_CODE_ALPHABET[b % len(VOUCHER_CODE_ALPHABET)] for b in digest[:3])
     return f"{VOUCHER_CODE_PREFIX}{suffix}"
 
@@ -831,7 +830,7 @@ def _agenda_code(record_id: str) -> str:
 def _agenda_item(
     *, record_id: str, kind: str, title: str, starts_at, ends_at, place: str,
     price_kes, capacity, joined: int, state: str, status_label: str,
-    counterparty: Optional[dict], to: str, passable: bool,
+    counterparty: Optional[dict], to: str, passable: bool, pass_rotation: int = 0,
 ) -> dict:
     return {
         "id": f"{kind}:{record_id}",
@@ -849,7 +848,7 @@ def _agenda_item(
         "counterparty": counterparty,
         "to": to,
         "passable": passable,
-        "pass_code": _agenda_code(record_id) if passable else None,
+        "pass_code": _agenda_code(record_id, pass_rotation) if passable else None,
     }
 
 
@@ -905,6 +904,7 @@ async def agenda(
             counterparty={"name": org.business_name, "handle": org.vendor_handle},
             to=f"/events?event={ev.id}",
             passable=confirmed,
+            pass_rotation=int(reg.pass_rotation or 0),
         ))
 
     booking_rows = (await db.execute(

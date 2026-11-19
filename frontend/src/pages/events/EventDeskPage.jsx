@@ -27,6 +27,7 @@ const TABS = [
   { value: "open", label: "Open requests" },
   { value: "mine", label: "My requests" },
   { value: "quotes", label: "My quotes" },
+  { value: "resale", label: "Pass resale" },
 ];
 
 const PAYERS = [
@@ -92,6 +93,10 @@ export default function EventDeskPage() {
 
   const [detail, setDetail] = useState(null);
   const [detailBusy, setDetailBusy] = useState(false);
+  const [resale, setResale] = useState({ eligible: [], board: [], sales: [], purchases: [] });
+  const [resaleBusy, setResaleBusy] = useState(false);
+  const [listFor, setListFor] = useState(null);
+  const [listForm, setListForm] = useState({ price_kes: "", note: "" });
   const confirm = useConfirm();
 
   const load = useCallback(async (showSpinner = false) => {
@@ -115,6 +120,86 @@ export default function EventDeskPage() {
   }, [category, query]);
 
   useEffect(() => { load(true); }, [load]);
+
+  const loadResale = useCallback(async () => {
+    try {
+      const [eligible, board, mine] = await Promise.all([
+        eventDeskAPI.resaleEligible(), eventDeskAPI.resaleBoard(), eventDeskAPI.resaleMine(),
+      ]);
+      setResale({
+        eligible: eligible.data.passes || [],
+        board: board.data.listings || [],
+        sales: mine.data.sales || [],
+        purchases: mine.data.purchases || [],
+      });
+    } catch (error) {
+      toast.error(apiError(error, "Could not load pass resale."));
+    }
+  }, []);
+
+  useEffect(() => { if (tab === "resale") loadResale(); }, [tab, loadResale]);
+
+  const listPass = async () => {
+    if (!listFor) return;
+    setResaleBusy(true);
+    try {
+      await eventDeskAPI.resaleList({
+        registration_id: listFor.registration_id,
+        price_kes: Number(listForm.price_kes) || 0,
+        note: listForm.note.trim() || null,
+      });
+      toast.success("Pass listed — the buyer pays you directly");
+      setListFor(null);
+      setListForm({ price_kes: "", note: "" });
+      await loadResale();
+    } catch (error) {
+      toast.error(apiError(error, "Could not list that pass."));
+    } finally {
+      setResaleBusy(false);
+    }
+  };
+
+  const claimPass = async (listing) => {
+    const ok = await confirm({
+      title: "Claim this pass?",
+      message: `${listing.event.title} · ${formatKes(listing.price_kes)}. Agree payment directly with ${listing.seller.business}; the pass only moves after both of you confirm.`,
+      confirmLabel: "Claim pass",
+    });
+    if (!ok) return;
+    try {
+      await eventDeskAPI.resaleClaim(listing.id);
+      toast.success("Pass claimed — contact details are open");
+      await loadResale();
+    } catch (error) {
+      toast.error(apiError(error, "Could not claim that pass."));
+    }
+  };
+
+  const handover = async (listing) => {
+    try {
+      const { data } = await eventDeskAPI.resaleHandover(listing.id);
+      if (data.listing.status === "completed") {
+        toast.success(`Handover complete — new pass ${data.listing.pass_code}`);
+      } else {
+        toast.success("Confirmation recorded — waiting for the other side");
+      }
+      await loadResale();
+    } catch (error) {
+      toast.error(apiError(error, "Could not confirm the handover."));
+    }
+  };
+
+  const withdrawListing = async (listing) => {
+    const ok = await confirm({ title: "Withdraw this listing?", message: "A buyer who already claimed it will be told.", confirmLabel: "Withdraw", danger: true });
+    if (!ok) return;
+    try {
+      await eventDeskAPI.resaleCancel(listing.id);
+      toast.success("Listing withdrawn");
+      await loadResale();
+    } catch (error) {
+      toast.error(apiError(error, "Could not withdraw the listing."));
+    }
+  };
 
   const organised = useMemo(() => {
     const now = Date.now();
@@ -388,6 +473,124 @@ export default function EventDeskPage() {
             ))}
           </div>
         )
+      ) : tab === "resale" ? (
+        <div className="space-y-4">
+          <Card className="space-y-2">
+            <div>
+              <h3 className="text-sm font-semibold text-ink-1">Passes you can re-list</h3>
+              <p className="text-micro text-ink-4">
+                One confirmed pass, one buyer, one new code. You settle payment directly — the platform never holds it.
+              </p>
+            </div>
+            {resale.eligible.length === 0 ? (
+              <p className="text-xs text-ink-3">You have no unused confirmed passes for an upcoming event.</p>
+            ) : (
+              <ul className="space-y-2">
+                {resale.eligible.map((pass) => (
+                  <li key={pass.registration_id} className="rounded-xl border border-edge-1 p-3">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-semibold text-ink-1">{pass.title}</p>
+                        <p className="text-2xs text-ink-4">
+                          {shortDateTime(pass.start_date)} · {pass.location || "Location not set"} · pass {pass.pass_code}
+                        </p>
+                      </div>
+                      {pass.resale ? (
+                        <Badge variant={STATUS_BADGE[pass.resale.status] || "gray"} size="xs">
+                          {pass.resale.status} · {formatKes(pass.resale.price_kes)}
+                        </Badge>
+                      ) : (
+                        <Button size="xs" onClick={() => {
+                          setListForm({ price_kes: String(pass.max_price_kes || 0), note: "" });
+                          setListFor(pass);
+                        }}>List for resale</Button>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+
+          <div>
+            <h3 className="text-sm font-semibold text-ink-1">Passes for sale</h3>
+            {resale.board.length === 0 ? (
+              <p className="mt-1 text-xs text-ink-3">No one is re-selling a pass right now.</p>
+            ) : (
+              <div className="mt-2 grid lg:grid-cols-2 gap-3">
+                {resale.board.map((listing) => (
+                  <Card key={listing.id} className="space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-semibold text-ink-1">{listing.event.title}</p>
+                        <p className="text-2xs text-ink-4">
+                          {shortDateTime(listing.event.start_date)} · {listing.event.location || "Location not set"}
+                        </p>
+                      </div>
+                      <span className="text-sm font-semibold text-ink-1">{formatKes(listing.price_kes)}</span>
+                    </div>
+                    <p className="text-2xs text-ink-4">
+                      Sold by {listing.seller.business} · @{listing.seller.handle}
+                      {listing.note ? ` · ${listing.note}` : ""}
+                    </p>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-micro text-ink-4">Pay the seller directly</span>
+                      <Button size="sm" onClick={() => claimPass(listing)}>Claim pass</Button>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {(resale.sales.length > 0 || resale.purchases.length > 0) && (
+            <div>
+              <h3 className="text-sm font-semibold text-ink-1">Your handovers</h3>
+              <div className="mt-2 space-y-2">
+                {[...resale.sales, ...resale.purchases].map((listing) => (
+                  <Card key={`${listing.id}-${listing.my_role}`} className="space-y-2">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-semibold text-ink-1">
+                          {listing.event.title} <span className="font-normal text-ink-4">· you are the {listing.my_role}</span>
+                        </p>
+                        <p className="text-2xs text-ink-4">
+                          {listing.status} · {formatKes(listing.price_kes)}
+                          {listing.contact ? ` · ${listing.contact.name}: ${listing.contact.phone || listing.contact.email}` : ""}
+                        </p>
+                        {listing.pass_code && (
+                          <p className="text-2xs font-semibold text-brand-600">New pass {listing.pass_code}</p>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {listing.can_confirm && !listing.i_confirmed && (
+                          <Button size="xs" icon={CheckCircle2} onClick={() => handover(listing)}>
+                            Confirm handover
+                          </Button>
+                        )}
+                        {listing.can_confirm && listing.i_confirmed && (
+                          <Badge variant="amber" size="xs">Waiting for the other side</Badge>
+                        )}
+                        {listing.my_role === "buyer" && listing.status === "claimed" && (
+                          <Button size="xs" variant="ghost" onClick={async () => {
+                            try {
+                              await eventDeskAPI.resaleRelease(listing.id);
+                              toast.success("Claim released");
+                              await loadResale();
+                            } catch (error) { toast.error(apiError(error)); }
+                          }}>Release</Button>
+                        )}
+                        {listing.my_role === "seller" && ["listed", "claimed"].includes(listing.status) && (
+                          <Button size="xs" variant="dangerGhost" onClick={() => withdrawListing(listing)}>Withdraw</Button>
+                        )}
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       ) : quotes.length === 0 ? (
         <EmptyState icon={Send} title="No quotes yet" description="Open requests show what the day needs. Answer one with a package."
                     action={<Button size="sm" onClick={() => setTab("open")}>Browse requests</Button>} />
@@ -469,6 +672,28 @@ export default function EventDeskPage() {
           </div>
           <Input label="Anything else" value={postForm.notes} onChange={(e) => setPostForm({ ...postForm, notes: e.target.value })} placeholder="The ceremony starts at 11am" />
         </div>
+      </Modal>
+
+      <Modal open={!!listFor} onClose={() => setListFor(null)} title="Re-list a pass" size="md"
+             description={listFor ? `${listFor.title} · ${shortDateTime(listFor.start_date)}` : ""}
+             footer={<><Button variant="ghost" size="sm" onClick={() => setListFor(null)}>Cancel</Button>
+               <Button size="sm" onClick={listPass} loading={resaleBusy}>List pass</Button></>}>
+        {listFor && (
+          <div className="space-y-3">
+            <div className="rounded-xl bg-surface-2 p-3 text-xs text-ink-3">
+              <p>You are selling one seat. The buyer pays you directly by M-Pesa, MTN, cash or an SMS hash.</p>
+              <p className="mt-1">The buyer only gets a valid pass after both of you confirm the handover. Your old code then stops working.</p>
+            </div>
+            <Input label="Your price (KES)" type="number" min="0" max={listFor.max_price_kes}
+                   value={listForm.price_kes}
+                   onChange={(e) => setListForm({ ...listForm, price_kes: e.target.value })}
+                   hint={`At or below ${formatKes(listFor.max_price_kes)} — no touting.`} />
+            <Textarea label="Note for buyers (optional)" rows={2} maxLength={500}
+                      value={listForm.note}
+                      onChange={(e) => setListForm({ ...listForm, note: e.target.value })}
+                      placeholder="Can't make it — balcony seat, e-ticket transfer." />
+          </div>
+        )}
       </Modal>
 
       <Modal open={!!quoteFor} onClose={() => setQuoteFor(null)} title="Respond with a quote" size="md"
