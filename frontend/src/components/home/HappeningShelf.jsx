@@ -50,11 +50,11 @@ function ShelfCard({ item }) {
     <li className="w-[220px] shrink-0 snap-start">
       <Link
         to={item.to}
-        className="group block overflow-hidden rounded-2xl border border-edge-1 bg-surface-1 shadow-xs transition-[border-color,transform] duration-2 hover:-translate-y-0.5 hover:border-edge-3 focus-visible:ring-2 focus-visible:ring-brand-500"
+        className="shelf-card group block bg-surface-1 transition-transform duration-2 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-brand-500"
         data-testid="happening-card"
       >
         <div
-          className="relative h-[132px] overflow-hidden"
+          className="shelf-media-fade shelf-fade-surface-1 relative h-[132px] overflow-hidden"
           data-testid="happening-art"
           data-fallback={!item.image || imageFailed ? "true" : "false"}
         >
@@ -83,7 +83,7 @@ function ShelfCard({ item }) {
           </span>
         </div>
 
-        <div className="flex min-h-[142px] flex-col p-3">
+        <div className="relative z-10 -mt-5 flex min-h-[142px] flex-col bg-gradient-to-t from-surface-1 via-surface-1/95 to-transparent p-3 pt-5">
           <p className="line-clamp-2 text-sm font-extrabold leading-snug text-ink-1">{item.title}</p>
           <p className="mt-1 line-clamp-1 text-micro text-ink-4">
             {place || "Near you"}

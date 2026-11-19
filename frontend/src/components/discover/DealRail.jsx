@@ -27,7 +27,7 @@ export default function DealRail({ items = [], viewAllTo = "/discover?public_sal
       </div>
 
       {items.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-mk-line bg-mk-card px-4 py-8 text-center">
+        <div className="rounded-2xl bg-mk-card px-4 py-8 text-center">
           <BadgePercent size={20} className="mx-auto text-mk-orange" aria-hidden="true" />
           <p className="mt-2 text-sm font-bold text-mk-ink">No priced items here yet</p>
           <p className="mt-0.5 text-xs text-mk-ink-soft">Publish an offer, or spot a public sale you walked past.</p>
@@ -39,27 +39,28 @@ export default function DealRail({ items = [], viewAllTo = "/discover?public_sal
               key={`${item.feed_kind || item.kind}:${item.id}`}
               to={item.to || "#"}
               data-testid={`discover-deal-${item.id}`}
-              className="group w-[142px] shrink-0 snap-start overflow-hidden rounded-2xl border border-mk-line bg-mk-card"
+              className="group relative block w-[142px] shrink-0 snap-start overflow-hidden rounded-2xl bg-[#171021] shadow-[0_16px_32px_-26px_rgba(15,10,24,0.55)]"
             >
-              <div className="relative aspect-square overflow-hidden bg-mk-warm">
+              <div className="relative aspect-[3/4] overflow-hidden">
                 {item.image ? (
-                  <img src={item.image} alt="" loading="lazy" className="h-full w-full object-cover transition-transform duration-3 group-hover:scale-[1.04]" />
+                  <img src={item.image} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover transition-transform duration-3 group-hover:scale-[1.04]" />
                 ) : (
-                  <span className="grid h-full w-full place-items-center text-mk-orange">
-                    <BadgePercent size={26} aria-hidden="true" />
+                  <span className="absolute inset-0 grid place-items-center bg-gradient-to-br from-[#7A2E0E] to-mk-orange text-white/80">
+                    <BadgePercent size={28} aria-hidden="true" />
                   </span>
                 )}
+                <span className="absolute inset-0 bg-gradient-to-t from-[#171021] via-[#171021]/55 to-transparent" aria-hidden="true" />
                 <span className="absolute left-2 top-2 rounded-md bg-mk-orange px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-white">
                   {item.feed_kind === "SPOTTED_DEAL" ? "Spotted" : "Priced"}
                 </span>
-              </div>
-              <div className="space-y-1 p-2.5">
-                <p className="line-clamp-2 text-[12px] font-extrabold leading-snug text-mk-ink">{item.title}</p>
-                <p className="text-[13px] font-black text-mk-ink">{priceLabel(item.price_kes)}</p>
-                <p className="flex items-center gap-1 text-[10px] text-mk-ink-soft">
-                  <MapPin size={9} aria-hidden="true" />
-                  <span className="truncate">{String(item.location || "Near you").split(",")[0]}</span>
-                </p>
+                <div className="absolute inset-x-0 bottom-0 p-2.5 text-white">
+                  <p className="line-clamp-2 text-[12px] font-extrabold leading-snug">{item.title}</p>
+                  <p className="mt-1 text-[13px] font-black text-[#FFD7A8]">{priceLabel(item.price_kes)}</p>
+                  <p className="mt-0.5 flex items-center gap-1 text-[10px] text-white/70">
+                    <MapPin size={9} aria-hidden="true" />
+                    <span className="truncate">{String(item.location || "Near you").split(",")[0]}</span>
+                  </p>
+                </div>
               </div>
             </Link>
           ))}

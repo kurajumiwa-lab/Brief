@@ -40,22 +40,24 @@ export default function DiscoverCategoryStrip({ value, onSelect, savedCount = 0,
         to="/discover/favorites"
         aria-current={savedActive ? "page" : undefined}
         data-testid="discover-saved-pill"
-        className="group flex w-[104px] shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-mk-line bg-mk-card text-center transition-transform hover:-translate-y-0.5"
+        className={cn(
+          "group relative flex h-[118px] w-[104px] shrink-0 snap-start flex-col justify-end overflow-hidden rounded-2xl bg-gradient-to-br p-3 text-left shadow-[0_16px_32px_-26px_rgba(15,10,24,0.55)] transition-transform hover:-translate-y-0.5",
+          savedActive ? "from-mk-orange to-[#FF9C6E]" : "from-[#F3E7DA] to-[#E8D3BF]",
+          savedActive && "ring-2 ring-mk-orange ring-offset-2 ring-offset-mk-cream",
+        )}
       >
         <span className={cn(
-          "relative flex h-[74px] items-center justify-center bg-gradient-to-br",
-          savedActive ? "from-mk-orange to-[#FF9C6E]" : "from-[#F3E7DA] to-[#E8D3BF]",
+          "absolute left-3 top-3 grid h-9 w-9 place-items-center rounded-full bg-white/85 shadow-sm backdrop-blur",
+          savedActive ? "text-mk-orange" : "text-[#1F1632]",
         )}>
-          <span className={cn("grid h-10 w-10 place-items-center rounded-full bg-white/85 shadow-sm", savedActive ? "text-mk-orange" : "text-mk-ink")}>
-            <Heart size={18} strokeWidth={2} aria-hidden="true" />
-          </span>
-          {savedCount > 0 && (
-            <span className="absolute right-2 top-2 rounded-full bg-mk-ink px-1.5 py-0.5 text-[10px] font-extrabold text-mk-cream">
-              {savedCount}
-            </span>
-          )}
+          <Heart size={17} strokeWidth={2} aria-hidden="true" />
         </span>
-        <span className="px-2 py-2 text-[11px] font-extrabold leading-tight text-mk-ink">
+        {savedCount > 0 && (
+          <span className="absolute right-2.5 top-2.5 rounded-full bg-[#1F1632]/85 px-1.5 py-0.5 text-[10px] font-extrabold text-[#FAF7F2]">
+            {savedCount}
+          </span>
+        )}
+        <span className={cn("relative text-[12px] font-extrabold leading-tight", savedActive ? "text-white" : "text-[#1F1632]")}>
           Saved<span className="sr-only">{savedCount > 0 ? ` ${savedCount} items` : ""}</span>
         </span>
       </Link>
@@ -72,22 +74,19 @@ export default function DiscoverCategoryStrip({ value, onSelect, savedCount = 0,
             data-testid={categoryValue && categoryValue !== "rounds" && categoryValue !== "spotted" ? `explore-kind-${categoryValue}` : `discover-category-${key}`}
             data-category={key}
             className={cn(
-              "group flex w-[104px] shrink-0 snap-start flex-col overflow-hidden rounded-2xl border bg-mk-card text-center transition-transform hover:-translate-y-0.5",
-              active ? "border-mk-orange ring-2 ring-mk-orange/25" : "border-mk-line",
+              "group relative flex h-[118px] w-[104px] shrink-0 snap-start flex-col justify-end overflow-hidden rounded-2xl bg-gradient-to-br p-3 text-left shadow-[0_16px_32px_-26px_rgba(15,10,24,0.55)] transition-transform hover:-translate-y-0.5",
+              tone,
+              active && "ring-2 ring-mk-orange ring-offset-2 ring-offset-mk-cream",
             )}
           >
-            <span className={cn("relative flex h-[74px] items-center justify-center overflow-hidden bg-gradient-to-br", tone)}>
-              {image ? (
-                <>
-                  <img src={image} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
-                  <span className="absolute inset-0 bg-gradient-to-t from-black/45 via-black/10 to-transparent" aria-hidden="true" />
-                </>
-              ) : null}
-              <span className="relative grid h-9 w-9 place-items-center rounded-full bg-white/90 text-mk-ink shadow-sm">
-                <Icon size={16} strokeWidth={2} aria-hidden="true" />
-              </span>
+            {image ? (
+              <img src={image} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover transition-transform duration-3 group-hover:scale-[1.04]" />
+            ) : null}
+            <span className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/15 to-transparent" aria-hidden="true" />
+            <span className="absolute left-3 top-3 grid h-9 w-9 place-items-center rounded-full bg-white/90 text-[#1F1632] shadow-sm backdrop-blur">
+              <Icon size={16} strokeWidth={2} aria-hidden="true" />
             </span>
-            <span className={cn("px-2 py-2 text-[11px] font-extrabold leading-tight", active ? "text-mk-orange" : "text-mk-ink")}>
+            <span className={cn("relative text-[12px] font-extrabold leading-tight text-white", active && "text-[#FFD7A8]")}>
               {label}
             </span>
           </button>

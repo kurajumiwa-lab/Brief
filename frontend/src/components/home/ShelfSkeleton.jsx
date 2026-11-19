@@ -15,7 +15,7 @@ export default function ShelfSkeleton({ count = 4, label, className }) {
       {Array.from({ length: count }).map((_, i) => (
         <div
           key={i}
-          className={cn(CARD_SLOT, "shrink-0 overflow-hidden rounded-2xl border border-edge-1 bg-surface-0")}
+          className={cn(CARD_SLOT, "shelf-card shrink-0 bg-surface-0")}
           aria-hidden="true"
         >
           <Skeleton className={cn(CARD_MEDIA_RATIO, "w-full")} rounded="rounded-none" />

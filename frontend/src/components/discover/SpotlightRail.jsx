@@ -140,7 +140,7 @@ export default function SpotlightRail({ items, spotted, region, onSpotSale }) {
     <section
       aria-label="Spotlight"
       data-testid="discover-spotlight"
-      className="overflow-hidden rounded-3xl border border-mk-line bg-mk-card"
+      className="overflow-hidden rounded-3xl bg-mk-card/70"
     >
       <div className="flex items-center justify-between gap-3 px-4 pt-4">
         <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-mk-orange">Our top picks</p>
@@ -167,7 +167,7 @@ export default function SpotlightRail({ items, spotted, region, onSpotSale }) {
       <div
         data-testid="spotlight-poster"
         data-poster="true"
-        className="relative m-4 aspect-[4/5] overflow-hidden rounded-2xl bg-mk-ink sm:aspect-[16/10]"
+        className="relative m-4 aspect-[4/5] overflow-hidden rounded-2xl bg-[#171021] sm:aspect-[16/10]"
       >
         {slide.image ? (
           <img src={slide.image} alt="" className="absolute inset-0 h-full w-full object-cover" />

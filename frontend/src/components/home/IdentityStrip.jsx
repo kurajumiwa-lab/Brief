@@ -56,7 +56,7 @@ export default function IdentityStrip({ name, page = {}, institution = null }) {
   }
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-edge-1 bg-surface-1" data-testid="identity-strip">
+    <section className="soft-card overflow-hidden rounded-2xl bg-surface-1" data-testid="identity-strip">
       <div className="flex items-start gap-3 p-4">
         <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-brand-700 text-sm font-extrabold text-white">
           {initials(name || "You")}

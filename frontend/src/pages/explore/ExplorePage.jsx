@@ -978,7 +978,7 @@ function FeedSkeleton({ regionAware = false }) {
       aria-label="Loading results"
     >
       {[0, 1, 2, 3, 4, 5].map((i) => (
-        <li key={i} className="overflow-hidden rounded-2xl border border-mk-line bg-mk-card">
+        <li key={i} className="soft-card overflow-hidden rounded-2xl bg-mk-card">
           <Skeleton className="aspect-square w-full rounded-none bg-mk-warm" />
           <div className="space-y-2 p-4">
             <Skeleton className="h-4 w-3/4" />
@@ -995,7 +995,7 @@ function ErrorPanel({ onRetry, message }) {
   return (
     <div
       data-testid="explore-error"
-      className="rounded-2xl border border-mk-line bg-mk-card p-6 text-center shadow-xs"
+      className="soft-card rounded-2xl bg-mk-card p-6 text-center"
     >
       <p className="text-sm font-semibold text-mk-ink">{message || "That didn't load."}</p>
       <p className="mt-1 text-xs text-mk-ink-soft">The rest of the app is fine — this is just this list.</p>
@@ -1010,7 +1010,7 @@ function FilteredEmpty({ onClear, hasMore = false, onMore }) {
   return (
     <div
       data-testid="explore-filtered-empty"
-      className="rounded-2xl border border-mk-line bg-mk-card p-6 text-center shadow-xs"
+      className="soft-card rounded-2xl bg-mk-card p-6 text-center"
     >
       <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-mk-warm text-mk-orange">
         <ShieldCheck size={22} aria-hidden="true" />

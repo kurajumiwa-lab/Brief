@@ -56,7 +56,7 @@ export default function TradeNetworkPanel({ className = "" }) {
     <section
       aria-labelledby="trade-network-heading"
       data-testid="trade-network-panel"
-      className={`overflow-hidden rounded-2xl border border-edge-1 bg-surface-1 ${className}`}
+      className={`soft-card overflow-hidden rounded-2xl bg-surface-1 ${className}`}
     >
       <div className="flex items-baseline justify-between gap-2 px-4 pb-1 pt-4">
         <h2 id="trade-network-heading" className="text-sm font-bold tracking-tight text-ink-1">

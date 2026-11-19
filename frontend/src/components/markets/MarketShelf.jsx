@@ -183,7 +183,7 @@ export default function MarketShelf({
               <Link
                 to={item.to}
                 data-testid="market-shelf-item"
-                className="flex h-full gap-2 rounded-xl border border-edge-1 bg-surface-1 p-2 transition-colors hover:border-brand-400/60 hover:bg-brand-500/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/60"
+                className="flex h-full gap-2 rounded-xl bg-surface-1 p-2 shadow-[0_10px_24px_-24px_rgba(15,10,24,0.6)] transition-colors hover:bg-brand-500/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/60"
               >
                 {item.image ? (
                   <Media

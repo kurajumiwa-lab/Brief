@@ -146,7 +146,7 @@ export default function StockCard({
   const to = href || `/listing/${item.id}`;
 
   return (
-    <article className="group flex flex-col bg-surface-0 border border-edge-1 rounded-2xl overflow-hidden shadow-xs glass-hover h-full">
+    <article className="shelf-card group flex h-full flex-col bg-surface-0">
       {/* ── media ─────────────────────────────────────────────────────── */}
       <Link to={to} className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50" tabIndex={-1} aria-hidden="true">
         <StockThumb item={item} ratio="aspect-[16/9]">
@@ -195,7 +195,7 @@ export default function StockCard({
                 title={item.visible_to_network ? "Visible to the network" : "Hidden from the network"}
                 aria-label={item.visible_to_network ? "Hide from the network" : "Show to the network"}
                 className={cn(
-                  "grid place-items-center w-7 h-7 rounded-lg bg-surface-0 border border-edge-1 shadow-2xs transition-colors",
+                  "grid h-7 w-7 place-items-center rounded-lg bg-surface-0 shadow-2xs transition-colors",
                   item.visible_to_network ? "text-brand-600 dark:text-brand-400" : "text-ink-4"
                 )}
               >
@@ -237,7 +237,7 @@ export default function StockCard({
             {item.sku && <span className="text-micro text-ink-4 font-mono">{item.sku}</span>}
           </div>
           {mode === "mine" && (
-            <div className="mt-2 rounded-lg border border-edge-1 bg-surface-1 px-2.5 py-1.5 text-micro text-ink-3">
+            <div className="mt-2 rounded-lg bg-surface-1 px-2.5 py-1.5 text-micro text-ink-3">
               <p className="font-semibold text-ink-1">{visibility.summary}</p>
               {!visibility.isPublished && (
                 <p className="mt-0.5 text-ink-4 leading-snug">{visibility.reason}</p>
@@ -247,7 +247,7 @@ export default function StockCard({
         </div>
 
         {/* ── price + availability + MOQ at first glance ────────────── */}
-        <div className="mt-auto rounded-xl bg-surface-1 border border-edge-1 p-3">
+        <div className="mt-auto rounded-xl bg-surface-1 p-3">
           <div className="flex items-end justify-between gap-2">
             <div className="min-w-0">
               <p className="text-micro uppercase tracking-[0.08em] font-bold text-ink-4">
@@ -266,7 +266,7 @@ export default function StockCard({
             </div>
           </div>
 
-          <div className="mt-2 pt-2 border-t border-edge-1 flex items-center justify-between gap-2 text-micro text-ink-3">
+          <div className="mt-2 flex items-center justify-between gap-2 text-micro text-ink-3">
             <span className="font-medium">
               Min order: <strong className="text-ink-1 tabular-nums">{num(moq)} {unit}</strong>
             </span>
@@ -282,7 +282,7 @@ export default function StockCard({
 
         {/* ── Progressive disclosure: Details on demand ─────────────── */}
         {detailsOpen && (
-          <div className="rounded-xl border border-edge-1 bg-surface-1 p-3 space-y-2 text-micro text-ink-3 animate-fade-in">
+          <div className="rounded-xl bg-surface-1 p-3 space-y-2 text-micro text-ink-3 animate-fade-in">
             {item.description && <p className="text-2xs text-ink-2 leading-relaxed">{item.description}</p>}
             {provenance && (
               <div className="flex flex-wrap gap-x-3 gap-y-1 text-micro text-ink-3">
@@ -315,7 +315,7 @@ export default function StockCard({
             {item.tags?.length > 0 && (
               <div className="flex flex-wrap gap-1">
                 {item.tags.map((t) => (
-                  <span key={t} className="rounded-md bg-surface-0 border border-edge-1 px-1.5 py-0.5 text-ink-3">
+                  <span key={t} className="rounded-md bg-surface-0 px-1.5 py-0.5 text-ink-3">
                     #{t}
                   </span>
                 ))}

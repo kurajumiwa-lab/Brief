@@ -60,7 +60,7 @@ export default function ParticipantBand({ className = "" }) {
     <section
       aria-labelledby="participants-heading"
       data-testid="participant-band"
-      className={`rounded-2xl border border-edge-1 bg-surface-1 p-4 ${className}`}
+      className={`soft-card rounded-2xl bg-surface-1 p-4 ${className}`}
     >
       <h2 id="participants-heading" className="text-sm font-bold tracking-tight text-ink-1">
         One network. Different participants.

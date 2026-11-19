@@ -36,7 +36,7 @@ export default function ActivityList() {
           All trades <ArrowRight size={12} aria-hidden="true" />
         </Link>
       </div>
-      <ul className="divide-y divide-edge-1 rounded-2xl border border-edge-1 bg-surface-0">
+      <ul className="soft-card divide-y divide-edge-1 rounded-2xl bg-surface-0">
         {items.map((t) => (
           <li key={t.id}>
             <Link to={`/orders/${t.id}`} className="flex items-center justify-between gap-3 px-3 py-2.5 hover:bg-surface-1">

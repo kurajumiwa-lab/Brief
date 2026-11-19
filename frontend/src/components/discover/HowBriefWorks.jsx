@@ -26,7 +26,7 @@ export default function HowBriefWorks({ open, onClose }) {
     >
       <ul data-testid="discover-how-it-works" className="space-y-2.5">
         {PROMISES.map(({ Icon, title, note }) => (
-          <li key={title} className="flex gap-3 rounded-xl border border-mk-line bg-mk-card p-3">
+          <li key={title} className="soft-card flex gap-3 rounded-xl bg-mk-card p-3">
             <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full bg-mk-orange-soft text-mk-orange">
               <Icon size={15} aria-hidden="true" />
             </span>

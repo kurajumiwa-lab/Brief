@@ -17,7 +17,7 @@ export default function CommunityStrip() {
     <Link
       to="/community"
       data-testid="community-entry"
-      className="group flex items-center gap-3 rounded-2xl border border-edge-1 bg-surface-0 p-3 transition-colors hover:border-edge-3 hover:bg-surface-1"
+      className="soft-card group flex items-center gap-3 rounded-2xl bg-surface-0 p-3 transition-colors hover:bg-surface-1"
     >
       <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300">
         <MessagesSquare size={18} aria-hidden="true" />

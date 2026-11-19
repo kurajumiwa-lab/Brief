@@ -104,7 +104,7 @@ export default function LocationBar({ className, showRadius = true }) {
     <section
       aria-label="Your location"
       data-testid="location-bar"
-      className={cn("rounded-card border border-edge-1 bg-surface-1 p-3 shadow-xs sm:p-4", className)}
+      className={cn("soft-card rounded-card bg-surface-1 p-3 sm:p-4", className)}
     >
       <div className="flex flex-wrap items-center gap-2">
         <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300">

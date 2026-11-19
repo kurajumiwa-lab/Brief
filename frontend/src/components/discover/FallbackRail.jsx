@@ -15,7 +15,7 @@ export default function FallbackRail({ items = [], region = null, onShowEveryPag
   const label = region ? regionLabel(region) : "this area";
   return (
     <section data-testid="explore-filtered-empty" className="space-y-3">
-      <div className="rounded-2xl border border-mk-line bg-mk-card p-4 text-sm text-mk-ink">
+      <div className="rounded-2xl bg-mk-card p-4 text-sm text-mk-ink">
         <p className="font-extrabold">No Level 3+ traders here yet</p>
         <p className="mt-0.5 text-xs text-mk-ink-soft">
           Level 3 means at least one completed trade on record. The strict filter found none in {label}.
@@ -25,7 +25,7 @@ export default function FallbackRail({ items = [], region = null, onShowEveryPag
             Show every page
           </button>
           {onWiden && (
-            <button type="button" onClick={onWiden} className="inline-flex h-9 items-center rounded-lg border border-mk-line px-3 text-micro font-bold text-mk-ink">
+            <button type="button" onClick={onWiden} className="inline-flex h-9 items-center rounded-lg bg-mk-warm px-3 text-micro font-bold text-mk-ink">
               Widen to 50 km
             </button>
           )}
@@ -73,7 +73,7 @@ export function ColdStartRail({ items = [], region = null, radius = 15, onSavedC
   if (!items.length) return null;
   return (
     <section data-testid="discover-cold-start" className="space-y-3">
-      <div className="rounded-2xl border border-mk-line bg-mk-card p-4">
+      <div className="rounded-2xl bg-mk-card p-4">
         <p className="text-sm font-extrabold text-mk-ink">Quiet within {radius} km</p>
         <p className="mt-0.5 text-xs text-mk-ink-soft">
           Showing active pages nearby, up to 50 km. Each card says how far away it is.

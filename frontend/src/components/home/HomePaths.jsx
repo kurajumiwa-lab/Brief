@@ -19,7 +19,7 @@ export default function HomePaths() {
         <Link
           key={to}
           to={to}
-          className="group flex flex-col gap-2 rounded-2xl border border-edge-1 bg-surface-0 p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50"
+          className="group flex flex-col gap-2 soft-card rounded-2xl bg-surface-0 p-4 transition hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50"
         >
           <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-50 text-brand-700 dark:bg-surface-2 dark:text-brand-300">
             <Icon size={18} aria-hidden="true" />

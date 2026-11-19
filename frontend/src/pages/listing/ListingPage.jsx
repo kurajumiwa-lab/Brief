@@ -194,7 +194,7 @@ export default function ListingPage() {
             </div>
           </header>
 
-          <StockThumb item={item} ratio="aspect-[2/1]" rounded="rounded-2xl border border-edge-1" />
+          <StockThumb item={item} ratio="aspect-[2/1]" rounded="soft-card rounded-2xl" />
 
           {item.description && <p className="text-sm text-ink-2 leading-relaxed max-w-2xl text-pretty">{item.description}</p>}
 
