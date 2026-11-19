@@ -15,6 +15,7 @@ import { PageSpinner } from "@/components/ui/Spinner";
 import { toast } from "@/components/ui/Toast";
 import { useConfirm } from "@/components/ui/ConfirmDialog";
 import EventPaymentCard from "@/components/events/EventPaymentCard";
+import PulseStrip from "@/components/pulse/PulseStrip";
 import WhatsAppRosterButton from "@/components/events/WhatsAppRosterButton";
 import EventForm, { PAYMENT_OPTIONS } from "@/components/forms/EventForm";
 import { EVENT_HUB_ENABLED } from "@/config/flags";
@@ -127,6 +128,8 @@ export default function EventsPage() {
           </Button>
         </div>
       </div>
+
+      <PulseStrip />
 
       <Tabs tabs={TABS} value={tab} onChange={setTab} />
 

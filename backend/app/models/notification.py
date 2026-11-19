@@ -40,6 +40,7 @@ class NotificationType(str, PyEnum):
     LIST_REVIEW = "list_review"              # A member reviewed a list you run
     COLLECTIVE_UPDATE = "collective_update"  # Group collective sourcing progress
     EVENT_REGISTRATION = "event_registration"  # A vendor registered for your event
+    FLASH_DROP_CLAIM = "flash_drop_claim"      # Someone claimed one unit of your drop
     EVENT_REMINDER = "event_reminder"        # Upcoming event
     EVENT_HOST_UPDATE = "event_host_update"  # Host posted a photo or a message for your event
     # Event payments & waitlist (spec §2–§3): user-declared M-Pesa evidence
