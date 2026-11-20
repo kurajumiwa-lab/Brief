@@ -160,6 +160,9 @@ from app.modules.office.models import (  # noqa: F401
 )
 from app.modules.leads.models import LeadEvent  # noqa: F401
 from app.modules.pulse.models import FlashDrop, FlashDropClaim  # noqa: F401
+from app.modules.street.models import (  # noqa: F401
+    StreetBroadcast, StreetLobby, StreetLobbyMember,
+)
 
 from app.modules.town.models import (  # noqa: F401
     CommerceSetting, DisputeCase, MerchantAnalyticsSubscription, MerchantCreditAccount,

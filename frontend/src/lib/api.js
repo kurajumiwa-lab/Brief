@@ -1224,6 +1224,22 @@ export const socialTrustAPI = {
   resolveDelivery: (id, note) => api.post(`/social-trust/delivery-reports/${id}/resolve`, { note }),
 };
 
+// ── 0078: the street engine ─────────────────────────────────────────────────
+// The calendar is a deterministic weekday/season rule; tables are expiring
+// introductions. A handoff URL is only returned after joining, and Brief never
+// sends the message or holds a payment.
+export const streetAPI = {
+  now: () => api.get("/street/now"),
+  calendar: () => api.get("/street/calendar"),
+  guide: () => api.get("/street/guide"),
+  lobbies: (params = {}) => api.get("/street/lobbies", { params: noEmpty(params) }),
+  mine: () => api.get("/street/lobbies/mine"),
+  create: (body) => api.post("/street/lobbies", body),
+  join: (id) => api.post(`/street/lobbies/${id}/join`),
+  leave: (id) => api.delete(`/street/lobbies/${id}/membership`),
+  close: (id) => api.post(`/street/lobbies/${id}/close`),
+};
+
 // ── 0069: live corridor price index ─────────────────────────────────────────
 // Public read: a 45-day interquartile range from confirmed local trades. The
 // endpoint is allowed to answer `{ available: false }`; callers must stay
