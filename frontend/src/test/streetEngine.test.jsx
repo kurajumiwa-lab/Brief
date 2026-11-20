@@ -2,7 +2,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
-const mocks = vi.hoisted(() => ({ now: vi.fn(), join: vi.fn(), create: vi.fn(), leave: vi.fn(), close: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+  now: vi.fn(), join: vi.fn(), create: vi.fn(), leave: vi.fn(), close: vi.fn(), context: vi.fn(),
+}));
 
 vi.mock("@/lib/api", () => ({
   streetAPI: {
@@ -11,6 +13,7 @@ vi.mock("@/lib/api", () => ({
     create: mocks.create,
     leave: mocks.leave,
     close: mocks.close,
+    context: mocks.context,
   },
   apiError: (_error, fallback) => fallback,
 }));
@@ -21,6 +24,14 @@ vi.mock("@/components/ui/Toast", () => ({
 
 vi.mock("@/stores/authStore", () => ({
   useAuthStore: (selector) => selector({ vendor: { physical_location: "Kondele, Kisumu" } }),
+}));
+
+vi.mock("@/stores/outsideStore", () => ({
+  useOutsideStore: (selector) => selector({ location: null }),
+}));
+
+vi.mock("@/components/outside/LocationBar", () => ({
+  default: () => null,
 }));
 
 import StreetPage from "@/pages/street/StreetPage";
@@ -94,6 +105,24 @@ beforeEach(() => {
   mocks.create.mockResolvedValue({ data: {} });
   mocks.leave.mockResolvedValue({ data: {} });
   mocks.close.mockResolvedValue({ data: {} });
+  mocks.context.mockResolvedValue({
+    data: {
+      available: true,
+      label: "Near Kondele Market",
+      radius_m: 900,
+      counts: { total: 2, transit: 1, commerce: 1, community: 0 },
+      fixtures: [
+        { external_id: "node/1", name: "Kondele Market", kind: "commerce", kind_label: "Market", distance_m: 80 },
+        { external_id: "node/2", name: "Kondele Stage", kind: "transit", kind_label: "Bus stage", distance_m: 160 },
+      ],
+      prompts: [{
+        eyebrow: "Your anchor", title: "80 m from Kondele Market",
+        body: "Use the market name in the table title.", kind: "anchor",
+      }],
+      cache: { cached: true, source: "openstreetmap" },
+      attribution: "Data © OpenStreetMap contributors",
+    },
+  });
 });
 
 describe("the street engine", () => {
@@ -106,6 +135,8 @@ describe("the street engine", () => {
     expect(screen.getByTestId("street-lobby-lobby-1")).toHaveTextContent("Two bags of maize flour");
     expect(screen.getByTestId("street-guide")).toHaveTextContent("2 of 5 chapters");
     expect(screen.getByTestId("street-guide")).toHaveTextContent("Mtaa");
+    expect(screen.getByTestId("street-context")).toHaveTextContent("Kondele Market");
+    expect(screen.getByTestId("street-context")).toHaveTextContent("Cached");
   });
 
   it("joins a table and shows the verification code and WhatsApp handoff", async () => {

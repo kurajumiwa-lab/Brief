@@ -24,13 +24,14 @@ from typing import Iterable, Optional
 from urllib.parse import quote
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import func, select, update
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.notification import NotificationType
 from app.models.stock import StockItem
 from app.models.vendor import Vendor
+from app.modules.outside.models import OutsideDiscoveryPref
 from app.modules.pulse import service as pulse_service
 from app.modules.routines.models import RecurringRoutine
 from app.modules.routines.service import next_occurrence, weekly_label
@@ -38,7 +39,9 @@ from app.modules.street.models import (
     HANDOFF_CHANNELS, INTENT_LABELS, INTENTS, StreetBroadcast, StreetLobby,
     StreetLobbyMember,
 )
+from app.services import h3_geo, hex_context
 from app.services.notification_service import create_notification
+from app.services.routing import haversine_km
 
 NAIROBI = ZoneInfo("Africa/Nairobi")
 
@@ -153,6 +156,61 @@ def _local(value: Optional[datetime] = None) -> datetime:
 
 def _iso(value: Optional[datetime]) -> Optional[str]:
     return _aware(value).isoformat() if value else None
+
+
+def _point(lat: Optional[float], lng: Optional[float], *, label: Optional[str] = None,
+           source: str = "request") -> Optional[dict]:
+    if not h3_geo.valid_point(lat, lng):
+        return None
+    info = h3_geo.describe(float(lat), float(lng))
+    return {
+        "lat": float(lat),
+        "lng": float(lng),
+        "label": label,
+        "source": source,
+        **info,
+    }
+
+
+async def viewer_point(db: AsyncSession, vendor: Vendor) -> Optional[dict]:
+    """Where this person is looking.
+
+    The discovery preference wins because the person set it deliberately, then
+    the shop's own coordinates. A missing point is a supported state: tables
+    still match on zone text, and the UI asks for a pin.
+    """
+    prefs = (await db.execute(
+        select(OutsideDiscoveryPref).where(OutsideDiscoveryPref.vendor_id == vendor.id)
+    )).scalar_one_or_none()
+    if prefs is not None and h3_geo.valid_point(prefs.geo_lat, prefs.geo_lng):
+        return _point(prefs.geo_lat, prefs.geo_lng, label=prefs.label,
+                      source=prefs.source or "manual")
+    if h3_geo.valid_point(vendor.geo_lat, vendor.geo_lng):
+        return _point(vendor.geo_lat, vendor.geo_lng, label=vendor.physical_location,
+                      source="vendor_profile")
+    return None
+
+
+def _viewer_out(point: Optional[dict]) -> Optional[dict]:
+    if not point:
+        return None
+    return {
+        "label": point.get("label"),
+        "source": point.get("source"),
+        "h3": {"r9": point["h3_r9"], "r8": point["h3_r8"], "r7": point["h3_r7"]},
+    }
+
+
+def _level_for(lobby: StreetLobby, point: Optional[dict]) -> str:
+    if not point or not lobby.h3_r9:
+        return "unlocated"
+    if lobby.h3_r9 in point["rings"]["r9"]:
+        return "street"
+    if lobby.h3_r8 in point["rings"]["r8"]:
+        return "ward"
+    if lobby.h3_r7 in point["rings"]["r7"]:
+        return "town"
+    return "region"
 
 
 def _add_months(year: int, month: int, delta: int) -> tuple[int, int]:
@@ -412,18 +470,38 @@ def _viewer_terms(vendor: Optional[Vendor]) -> set[str]:
     }
 
 
-def _match(lobby: StreetLobby, vendor: Optional[Vendor], now: Optional[datetime] = None) -> tuple[int, list[str]]:
+def _match(lobby: StreetLobby, vendor: Optional[Vendor], point: Optional[dict] = None,
+           now: Optional[datetime] = None) -> tuple[int, list[str], Optional[float]]:
     if vendor is None:
-        return 0, []
+        return 0, [], None
     if lobby.host_vendor_id == vendor.id:
-        return 100, ["Your table"]
+        return 100, ["Your table"], None
     score = 35
     reasons: list[str] = []
+    distance = None
+    if point and lobby.h3_r9:
+        distance = haversine_km(
+            {"lat": point["lat"], "lng": point["lng"]},
+            {"lat": lobby.geo_lat, "lng": lobby.geo_lng},
+        )
+        level = _level_for(lobby, point)
+        if level == "street":
+            score += 32
+            reasons.append("Same street cell")
+        elif level == "ward":
+            score += 20
+            reasons.append("Same ward")
+        elif level == "town":
+            score += 10
+            reasons.append("Same town")
+        if distance is not None and distance <= 2:
+            reasons.append(f"{distance:.1f} km away")
     viewer_zone = " ".join(str(getattr(vendor, "physical_location", "") or "").split()).lower()
     zone = " ".join(str(lobby.zone or "").split()).lower()
     if zone and viewer_zone and (zone in viewer_zone or viewer_zone in zone):
         score += 30
-        reasons.append("Same zone")
+        if "Same zone" not in reasons:
+            reasons.append("Same zone")
     overlap = sorted(_viewer_terms(vendor) & {str(t).lower() for t in (lobby.tags or [])})
     if overlap:
         score += min(24, len(overlap) * 8)
@@ -431,12 +509,14 @@ def _match(lobby: StreetLobby, vendor: Optional[Vendor], now: Optional[datetime]
     remaining = max(0, int(lobby.seats or 0) - int(lobby.joined_count or 0))
     if remaining <= 2:
         score += 5
-        reasons.append("Almost full")
+        if "Almost full" not in reasons:
+            reasons.append("Almost full")
     moment = _aware(now)
     if lobby.expires_at and (_aware(lobby.expires_at) - moment).total_seconds() <= 3600:
         score += 3
-        reasons.append("Closes soon")
-    return min(99, score), reasons
+        if "Closes soon" not in reasons:
+            reasons.append("Closes soon")
+    return min(99, score), reasons, distance
 
 
 def _lobby_out(
@@ -448,12 +528,13 @@ def _lobby_out(
     include_handoff: bool = False,
     include_code: bool = False,
     now: Optional[datetime] = None,
+    point: Optional[dict] = None,
 ) -> dict:
     moment = _aware(now)
     remaining = max(0, int(lobby.seats or 0) - int(lobby.joined_count or 0))
     expired = bool(lobby.expires_at and _aware(lobby.expires_at) <= moment)
     status = "expired" if expired and lobby.status == "open" else lobby.status
-    score, reasons = _match(lobby, viewer, moment)
+    score, reasons, distance = _match(lobby, viewer, point, moment)
     is_mine = bool(viewer and lobby.host_vendor_id == viewer.id)
     return {
         "id": str(lobby.id),
@@ -478,6 +559,8 @@ def _lobby_out(
                          and status == "open" and remaining > 0),
         "match_score": score,
         "match_reasons": reasons,
+        "distance_km": round(distance, 2) if distance is not None else None,
+        "zoom_level": _level_for(lobby, point),
         "contact_hidden": not include_handoff,
         "verification_code": lobby.verification_code if include_code else None,
     }
@@ -513,6 +596,34 @@ async def _memberships(db: AsyncSession, vendor_id: uuid.UUID,
     return set(rows)
 
 
+async def _rows_for_point(db: AsyncSession, moment: datetime, vendor: Vendor,
+                          point: Optional[dict]) -> list:
+    """Open tables in the viewer's H3 rings, then fall back to the town rail.
+
+    The SQL predicate is the expansion: street cells first, then wards, then
+    towns, plus unlocated rows and the viewer's own table. If even that is empty
+    the whole open rail is the fallback, which is what keeps a new town usable.
+    """
+    base = (
+        select(StreetLobby, Vendor)
+        .join(Vendor, Vendor.id == StreetLobby.host_vendor_id)
+        .where(StreetLobby.status == "open", StreetLobby.expires_at > moment)
+        .order_by(StreetLobby.created_at.desc())
+        .limit(120)
+    )
+    if point is None:
+        return (await db.execute(base)).all()
+    local = or_(
+        StreetLobby.h3_r9.in_(list(point["rings"]["r9"])),
+        StreetLobby.h3_r8.in_(list(point["rings"]["r8"])),
+        StreetLobby.h3_r7.in_(list(point["rings"]["r7"])),
+        StreetLobby.h3_r9.is_(None),
+        StreetLobby.host_vendor_id == vendor.id,
+    )
+    rows = (await db.execute(base.where(local))).all()
+    return rows if rows else (await db.execute(base)).all()
+
+
 async def list_lobbies(
     db: AsyncSession,
     vendor: Vendor,
@@ -522,18 +633,17 @@ async def list_lobbies(
     tag: Optional[str] = None,
     limit: int = 24,
     now: Optional[datetime] = None,
+    lat: Optional[float] = None,
+    lng: Optional[float] = None,
+    point: Optional[dict] = None,
 ) -> dict:
     moment = _aware(now)
     await _expire_if_needed(db, moment)
     if intent and intent not in INTENTS:
         raise StreetError("Choose co-buy, source, delivery, a quick job or a meet-up.", 422)
-    rows = (await db.execute(
-        select(StreetLobby, Vendor)
-        .join(Vendor, Vendor.id == StreetLobby.host_vendor_id)
-        .where(StreetLobby.status == "open", StreetLobby.expires_at > moment)
-        .order_by(StreetLobby.created_at.desc())
-        .limit(120)
-    )).all()
+    if point is None:
+        point = _point(lat, lng) or await viewer_point(db, vendor)
+    rows = await _rows_for_point(db, moment, vendor, point)
     wanted_zone = " ".join(str(zone or "").split()).lower()
     wanted_tag = str(tag or "").strip().lower()
     memberships = await _memberships(db, vendor.id, [lobby.id for lobby, _ in rows])
@@ -548,7 +658,7 @@ async def list_lobbies(
         is_mine = lobby.host_vendor_id == vendor.id
         items.append(_lobby_out(
             lobby, host, vendor, joined=lobby.id in memberships,
-            include_handoff=is_mine, include_code=is_mine, now=moment,
+            include_handoff=is_mine, include_code=is_mine, now=moment, point=point,
         ))
     # A person's own table stays visible, then the strongest local match, then
     # whatever closes first. Nothing is promoted by spend.
@@ -557,6 +667,23 @@ async def list_lobbies(
         -row["match_score"],
         row["minutes_left"],
     ))
+    level = "text"
+    matched = 0
+    if point is not None:
+        for candidate in ("street", "ward", "town"):
+            hits = [row for row in items if not row["is_mine"] and row["zoom_level"] == candidate]
+            if hits:
+                level = candidate
+                matched = len(hits)
+                break
+        else:
+            level = "region"
+        keep = {level, "unlocated"}
+        items = [row for row in items if row["is_mine"] or row["zoom_level"] in keep]
+    label = {
+        "street": "street block", "ward": "ward or estate", "town": "town",
+        "region": "wider area", "text": "zone text",
+    }[level]
     return {
         "lobbies": items[:max(1, min(limit, 50))],
         "counts": {
@@ -565,6 +692,17 @@ async def list_lobbies(
             "joined": sum(1 for row in items if row["joined"]),
         },
         "filters": {"intent": intent, "zone": zone or None, "tag": tag or None},
+        "viewer": _viewer_out(point),
+        "zoom": {
+            "level": level,
+            "label": label,
+            "h3": ({"r9": point["h3_r9"], "r8": point["h3_r8"], "r7": point["h3_r7"]}
+                   if point else None),
+            "ring": 1 if point else 0,
+            "matched": matched if level != "region" else len(items),
+            "note": ("Expands street → ward → town only when the nearer ring has a table."
+                     if point else "Set a pin to rank tables by distance."),
+        },
         "note": "A table is an introduction with an expiry. Brief publishes no "
                 "phone number here; contact is released only to a person who joins.",
     }
@@ -599,6 +737,8 @@ async def create_lobby(
     duration_minutes: int,
     handoff_channel: str,
     handoff_target: str,
+    geo_lat: Optional[float] = None,
+    geo_lng: Optional[float] = None,
     now: Optional[datetime] = None,
 ) -> dict:
     title = " ".join(str(title or "").split())
@@ -623,6 +763,13 @@ async def create_lobby(
     if channel not in HANDOFF_CHANNELS:
         raise StreetError("Choose WhatsApp or Telegram for the handoff.", 422)
     target = _clean_target(channel, handoff_target)
+    if (geo_lat is None) != (geo_lng is None):
+        raise StreetError("Send both geo_lat and geo_lng, or neither.", 422)
+    if geo_lat is not None and not h3_geo.valid_point(geo_lat, geo_lng):
+        raise StreetError("That pin is outside the map.", 422)
+    point = _point(geo_lat, geo_lng, label=zone) if geo_lat is not None else None
+    if point is None:
+        point = await viewer_point(db, vendor)
     moment = _aware(now)
     lobby = StreetLobby(
         host_vendor_id=vendor.id,
@@ -631,6 +778,11 @@ async def create_lobby(
         details=details or None,
         zone=zone,
         tags=_clean_tags(tags),
+        geo_lat=point["lat"] if point else None,
+        geo_lng=point["lng"] if point else None,
+        h3_r9=point["h3_r9"] if point else None,
+        h3_r8=point["h3_r8"] if point else None,
+        h3_r7=point["h3_r7"] if point else None,
         seats=seats,
         joined_count=1,
         status="open",
@@ -645,7 +797,7 @@ async def create_lobby(
     await db.flush()
     return {
         "lobby": _lobby_out(lobby, vendor, vendor, joined=True, include_handoff=True,
-                            include_code=True, now=moment),
+                            include_code=True, now=moment, point=point),
         "note": "Your table is open until the time shown. Brief will not send the "
                 "handoff for you.",
     }
@@ -936,11 +1088,41 @@ async def guide(db: AsyncSession, vendor: Vendor, now: Optional[datetime] = None
     }
 
 
+async def context(
+    db: AsyncSession,
+    vendor: Vendor,
+    *,
+    lat: Optional[float] = None,
+    lng: Optional[float] = None,
+    refresh: bool = False,
+) -> dict:
+    """Free open-data anchors around the viewer's H3 block.
+
+    A request may carry an explicit pin; otherwise the saved discovery point,
+    then the shop's own coordinates, are used. No pin is a supported answer —
+    the page asks for one instead of guessing a city.
+    """
+    point = None
+    if lat is not None or lng is not None:
+        if not h3_geo.valid_point(lat, lng):
+            raise StreetError("Send both geo_lat and geo_lng inside the map bounds.", 422)
+        point = _point(lat, lng, label="Your pin")
+    if point is None:
+        point = await viewer_point(db, vendor)
+    if point is None:
+        return hex_context.unavailable()
+    return await hex_context.get_context(
+        db, point["lat"], point["lng"], label=point.get("label"), refresh=refresh,
+    )
+
+
 async def now_payload(db: AsyncSession, vendor: Vendor, now: Optional[datetime] = None) -> dict:
     moment = _aware(now)
+    point = await viewer_point(db, vendor)
     return {
         "server_time": _local(moment).isoformat(),
+        "viewer": _viewer_out(point),
         "calendar": await calendar(db, vendor, moment),
         "guide": await guide(db, vendor, moment),
-        "lobbies": await list_lobbies(db, vendor, limit=6, now=moment),
+        "lobbies": await list_lobbies(db, vendor, limit=6, now=moment, point=point),
     }

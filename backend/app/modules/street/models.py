@@ -17,8 +17,8 @@ import uuid
 from datetime import datetime, timezone
 
 from sqlalchemy import (
-    CheckConstraint, Column, Date, DateTime, ForeignKey, Index, Integer, String,
-    Text, UniqueConstraint, text,
+    CheckConstraint, Column, Date, DateTime, Float, ForeignKey, Index, Integer,
+    String, Text, UniqueConstraint, text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 
@@ -51,6 +51,9 @@ class StreetLobby(Base):
         CheckConstraint("expires_at > opens_at", name="ck_street_lobbies_window"),
         Index("ix_street_lobbies_live", "status", "expires_at"),
         Index("ix_street_lobbies_zone_intent", "zone", "intent", "created_at"),
+        Index("ix_street_lobbies_h3_r9", "h3_r9", "status", "expires_at"),
+        Index("ix_street_lobbies_h3_r8", "h3_r8", "status", "expires_at"),
+        Index("ix_street_lobbies_h3_r7", "h3_r7", "status", "expires_at"),
     )
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4,
@@ -61,6 +64,13 @@ class StreetLobby(Base):
     intent = Column(String(24), nullable=False)
     details = Column(Text, nullable=True)
     zone = Column(String(80), nullable=False)
+    # A table's own pin. Public cards expose distance, never these coordinates.
+    # The three H3 strings make nearby matching an indexed string comparison.
+    geo_lat = Column(Float, nullable=True)
+    geo_lng = Column(Float, nullable=True)
+    h3_r9 = Column(String(20), nullable=True)
+    h3_r8 = Column(String(20), nullable=True)
+    h3_r7 = Column(String(20), nullable=True)
     tags = Column(JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb"))
     seats = Column(Integer, nullable=False, default=2, server_default="2")
     joined_count = Column(Integer, nullable=False, default=1, server_default="1")

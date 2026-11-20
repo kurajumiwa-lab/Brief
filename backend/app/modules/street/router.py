@@ -2,8 +2,9 @@
 
     GET    /api/street/now                 calendar + guide + the first tables
     GET    /api/street/calendar            season, today's script, next scripts, my routines
+    GET    /api/street/context             cached OSM anchors around my H3 block
     GET    /api/street/guide               chapters, next actions, season points
-    GET    /api/street/lobbies             open tables, ranked for the signed-in person
+    GET    /api/street/lobbies             open tables, zoomed by H3 for the signed-in person
     POST   /api/street/lobbies             open a table (15 minutes to 8 hours)
     GET    /api/street/lobbies/mine        hosted and joined tables
     POST   /api/street/lobbies/{id}/join   take a seat and receive the handoff
@@ -41,6 +42,8 @@ class LobbyIn(BaseModel):
     duration_minutes: int = Field(120, ge=15, le=480)
     handoff_channel: str = Field(..., min_length=7, max_length=16)
     handoff_target: str = Field(..., min_length=5, max_length=120)
+    geo_lat: Optional[float] = Field(None, ge=-90, le=90)
+    geo_lng: Optional[float] = Field(None, ge=-180, le=180)
 
 
 @router.get("/now")
@@ -67,18 +70,43 @@ async def guide(
     return await service.guide(db, vendor)
 
 
+@router.get("/context")
+async def block_context(
+    lat: Optional[float] = Query(None, ge=-90, le=90),
+    lng: Optional[float] = Query(None, ge=-180, le=180),
+    refresh: bool = Query(False),
+    vendor: Vendor = Depends(get_current_vendor),
+    db: AsyncSession = Depends(get_db),
+):
+    """Cached OSM anchors around an H3 block (stage, market, school, shop).
+
+    `refresh=true` forces one Overpass attempt; the default is cache-first, so
+    a page paint costs one indexed row and no external API call.
+    """
+    try:
+        result = await service.context(db, vendor, lat=lat, lng=lng, refresh=refresh)
+        await db.commit()
+        return result
+    except service.StreetError as exc:
+        await db.rollback()
+        raise HTTPException(exc.status, str(exc))
+
+
 @router.get("/lobbies")
 async def lobbies(
     intent: Optional[str] = Query(None, max_length=24),
     zone: Optional[str] = Query(None, max_length=80),
     tag: Optional[str] = Query(None, max_length=24),
     limit: int = Query(24, ge=1, le=50),
+    lat: Optional[float] = Query(None, ge=-90, le=90),
+    lng: Optional[float] = Query(None, ge=-180, le=180),
     vendor: Vendor = Depends(get_current_vendor),
     db: AsyncSession = Depends(get_db),
 ):
     try:
         return await service.list_lobbies(
             db, vendor, intent=intent, zone=zone, tag=tag, limit=limit,
+            lat=lat, lng=lng,
         )
     except service.StreetError as exc:
         raise HTTPException(exc.status, str(exc))
@@ -96,6 +124,7 @@ async def create_lobby(
             title=data.title, intent=data.intent, zone=data.zone, details=data.details,
             tags=data.tags, seats=data.seats, duration_minutes=data.duration_minutes,
             handoff_channel=data.handoff_channel, handoff_target=data.handoff_target,
+            geo_lat=data.geo_lat, geo_lng=data.geo_lng,
         )
         await db.commit()
         return result

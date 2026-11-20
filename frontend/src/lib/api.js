@@ -1232,6 +1232,8 @@ export const streetAPI = {
   now: () => api.get("/street/now"),
   calendar: () => api.get("/street/calendar"),
   guide: () => api.get("/street/guide"),
+  /** Free OSM anchors around the saved H3 pin; cached server-side. */
+  context: (params = {}) => api.get("/street/context", { params: noEmpty(params) }),
   lobbies: (params = {}) => api.get("/street/lobbies", { params: noEmpty(params) }),
   mine: () => api.get("/street/lobbies/mine"),
   create: (body) => api.post("/street/lobbies", body),

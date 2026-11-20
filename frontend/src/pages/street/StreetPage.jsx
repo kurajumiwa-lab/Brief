@@ -2,14 +2,16 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
   ArrowRight, BadgeCheck, CalendarDays, Check, Clock3, HeartHandshake,
-  MapPin, MessageCircle, Plus, Radio, Send, Sparkles, Users, X,
+  MapPin, MessageCircle, Plus, Radio, RefreshCw, Send, Sparkles, Users, X,
 } from "lucide-react";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
+import LocationBar from "@/components/outside/LocationBar";
 import { PageSpinner } from "@/components/ui/Spinner";
 import { toast } from "@/components/ui/Toast";
 import { apiError, streetAPI } from "@/lib/api";
 import { useAuthStore } from "@/stores/authStore";
+import { useOutsideStore } from "@/stores/outsideStore";
 import { cn } from "@/lib/utils";
 
 /**
@@ -21,6 +23,8 @@ import { cn } from "@/lib/utils";
  * do by scrolling?"
  *
  * The rules are visible in the UI, not buried in a policy:
+ *   · the location bar is the only permission prompt; the block is an H3 cell,
+ *     and the anchors around it are cached public OpenStreetMap data;
  *   · a table expires by itself;
  *   · the public card never carries a phone number;
  *   · joining produces a wa.me / t.me handoff with a verification code;
@@ -78,6 +82,9 @@ export default function StreetPage() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [handoffs, setHandoffs] = useState({});
   const [copied, setCopied] = useState("");
+  const [block, setBlock] = useState(null);
+  const [blockStatus, setBlockStatus] = useState("idle");
+  const location = useOutsideStore((s) => s.location);
 
   const zoneDefault = useMemo(
     () => String(vendor?.physical_location || "").split(",").slice(0, 2).join(",").trim(),
@@ -94,7 +101,30 @@ export default function StreetPage() {
     }
   }, []);
 
+  const loadBlock = useCallback(async (refresh = false) => {
+    setBlockStatus("loading");
+    try {
+      const { data: payload } = await streetAPI.context(refresh ? { refresh: true } : {});
+      setBlock(payload);
+    } catch {
+      setBlock((current) => current || null);
+    } finally {
+      setBlockStatus("ready");
+    }
+  }, []);
+
   useEffect(() => { load(); }, [load]);
+
+  // A saved pin (GPS or typed) changes both the table zoom and the anchors.
+  // The LocationBar owns the permission prompt; this page only reacts to the
+  // resolved point, so a denied prompt still leaves the zone rail working.
+  useEffect(() => {
+    if (location?.lat != null && location?.lng != null) load();
+  }, [location?.lat, location?.lng, load]);
+
+  useEffect(() => {
+    loadBlock();
+  }, [loadBlock, location?.lat, location?.lng]);
 
   useEffect(() => {
     setShowForm(params.get("open") === "1");
@@ -229,6 +259,8 @@ export default function StreetPage() {
         </Button>
       </header>
 
+      <LocationBar showRadius={false} className="mt-3" />
+
       {showForm && (
         <LobbyForm
           form={form}
@@ -327,6 +359,8 @@ export default function StreetPage() {
           )}
         </section>
       </div>
+
+      <BlockContext block={block} status={blockStatus} onRefresh={() => loadBlock(true)} />
 
       <section aria-labelledby="tables-heading" className="mt-7">
         <div className="flex flex-wrap items-end justify-between gap-2">
@@ -468,6 +502,101 @@ export default function StreetPage() {
         </span>
       </p>
     </main>
+  );
+}
+
+function BlockContext({ block, status, onRefresh }) {
+  return (
+    <section className="soft-card mt-5 rounded-3xl bg-surface-0 p-4" data-testid="street-context">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="eyebrow">Around your pin · OpenStreetMap</p>
+          <h2 className="mt-1 text-base font-extrabold text-ink-1">
+            {block?.available ? block.label : "Trace the nearest stage, market or school"}
+          </h2>
+          <p className="mt-1 max-w-xl text-[11px] leading-relaxed text-ink-3">
+            {block?.available
+              ? `${block.counts.transit} stages · ${block.counts.commerce} trade points · ${block.counts.community} community anchors within ${block.radius_m} m.`
+              : "Set a pin above and we will trace the named places already on your block — no map tiles, no Places API bill."}
+          </p>
+        </div>
+        <div className="flex items-center gap-1.5">
+          {block?.available && (
+            <Badge variant={block.cache?.cached ? "gray" : "brand"}>
+              {block.cache?.cached ? "Cached" : "Fresh"}
+            </Badge>
+          )}
+          <button
+            type="button"
+            onClick={onRefresh}
+            disabled={status === "loading"}
+            aria-label="Refresh nearby open data"
+            className="grid h-8 w-8 place-items-center rounded-full bg-surface-2 text-ink-3 transition-colors hover:bg-surface-3 disabled:opacity-50"
+          >
+            <RefreshCw size={13} className={status === "loading" ? "animate-spin" : ""} aria-hidden="true" />
+          </button>
+        </div>
+      </div>
+
+      {!block && status === "loading" && (
+        <p className="mt-3 text-[11px] text-ink-4">Tracing the block…</p>
+      )}
+
+      {block?.available && block.fixtures.length > 0 && (
+        <>
+          <ul className="mt-3 grid gap-1.5 sm:grid-cols-2">
+            {block.fixtures.slice(0, 6).map((fixture) => (
+              <li key={`${fixture.external_id}:${fixture.name}`} className="flex items-center gap-2 rounded-xl bg-surface-2 px-2.5 py-2">
+                <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-surface-0 text-brand-700 dark:text-brand-300">
+                  <MapPin size={12} aria-hidden="true" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[11px] font-extrabold text-ink-1">{fixture.name}</span>
+                  <span className="block text-[10px] text-ink-4">
+                    {fixture.kind_label} · {fixture.distance_m < 1000 ? `${fixture.distance_m} m` : `${(fixture.distance_m / 1000).toFixed(1)} km`}
+                  </span>
+                </span>
+              </li>
+            ))}
+          </ul>
+          {block.prompts?.length > 0 && (
+            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+              {block.prompts.slice(0, 2).map((prompt) => (
+                <div key={`${prompt.eyebrow}:${prompt.title}`} className="rounded-2xl bg-brand-50 px-3 py-2.5 dark:bg-brand-500/10">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-brand-700 dark:text-brand-300">
+                    {prompt.eyebrow}
+                  </p>
+                  <p className="mt-0.5 text-xs font-extrabold text-ink-1">{prompt.title}</p>
+                  <p className="mt-0.5 text-[11px] leading-relaxed text-ink-3">{prompt.body}</p>
+                  {prompt.href && (
+                    <Link to={prompt.href} className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-bold text-brand-700 hover:underline dark:text-brand-300">
+                      {prompt.cta || "Open a table"} <ArrowRight size={10} aria-hidden="true" />
+                    </Link>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {block?.available && block.fixtures.length === 0 && (
+        <div className="mt-3 rounded-2xl bg-surface-2 px-3 py-2.5">
+          <p className="text-xs font-extrabold text-ink-1">
+            {block.prompts?.[0]?.title || "No mapped anchor in this block yet"}
+          </p>
+          <p className="mt-0.5 text-[11px] leading-relaxed text-ink-3">
+            {block.prompts?.[0]?.body || "Your pin is still the anchor. Name the stage or shop in the table title."}
+          </p>
+        </div>
+      )}
+
+      {block?.available && (
+        <p className="mt-2 text-[10px] text-ink-4">
+          {block.attribution} · {block.cache?.cached ? "cached snapshot, not a live census" : "fetched for this block"}
+        </p>
+      )}
+    </section>
   );
 }
 

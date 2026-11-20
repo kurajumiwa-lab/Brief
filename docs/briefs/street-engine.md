@@ -1,8 +1,10 @@
 # The Street Engine — calendar, tables, story guide
 
 **Status:** shipped in the `arena/0e6590ee-brief` slice.
-**Schema:** `0078_street_lobbies` (tables + members) and
-`0079_street_broadcasts` (the scheduled stamp). No ledger.
+**Schema:** `0078_street_lobbies` (tables + members),
+`0079_street_broadcasts` (the scheduled stamp) and `0080_location_hex` (pins +
+the cached open-data grid). No ledger. See `location-hex.md` for the spatial
+layer.
 **Routes:** `/api/street/*` and `/street`.
 
 ## Why this exists
@@ -122,9 +124,10 @@ a private record of finished actions.
 
 ## 4. Frontend
 
-* `/street` — season hero, today’s script (with an `Official broadcast`
-  badge once the stamp exists), open tables, handoff, next seven days,
-  recurring slots, chapters.
+* `/street` — season hero, location bar, today’s script (with an `Official
+  broadcast` badge once the stamp exists), **Around your pin*** (OSM anchors
+  from the cached H3 cell), open tables, handoff, next seven days, recurring
+  slots, chapters.
 * Home (`TodayView`) — a static `StreetDoor` card links to `/street`; it makes
   no extra API call and adds no ninth navigation tab.
 * Design: borderless `shelf-card` / `soft-card` surfaces; fixed dark poster
