@@ -291,7 +291,8 @@ async def get_context(
         )
 
     fixtures = _clean_fixtures(float(lat), float(lng), places)
-    if not label:
+    generic = {"pasted pin", "your pin", "pinned location"}
+    if not label or str(label).strip().lower() in generic:
         try:
             label = await geo_data.reverse_geocode(float(lat), float(lng))
         except Exception:
