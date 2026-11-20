@@ -35,7 +35,7 @@ export default function MarketActivityCard({ market, compact = false }) {
       data-testid="market-activity-card"
       data-empty={market.empty ? "true" : "false"}
       className={cn(
-        "rounded-2xl border border-edge-1 bg-surface-1 shadow-xs",
+        "soft-card rounded-2xl bg-surface-1",
         compact ? "p-3" : "p-3.5"
       )}
     >

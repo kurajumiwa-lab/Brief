@@ -78,7 +78,7 @@ export default function CollapsedMyShop({ className }) {
       aria-labelledby="my-shop-heading"
       data-testid="home-your-shop"
       data-shop-state={open ? "expanded" : "collapsed"}
-      className={cn("rounded-3xl border border-edge-1 bg-surface-0 shadow-xs", className)}
+      className={cn("soft-card rounded-3xl bg-surface-0", className)}
     >
       {/* ── the folded state ─────────────────────────────────────────────
           A phone stacks identity above the actions; from `sm` the same two
@@ -152,7 +152,7 @@ export default function CollapsedMyShop({ className }) {
                 <Badge variant="outline" size="sm">{num(listings.length)} total</Badge>
               </div>
 
-              <ul className="divide-y divide-edge-1 overflow-hidden rounded-2xl border border-edge-1 bg-surface-1">
+              <ul className="soft-card divide-y divide-edge-1 overflow-hidden rounded-2xl bg-surface-1">
                 {published.slice(0, 4).map(({ item, status }) => (
                   <li key={item.id}>
                     <Link

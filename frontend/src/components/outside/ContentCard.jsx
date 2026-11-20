@@ -74,16 +74,16 @@ export default function ContentCard({ item, onReact, compact = false, className 
   return (
     <article
       className={cn(
-        "group relative flex flex-col overflow-hidden rounded-card border border-edge-1 bg-surface-1 shadow-xs",
-        "transition-[border-color,box-shadow] duration-1 ease-out hover:border-edge-2 hover:shadow-sm",
-        "focus-within:border-brand-500/60",
+        "shelf-card group flex flex-col bg-surface-1",
+        "transition-[box-shadow,transform] duration-1 ease-out hover:-translate-y-0.5 hover:shadow-md",
+        "focus-within:ring-2 focus-within:ring-brand-500/40",
         className,
       )}
       data-testid={`content-card-${item.kind}`}
       data-kind={item.kind}
     >
       {item.image ? (
-        <div className="relative aspect-[4/3] w-full overflow-hidden bg-surface-2">
+        <div className="shelf-media-fade shelf-fade-surface-1 relative aspect-[4/3] w-full overflow-hidden bg-surface-2">
           <Media
             src={item.image}
             alt=""
@@ -173,7 +173,7 @@ export default function ContentCard({ item, onReact, compact = false, className 
           </p>
         )}
 
-        <div className="flex items-center justify-between gap-2 border-t border-edge-1 pt-2.5">
+        <div className="flex items-center justify-between gap-2 pt-2.5">
           <div className="flex items-center gap-2.5 text-2xs text-ink-4">
             <Count icon={Heart} value={item.counts?.like} />
             <Count icon={MessageSquare} value={item.counts?.reply} />

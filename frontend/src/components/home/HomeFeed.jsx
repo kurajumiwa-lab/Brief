@@ -94,7 +94,7 @@ export default function HomeFeed({ onSource, className }) {
         <Link
           to="/orders?needs=me"
           data-testid="home-needs-action"
-          className="flex items-center gap-3 rounded-2xl border border-edge-1 bg-surface-0 px-4 py-3 shadow-xs transition-colors hover:border-brand-500/50 hover:bg-surface-1"
+          className="soft-card flex items-center gap-3 rounded-2xl bg-surface-0 px-4 py-3 transition-colors hover:bg-surface-1"
         >
           <span
             className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-accent-50 text-accent-700 dark:bg-accent-500/10 dark:text-accent-300"
@@ -184,7 +184,7 @@ function QuietNetworkPanel({ onRefresh }) {
     <section
       aria-labelledby="network-quiet-title"
       data-testid="home-network-quiet"
-      className="rounded-3xl border border-edge-1 bg-surface-0 p-4 shadow-xs sm:p-5"
+      className="soft-card rounded-3xl bg-surface-0 p-4 sm:p-5"
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
@@ -214,7 +214,7 @@ function QuietNetworkPanel({ onRefresh }) {
           <li key={to}>
             <Link
               to={to}
-              className="flex h-full items-start gap-2.5 rounded-2xl border border-edge-1 bg-surface-1 px-3 py-2.5 transition-colors hover:border-brand-500/50 hover:bg-brand-50 dark:hover:bg-brand-500/10"
+              className="soft-card flex h-full items-start gap-2.5 rounded-2xl bg-surface-1 px-3 py-2.5 transition-colors hover:bg-brand-50 dark:hover:bg-brand-500/10"
             >
               <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300" aria-hidden="true">
                 <Icon size={15} />

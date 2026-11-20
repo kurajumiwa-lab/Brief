@@ -51,7 +51,7 @@ export default function TownDoors() {
           <Link
             key={to}
             to={to}
-            className="group rounded-2xl border border-edge-1 bg-surface-1 p-3 transition-colors hover:border-edge-2"
+            className="soft-card group rounded-2xl bg-surface-1 p-3 transition-colors hover:bg-surface-2"
           >
             <span className={`grid h-8 w-8 place-items-center rounded-xl ${tint}`}>
               <Icon size={15} aria-hidden="true" />

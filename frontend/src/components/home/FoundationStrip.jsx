@@ -56,7 +56,7 @@ export default function FoundationStrip({ className = "" }) {
     <section
       aria-labelledby="foundations-heading"
       data-testid="foundation-strip"
-      className={`rounded-2xl border border-edge-1 bg-surface-1 p-4 ${className}`}
+      className={`soft-card rounded-2xl bg-surface-1 p-4 ${className}`}
     >
       <h2 id="foundations-heading" className="text-sm font-bold tracking-tight text-ink-1">
         What the network is built on
@@ -90,7 +90,7 @@ export default function FoundationStrip({ className = "" }) {
               {to ? (
                 <Link
                   to={to}
-                  className="block h-full rounded-xl border border-edge-1 bg-surface-0 p-3 transition-colors hover:border-brand-300 hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40"
+                  className="soft-card block h-full rounded-xl bg-surface-0 p-3 transition-colors hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40"
                 >
                   {inner}
                 </Link>

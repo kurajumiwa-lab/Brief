@@ -33,7 +33,7 @@ export default function HomeTrustStrip({ className = "" }) {
     <ul
       aria-label="What this network guarantees"
       data-testid="home-trust-strip"
-      className={`grid grid-cols-2 gap-x-2 gap-y-2 rounded-2xl border border-edge-1 bg-surface-1 px-2.5 py-2.5 sm:grid-cols-4 ${className}`}
+      className={`soft-card grid grid-cols-2 gap-x-2 gap-y-2 rounded-2xl bg-surface-1 px-2.5 py-2.5 sm:grid-cols-4 ${className}`}
     >
       {FACTS.map(({ icon: Icon, label }) => (
         <li key={label} className="flex items-center gap-1.5 px-1">

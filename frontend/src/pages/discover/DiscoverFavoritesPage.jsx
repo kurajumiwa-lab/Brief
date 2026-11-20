@@ -35,7 +35,7 @@ export default function DiscoverFavoritesPage() {
       </header>
 
       {items.length === 0 ? (
-        <section className="rounded-2xl border border-dashed border-mk-line bg-mk-card p-6 text-center">
+        <section className="soft-card rounded-2xl bg-mk-card p-6 text-center">
           <span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-mk-orange-soft text-mk-orange"><Heart size={22} aria-hidden="true" /></span>
           <h2 className="mt-3 text-title-section font-extrabold text-mk-ink">Nothing saved yet</h2>
           <p className="mx-auto mt-1 max-w-sm text-sm text-mk-ink-soft">Tap the heart on any card in Discover to keep it here.</p>

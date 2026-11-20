@@ -21,10 +21,11 @@ import { cn } from "@/lib/utils";
  * than 4:3), which is where a 390px phone stops feeling cramped — three cards
  * still peek across the rail, and each card carries about a fifth more text.
  *
- * The media slot also stops being a bordered box when the card is filled in:
- * `bare` drops the hairline and the background tint, so a real photograph (or
- * the market-green identity panel) reaches the card's edges instead of sitting
- * inside one more outline.
+ * The media slot is never a framed picture. It runs edge to edge under the
+ * card's own radius, and `bare` drops even the background tint so a real
+ * photograph (or the market-green identity panel) reaches the card's edges.
+ * A filled card therefore has one surface, not a picture sitting inside an
+ * outline.
  */
 
 /** The card slot: identical width for every shelf, at every breakpoint. */
@@ -37,7 +38,7 @@ export default function CardShell({ to, label, children, className, footer }) {
   return (
     <article
       className={cn(
-        "group relative flex h-full flex-col overflow-hidden rounded-2xl border border-edge-1 bg-surface-0 shadow-xs glass-hover",
+        "shelf-card glass-hover group flex h-full flex-col bg-surface-0",
         className
       )}
     >
@@ -74,7 +75,7 @@ export function CardMedia({ src, ratio = CARD_MEDIA_RATIO, tint = "bg-surface-2"
   const showing = Boolean(src) && !failed;
 
   return (
-    <div className={cn("relative shrink-0 overflow-hidden", !bare && "border-b border-edge-1", ratio, showing ? "bg-surface-2" : tint, className)}>
+    <div className={cn("relative shrink-0 overflow-hidden", ratio, showing ? "bg-surface-2" : tint, !bare && "shelf-media-fade shelf-fade-surface", className)}>
       <Media
         src={src}
         alt=""
@@ -131,7 +132,16 @@ export function CardPoster({ icon: Icon, label, tone = "brand", corner, classNam
 
 /** The card's text block. Not interactive — the stretched link owns the tap. */
 export function CardBody({ children, className }) {
-  return <div className={cn("pointer-events-none flex flex-1 flex-col gap-1 p-3", className)}>{children}</div>;
+  return (
+    <div
+      className={cn(
+        "pointer-events-none relative z-10 -mt-5 flex flex-1 flex-col gap-1 bg-gradient-to-t from-surface-0 via-surface-0/95 to-transparent p-3 pt-4",
+        className,
+      )}
+    >
+      {children}
+    </div>
+  );
 }
 
 /** A card's own action row, above the stretched link. */

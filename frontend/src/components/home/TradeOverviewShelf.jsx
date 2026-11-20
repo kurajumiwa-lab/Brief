@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { ArrowRight, BookOpen, PackageCheck, RotateCcw, ClipboardCheck } from "lucide-react";
 import ErrorState from "@/components/ui/ErrorState";
 import { SkeletonRows } from "@/components/ui/Skeleton";
@@ -20,7 +20,6 @@ import { currency, num, relativeTime } from "@/lib/formatters";
  * Reduces vertical space substantially without removing functionality.
  */
 export default function TradeOverviewShelf() {
-  const navigate = useNavigate();
   // The overview is a shared fact: the business pulse reads the same store, so
   // this page makes one request and shows one failure, not two cards apologising
   // for the same broken endpoint.
@@ -65,7 +64,7 @@ export default function TradeOverviewShelf() {
         compact
       />
     ) : (
-      <div className="rounded-2xl border border-edge-1 bg-surface-0 p-4">
+      <div className="soft-card rounded-2xl bg-surface-0 p-4">
         <SkeletonRows count={2} />
       </div>
     );
@@ -92,7 +91,7 @@ export default function TradeOverviewShelf() {
   return (
     <section 
       aria-label="Trade overview" 
-      className="rounded-2xl border border-edge-1 bg-surface-0 p-3 space-y-2"
+      className="soft-card rounded-2xl bg-surface-0 p-3 space-y-2"
     >
       {/* Status indicator */}
       <p role="status" className="flex items-center gap-1.5 text-micro text-ink-4">
@@ -111,7 +110,7 @@ export default function TradeOverviewShelf() {
       {/* Primary: Pending actions */}
       <Link
         to="/orders?needs=me"
-        className="flex items-center gap-3 rounded-xl border border-brand-500/40 bg-brand-50 px-3 py-2.5 font-semibold text-brand-800 dark:bg-brand-500/10 dark:text-brand-300 hover:bg-brand-100 dark:hover:bg-brand-500/20 transition-colors"
+        className="flex items-center gap-3 rounded-xl bg-brand-50 px-3 py-2.5 font-semibold text-brand-800 dark:bg-brand-500/10 dark:text-brand-300 hover:bg-brand-100 dark:hover:bg-brand-500/20 transition-colors"
       >
         <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-brand-500/20 text-brand-700 dark:text-brand-300">
           <ClipboardCheck size={16} aria-hidden="true" />
@@ -133,7 +132,7 @@ export default function TradeOverviewShelf() {
       <div className="flex flex-wrap gap-2">
         <Link 
           to="/orders/records"
-          className="flex items-center gap-2 rounded-xl border border-edge-1 px-3 py-2 text-micro font-medium text-ink-2 hover:bg-surface-1 transition-colors"
+          className="flex items-center gap-2 rounded-xl bg-surface-1 px-3 py-2 text-micro font-medium text-ink-2 hover:bg-surface-2 transition-colors"
         >
           <BookOpen size={14} aria-hidden="true" />
           {num(count.recorded)} orders recorded
@@ -143,7 +142,7 @@ export default function TradeOverviewShelf() {
         {latest && (
           <Link 
             to={`/orders/${latest.id}`}
-            className="flex items-center gap-2 rounded-xl border border-edge-1 px-3 py-2 text-micro text-ink-2 hover:bg-surface-1 transition-colors"
+            className="flex items-center gap-2 rounded-xl bg-surface-1 px-3 py-2 text-micro text-ink-2 hover:bg-surface-2 transition-colors"
           >
             <PackageCheck size={14} aria-hidden="true" />
             <span className="truncate">Recent: {latest.item} · {currency(latest.total_kes)}</span>

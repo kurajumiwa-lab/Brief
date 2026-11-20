@@ -13,7 +13,7 @@ export default function MarketplaceHero({ region, onShopSale, onBrowseAll, onHow
   return (
     <section
       data-testid="discover-hero"
-      className="relative overflow-hidden rounded-3xl border border-mk-line bg-mk-cream px-5 py-6 text-center sm:px-10 sm:py-9"
+      className="soft-card relative overflow-hidden rounded-3xl bg-mk-cream px-5 py-6 text-center sm:px-10 sm:py-9"
     >
       <span
         className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-mk-orange/10 blur-2xl"

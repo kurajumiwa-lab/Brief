@@ -13,8 +13,8 @@ export function SpottedDealCard({ deal, onChanged }) {
   const [receipts, setReceipts] = useState([]);
   useEffect(() => { if (open === "receipt") receiptsAPI.ledger().then(r => setReceipts(r.data.receipts || [])).catch(e => toast.error(apiError(e))); }, [open]);
   const act = async (fn) => { setBusy(true); try { await fn(); setOpen(""); await onChanged(); toast.success("Updated"); } catch (e) { toast.error(apiError(e)); } finally { setBusy(false); } };
-  return <article className="h-full overflow-hidden rounded-2xl border-2 border-dashed border-amber-300 bg-amber-50/20 text-ink-1">
-    <div className="relative aspect-[4/3] bg-surface-2"><img src={deal.image_url} alt="Shopfront or sale" className="w-full h-full object-cover" loading="lazy" /><span className="absolute left-2 top-2 rounded bg-amber-400 p-1 text-[10px] font-bold text-stone-950">Spotted in Town • Public Sale</span></div>
+  return <article className="soft-card h-full overflow-hidden rounded-2xl bg-amber-50/20 text-ink-1 dark:bg-amber-500/10">
+    <div className="shelf-media-fade shelf-fade-surface-1 relative aspect-[4/3] bg-surface-2"><img src={deal.image_url} alt="Shopfront or sale" className="w-full h-full object-cover" loading="lazy" /><span className="absolute left-2 top-2 rounded bg-amber-400 p-1 text-[10px] font-bold text-stone-950">Spotted in Town • Public Sale</span></div>
     <div className="p-3 space-y-2"><h3 className="text-sm font-bold">{deal.title}</h3><p className="text-xs text-ink-3">{deal.merchant_name} · {deal.town}</p>{deal.discount_summary && <p className="text-xs font-semibold">{deal.discount_summary}</p>}
       {deal.status === "RECEIPT_LINKED" && <p className="text-xs text-brand-700 font-bold">Parsed Receipt Linked</p>}
       <p className="text-[11px] text-ink-3">{deal.status === "RECEIPT_LINKED" ? "A separate shopper scanned a parsed receipt for this shop after this post. Not KRA-verified; awards no standing credit. It does not verify the discount." : "Seen in store is an unverified neighbour tap, not proof or standing credit."}</p>

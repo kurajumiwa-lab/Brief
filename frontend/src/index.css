@@ -106,6 +106,39 @@
     border-color: rgb(var(--edge-2));
   }
 
+  /* ── Shelves: no hard frame ──────────────────────────────────────────
+     Every shelf card is a soft surface, never a bordered box. The media
+     fades into the card instead of ending on a hairline. This is the same
+     poster treatment as the Discover spotlight, applied to categories,
+     deal rails, home shelves and search cards. */
+  .shelf-card {
+    @apply relative overflow-hidden rounded-2xl;
+    border: 0;
+    box-shadow: 0 16px 32px -26px rgb(15 10 24 / 0.55);
+  }
+  /* The quiet sibling of .shelf-card: a panel or row that still needs to read
+     as its own surface, without drawing a hairline around it. Radius and
+     padding stay with the component. */
+  .soft-card {
+    border: 0;
+    box-shadow: 0 10px 24px -24px rgb(15 10 24 / 0.45);
+  }
+  .shelf-media-fade {
+    position: relative;
+  }
+  .shelf-media-fade::after {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0;
+    height: 3rem;
+    pointer-events: none;
+    background: linear-gradient(to top, var(--shelf-fade), transparent);
+  }
+  .shelf-fade-surface { --shelf-fade: rgb(var(--surface-0)); }
+  .shelf-fade-surface-1 { --shelf-fade: rgb(var(--surface-1)); }
+  .shelf-fade-mk { --shelf-fade: rgb(var(--mk-card)); }
+
   /* ── The deep-green market surface (v3.2) ────────────────────────────
      The hero, the market strip and the shop plate all wear this one green,
      so "Ogallo" reads the same everywhere and the dark theme deepens it

@@ -64,7 +64,7 @@ export default function ActionCentre({ progress }) {
       </div>
       <ul className="space-y-2">
         {visible.map((a) => (
-          <li key={a.key} className="flex items-center gap-3 rounded-2xl border border-edge-1 bg-surface-0 p-3">
+          <li key={a.key} className="soft-card flex items-center gap-3 rounded-2xl bg-surface-0 p-3">
             <span className="h-2 w-2 shrink-0 rounded-full bg-accent-500" aria-hidden="true" />
             <div className="min-w-0 flex-1">
               <p className="truncate text-xs font-semibold text-ink-1">{a.title}</p>

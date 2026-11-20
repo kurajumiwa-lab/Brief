@@ -48,7 +48,7 @@ export default function MarketStrip({ limit = 2, className }) {
         </Link>
       </div>
 
-      <ul className="divide-y divide-edge-1 overflow-hidden rounded-xl border border-edge-1 bg-surface-1">
+      <ul className="soft-card divide-y divide-edge-1 overflow-hidden rounded-xl bg-surface-1">
         {markets.map((market) => (
           <li key={market.id}>
             <Link

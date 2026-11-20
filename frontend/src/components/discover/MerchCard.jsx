@@ -92,13 +92,13 @@ export default function MerchCard({ item, featured = false, onSavedChanged }) {
       data-testid={`content-card-${item.kind}`}
       data-merch-card="true"
       className={cn(
-        "group relative flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border border-mk-line bg-mk-card",
-        "transition-[border-color,transform,box-shadow] duration-2 hover:-translate-y-0.5 hover:border-mk-ink/25 hover:shadow-sm",
-        featured && "sm:col-span-2",
+        "shelf-card group relative flex min-w-0 flex-col bg-[#171021] text-white",
+        "min-h-[292px] transition-transform duration-2 hover:-translate-y-0.5",
+        featured && "sm:col-span-2 sm:min-h-[340px]",
       )}
     >
       <div
-        className={cn("relative w-full overflow-hidden bg-mk-warm", featured ? "aspect-[16/10]" : "aspect-square")}
+        className="absolute inset-0 overflow-hidden bg-mk-warm"
         data-testid="region-card-art"
         data-fallback={item.image ? "false" : "true"}
       >
@@ -111,12 +111,20 @@ export default function MerchCard({ item, featured = false, onSavedChanged }) {
               style={{ backgroundImage: `linear-gradient(135deg, ${palette.from}, ${palette.to})` }}
               aria-hidden="true"
             >
-              <Icon size={featured ? 48 : 34} strokeWidth={1.3} style={{ color: palette.ink }} />
+              <Icon size={featured ? 56 : 42} strokeWidth={1.3} style={{ color: palette.ink }} />
             </span>
           )}
         </Link>
+        <span className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#171021]/45 via-transparent to-[#171021]" aria-hidden="true" />
+      </div>
 
-        <div className="absolute right-2 top-2 z-20 flex flex-col gap-1.5">
+      <div className="relative z-20 flex items-start justify-between gap-2 p-2">
+        <CategoryPill
+          kind={cardKind}
+          label={cardLabel}
+          className="border-0 bg-black/50 text-white shadow-none backdrop-blur"
+        />
+        <div className="flex flex-col gap-1.5">
           <button
             type="button"
             onClick={save}
@@ -124,8 +132,8 @@ export default function MerchCard({ item, featured = false, onSavedChanged }) {
             aria-label={saved ? `Remove ${item.title || "card"} from saved` : `Save ${item.title || "card"}`}
             data-testid="merch-card-save"
             className={cn(
-              "grid h-9 w-9 place-items-center rounded-full border border-mk-line bg-mk-card/95 shadow-sm backdrop-blur transition-colors",
-              saved ? "text-mk-orange" : "text-mk-ink-soft hover:text-mk-ink",
+              "grid h-9 w-9 place-items-center rounded-full bg-black/40 text-white shadow-sm backdrop-blur transition-colors",
+              saved && "text-[#FFD7A8]",
             )}
           >
             <Heart size={15} fill={saved ? "currentColor" : "none"} aria-hidden="true" />
@@ -135,34 +143,28 @@ export default function MerchCard({ item, featured = false, onSavedChanged }) {
             onClick={share}
             aria-label={`Share ${item.title || "card"}`}
             data-testid="region-card-share"
-            className="grid h-9 w-9 place-items-center rounded-full border border-mk-line bg-mk-card/95 text-mk-ink-soft shadow-sm backdrop-blur transition-colors hover:text-mk-ink"
+            className="grid h-9 w-9 place-items-center rounded-full bg-black/40 text-white/90 shadow-sm backdrop-blur transition-colors hover:text-white"
           >
             <Share2 size={14} aria-hidden="true" />
           </button>
         </div>
-
-        <CategoryPill
-          kind={cardKind}
-          label={cardLabel}
-          className="absolute left-2 top-2 z-20 border border-mk-line bg-mk-card/95 text-mk-ink shadow-xs backdrop-blur"
-        />
-
-        {shared && (
-          <span className="absolute bottom-2 left-2 z-20 rounded-md bg-mk-ink px-2 py-1 text-[10px] font-bold text-mk-cream">
-            Link copied
-          </span>
-        )}
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col p-3">
+      {shared && (
+        <span className="absolute left-2 top-14 z-20 rounded-md bg-black/70 px-2 py-1 text-[10px] font-bold text-white backdrop-blur">
+          Link copied
+        </span>
+      )}
+
+      <div className="relative z-10 mt-auto flex min-h-0 flex-1 flex-col justify-end p-3 pt-16">
         <Link to={item.to || "#"} className="min-w-0">
-          <h3 className={cn("line-clamp-2 font-extrabold leading-snug text-mk-ink", featured ? "text-base" : "text-sm")}>
+          <h3 className={cn("line-clamp-2 font-extrabold leading-snug text-white", featured ? "text-lg" : "text-sm")}>
             {item.title || kindLabel(item.kind)}
           </h3>
         </Link>
 
-        <div className="mt-1 flex min-w-0 items-center gap-1.5 text-[10px] font-bold text-mk-ink-soft">
-          <span className="inline-flex items-center gap-0.5 rounded-full bg-mk-warm px-1.5 py-0.5 text-mk-ink">
+        <div className="mt-1 flex min-w-0 items-center gap-1.5 text-[10px] font-bold text-white/70">
+          <span className="inline-flex items-center gap-0.5 rounded-full bg-white/15 px-1.5 py-0.5 text-white backdrop-blur">
             Lvl {rank.level}{rank.level >= 3 ? "+" : ""}
           </span>
           <span className="truncate">{trades > 0 ? `${trades} trade${trades === 1 ? "" : "s"}` : "No trades yet"}</span>
@@ -171,7 +173,7 @@ export default function MerchCard({ item, featured = false, onSavedChanged }) {
         </div>
 
         {serviceCount > 0 && (
-          <span data-testid="region-card-service-count" className="mt-1 inline-flex w-fit items-center rounded-full border border-mk-line bg-mk-warm px-1.5 py-0.5 text-[10px] font-bold text-mk-ink-soft">
+          <span data-testid="region-card-service-count" className="mt-1 inline-flex w-fit items-center rounded-full bg-white/15 px-1.5 py-0.5 text-[10px] font-bold text-white/80 backdrop-blur">
             {serviceCount} service{serviceCount === 1 ? "" : "s"}
           </span>
         )}
@@ -180,14 +182,14 @@ export default function MerchCard({ item, featured = false, onSavedChanged }) {
           <span
             data-testid="region-card-fair-price"
             title={`At or below the ${item.corridor_scope_label || item.location || "corridor"} median of KSh ${Number(item.corridor_median_kes || 0).toLocaleString()}`}
-            className="mt-1 inline-flex w-fit items-center gap-1 rounded-md border border-mk-orange/25 bg-mk-orange-soft px-1.5 py-0.5 text-[10px] font-bold text-mk-orange"
+            className="mt-1 inline-flex w-fit items-center gap-1 rounded-md bg-[#FFD7A8]/20 px-1.5 py-0.5 text-[10px] font-bold text-[#FFD7A8] backdrop-blur"
           >
             <TrendingDown size={11} aria-hidden="true" /> Fair corridor price
           </span>
         )}
 
-        <div className="mt-2 rounded-xl border border-mk-line bg-mk-cream p-2">
-          <div className="flex items-center justify-between gap-2 text-[10px] font-bold uppercase tracking-[0.06em] text-mk-ink-soft">
+        <div className="mt-2 rounded-xl bg-black/35 p-2 backdrop-blur-sm">
+          <div className="flex items-center justify-between gap-2 text-[10px] font-bold uppercase tracking-[0.06em] text-white/60">
             <span className="truncate">{unitLabel(item)}</span>
             {item.distance_km != null && (
               <span data-testid="region-card-distance" className="inline-flex shrink-0 items-center gap-0.5 normal-case tracking-normal">
@@ -211,11 +213,11 @@ export default function MerchCard({ item, featured = false, onSavedChanged }) {
         <div className="mt-auto pt-2.5">
           {momentum?.capacity > 0 ? (
             <>
-              <div className="flex items-center justify-between gap-2 text-[10px] font-bold text-mk-ink-soft">
+              <div className="flex items-center justify-between gap-2 text-[10px] font-bold text-white/70">
                 <span data-testid="region-card-momentum">{momentum.text}</span>
                 <span>{Math.max(momentum.capacity - momentum.joined, 0)} left</span>
               </div>
-              <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-mk-warm">
+              <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-white/20">
                 <div
                   className="h-full rounded-full bg-mk-orange"
                   style={{ width: `${Math.min(Math.max(Math.round((momentum.joined / momentum.capacity) * 100), 4), 100)}%` }}
@@ -227,13 +229,13 @@ export default function MerchCard({ item, featured = false, onSavedChanged }) {
 
           <Link
             to={item.to || "#"}
-            className="mt-2 flex h-10 w-full items-center justify-center gap-1 rounded-lg border border-mk-ink/25 bg-mk-card text-[11px] font-extrabold uppercase tracking-[0.06em] text-mk-ink transition-colors hover:border-mk-ink hover:bg-mk-cream"
+            className="mt-2 flex h-10 w-full items-center justify-center gap-1 rounded-lg bg-mk-orange text-[11px] font-extrabold uppercase tracking-[0.06em] text-white transition-colors hover:bg-mk-orange/90"
           >
             {cta} <ArrowRight size={11} aria-hidden="true" />
           </Link>
 
           {!momentum?.capacity && item.owner?.handle && (
-            <span className="mt-1.5 block truncate text-center text-[10px] text-mk-ink-soft">/p/{item.owner.handle}</span>
+            <span className="mt-1.5 block truncate text-center text-[10px] text-white/55">/p/{item.owner.handle}</span>
           )}
         </div>
       </div>

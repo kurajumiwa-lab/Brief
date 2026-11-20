@@ -41,7 +41,7 @@ export default function TradePulse() {
   const count = data?.summary;
   const latest = data?.items?.[0];
   return (
-    <section aria-label="My trade overview" className="rounded-3xl border border-edge-1 bg-surface-0 p-4 sm:p-5 space-y-3">
+    <section aria-label="My trade overview" className="soft-card rounded-3xl bg-surface-0 p-4 sm:p-5 space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div><p className="text-micro font-bold uppercase tracking-widest text-brand-700 dark:text-brand-300">My shop</p><h2 className="text-base font-bold text-ink-1">Trade overview</h2></div>
         <p role="status" className="flex items-center gap-1.5 text-micro text-ink-4">
@@ -66,8 +66,8 @@ export default function TradePulse() {
           </div>
           <div className="grid gap-2 sm:grid-cols-3 text-xs">
             <Link to="/orders/repeat" className="flex items-center gap-2 rounded-xl border border-brand-500/40 bg-brand-50 px-3 py-3 font-semibold text-brand-800 dark:bg-brand-500/10 dark:text-brand-300"><RotateCcw size={16} aria-hidden="true" /> Repeat an order <ArrowRight size={13} className="ml-auto" aria-hidden="true" /></Link>
-            {latest && <Link to={`/orders/${latest.id}`} className="flex items-center gap-2 rounded-xl border border-edge-1 px-3 py-3 text-ink-2"><PackageCheck size={16} aria-hidden="true" /><span className="truncate">Recent: {latest.item} · {currency(latest.total_kes)}</span><ArrowRight size={13} className="ml-auto shrink-0" aria-hidden="true" /></Link>}
-            <Link to="/orders/records" className="flex items-center gap-2 rounded-xl border border-edge-1 px-3 py-3 font-semibold text-ink-2"><BookOpen size={16} aria-hidden="true" /> My records <ArrowRight size={13} className="ml-auto" aria-hidden="true" /></Link>
+            {latest && <Link to={`/orders/${latest.id}`} className="flex items-center gap-2 rounded-xl bg-surface-1 px-3 py-3 text-ink-2"><PackageCheck size={16} aria-hidden="true" /><span className="truncate">Recent: {latest.item} · {currency(latest.total_kes)}</span><ArrowRight size={13} className="ml-auto shrink-0" aria-hidden="true" /></Link>}
+            <Link to="/orders/records" className="flex items-center gap-2 rounded-xl bg-surface-1 px-3 py-3 font-semibold text-ink-2"><BookOpen size={16} aria-hidden="true" /> My records <ArrowRight size={13} className="ml-auto" aria-hidden="true" /></Link>
           </div>
         </>
       ) : (

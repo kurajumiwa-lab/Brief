@@ -119,7 +119,7 @@ export default function TodayView({
       {unread > 0 && (
         <Link
           to="/inbox"
-          className="flex items-center gap-3 rounded-2xl border border-edge-1 bg-surface-1 px-4 py-3 hover:border-edge-2"
+          className="soft-card flex items-center gap-3 rounded-2xl bg-surface-1 px-4 py-3 hover:bg-surface-2"
         >
           <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300">
             <Inbox size={16} aria-hidden="true" />

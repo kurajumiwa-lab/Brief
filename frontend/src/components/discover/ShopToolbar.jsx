@@ -43,7 +43,7 @@ export default function ShopToolbar({
         <h2 id="shop-all-heading" className="mt-1 scroll-mt-[10.5rem] text-2xl font-black tracking-tight text-mk-ink">{title}</h2>
       </div>
 
-      <div className="rounded-2xl border border-mk-line bg-mk-card p-3">
+      <div className="soft-card rounded-2xl bg-mk-card p-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-[11px] font-semibold text-mk-ink-soft" data-testid="explore-count">{countText}</p>
           <div className="flex items-center gap-2">

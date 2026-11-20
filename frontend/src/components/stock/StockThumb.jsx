@@ -70,7 +70,7 @@ export default function StockThumb({ item, className, ratio = "aspect-[16/10]", 
   return (
     <div
       data-photo={!hasPhoto ? "missing" : unavailable ? "unavailable" : "present"}
-      className={cn("relative overflow-hidden bg-surface-2 border-b border-edge-1", ratio, rounded, className)}
+      className={cn("shelf-media-fade shelf-fade-surface relative overflow-hidden bg-surface-2", ratio, rounded, className)}
     >
       <Media
         src={item?.images?.[0]}
