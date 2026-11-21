@@ -3,7 +3,8 @@ from datetime import datetime
 from enum import Enum as PyEnum
 
 from sqlalchemy import (
-    Boolean, CheckConstraint, Column, DateTime, Enum, Float, ForeignKey, Index, Integer, String, Text
+    Boolean, CheckConstraint, Column, DateTime, Enum, Float, ForeignKey, Index, Integer,
+    Numeric, String, Text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import relationship
@@ -90,6 +91,11 @@ class StockItem(Base):
     visible_to_network = Column(Boolean, default=True, nullable=False)
     price_mode = Column(String(12), nullable=False, default="fixed", server_default="fixed")  # fixed | negotiable | ask_me
     archived_at = Column(DateTime, nullable=True)  # set = archived (kept, hidden from lists)
+    # Seller terms (migration 0082). Our share never ranks; the buyer's cutback
+    # is the only money-adjacent number ranking may read, and only inside the
+    # labelled partner band. 0 = not a partner, which is what every older row means.
+    platform_fee_pct = Column(Numeric(5, 2), nullable=False, default=0, server_default="0")
+    buyer_cutback_pct = Column(Numeric(5, 2), nullable=False, default=0, server_default="0")
     visible_to_groups = Column(JSONB, default=list)  # Specific group IDs
 
     # Quality verification (v2.1 §3.1)

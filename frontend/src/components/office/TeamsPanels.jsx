@@ -1,8 +1,21 @@
 import { useCallback, useEffect, useState } from "react";
+import { Pin, Timer } from "lucide-react";
 import Button from "@/components/ui/Button";
 import { teamsAPI, apiError } from "@/lib/api";
+import { cn } from "@/lib/utils";
 
 const ACTIVE_OR_PENDING = ["invited", "active"];
+
+// The whiteboard (0082). A sticky note is the thing you write and rub out; a
+// notice is the thing you keep. Same board, different weight — colour is the
+// only cue, so the words still carry the meaning for anyone who cannot see it.
+const STICKY_SKIN = {
+  amber: "bg-accent-50 border-accent-200 dark:bg-accent-500/10 dark:border-accent-500/30",
+  lime: "bg-tech-50 border-tech-200 dark:bg-tech-500/10 dark:border-tech-500/30",
+  sky: "bg-blue-50 border-blue-200 dark:bg-blue-500/10 dark:border-blue-500/30",
+  rose: "bg-red-50 border-red-200 dark:bg-red-500/10 dark:border-red-500/30",
+  plain: "bg-surface-2 border-edge-2",
+};
 
 /**
  * Partner teams: one office invites another by its office ID. The other office's owner accepts
@@ -97,7 +110,7 @@ export function PartnerPanel({ detail, onRun }) {
  */
 export function NoticeBoard({ detail, onRun }) {
   const [notices, setNotices] = useState(null);
-  const [form, setForm] = useState({ title: "", body: "" });
+  const [form, setForm] = useState({ title: "", body: "", kind: "notice", colour: "plain", pinned: false });
   const [editing, setEditing] = useState(null);
   const [err, setErr] = useState(null);
   const canWrite = detail.my_role === "owner" || detail.my_role === "editor";
@@ -117,7 +130,7 @@ export function NoticeBoard({ detail, onRun }) {
   async function post(e) {
     e.preventDefault();
     await onRun(() => teamsAPI.postNotice(detail.id, form), () => "Notice posted.");
-    setForm({ title: "", body: "" });
+    setForm({ title: "", body: "", kind: "notice", colour: "plain", pinned: false });
     await load();
   }
 
@@ -141,7 +154,14 @@ export function NoticeBoard({ detail, onRun }) {
       ) : (
         <ul className="space-y-2">
           {notices.map((n) => (
-            <li key={n.id} className="rounded-md border border-edge-2 p-3 text-sm">
+            <li
+              key={n.id}
+              data-testid={n.kind === "sticky" ? "office-sticky" : "office-notice"}
+              className={cn(
+                "rounded-md border p-3 text-sm",
+                n.kind === "sticky" ? STICKY_SKIN[n.colour] || STICKY_SKIN.plain : "border-edge-2",
+              )}
+            >
               {editing && editing.id === n.id ? (
                 <div className="space-y-2">
                   <input
@@ -164,8 +184,19 @@ export function NoticeBoard({ detail, onRun }) {
                 <>
                   <p className="font-medium text-ink-1">{n.title}</p>
                   <p className="mt-1 whitespace-pre-wrap text-ink-2">{n.body}</p>
-                  <p className="mt-1 text-xs text-ink-4">
-                    {new Date(n.created_at).toLocaleString()}{n.edited_at ? " · edited" : ""}
+                  <p className="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-ink-4">
+                    <span>{new Date(n.created_at).toLocaleString()}{n.edited_at ? " · edited" : ""}</span>
+                    {n.pinned && (
+                      <span className="inline-flex items-center gap-0.5 font-bold text-ink-2">
+                        <Pin size={10} aria-hidden="true" /> pinned
+                      </span>
+                    )}
+                    {n.expires_at && (
+                      <span className="inline-flex items-center gap-0.5">
+                        <Timer size={10} aria-hidden="true" />
+                        clears {new Date(n.expires_at).toLocaleDateString()}
+                      </span>
+                    )}
                   </p>
                   {canWrite && (
                     <span className="mt-2 flex gap-2">
@@ -194,6 +225,50 @@ export function NoticeBoard({ detail, onRun }) {
             value={form.body}
             onChange={(e) => setForm({ ...form, body: e.target.value })}
           />
+          <div className="flex flex-wrap items-center gap-1.5">
+            {["notice", "sticky"].map((kind) => (
+              <button
+                key={kind}
+                type="button"
+                aria-pressed={form.kind === kind}
+                onClick={() => setForm({ ...form, kind })}
+                className={cn(
+                  "rounded-full border px-2.5 py-1 text-2xs font-bold",
+                  form.kind === kind
+                    ? "border-ink-1 bg-ink-1 text-surface-0"
+                    : "border-edge-2 text-ink-3 hover:text-ink-1",
+                )}
+              >
+                {kind === "notice" ? "Notice" : "Sticky"}
+              </button>
+            ))}
+            {form.kind === "sticky" && (
+              <>
+                {Object.keys(STICKY_SKIN).map((colour) => (
+                  <button
+                    key={colour}
+                    type="button"
+                    aria-label={`${colour} sticky`}
+                    aria-pressed={form.colour === colour}
+                    onClick={() => setForm({ ...form, colour })}
+                    className={cn(
+                      "h-5 w-5 rounded-full border-2",
+                      STICKY_SKIN[colour],
+                      form.colour === colour ? "border-ink-1" : "border-transparent",
+                    )}
+                  />
+                ))}
+                <label className="inline-flex items-center gap-1 text-2xs font-bold text-ink-3">
+                  <input
+                    type="checkbox"
+                    checked={form.pinned}
+                    onChange={(e) => setForm({ ...form, pinned: e.target.checked })}
+                  />
+                  Pin
+                </label>
+              </>
+            )}
+          </div>
           <Button type="submit" variant="outline" size="sm">Post notice</Button>
         </form>
       )}

@@ -580,9 +580,7 @@ marketplace** — enforced end to end on the map surfaces only
    "Still there" / "Report gone" actions in the bottom sheet, and a list that
    reads marketplace-first.
 
-## Plans not yet built
-
-Specifications only — no code in these changes, and each says so at the top.
+## The open market (built)
 
 `docs/briefs/open-market-claims-and-priority.md` — **the open market**: a seller sets
 two percentages (our fee, and the cutback the *buyer* keeps, which is what buys
@@ -595,6 +593,15 @@ Money is **claims, not custody**: rows accrue, nothing settles, no wallet, no ba
 Three rules hold the whole design up — a paying partner never outranks a cheaper
 verified offer, the person looking for work never pays, and nobody gets paid until
 someone is hired.
+
+Built as `alembic/versions/0082_open_market.py` plus: `offerings/terms.py` (the two
+percentages, the ceilings, the band); `hiring/` (broadcasts, applications, the claim
+ledger, the reward ladder); `intake/claims.py` (public price claims and the savings
+figure); `blueprints/packs.py` (twelve template packs, drafts only); and the office
+whiteboard's `kind`/`colour`/`pinned`/`expires_at`. On the frontend: `/savings`,
+`/price-work`, `/jobs`, `/jobs/post`, `/jobs/mine`, `/templates/packs`, the partner
+terms in the offer form, the cutback line on a public page, and stickies on the office
+noticeboard.
 
 ## History
 

@@ -40,9 +40,37 @@ export const SERVICE_DOMAINS = [
 export const MAX_PHOTOS = 8;
 export const MAX_RADIUS_KM = 500;
 
+/**
+ * Seller terms (0082). Two percentages, and the difference between them is the
+ * whole design:
+ *
+ *   platform_fee_pct   what Brief is paid for the introduction. It NEVER
+ *                      changes where an offer appears.
+ *   buyer_cutback_pct  what the buyer gets back off the price. This is the only
+ *                      number that moves an offer, and only inside the labelled
+ *                      partner strip — where a cheaper offer always wins.
+ *
+ * The ceilings mirror the backend. A seller giving back more than 10% is either
+ * not making money or not telling the truth about the price.
+ */
+export const MAX_PLATFORM_FEE_PCT = 3;
+export const MAX_CUTBACK_PCT = 10;
+export const MAX_COMBINED_PCT = 12;
+
 /** Returns { field: message } for anything wrong. An empty object means it can be sent. */
 export function validateOffering(form, kind) {
   const errors = {};
+  const fee = form.platform_fee_pct === "" || form.platform_fee_pct == null ? 0 : Number(form.platform_fee_pct);
+  const cut = form.buyer_cutback_pct === "" || form.buyer_cutback_pct == null ? 0 : Number(form.buyer_cutback_pct);
+  if (Number.isNaN(fee) || fee < 0 || fee > MAX_PLATFORM_FEE_PCT) {
+    errors.platform_fee_pct = `Our share is 0 to ${MAX_PLATFORM_FEE_PCT}%.`;
+  }
+  if (Number.isNaN(cut) || cut < 0 || cut > MAX_CUTBACK_PCT) {
+    errors.buyer_cutback_pct = `The buyer's cutback is 0 to ${MAX_CUTBACK_PCT}%.`;
+  }
+  if (!errors.platform_fee_pct && !errors.buyer_cutback_pct && fee + cut > MAX_COMBINED_PCT) {
+    errors.buyer_cutback_pct = `Together they cannot be more than ${MAX_COMBINED_PCT}%.`;
+  }
   if (!form.title || form.title.trim().length < 2) errors.title = "Give it a name of at least 2 characters.";
   if (form.price_mode === "fixed") {
     if (form.price === "" || form.price == null || Number.isNaN(Number(form.price)) || Number(form.price) < 0) {
@@ -120,12 +148,31 @@ export function buildPayload(form, kind) {
     body.domain = form.domain || null;
   }
   if (kind !== "goods") body.service_radius_km = num(form.service_radius_km) ?? null;
+  // 0 is meaningful ("not a partner"), so it is always sent when the field is
+  // present; only a blank field is omitted.
+  if (form.platform_fee_pct !== "" && form.platform_fee_pct != null) {
+    body.platform_fee_pct = Number(form.platform_fee_pct) || 0;
+  }
+  if (form.buyer_cutback_pct !== "" && form.buyer_cutback_pct != null) {
+    body.buyer_cutback_pct = Number(form.buyer_cutback_pct) || 0;
+  }
   return body;
+}
+
+/** What the buyer actually keeps, for the terms panel's live preview. */
+export function cutbackPreview(price, cutbackPct) {
+  const amount = Number(price);
+  const pct = Number(cutbackPct);
+  if (!price || Number.isNaN(amount) || !pct || Number.isNaN(pct) || pct <= 0) return null;
+  const saved = Math.round((amount * pct) / 100);
+  if (saved <= 0) return null;
+  return { saved, price: amount - saved };
 }
 
 export const emptyForm = () => ({
   title: "", description: "", category: "", price_mode: "fixed", price: "", price_unit: "",
   quantity: "", duration_minutes: "30", service_radius_km: "", photos: "", domain: "",
+  platform_fee_pct: "", buyer_cutback_pct: "",
   modes: [],
 });
 
@@ -146,6 +193,8 @@ export function formFromOffering(item) {
     service_radius_km: item.service_radius_km == null ? "" : String(item.service_radius_km),
     photos: (item.photos || []).join("\n"),
     domain: item.domain || "",
+    platform_fee_pct: item.platform_fee_pct ? String(item.platform_fee_pct) : "",
+    buyer_cutback_pct: item.buyer_cutback_pct ? String(item.buyer_cutback_pct) : "",
     modes: (item.modes || []).map((m) => ({
       mode: m.mode, price_mode: m.price_mode || "fixed",
       price: m.price == null ? "" : String(m.price), price_unit: m.price_unit || "",

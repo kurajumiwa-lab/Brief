@@ -42,6 +42,12 @@ import { DESK_ENABLED, INTEGRATIONS_ENABLED, MAIL_ENABLED, NEARBY_DOORS_ENABLED 
 import FrontDoorsPage from "@/pages/nearby/FrontDoorsPage";
 import BlueprintsPage from "@/pages/templates/BlueprintsPage";
 import BlueprintDetailPage from "@/pages/templates/BlueprintDetailPage";
+import TemplatePacksPage, { TemplatePackDetailPage } from "@/pages/templates/TemplatePacksPage";
+import SavingsPage from "@/pages/market/SavingsPage";
+import PriceWorkPage from "@/pages/work/PriceWorkPage";
+import {
+  JobDetailPage, JobsBoardPage, MyJobsPage, PostJobPage,
+} from "@/pages/jobs/JobsPages";
 import ReceiptsPage from "@/pages/payments/ReceiptsPage";
 import { useAuthStore } from "@/stores/authStore";
 import { useIdentityStore } from "@/stores/identityStore";
@@ -266,7 +272,20 @@ function AppRoutes() {
       <Route path="/learn" element={<LearnPage />} />
       <Route path="/learn/:id" element={<LearnDetailPage />} />
       <Route path="/templates" element={<BlueprintsPage />} />
+      {/* 0082: template packs. A shelf offers a choice of business type; the
+          detail route is declared first so /packs is not read as a pack key. */}
+      <Route path="/templates/packs" element={<TemplatePacksPage />} />
+      <Route path="/templates/packs/:key" element={<TemplatePackDetailPage />} />
       <Route path="/templates/:key" element={<BlueprintDetailPage />} />
+      {/* 0082: what the next shop charges. Public — a saving is information
+          the whole town should be able to check before joining anything. */}
+      <Route path="/savings" element={<SavingsPage />} />
+      {/* Jobs are readable before sign-in; applying needs an account and is
+          free. Nothing on either page takes money from the applicant. */}
+      <Route path="/jobs" element={<JobsBoardPage />} />
+      <Route path="/jobs/post" element={<PostJobPage />} />
+      <Route path="/jobs/mine" element={<MyJobsPage />} />
+      <Route path="/jobs/:id" element={<JobDetailPage />} />
       {/* Operator side of the same desk: where a request lands. The API answers
           403 for anyone without a market-ops role, so the page can be public. */}
       <Route path="/storefront/inbox" element={<EnquiryInboxPage />} />
@@ -321,6 +340,9 @@ function AppRoutes() {
           <Route path="/inbox" element={<InboxPage />} />
           <Route path="/routines" element={<RoutinesPage />} />
           <Route path="/street" element={<StreetPage />} />
+          {/* 0082: the receipt game as a paid task. Signed in, so a day can be
+              assessed against a real person and a monthly cap. */}
+          <Route path="/price-work" element={<PriceWorkPage />} />
           <Route path="/live" element={<Navigate to="/street" replace />} />
           <Route path="/e/:slug" element={<EventShareRedirect />} />
           <Route path="/you" element={<YouPage />} />

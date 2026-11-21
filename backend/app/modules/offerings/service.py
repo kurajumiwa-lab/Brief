@@ -34,6 +34,7 @@ from app.models.stock import StockItem, StockSource
 from app.models.tools import ToolCategory, ToolListing
 from app.models.vendor import Vendor
 from app.modules.schedule.domains import check_domain
+from app.modules.offerings import terms
 from app.modules.schedule.models import SERVICE_MODES, AvailabilityRule, BookableService, ServiceModePrice
 
 LIMIT = 200
@@ -112,6 +113,11 @@ def _item(kind: str, r, modes=None) -> dict:
                 "price_unit": r.price_unit, "available": bool(r.is_available)}
         radius, photos = r.service_radius_km, list(r.images or [])
         quantity = None
+    fee = float(r.platform_fee_pct or 0)
+    cut = float(r.buyer_cutback_pct or 0)
+    # The buyer's numbers are computed here, once, so no client re-derives a
+    # discount differently from the server that will be asked to honour it.
+    price = base["price"]
     return {
         "kind": kind,
         "id": str(r.id),
@@ -122,6 +128,14 @@ def _item(kind: str, r, modes=None) -> dict:
         "service_radius_km": radius,
         "photos": photos,
         "quantity": quantity,
+        # Seller terms. `platform_fee_pct` is ours and never influences order;
+        # `buyer_cutback_pct` is the buyer's and is the only money-adjacent
+        # number the partner band may read (see offerings/terms.py).
+        "platform_fee_pct": fee,
+        "buyer_cutback_pct": cut,
+        "cutback_kes": terms.cutback_kes(price, cut),
+        "buyer_price": terms.buyer_price(price, cut),
+        "partner": cut > 0,
     }
 
 
@@ -356,6 +370,65 @@ def _check_price(mode: str, price: Optional[float], *, sent: bool) -> Optional[f
     return price
 
 
+def _terms(fee, cut) -> tuple[float, float]:
+    """Validate a seller's two percentages, together.
+
+    The pair is checked as a pair: an offer where our fee plus the buyer's
+    cutback exceeds the ceiling stops being an offer and becomes a markup.
+    """
+    try:
+        fee_pct = terms.clean_pct(fee, ceiling=terms.MAX_PLATFORM_FEE_PCT,
+                                  what="Our share")
+        cut_pct = terms.clean_pct(cut, ceiling=terms.MAX_CUTBACK_PCT,
+                                  what="The buyer's cutback")
+        terms.terms_ok(fee_pct, cut_pct)
+    except ValueError as exc:
+        raise OfferingError(str(exc), 422)
+    return fee_pct, cut_pct
+
+
+# Suggested percentages by line of business, so a seller is choosing rather
+# than guessing. The reason travels with the number; `terms` never publishes a
+# suggestion as a fact about anyone's margins.
+SUGGESTIONS = (
+    ("fresh_produce", "Fresh produce wholesale", 0.5, 1.0,
+     "Wholesale margins are thin; a small cutback is already a real saving."),
+    ("dry_goods", "Dry goods wholesale", 0.5, 1.5,
+     "Bales and cartons move in volume, so 1–2% back is a visible difference."),
+    ("shop_retail", "Shop retail", 1.0, 4.0,
+     "Retail margins carry a bigger cutback without giving away the sale."),
+    ("services", "Services", 2.0, 6.0,
+     "One job, high margin: the customer sees a real saving and you keep the work."),
+    ("equipment", "Equipment and rentals", 2.0, 8.0,
+     "A day rate is priced per job, so a percentage back is easy to absorb."),
+    ("hardware", "Hardware and building", 1.0, 2.5,
+     "Order values are large; a couple of points is a meaningful discount."),
+    ("agrovet", "Agrovet and inputs", 1.0, 2.0,
+     "Repeat buyers compare prices closely; 2% back wins the next season."),
+)
+
+
+def suggestions() -> dict:
+    """What we suggest, and the ceiling, for the owner's terms form."""
+    return {
+        "lines": [
+            {"key": key, "label": label, "platform_fee_pct": fee, "buyer_cutback_pct": cut,
+             "reason": reason}
+            for key, label, fee, cut, reason in SUGGESTIONS
+        ],
+        "ceilings": {
+            "platform_fee_pct": terms.MAX_PLATFORM_FEE_PCT,
+            "buyer_cutback_pct": terms.MAX_CUTBACK_PCT,
+            "combined_pct": terms.MAX_COMBINED_PCT,
+        },
+        "note": (
+            "Our share never changes where an offer appears. The buyer's cutback "
+            "does, and only inside the labelled partner strip — where a cheaper "
+            "offer always wins."
+        ),
+    }
+
+
 def _modes_input(value) -> list[dict]:
     """Validate the list of delivery modes a service is given in. Each has its own price."""
     if not isinstance(value, list) or not value:
@@ -440,6 +513,7 @@ async def create(db: AsyncSession, vendor: Vendor, kind: str, data: dict):
     photos = _photos(data.get("photos"))
     radius = _radius(data.get("service_radius_km"), kind)
     desc = _text(data.get("description"), 1, 2000, "a description", required=False)
+    fee_pct, cut_pct = _terms(data.get("platform_fee_pct"), data.get("buyer_cutback_pct"))
 
     if kind != "service" and data.get("domain") is not None:
         raise OfferingError("Only services have a domain.", 422)
@@ -456,6 +530,7 @@ async def create(db: AsyncSession, vendor: Vendor, kind: str, data: dict):
             unit_of_measure=_text(data.get("price_unit"), 1, 50, "a unit", required=False) or "units",
             unit_price=price, source=StockSource.MANUAL_ENTRY,
             visible_to_network=True, images=photos, price_mode=mode,
+            platform_fee_pct=fee_pct, buyer_cutback_pct=cut_pct,
         )
     elif kind == "service":
         duration = data.get("duration_minutes", 30)
@@ -469,6 +544,7 @@ async def create(db: AsyncSession, vendor: Vendor, kind: str, data: dict):
             is_active=True, price_mode=mode, service_radius_km=radius, images=photos,
             price_unit=_text(data.get("price_unit"), 1, 30, "a price unit", required=False),
             domain=_domain(data.get("domain")),
+            platform_fee_pct=fee_pct, buyer_cutback_pct=cut_pct,
         )
         if modes_in is not None:
             _apply_modes(row, modes_in)
@@ -484,6 +560,7 @@ async def create(db: AsyncSession, vendor: Vendor, kind: str, data: dict):
             description=desc, price_per_unit=price,
             price_unit=_text(data.get("price_unit"), 1, 50, "a price unit", required=False),
             is_available=True, price_mode=mode, service_radius_km=radius, images=photos,
+            platform_fee_pct=fee_pct, buyer_cutback_pct=cut_pct,
         )
     db.add(row)
     await db.flush()
@@ -509,11 +586,15 @@ async def owned(db: AsyncSession, vendor: Vendor, kind: str, offering_id: str):
     return row
 
 
+TERMS_FIELDS = {"platform_fee_pct", "buyer_cutback_pct"}
+
 EDITABLE = {
-    "goods": {"title", "description", "category", "price", "price_unit", "price_mode", "photos", "quantity"},
+    "goods": {"title", "description", "category", "price", "price_unit", "price_mode", "photos", "quantity"}
+             | TERMS_FIELDS,
     "service": {"title", "description", "price", "price_unit", "price_mode", "photos", "service_radius_km",
-                "duration_minutes", "domain", "modes"},
-    "tool": {"title", "description", "category", "price", "price_unit", "price_mode", "photos", "service_radius_km"},
+                "duration_minutes", "domain", "modes"} | TERMS_FIELDS,
+    "tool": {"title", "description", "category", "price", "price_unit", "price_mode", "photos",
+             "service_radius_km"} | TERMS_FIELDS,
 }
 
 
@@ -594,6 +675,14 @@ async def update(db: AsyncSession, vendor: Vendor, kind: str, offering_id: str, 
                 raise OfferingError("Choose a tool category from the list.", 422)
         if "price_unit" in patch:
             row.price_unit = _text(patch["price_unit"], 1, 50, "a price unit", required=False)
+
+    if TERMS_FIELDS & set(patch):
+        fee_pct, cut_pct = _terms(
+            patch.get("platform_fee_pct", float(row.platform_fee_pct or 0)),
+            patch.get("buyer_cutback_pct", float(row.buyer_cutback_pct or 0)),
+        )
+        row.platform_fee_pct = fee_pct
+        row.buyer_cutback_pct = cut_pct
 
     await db.flush()
     if kind == "service" and modes_in is not None:

@@ -159,6 +159,9 @@ from app.modules.office.models import (  # noqa: F401
     Office, OfficeEvent, OfficeMember, OfficeSavedItem,
 )
 from app.modules.leads.models import LeadEvent  # noqa: F401
+from app.modules.hiring.models import (  # noqa: F401
+    HiringApplication, HiringBroadcast, HiringClaim, ObservationReward,
+)
 from app.modules.pulse.models import FlashDrop, FlashDropClaim  # noqa: F401
 from app.modules.street.models import (  # noqa: F401
     StreetBroadcast, StreetLobby, StreetLobbyMember,

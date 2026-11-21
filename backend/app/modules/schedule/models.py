@@ -15,7 +15,8 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import (
-    Boolean, CheckConstraint, Column, DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint, text,
+    Boolean, CheckConstraint, Column, DateTime, ForeignKey, Index, Integer, Numeric,
+    String, Text, UniqueConstraint, text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import relationship
@@ -79,6 +80,10 @@ class BookableService(Base):
     archived_at = Column(DateTime, nullable=True)  # set = archived (kept, hidden from lists)
     service_radius_km = Column(Integer, nullable=True)  # how far the offer reaches, 1..500
     images = Column(JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb"))
+    # Seller terms (migration 0082): our share never ranks; the buyer's cutback
+    # is the only money-adjacent number ranking may read. 0 = not a partner.
+    platform_fee_pct = Column(Numeric(5, 2), nullable=False, default=0, server_default="0")
+    buyer_cutback_pct = Column(Numeric(5, 2), nullable=False, default=0, server_default="0")
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
 

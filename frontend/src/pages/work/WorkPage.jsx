@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  ClipboardList, Megaphone, Receipt, ListChecks, Lock, CalendarDays, Truck,
-  ChevronRight, UserPlus,
+  Briefcase, ChevronRight, ClipboardList, CalendarDays, Footprints, ListChecks,
+  Lock, Megaphone, Receipt, Truck, UserPlus,
 } from "lucide-react";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
@@ -66,6 +66,12 @@ export default function WorkPage() {
           badge={awaiting || null} />
         <WorkLink to="/tasks" icon={ListChecks} label="Tasks & jobs"
           sub="Hustle contracts and job calls" />
+        {/* 0082: hiring is its own door, because it is the one place money is
+            never taken from the person working. */}
+        <WorkLink to="/jobs" icon={Briefcase} label="Jobs hiring now"
+          sub="Free to apply, always. Employers pay, after a hire" />
+        <WorkLink to="/price-work" icon={Footprints} label="Price work"
+          sub="Note a town's prices; a full day pays KSh 200" />
         <WorkLink to="/referrals" icon={UserPlus} label="Referral network"
           sub="Introduce a new customer; verify with a receipt" />
         <WorkLink to="/locks" icon={Lock} label="Market locks"

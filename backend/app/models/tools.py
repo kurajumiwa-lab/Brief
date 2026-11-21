@@ -3,7 +3,8 @@ from datetime import datetime
 from enum import Enum as PyEnum
 
 from sqlalchemy import (
-    Boolean, CheckConstraint, Column, DateTime, Enum, Float, ForeignKey, Integer, String, Text,
+    Boolean, CheckConstraint, Column, DateTime, Enum, Float, ForeignKey, Integer, Numeric,
+    String, Text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import relationship
@@ -59,6 +60,10 @@ class ToolListing(Base):
     is_available = Column(Boolean, default=True, nullable=False)
     price_mode = Column(String(12), nullable=False, default="fixed", server_default="fixed")  # fixed | negotiable | ask_me
     archived_at = Column(DateTime, nullable=True)  # set = archived (kept, hidden from lists)
+    # Seller terms (migration 0082): our share never ranks; the buyer's cutback
+    # is the only money-adjacent number ranking may read. 0 = not a partner.
+    platform_fee_pct = Column(Numeric(5, 2), nullable=False, default=0, server_default="0")
+    buyer_cutback_pct = Column(Numeric(5, 2), nullable=False, default=0, server_default="0")
     service_radius_km = Column(Integer, nullable=True)  # how far the offer reaches, 1..500
     available_from = Column(DateTime)
     available_until = Column(DateTime)

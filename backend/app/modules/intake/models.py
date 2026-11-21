@@ -33,6 +33,7 @@ from sqlalchemy import (
     Boolean,
     CheckConstraint,
     Column,
+    Date,
     DateTime,
     Float,
     ForeignKey,
@@ -106,9 +107,14 @@ class MarketObservation(Base):
             "status IN ('suggested','confirmed','rejected')",
             name="ck_market_observation_status",
         ),
+        CheckConstraint(
+            "source IN ('operator','customer','employee','rival','owner')",
+            name="ck_market_observations_source",
+        ),
         Index("ix_market_observations_status_created", "status", "created_at"),
         Index("ix_market_observations_category", "category"),
         Index("ix_market_observations_market", "market"),
+        Index("ix_market_observations_product", "product"),
     )
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -135,6 +141,22 @@ class MarketObservation(Base):
     wholesale = Column(Boolean, nullable=False, default=False, server_default="false")
     confidence = Column(Float, nullable=False, default=0.5, server_default="0.5")
     raw_line = Column(Text, nullable=True)
+
+    # Who reported it, and where it came from (migration 0082). A price anyone
+    # can see may be advertised by a customer, an employee in their own time, or
+    # a rival — never an internal document, and never anonymously: an unlabelled
+    # fact does not go up. `operator` is the original intake path.
+    reported_by = Column(
+        UUID(as_uuid=True), ForeignKey("vendors.id", ondelete="SET NULL"), nullable=True
+    )
+    source = Column(String(16), nullable=False, default="operator", server_default="operator")
+    observed_on = Column(Date, nullable=True)
+    # The business's right of reply: it may always answer a claim about itself.
+    reply_body = Column(Text, nullable=True)
+    reply_by = Column(
+        UUID(as_uuid=True), ForeignKey("vendors.id", ondelete="SET NULL"), nullable=True
+    )
+    replied_at = Column(DateTime, nullable=True)
 
     status = Column(String(16), nullable=False, default="suggested", server_default="suggested")
     decided_by = Column(
