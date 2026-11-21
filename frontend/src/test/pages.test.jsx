@@ -72,6 +72,7 @@ vi.mock("@/lib/api", () => {
     passportAPI: { publicView: vi.fn(() => ok({ score: { trust_score: 75, tier: "established" }, public_claims: [] })), catalog: vi.fn(() => ok({ claims: [], checklists: [] })), of: vi.fn(() => ok({ score: { trust_score: 75, tier: "established" }, public_claims: [] })) },
     growthAPI: { blueprint: vi.fn(() => ok({})), pulse: vi.fn(() => ok({ tasks: { done_count: 2, total_count: 5 } })) },
     requestsAPI: { list: vi.fn(() => ok([])) },
+    offeringsAPI: { mine: vi.fn(() => ok({ items: [], counts: {} })), of: vi.fn(() => ok({ items: [], counts: {} })) },
     onboardingAPI: { get: vi.fn(() => ok({ completion: 1, steps: [] })) },
     // the home hub reads four live counts
     newsAPI: { feed: vi.fn(() => ok({ window_days: 7, new_today: 2, generated_at: new Date().toISOString(), items: [], counts: {} })) },

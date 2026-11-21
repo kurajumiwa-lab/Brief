@@ -20,6 +20,13 @@ from app.services.work_showcase import (
     clean_work_items,
     public_work_items,
 )
+from app.services.gallery_showcase import (
+    MAX_GALLERY_ITEMS,
+    GalleryItem,
+    clean_gallery_items,
+    public_gallery_items,
+    tag_counts,
+)
 
 router = APIRouter()
 
@@ -81,6 +88,9 @@ class VendorOut(BaseModel):
     portfolio_images: list = []
     # Selected work: what this business has done, shown on its shop front.
     work_items: list = []
+    # The gallery board: the photographs the page is read by, with their chips.
+    gallery_items: list = []
+    gallery_tags: dict = {}
     # Claimed receipt merchants so `/p/:handle` can show probationary/verified/contested
     # shop status and offer a "Contest this claim" button to the real shop owner.
     claimed_merchants: list = []
@@ -141,6 +151,7 @@ class ProfileUpdate(BaseModel):
         except MediaUrlError as exc:
             raise ValueError(str(exc))
     work_items: Optional[List[WorkItem]] = Field(default=None, max_length=MAX_WORK_ITEMS)
+    gallery_items: Optional[List[GalleryItem]] = Field(default=None, max_length=MAX_GALLERY_ITEMS)
     chat_identity: Optional[dict] = None
 
 
@@ -228,6 +239,7 @@ def _extended_profile_dict(profile: VendorProfile) -> dict:
         "avatar_url": avatar_url,
         "portfolio_images": list(profile.portfolio_images or []),
         "work_items": public_work_items(profile),
+        "gallery_items": public_gallery_items(profile),
         "chat_identity": {
             "mode": chat_identity.get("mode", "business_logo"),
             "scope": chat_identity.get("scope", "organization"),
@@ -275,6 +287,12 @@ async def update_extended_profile(
         payload["work_items"] = cleaned_work
     else:
         payload.pop("work_items", None)
+    # Same contract as work: not mentioning the board never clears it.
+    cleaned_gallery = clean_gallery_items(data.gallery_items)
+    if cleaned_gallery is not None:
+        payload["gallery_items"] = cleaned_gallery
+    else:
+        payload.pop("gallery_items", None)
     avatar_url = payload.pop("avatar_url", None)
     chat_identity = payload.pop("chat_identity", None)
     for field, value in payload.items():
@@ -473,6 +491,8 @@ async def vendor_by_handle(
         out.avatar_url = cap.get("avatar_url") or chat_identity.get("avatar_url") or None
         out.portfolio_images = list(profile.portfolio_images or [])
         out.work_items = public_work_items(profile)
+        out.gallery_items = public_gallery_items(profile)
+        out.gallery_tags = tag_counts(out.gallery_items)
     from app.models.receipts import ReceiptMerchant
     from app.services.merchant_claims import status_label
 

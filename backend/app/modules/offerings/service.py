@@ -40,6 +40,10 @@ LIMIT = 200
 KINDS = ("goods", "service", "tool")
 PRICE_MODES = ("fixed", "negotiable", "ask_me")
 ACTIONS = ("pause", "resume", "archive")
+# A photo this API serves itself, or a real https link. Mirrors the rule in
+# `app/services/media_urls.py`, minus plain http.
+OWN_PHOTO_PREFIXES = ("https://", "/static/", "/api/files/", "uploads/")
+
 MAX_PHOTOS = 8
 MAX_RADIUS_KM = 500
 
@@ -295,11 +299,22 @@ def _photos(value) -> list[str]:
         raise OfferingError("Photos must be a list of links.", 422)
     if len(value) > MAX_PHOTOS:
         raise OfferingError(f"At most {MAX_PHOTOS} photos.", 422)
+    # `/static/…` and `/api/files/…` are this API's own photo routes, and they
+    # are exactly what `/api/files/upload` returns. They were missing from this
+    # list, so an uploaded photo could not be attached to an offering: the
+    # uploader produced the URL this validator refused. A plain `http://` link
+    # is still refused (a page served over TLS must not load mixed content), and
+    # so is anything that is not a picture.
     out = []
     for link in value:
-        if not isinstance(link, str) or not link.startswith("https://") or len(link) > 2000:
-            raise OfferingError("Each photo must be an https:// link.", 422)
-        out.append(link.strip())
+        if not isinstance(link, str):
+            raise OfferingError("Each photo must be a link.", 422)
+        clean = link.strip()
+        if len(clean) > 2000 or not clean.startswith(OWN_PHOTO_PREFIXES):
+            raise OfferingError(
+                "Each photo must be an uploaded photo or an https:// link.", 422
+            )
+        out.append(clean)
     return out
 
 

@@ -6,7 +6,10 @@ import {
   Twitter,
 } from "lucide-react";
 import Avatar from "@/components/ui/Avatar";
+import Media from "@/components/ui/Media";
 import Button from "@/components/ui/Button";
+import GalleryBoard, { AddGalleryModal } from "@/components/you/GalleryBoard";
+import PageOffers from "@/components/you/PageOffers";
 import { ClaimBadge, RankChip } from "@/components/identity/Rank";
 import { CAPABILITIES, identityLine } from "@/config/identity";
 import { regionFromPlace, regionPath } from "@/config/regions";
@@ -35,8 +38,15 @@ export default function PortfolioView({
   rank,
   isOwner = false,
   onShare,
+  /** What this page offers — public rows from /api/offerings/of/:handle. */
+  offers = [],
+  /** The owner's save hook: (nextGalleryItems) => Promise. Visitors never get one. */
+  onSaveGallery,
 }) {
   const [copied, setCopied] = useState(false);
+  const [gallery, setGallery] = useState(() => (Array.isArray(profile.gallery_items) ? profile.gallery_items : []));
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [galleryError, setGalleryError] = useState("");
   const [addressCopied, setAddressCopied] = useState(false);
   const initialMerchant = Array.isArray(vendor?.claimed_merchants) && vendor.claimed_merchants.length > 0
     ? vendor.claimed_merchants[0]
@@ -98,11 +108,37 @@ export default function PortfolioView({
   const links = shareLinks({ handle, title: name, phone });
   const year = (vendor?.created_at || vendor?.joined_at || "").slice(0, 4);
 
+  // The hero's three numbers are the three things a stranger checks before
+  // reading: what can I see, what can I buy, and how long have they been here.
   const stats = [
-    { label: work.length === 1 ? "Selected work" : "Selected work", value: work.length },
-    { label: "Trades", value: vendor?.movements_completed || 0 },
+    { label: gallery.length ? "Photos" : "Selected work", value: gallery.length || work.length },
+    { label: offers.length ? "Listings" : "Trades", value: offers.length || vendor?.movements_completed || 0 },
     { label: "Since", value: year || "—" },
   ];
+
+  // Optimistic: the board changes under the owner's thumb immediately, and rolls
+  // back with the reason if the server refuses. A visitor can never reach this —
+  // `onSaveGallery` is only passed by the owner's page.
+  async function persist(next) {
+    const previous = gallery;
+    setGallery(next);
+    setGalleryError("");
+    try {
+      await onSaveGallery?.(next);
+    } catch (error) {
+      setGallery(previous);
+      setGalleryError(apiError(error, "That change was not saved. Try again."));
+    }
+  }
+
+  function addPhotos(items) {
+    if (!items?.length) return;
+    persist([...gallery, ...items].slice(0, 30));
+  }
+
+  function removePhoto(index) {
+    persist(gallery.filter((_, i) => i !== index));
+  }
 
   async function copy(kind) {
     try {
@@ -279,6 +315,42 @@ export default function PortfolioView({
             {!phone && !email && <span className="self-center text-micro text-ink-4">Contact routes are not published yet.</span>}
           </div>
 
+          {/* ── the first four photos, as a strip ───────────────────────
+              A portfolio is looked at before it is read. The strip is the
+              top of the board, one tap from the full gallery, and it is
+              absent — not empty — when there are no photos yet. */}
+          {gallery.length > 0 && (
+            <div className="mt-4 -mx-1" data-testid="page-hero-strip">
+              <div className="flex items-center justify-between gap-2 px-1">
+                <p className="text-micro font-bold uppercase tracking-[0.12em] text-ink-4">
+                  {gallery.length} photo{gallery.length === 1 ? "" : "s"}
+                </p>
+                <a href="#gallery" className="inline-flex items-center gap-1 text-micro font-bold text-brand-700 hover:underline dark:text-brand-400">
+                  See the board
+                  <ArrowUpRight size={12} aria-hidden="true" />
+                </a>
+              </div>
+              <div className="mt-1.5 flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+                {gallery.slice(0, 6).map((photo, index) => (
+                  <button
+                    key={`${photo.image_url}-${index}`}
+                    type="button"
+                    onClick={() => document.getElementById("gallery")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                    className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl border border-edge-1 bg-surface-2 sm:h-28 sm:w-28"
+                    aria-label={photo.caption || `Photo ${index + 1}`}
+                  >
+                    <Media src={photo.image_url} alt="" className="h-full w-full object-cover" />
+                    {index === 5 && gallery.length > 6 && (
+                      <span className="absolute inset-0 grid place-items-center bg-ink-1/60 text-xs font-extrabold text-white">
+                        +{gallery.length - 6}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* ── the address, as a place not a route ────────────────────── */}
           {handle && (
             <div className="mt-4 flex items-center gap-2 rounded-xl border border-edge-1 bg-surface-0 px-3 py-2">
@@ -383,8 +455,8 @@ export default function PortfolioView({
       <nav aria-label="Page sections" className="mt-3 flex gap-1 overflow-x-auto no-scrollbar">
         {[
           ["#top", "Home"],
+          ["#gallery", "Portfolio"],
           ["#about", "About"],
-          ["#work", "Selected work"],
           ["#offers", "Offers"],
           ["#contact", "Contact"],
         ].map(([href, label]) => (
@@ -400,6 +472,19 @@ export default function PortfolioView({
 
       <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_19rem]">
         <div className="space-y-4">
+          {galleryError && (
+            <p role="alert" className="rounded-xl border border-danger/30 bg-danger-soft px-3 py-2 text-2xs font-semibold text-danger">
+              {galleryError}
+            </p>
+          )}
+
+          <GalleryBoard
+            items={gallery}
+            own={isOwner && Boolean(onSaveGallery)}
+            onAdd={() => setGalleryOpen(true)}
+            onRemove={removePhoto}
+          />
+
           {about && (
             <section id="about" className="rounded-2xl border border-edge-1 bg-surface-1 p-5">
               <h2 className="eyebrow">About</h2>
@@ -467,36 +552,41 @@ export default function PortfolioView({
             </section>
           )}
 
-          <section id="offers" className="rounded-2xl border border-edge-1 bg-surface-1 p-5">
+          <PageOffers
+            items={offers}
+            own={isOwner}
+            createHref="/you/page"
+          />
+
+          <section
+            id="around"
+            data-testid="page-region-door"
+            className="rounded-2xl border border-edge-1 bg-surface-1 p-4"
+          >
             <div className="flex items-start gap-3">
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-700 dark:bg-brand-500/10 dark:text-brand-300">
-                <Sparkles size={18} aria-hidden="true" />
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-700 dark:bg-brand-500/10 dark:text-brand-300">
+                <Sparkles size={16} aria-hidden="true" />
               </span>
               <div className="min-w-0">
                 <h2 className="text-sm font-extrabold text-ink-1">
-                  {region ? `Offers and needs around ${region.name}` : "Offers and needs nearby"}
+                  {region ? `Around ${region.name}` : "Offers and needs nearby"}
                 </h2>
                 <p className="mt-1 text-2xs leading-relaxed text-ink-3">
                   {region
-                    ? `What people are offering, asking for and scheduling across ${region.hub} and the wider region.`
-                    : "What people are offering, asking for and scheduling in this network."}
+                    ? `What other people are offering, asking for and scheduling across ${region.hub} and the wider region.`
+                    : "What other people are offering, asking for and scheduling in this network."}
                 </p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <Button
-                    as={Link}
-                    to={region ? `${regionPath(region)}?tab=offers` : "/regions"}
-                    size="sm"
-                  >
-                    See current offers
+                <div className="mt-2.5 flex flex-wrap gap-2">
+                  <Button as={Link} to={region ? `${regionPath(region)}?tab=offers` : "/regions"} size="sm" variant="secondary">
+                    See offers around here
                   </Button>
-                  <Button as={Link} to="/regions" size="sm" variant="secondary">
+                  <Button as={Link} to="/regions" size="sm" variant="ghost">
                     Browse regions
                   </Button>
                 </div>
               </div>
             </div>
-          </section>
-        </div>
+          </section>        </div>
 
         <aside className="space-y-3">
           <section id="contact" className="rounded-2xl border border-edge-1 bg-surface-1 p-4">
@@ -545,8 +635,8 @@ export default function PortfolioView({
             <ul className="mt-2 divide-y divide-edge-1">
               {[
                 ["#top", "Home"],
+                ["#gallery", "Portfolio"],
                 ["#about", "About"],
-                ["#work", "Selected work"],
                 ["#offers", "Offers"],
                 ["#contact", "Contact"],
               ].map(([href, label]) => (
@@ -617,8 +707,8 @@ export default function PortfolioView({
             <p className="text-micro font-bold uppercase tracking-[0.12em] text-surface-0/50">Quick links</p>
             <ul className="mt-2 grid grid-cols-2 gap-x-6 gap-y-1">
               <li><a href="#top" className="text-2xs text-surface-0/80 hover:text-surface-0">Home</a></li>
+              <li><a href="#gallery" className="text-2xs text-surface-0/80 hover:text-surface-0">Portfolio</a></li>
               <li><a href="#about" className="text-2xs text-surface-0/80 hover:text-surface-0">About</a></li>
-              <li><a href="#work" className="text-2xs text-surface-0/80 hover:text-surface-0">Selected work</a></li>
               <li><a href="#offers" className="text-2xs text-surface-0/80 hover:text-surface-0">Offers</a></li>
               <li><a href="#contact" className="text-2xs text-surface-0/80 hover:text-surface-0">Contact</a></li>
               <li><Link to="/regions/all" className="text-2xs text-surface-0/80 hover:text-surface-0">All regions</Link></li>
@@ -634,6 +724,15 @@ export default function PortfolioView({
           </Link>
         </div>
       </footer>
+
+      {isOwner && onSaveGallery && (
+        <AddGalleryModal
+          open={galleryOpen}
+          onClose={() => setGalleryOpen(false)}
+          onAdd={addPhotos}
+          remaining={30 - gallery.length}
+        />
+      )}
 
       <p className="mt-3 text-center text-micro text-ink-4">
         {verifiedInstitution || verifiedLicence

@@ -1,0 +1,212 @@
+{
+ "vendor": {
+  "business_name": "Glow Cleaning Services",
+  "vendor_handle": "glow_cleaning",
+  "physical_location": "Milimani, Kisumu",
+  "business_description": "Deep cleaning for homes and offices across Kisumu. Our own supplies, our own team, and a written checklist for every visit — so you know what was done.",
+  "gallery_items": [
+   {
+    "image_url": "/static/uploads/84205804-c45a-49b5-8a62-e10d757480da/cleaner-blue.jpg",
+    "caption": "Our team, and the supplies we bring",
+    "tag": "team"
+   },
+   {
+    "image_url": "/static/uploads/18c6fe18-f0bc-4fd4-a30b-c3191b6b0959/deep-clean-livingroom.jpg",
+    "caption": "Deep clean — sitting room, Milimani",
+    "tag": "work"
+   },
+   {
+    "image_url": "/static/uploads/89d26a4e-5929-4457-88eb-86379fea83b0/before-tidy.jpg",
+    "caption": "Before: the morning after a family gathering",
+    "tag": "before-after"
+   },
+   {
+    "image_url": "/static/uploads/a91682ff-6f68-46e3-b265-a267f5cd0fa6/kitchen-team.jpg",
+    "caption": "Kitchen detail, done twice over",
+    "tag": "work"
+   },
+   {
+    "image_url": "/static/uploads/6b835531-77d7-4f86-a35c-e138c78f64e3/cleaner-headband.jpg",
+    "caption": "Every visit uses our own products",
+    "tag": "team"
+   },
+   {
+    "image_url": "/static/uploads/c5556d7d-53d2-4888-a419-8c19a09f89af/site-top.jpg",
+    "caption": "Offices after hours, three evenings a week",
+    "tag": "work"
+   },
+   {
+    "image_url": "/static/uploads/1746f2ec-846d-4ea7-b7ce-2d4f585c1122/cleaning-poster.jpg",
+    "caption": "What a deep clean covers",
+    "tag": "other"
+   },
+   {
+    "image_url": "/static/uploads/de0c7ed5-2ca9-4231-aee2-ed98a5f579ab/site-team.jpg",
+    "caption": "The crew you will actually meet",
+    "tag": "team"
+   },
+   {
+    "image_url": "/static/uploads/9e303a27-ad6f-410c-8ae3-737396c1d8d8/premises.jpg",
+    "caption": "Our base in Kisumu — supplies, restocked weekly",
+    "tag": "premises"
+   }
+  ],
+  "gallery_tags": {
+   "work": 3,
+   "before-after": 1,
+   "premises": 1,
+   "team": 3,
+   "product": 0,
+   "event": 0,
+   "other": 1
+  },
+  "work_items": [
+   {
+    "year": "2026",
+    "title": "Deep clean — 3-bedroom, Milimani",
+    "outcome": "Handed back the same afternoon",
+    "summary": "Kitchen, two bathrooms, windows and balcony. Four hours, one team.",
+    "image_url": "/static/uploads/ecee359d-8e6f-4a8c-8139-8a2161364b46/cleaning-site.jpg",
+    "discipline": "Residential cleaning"
+   },
+   {
+    "year": "2026",
+    "title": "Office contract — 3 evenings a week",
+    "outcome": "Nine months without a missed evening",
+    "summary": "Two cleaners after hours for a 14-desk office on the Kenyatta road.",
+    "image_url": "/static/uploads/a3f5b96e-5ea2-4989-a9de-1b3c261c8c03/cleaner-blue.jpg",
+    "discipline": "Commercial cleaning"
+   },
+   {
+    "year": "2025",
+    "title": "Move-out clean before handover",
+    "outcome": "Deposit returned in full",
+    "summary": "Empty house cleaned top to bottom so the deposit was returned in full.",
+    "discipline": "Move-out cleaning"
+   }
+  ],
+  "movements_completed": 0,
+  "created_at": null
+ },
+ "offers": [
+  {
+   "kind": "goods",
+   "id": "4cb88a7f-f96d-443f-b8bf-9ec10e38d734",
+   "title": "Cleaning starter pack",
+   "category": null,
+   "price": 1450.0,
+   "price_unit": "per pack",
+   "available": true,
+   "status": "active",
+   "price_mode": "fixed",
+   "description": "Two sprays, gloves, microfibre cloths and a scrub brush. Delivered in Kisumu.",
+   "service_radius_km": null,
+   "photos": [
+    "/static/uploads/e7b00bcc-9c2f-4acc-98b0-592a8e0b7f20/cleaner-headband.jpg"
+   ],
+   "quantity": 24
+  },
+  {
+   "kind": "service",
+   "id": "0ac29eea-aec3-48c9-8a9a-356cd84bde08",
+   "title": "Deep clean — 3-bedroom house",
+   "category": null,
+   "price": 3500,
+   "price_unit": "per visit",
+   "available": true,
+   "domain": "other_services",
+   "delivery_modes": [
+    "clinic"
+   ],
+   "modes": [
+    {
+     "mode": "in_shop",
+     "price": 3500.0,
+     "price_unit": "per visit",
+     "price_mode": "fixed"
+    }
+   ],
+   "status": "active",
+   "price_mode": "fixed",
+   "description": "Floors, kitchen, two bathrooms, windows and balcony. Own supplies and equipment.",
+   "service_radius_km": 15,
+   "photos": [
+    "/static/uploads/dd99b90e-42a3-42ba-a665-d173a90a848e/deep-clean-livingroom.jpg"
+   ],
+   "quantity": null
+  },
+  {
+   "kind": "service",
+   "id": "7afe0ece-2def-41a6-b439-3ecbab3be6b1",
+   "title": "Move-in / move-out clean",
+   "category": null,
+   "price": null,
+   "price_unit": null,
+   "available": true,
+   "domain": "other_services",
+   "delivery_modes": [
+    "clinic"
+   ],
+   "modes": [
+    {
+     "mode": "in_shop",
+     "price": null,
+     "price_unit": null,
+     "price_mode": "ask_me"
+    }
+   ],
+   "status": "active",
+   "price_mode": "ask_me",
+   "description": "Empty-house clean before handover. Priced after a short look at the space.",
+   "service_radius_km": 20,
+   "photos": [],
+   "quantity": null
+  },
+  {
+   "kind": "service",
+   "id": "51971b50-49b3-41d2-8156-56dc04d6fa37",
+   "title": "Office cleaning, weekly contract",
+   "category": null,
+   "price": 18000,
+   "price_unit": "per month",
+   "available": true,
+   "domain": "other_services",
+   "delivery_modes": [
+    "clinic"
+   ],
+   "modes": [
+    {
+     "mode": "in_shop",
+     "price": 18000.0,
+     "price_unit": "per month",
+     "price_mode": "negotiable"
+    }
+   ],
+   "status": "active",
+   "price_mode": "negotiable",
+   "description": "Two cleaners, three evenings a week. Consumables included and restocked monthly.",
+   "service_radius_km": 25,
+   "photos": [
+    "/static/uploads/90921bc1-0695-4765-be2d-cd9fc3e85f67/site-top.jpg"
+   ],
+   "quantity": null
+  },
+  {
+   "kind": "tool",
+   "id": "586c4b83-ec91-4dc3-b1e9-465003e8134f",
+   "title": "Wet-and-dry vacuum for hire",
+   "category": "equipment",
+   "price": 1200.0,
+   "price_unit": "per day",
+   "available": true,
+   "status": "active",
+   "price_mode": "fixed",
+   "description": "16-litre machine with hose and floor head. Day rate, collected or delivered.",
+   "service_radius_km": 10,
+   "photos": [
+    "/static/uploads/277580d4-91b3-4630-bef5-9b87d3a1e6a5/cleaning-poster.jpg"
+   ],
+   "quantity": null
+  }
+ ]
+}

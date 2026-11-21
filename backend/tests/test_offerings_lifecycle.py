@@ -86,6 +86,12 @@ async def test_photos_must_be_https_links_and_capped(client):
     assert (await _create(client, headers, {**GOOD, "photos": ["http://x.example/a.jpg"]})).status_code == 422
     assert (await _create(client, headers, {**GOOD, "photos": ["javascript:alert(1)"]})).status_code == 422
     assert (await _create(client, headers, {**GOOD, "photos": ["https://x.example/a.jpg"] * 9})).status_code == 422
+    # A photo this API served itself is a photo: `/api/files/upload` returns
+    # `/static/…`, and refusing it meant an upload that could never be attached.
+    for own in ("/static/uploads/a/b.jpg", "/api/files/a.jpg"):
+        r = await _create(client, headers, {**GOOD, "photos": [own]})
+        assert r.status_code == 201, (own, r.text)
+        assert r.json()["photos"] == [own]
     r = await _create(client, headers, {**GOOD, "photos": ["https://x.example/a.jpg"]})
     assert r.status_code == 201 and r.json()["photos"] == ["https://x.example/a.jpg"]
 
