@@ -1307,3 +1307,23 @@ export const templatePacksAPI = {
   /** Creates the DRAFT the pack describes. Publishes nothing. */
   start: (key) => api.post(`/template-packs/${key}/start`),
 };
+
+
+// ── 0083: merit — a published record of what a business did ─────────────────
+// No endpoint here charges, lends, pays out or sells a score. The report is
+// exported by the business itself; Brief sends it to nobody.
+export const meritAPI = {
+  /** A page's trust card. Public: a claim nobody can check is a boast. */
+  card: (handle) => api.get(`/merit/public/${handle}`),
+  ticker: (handle, days = 30) => api.get(`/merit/public/${handle}/ticker`, { params: { days } }),
+  endorsements: (handle) => api.get(`/merit/public/${handle}/endorsements`),
+  leaderboard: () => api.get("/merit/public/leaderboard/records"),
+  mine: () => api.get("/merit/me"),
+  endorse: (handle, reason, context) => api.post("/merit/endorsements", { handle, reason, context }),
+  withdraw: (id) => api.delete(`/merit/endorsements/${id}`),
+  startMentorship: (handle, note) => api.post("/merit/mentorships", { handle, note }),
+  mentorships: () => api.get("/merit/mentorships"),
+  milestone: (id, milestone) => api.post(`/merit/mentorships/${id}/milestones`, { milestone }),
+  concierge: () => api.get("/merit/concierge"),
+  report: () => api.get("/merit/report"),
+};

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Link } from "react-router-dom";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
@@ -31,7 +32,31 @@ export default function DeskPage() {
   const [error, setError] = useState("");
   const [showArchived, setShowArchived] = useState(false);
   const [editing, setEditing] = useState(null); // null | "new" | offering item
+  // A door can name what it wants added: /desk?new=service opens the form on
+  // "service" instead of making the person pick again from a dropdown. The
+  // parameter is honest about what it is — a starting point, not a lock, so the
+  // kind is still changeable inside the form.
+  const [params, setParams] = useSearchParams();
+  // The choice is kept in state, not read back off the URL: the URL is cleaned
+  // as soon as it has been used, and a value that disappears from the address
+  // bar must not disappear from the form.
+  const [doorKind, setDoorKind] = useState(null);
   const [busy, setBusy] = useState("");
+
+  const askedKind = params.get("new");
+
+  useEffect(() => {
+    if (!askedKind) return;
+    if (["goods", "service", "tool"].includes(askedKind) && editing === null) {
+      setDoorKind(askedKind);
+      setEditing("new");
+    }
+    const next = new URLSearchParams(params);
+    next.delete("new");
+    setParams(next, { replace: true });
+    // Only the arrival matters; a later visit to the same URL is a new arrival.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [askedKind]);
 
   const load = useCallback(async () => {
     setError("");
@@ -87,18 +112,26 @@ export default function DeskPage() {
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-xl font-extrabold tracking-tight text-ink-1">My desk</h1>
-          <p className="text-sm text-ink-2">Everything you offer, in one place.</p>
+          <p className="text-sm text-ink-2">
+            Everything you offer, in one place — each with its price, duration and
+            what it includes.
+          </p>
         </div>
         {editing === null && <Button onClick={() => setEditing("new")}>Add an offering</Button>}
       </header>
 
       {editing !== null && (
         <Card className="p-4">
-          <h2 className="mb-3 text-base font-bold text-ink-1">
+          <h2 className="text-base font-bold text-ink-1">
             {editing === "new" ? "Add an offering" : `Edit “${editing.title}”`}
           </h2>
+          <p className="mb-3 mt-1 text-2xs text-ink-3">
+            One form, one save. The button at the bottom of the form saves it
+            straight to your page — there is nothing else to confirm.
+          </p>
           <OfferingForm
             offering={editing === "new" ? null : editing}
+            initialKind={doorKind || undefined}
             onCancel={() => setEditing(null)}
             onSaved={async () => { setEditing(null); await load(); }}
           />

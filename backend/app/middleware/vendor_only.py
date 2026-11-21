@@ -38,6 +38,9 @@ PUBLIC_READ_PREFIXES = ("/api/profiles/", "/api/og/events/", "/api/offers/public
                         "/api/event-desk/public/rate-cards/",
                         # The public Page (/page/:handle): one read per business, no account.
                         "/api/professional/page/",
+                        # A business's trust card, ticker and endorsements: published
+                        # precisely so a stranger can check them, GET only.
+                        "/api/merit/public/",
                         # Pulse windows and live drops are browsable before sign-in.
                         # Claiming a drop is a POST and still needs a member.
                         "/api/pulse",

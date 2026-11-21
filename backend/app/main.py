@@ -396,6 +396,12 @@ app.include_router(pulse_public, prefix="/api/pulse", tags=["Market pulse"])
 from app.modules.trust.router import customer as trust_customer  # noqa: E402
 app.include_router(trust_customer, prefix="/api/trust/customer", tags=["MarketTrust (customers)"])
 
+# Merit: the Trust Score, endorsements, mentorship and the Pattern Report.
+# It computes a record of what happened; it never lends, holds or pays out.
+from app.modules.merit.router import router as merit_router, public as merit_public  # noqa: E402
+app.include_router(merit_public, prefix="/api/merit/public", tags=["Merit (public)"])
+app.include_router(merit_router, prefix="/api/merit", tags=["Merit"])
+
 from app.modules.knowledge.router import router as knowledge_router  # noqa: E402
 app.include_router(knowledge_router, prefix="/api/knowledge", tags=["Knowledge directory"])
 from app.modules.routine.router import router as routine_router  # noqa: E402

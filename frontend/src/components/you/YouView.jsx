@@ -126,11 +126,27 @@ export default function YouView({
               What I do
             </h2>
             <p className="mt-0.5 text-2xs leading-relaxed text-ink-3">
-              Switch these on when they are true. You can change them any month —
-              the network is built for that.
+              Switch these on when they are true — they become the &ldquo;What I do&rdquo; line on
+              your page. You can change them any month; the network is built for that.
             </p>
           </div>
         </div>
+        {handle && (
+          <Link
+            to={`/p/${handle}?add=photos`}
+            data-testid="you-add-work-photos"
+            className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-edge-1 bg-surface-0 px-3 py-2.5 hover:border-edge-2"
+          >
+            <span className="min-w-0">
+              <span className="block text-xs font-bold text-ink-1">Add photos of your work</span>
+              <span className="mt-0.5 block text-2xs leading-snug text-ink-3">
+                Opens your page at the photo sheet. Tag them <strong>Before &amp; after</strong>
+                &nbsp;to show a result, not just a product.
+              </span>
+            </span>
+            <ArrowUpRight size={14} className="shrink-0 text-ink-4" aria-hidden="true" />
+          </Link>
+        )}
 
         <ul className="mt-3 space-y-1">
           {CAPABILITIES.map((capability) => {
@@ -300,7 +316,10 @@ export default function YouView({
       >
         <span className="flex items-center gap-2.5 text-xs font-bold text-ink-1">
           <Settings size={15} className="text-ink-3" aria-hidden="true" />
-          Settings & records
+          Settings &amp; records
+          <span className="hidden text-micro font-medium text-ink-4 sm:inline">
+            — the long list, also on Home as &ldquo;The counter&rdquo;
+          </span>
         </span>
         <ChevronRight size={15} className="text-ink-4" aria-hidden="true" />
       </Link>

@@ -594,6 +594,16 @@ Three rules hold the whole design up — a paying partner never outranks a cheap
 verified offer, the person looking for work never pays, and nobody gets paid until
 someone is hired.
 
+## Merit (built)
+
+`docs/briefs/merit-and-trust-ticker.md` — **the Trust Score**: six capped evidence
+families summing to 100, no fee or plan as an input (asserted against the source),
+Blue Chip requiring two independent families, decay floored at 40% so quiet is not
+misconduct, mentoring capped below the first tier, and a Pattern Report the business
+exports itself and hands to a lender of its choosing. Discovery position moves by at
+most five per cent. `alembic/versions/0083_merit.py`, `app/modules/merit/`, the
+`TrustTicker` on every public page and `/merit/:handle` for the full record.
+
 Built as `alembic/versions/0082_open_market.py` plus: `offerings/terms.py` (the two
 percentages, the ceilings, the band); `hiring/` (broadcasts, applications, the claim
 ledger, the reward ladder); `intake/claims.py` (public price claims and the savings

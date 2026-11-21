@@ -37,6 +37,14 @@ export default function OfficePage() {
   const [detail, setDetail] = useState(null);
   const [error, setError] = useState(null);
   const [notice, setNotice] = useState(null);
+  // True once we have waited long enough to stop pretending this is progress.
+  const [stalled, setStalled] = useState(false);
+
+  useEffect(() => {
+    if (offices !== null) return undefined;
+    const timer = window.setTimeout(() => setStalled(true), 10000);
+    return () => window.clearTimeout(timer);
+  }, [offices]);
 
   const loadMine = useCallback(async () => {
     try {
@@ -87,12 +95,47 @@ export default function OfficePage() {
     }
   }
 
+  // A white screen on a phone is indistinguishable from a broken app, and this
+  // page used to answer a slow or failed request with one grey word on an
+  // otherwise empty page. Every state now names itself: the heading is always
+  // drawn, a failure offers a retry, and a stall after ten seconds says so
+  // instead of waiting quietly forever.
   if (offices === null) {
     return (
-      <div className="mx-auto max-w-3xl p-4 sm:p-6">
-        {error
-          ? <p role="alert" className="text-sm font-medium text-red-600">{error}</p>
-          : <p className="text-sm text-ink-3">Loading…</p>}
+      <div className="mx-auto max-w-3xl space-y-4 p-4 sm:p-6">
+        <header>
+          <p className="eyebrow flex items-center gap-1.5 text-ink-4">
+            <Lock size={11} aria-hidden="true" /> Private workspace
+          </p>
+          <h1 className="mt-1 text-xl font-semibold text-ink-1">Home office</h1>
+        </header>
+        {error ? (
+          <div role="alert" className="rounded-xl border border-edge-1 bg-surface-1 p-4">
+            <p className="text-sm font-semibold text-ink-1">Your office did not open.</p>
+            <p className="mt-1 text-sm text-ink-3">{error}</p>
+            <p className="mt-1 text-micro text-ink-4">
+              Nothing was lost. Your page, your stock and your records are untouched.
+            </p>
+            <Button className="mt-3" size="sm" onClick={() => { setError(null); loadMine(); }}>
+              Try again
+            </Button>
+          </div>
+        ) : stalled ? (
+          <div role="status" className="rounded-xl border border-edge-1 bg-surface-1 p-4">
+            <p className="text-sm font-semibold text-ink-1">This is taking longer than usual.</p>
+            <p className="mt-1 text-sm text-ink-3">
+              The network answered nothing. You can wait, or try again — nothing has changed
+              while you were waiting.
+            </p>
+            <Button className="mt-3" size="sm" onClick={loadMine}>Try again</Button>
+          </div>
+        ) : (
+          <div role="status" aria-live="polite" className="space-y-2" data-testid="office-loading">
+            <div className="h-16 animate-pulse rounded-xl bg-surface-2" />
+            <div className="h-24 animate-pulse rounded-xl bg-surface-2" />
+            <p className="text-micro text-ink-4">Opening your office…</p>
+          </div>
+        )}
       </div>
     );
   }

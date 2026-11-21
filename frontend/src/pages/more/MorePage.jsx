@@ -8,10 +8,15 @@ import { cn } from "@/lib/utils";
  * SETTINGS & RECORDS — the long tail, in one place, reached deliberately.
  *
  * Everything that used to compete with the five tabs lives here: records,
- * tools, plans and the operator desks. It is grouped, searchable by eye, and
- * never on the home screen. The test for adding something here is simple: is it
- * a record or a tool you open from a standing start? If it is something you do
- * every day, it belongs in one of the five.
+ * tools, plans and the operator desks. It is grouped, and searchable by eye.
+ *
+ * This is the full list. The four things a business needs before it can trade
+ * at all — its page, what it offers, receipts, and this list — are also on Home
+ * as "The counter". That is not a duplicate: the counter is the shelf of four
+ * standing positions, and this is every drawer behind them. The test for adding
+ * something here is still simple: is it a record or a tool you open from a
+ * standing start? If it is something you do every day, it belongs in one of the
+ * five destinations.
  */
 export default function MorePage() {
   const vendor = useAuthStore((s) => s.vendor);
@@ -28,7 +33,9 @@ export default function MorePage() {
         <h1 className="mt-1.5 text-2xl font-extrabold tracking-tight text-ink-1">Settings & records</h1>
         <p className="mt-2 text-sm leading-relaxed text-ink-3">
           The records, tools and plans that are not part of the five daily
-          destinations. Nothing here is hidden — it is just not in the way.
+          destinations. Nothing here is hidden — it is just not in the way. The
+          four you need before you trade are also on Home, under{" "}
+          <span className="font-semibold text-ink-2">The counter</span>.
         </p>
       </header>
 
