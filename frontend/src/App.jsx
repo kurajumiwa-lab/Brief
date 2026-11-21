@@ -163,10 +163,14 @@ function RequireVendor({ children }) {
   const { token, vendor, ready, authError } = useAuthStore();
   const location = useLocation();
   if (!token) {
-    // A `/p/<handle>` link arrives from WhatsApp. A stranger should see the
-    // public page, not a login wall; the short profile URL must keep working.
+    // A `/p/<handle>` link arrives from WhatsApp, and a stranger must see the
+    // page, not a login wall. It used to be redirected to the older
+    // `/page/<handle>`, which renders a different, card-shaped layout without
+    // the gallery or the listings — so the link we hand out showed the weaker
+    // page. It now renders exactly the page the owner sees, read-only: the
+    // components are public, only the editing controls are gated on `isOwner`.
     const shared = location.pathname.match(/^\/p\/([^/]+)\/?$/);
-    if (shared) return <Navigate to={`/page/${shared[1]}`} replace />;
+    if (shared) return children;
     return <Navigate to="/auth" replace state={{ from: location.pathname + location.search }} />;
   }
   if (!ready) return <PageSpinner label="Entering the network…" />;

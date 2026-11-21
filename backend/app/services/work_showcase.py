@@ -31,7 +31,12 @@ MAX_IMAGE_CHARS = 2_000_000  # a data-URL fallback is allowed, as the gallery do
 # An image is either an upload we served, an absolute URL, or a local data URL
 # fallback used when the upload endpoint is unavailable. Anything else — a
 # javascript: URL, a bare path, a promise of an image — is refused.
-ALLOWED_IMAGE_PREFIXES = ("https://", "http://", "/api/", "data:image/")
+#
+# `/static/` is the path `/api/files/upload` returns for a stored photo, and it
+# was missing from this list: the uploader handed back exactly the URL this
+# validator then refused, so a photo could be uploaded and never attached to a
+# card. It is served by the API's own media route, the same as `/api/files/`.
+ALLOWED_IMAGE_PREFIXES = ("https://", "http://", "/api/", "/static/", "uploads/", "data:image/")
 
 
 class WorkItem(BaseModel):

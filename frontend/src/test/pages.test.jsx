@@ -72,6 +72,7 @@ vi.mock("@/lib/api", () => {
     passportAPI: { publicView: vi.fn(() => ok({ score: { trust_score: 75, tier: "established" }, public_claims: [] })), catalog: vi.fn(() => ok({ claims: [], checklists: [] })), of: vi.fn(() => ok({ score: { trust_score: 75, tier: "established" }, public_claims: [] })) },
     growthAPI: { blueprint: vi.fn(() => ok({})), pulse: vi.fn(() => ok({ tasks: { done_count: 2, total_count: 5 } })) },
     requestsAPI: { list: vi.fn(() => ok([])) },
+    offeringsAPI: { mine: vi.fn(() => ok({ items: [], counts: {} })), of: vi.fn(() => ok({ items: [], counts: {} })) },
     onboardingAPI: { get: vi.fn(() => ok({ completion: 1, steps: [] })) },
     // the home hub reads four live counts
     newsAPI: { feed: vi.fn(() => ok({ window_days: 7, new_today: 2, generated_at: new Date().toISOString(), items: [], counts: {} })) },
@@ -136,7 +137,7 @@ beforeEach(async () => {
 
 describe("routing & auth gate", () => {
   it("sends signed-out visitors to /auth, and joining asks no category at all", async () => {
-    useAuthStore.setState({ token: null, vendor: null, ready: true });
+    useAuthStore.setState({ token: null, vendor: null, ready: false });
     mount(<App />, "/stock");
     expect(await screen.findByRole("heading", { name: /enter the network/i })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("tab", { name: /join/i }));
@@ -565,6 +566,31 @@ describe("Business Control Centre, Stock Visibility, Shop Front & Gallery Photos
     // only on the legacy /page/ route.
     expect(screen.getByTestId("page-payment-tag")).toBeInTheDocument();
     expect(screen.queryByRole("navigation", { name: /shop navigation/i })).not.toBeInTheDocument();
+  });
+
+  it("shows the full page to a stranger who opens a shared /p/ link", async () => {
+    // The address we hand out on WhatsApp must open without an account, and it
+    // must be the SAME page the owner sees — the gallery and the listings are
+    // the reason a stranger trusts it.
+    useAuthStore.setState({ token: null, vendor: null, ready: false });
+    // The professional card belongs to another handle in this suite's default
+    // mock; a real stranger's handle has one too, so answer it for this handle.
+    api.professionalAPI.page.mockResolvedValueOnce(ok({ handle: "kibanda_kitchen", preset: "service", preset_content: null }));
+    api.vendorAPI.byHandle.mockResolvedValueOnce(ok({
+      ...OTHER,
+      gallery_items: [{ image_url: "/static/uploads/a.jpg", caption: "The stall", tag: "premises" }],
+      gallery_tags: { work: 0, "before-after": 0, premises: 1, team: 0, product: 0, event: 0, other: 0 },
+    }));
+    api.offeringsAPI.of.mockResolvedValueOnce(ok({
+      items: [{ kind: "goods", id: "g1", title: "Kitenge 6-yard", price: 1200, price_unit: "per piece", price_mode: "fixed", available: true, photos: [] }],
+    }));
+    mount(<App />, "/p/kibanda_kitchen");
+
+    expect(await screen.findByRole("heading", { name: "Kibanda Kitchen" })).toBeInTheDocument();
+    expect(await screen.findByTestId("page-gallery")).toBeInTheDocument();
+    expect(await screen.findByText("Kitenge 6-yard")).toBeInTheDocument();
+    // Read-only: a visitor gets no editing controls.
+    expect(screen.queryByTestId("gallery-add")).not.toBeInTheDocument();
   });
 
   /* ── v2.16 · the portfolio became a capability, not a page ──────────────── */

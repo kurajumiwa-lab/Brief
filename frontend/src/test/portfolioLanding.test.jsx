@@ -88,12 +88,12 @@ describe("a landing page, not a card", () => {
   it("offers quick links in the page, the sidebar and the footer", () => {
     mount();
     const quick = screen.getByTestId("quick-links");
-    for (const label of ["Home", "About", "Selected work", "Offers", "Contact", "All regions"]) {
+    for (const label of ["Home", "Portfolio", "About", "Offers", "Contact", "All regions"]) {
       expect(within(quick).getByRole("link", { name: label })).toBeInTheDocument();
     }
     expect(screen.getByRole("navigation", { name: "Page sections" })).toBeInTheDocument();
     const footerNav = screen.getByRole("navigation", { name: "Quick links" });
-    expect(within(footerNav).getByRole("link", { name: "Selected work" })).toHaveAttribute("href", "#work");
+    expect(within(footerNav).getByRole("link", { name: "Portfolio" })).toHaveAttribute("href", "#gallery");
   });
 
   it("passes the page on through WhatsApp and the other networks", () => {
@@ -178,3 +178,86 @@ describe("a landing page, not a card", () => {
     spy.mockRestore();
   });
 });
+
+/**
+ * THE BOARD AND THE LISTINGS — the two things a visitor looks at before reading.
+ *
+ * A page is judged in pictures and prices: has this person done the work, and
+ * what does it cost? Both were missing from the first version of the page — the
+ * work list was text-only and the offers were two buttons pointing at a region
+ * feed. These tests hold the board to its rules: real photos only, the owner's
+ * controls kept apart from the visitor's, and a removal that actually saves.
+ */
+describe("the gallery board and the page's own offers", () => {
+  const BOARD = [
+    { image_url: "/static/uploads/a.jpg", caption: "Deep clean, Milimani", tag: "work" },
+    { image_url: "/static/uploads/b.jpg", caption: "The team", tag: "team" },
+    { image_url: "/static/uploads/c.jpg", caption: "Before the clean", tag: "before-after" },
+  ];
+
+  const OFFERS = [
+    { kind: "service", id: "o1", title: "Deep clean — 3-bedroom", price: 3500, price_unit: "per visit", price_mode: "fixed", available: true, duration_minutes: 180, photos: [] },
+    { kind: "goods", id: "o2", title: "Cleaning starter pack", price: 1450, price_unit: "per pack", price_mode: "fixed", available: true, quantity: 24, photos: [] },
+    { kind: "service", id: "o3", title: "Move-out clean", price: null, price_mode: "ask_me", available: true, photos: [] },
+  ];
+
+  it("shows the photos as a board with working chips", () => {
+    mount({ profile: { ...PROFILE, gallery_items: BOARD } });
+    const board = screen.getByTestId("page-gallery");
+    expect(within(board).getByRole("heading", { name: "Portfolio" })).toBeInTheDocument();
+    expect(within(board).getAllByRole("img")).toHaveLength(3);
+    // Counts come from the photos actually on the page, never from a promise.
+    const teamChip = within(board).getByRole("button", { name: /^the team 1$/i });
+    expect(teamChip).toHaveTextContent("1");
+    fireEvent.click(teamChip);
+    expect(within(screen.getByTestId("gallery-grid")).getAllByRole("img")).toHaveLength(1);
+  });
+
+  it("opens a photo at full size and closes it with Escape", () => {
+    mount({ profile: { ...PROFILE, gallery_items: BOARD } });
+    const grid = screen.getByTestId("gallery-grid");
+    fireEvent.click(within(grid).getByRole("button", { name: /deep clean/i }));
+    expect(screen.getByTestId("gallery-lightbox")).toBeInTheDocument();
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByTestId("gallery-lightbox")).not.toBeInTheDocument();
+  });
+
+  it("shows a visitor nothing when the board is empty", () => {
+    mount();
+    expect(screen.queryByTestId("page-gallery")).not.toBeInTheDocument();
+  });
+
+  it("lets the owner add and remove, and saves the whole list", async () => {
+    const onSaveGallery = vi.fn().mockResolvedValue(undefined);
+    mount({ profile: { ...PROFILE, gallery_items: BOARD }, isOwner: true, onSaveGallery });
+    expect(screen.getByTestId("gallery-add")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /remove photo: before the clean/i }));
+    await waitFor(() => expect(onSaveGallery).toHaveBeenCalledTimes(1));
+    expect(onSaveGallery.mock.calls[0][0].map((item) => item.caption)).toEqual([
+      "Deep clean, Milimani",
+      "The team",
+    ]);
+  });
+
+  it("puts the page's own listings and prices on the page", () => {
+    mount({ offers: OFFERS });
+    const section = screen.getByTestId("page-offers");
+    expect(within(section).getByText("Deep clean — 3-bedroom")).toBeInTheDocument();
+    expect(within(section).getByText(/KSh 3,500/)).toBeInTheDocument();
+    expect(within(section).getByText(/KSh 1,450/)).toBeInTheDocument();
+    // An "ask me" price says so; it is never shown as zero.
+    expect(within(section).getByText(/ask for a price/i)).toBeInTheDocument();
+  });
+
+  it("gives the owner a way to publish an offer and a visitor nothing to edit", () => {
+    mount({ offers: [], isOwner: true });
+    expect(within(screen.getByTestId("page-offers-empty")).getByRole("link", { name: /add an offer/i })).toHaveAttribute("href", "/you/page");
+    unmountAll();
+    mount({ offers: OFFERS, isOwner: false });
+    expect(within(screen.getByTestId("page-offers")).queryByRole("link", { name: /add or edit/i })).not.toBeInTheDocument();
+  });
+});
+
+function unmountAll() {
+  document.body.innerHTML = "";
+}

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import PresetContent from "@/components/page/PresetContent";
 import PaymentTag from "@/components/page/PaymentTag";
@@ -9,7 +9,7 @@ import EmptyState from "@/components/ui/EmptyState";
 import { useAuthStore } from "@/stores/authStore";
 import { useIdentityStore } from "@/stores/identityStore";
 import { rankFor } from "@/config/identity";
-import { vendorAPI, professionalAPI, socialTrustAPI } from "@/lib/api";
+import { vendorAPI, professionalAPI, socialTrustAPI, offeringsAPI } from "@/lib/api";
 import { pageUrl } from "@/lib/pageShare";
 
 /**
@@ -23,6 +23,12 @@ import { pageUrl } from "@/lib/pageShare";
  * they are read only when the viewer *is* the owner. Showing the viewer's own
  * claims on somebody else's page would be the worst kind of leak: a green badge
  * that means nothing.
+ *
+ * Four things arrive in parallel, and each one is allowed to fail alone:
+ *   · the page card — the preset's public content
+ *   · the account — name, place, contact, work and gallery
+ *   · the trust signals — optional, the page still works without them
+ *   · the offers — the real listings, which is what a visitor came for
  */
 export default function PortfolioPage() {
   const { handle } = useParams();
@@ -34,10 +40,12 @@ export default function PortfolioPage() {
   const [vendor, setVendor] = useState(null);
   const [pageCard, setPageCard] = useState(null);
   const [trustCard, setTrustCard] = useState(null);
+  const [offers, setOffers] = useState([]);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const own = Boolean(me?.vendor_handle && handle && me.vendor_handle === handle.replace(/^@/, ""));
+  const slug = String(handle).replace(/^@/, "");
+  const own = Boolean(me?.vendor_handle && handle && me.vendor_handle === slug);
 
   useEffect(() => {
     let alive = true;
@@ -45,11 +53,12 @@ export default function PortfolioPage() {
     setError(null);
     setPageCard(null);
     setTrustCard(null);
-    professionalAPI.page(String(handle).replace(/^@/, "")).then(({data}) => { if (alive && data.handle && data.handle !== String(handle).replace(/^@/, "").toLowerCase()) navigate(`/p/${data.handle}`, {replace:true}); else if (alive) setPageCard(data); }).catch(() => {});
+    setOffers([]);
+    professionalAPI.page(slug).then(({ data }) => { if (alive && data.handle && data.handle !== slug.toLowerCase()) navigate(`/p/${data.handle}`, { replace: true }); else if (alive) setPageCard(data); }).catch(() => {});
     vendorAPI
-      .byHandle(String(handle).replace(/^@/, ""))
+      .byHandle(slug)
       .then(({ data }) => {
-        if (alive && data.vendor_handle && data.vendor_handle !== String(handle).replace(/^@/, "").toLowerCase()) navigate(`/p/${data.vendor_handle}`, {replace:true});
+        if (alive && data.vendor_handle && data.vendor_handle !== slug.toLowerCase()) navigate(`/p/${data.vendor_handle}`, { replace: true });
         else if (alive) setVendor(data);
       })
       .catch((err) => {
@@ -59,14 +68,35 @@ export default function PortfolioPage() {
         if (alive) setLoading(false);
       });
     socialTrustAPI
-      ?.publicCard?.(String(handle).replace(/^@/, ""))
+      ?.publicCard?.(slug)
       ?.then(({ data }) => { if (alive) setTrustCard(data); })
       ?.catch(() => { /* the page still works without its trust signals */ });
+    // The listings are public and need no account. A page with none simply
+    // shows none; a failure here must not take the page down with it.
+    offeringsAPI
+      ?.of?.(slug)
+      ?.then(({ data }) => {
+        if (alive) setOffers(Array.isArray(data?.items) ? data.items : []);
+      })
+      ?.catch(() => {});
     if (own) loadIdentity();
     return () => {
       alive = false;
     };
-  }, [handle, own, loadIdentity, navigate]);
+  }, [handle, own, loadIdentity, navigate, slug]);
+
+  /**
+   * The owner's one write on this page: the gallery board.
+   *
+   * It sends the whole list because that is what the API contract says — a list
+   * is the board, so removing a photo is the same call as adding one. The board
+   * is re-read afterwards so what is on screen is what was actually stored.
+   */
+  const saveGallery = useCallback(async (items) => {
+    await vendorAPI.updateProfile({ gallery_items: items });
+    const { data } = await vendorAPI.byHandle(slug);
+    setVendor(data);
+  }, [slug]);
 
   if (loading) return <PageSpinner label="Opening the page…" />;
 
@@ -122,13 +152,16 @@ export default function PortfolioPage() {
         profile={{
           about: vendor.business_description,
           work_items: vendor.work_items || [],
+          gallery_items: vendor.gallery_items || [],
           avatar_url: vendor.avatar_url,
           banner_url: vendor.banner_url,
         }}
+        offers={offers}
         identity={effectiveIdentity}
         rank={rank}
         isOwner={own}
         onShare={share}
+        onSaveGallery={own ? saveGallery : undefined}
       />
     </div>
   );

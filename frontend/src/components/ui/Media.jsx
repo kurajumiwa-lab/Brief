@@ -24,16 +24,29 @@ export default function Media({
   className,
   fallback = null,
   loading = "lazy",
+  /**
+   * `fit` keeps the photograph's OWN shape instead of cropping it to a frame.
+   *
+   * A gallery is the one place this matters: a tall before-and-after and a wide
+   * premises shot cannot both live in a 4:3 box without one of them losing the
+   * thing that makes it evidence. The browser knows the intrinsic size as soon
+   * as the bytes arrive, so the frame is set from that (`aspect-ratio`) and the
+   * image is not distorted (`object-contain`). Before the file loads — or if it
+   * never does — `fallback` is what fills the frame.
+   */
+  fit = false,
   onFail,
   ...rest
 }) {
   const url = mediaUrl(src);
   const [failed, setFailed] = useState(false);
+  const [ratio, setRatio] = useState(null);
 
   // A card can be recycled with a different record (a carousel that re-renders
   // after a retry); a failure on the old URL must not hide the new one.
   useEffect(() => {
     setFailed(false);
+    setRatio(null);
   }, [url]);
 
   if (!url || failed) return fallback;
@@ -45,6 +58,17 @@ export default function Media({
       loading={loading}
       decoding="async"
       className={className}
+      style={fit && ratio ? { aspectRatio: ratio } : undefined}
+      onLoad={
+        fit
+          ? (event) => {
+              const image = event.currentTarget;
+              if (image?.naturalWidth && image?.naturalHeight) {
+                setRatio(`${image.naturalWidth} / ${image.naturalHeight}`);
+              }
+            }
+          : undefined
+      }
       onError={() => {
         setFailed(true);
         onFail?.();

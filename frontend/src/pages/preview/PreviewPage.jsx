@@ -33,7 +33,7 @@ const DEMO_VENDOR = {
   display_name: "Ogallo",
   physical_location: "Kisumu, Nyanza",
   business_description:
-    "I run a virtual kitchen in Kisumu. Ready meals for offices and small events — cooked to order, delivered within town. Fifteen years in hospitality, formerly at a hotel kitchen on the lakefront.",
+    "Deep cleaning for homes and offices across Kisumu. Our own supplies, our own team, and a written checklist for every visit — so you know what was done before we leave.",
   current_role: "both",
   account_kind: "person",
   movements_completed: 7,
@@ -58,9 +58,56 @@ const DEMO_PROFILE = {
       year: "2026",
     },
   ],
-  avatar_url: null,
+  // The board, with the palette of a working service business: the cleaner, the
+  // premises, the finished job. These are real files in `public/photos/`, so the
+  // preview shows exactly what an owner's upload would.
+  gallery_items: [
+    { image_url: "/photos/cleaner-blue.jpg", caption: "Our team, and the supplies we bring", tag: "team" },
+    { image_url: "/photos/deep-clean-livingroom.jpg", caption: "Deep clean — sitting room, Milimani", tag: "work" },
+    { image_url: "/photos/before-tidy.jpg", caption: "Before: the morning after a family gathering", tag: "before-after" },
+    { image_url: "/photos/kitchen-team.jpg", caption: "Kitchen detail, done twice over", tag: "work" },
+    { image_url: "/photos/cleaner-headband.jpg", caption: "Every visit uses our own products", tag: "team" },
+    { image_url: "/photos/premises.jpg", caption: "Our base in Kisumu — supplies, restocked weekly", tag: "premises" },
+    { image_url: "/photos/site-top.jpg", caption: "Offices after hours, three evenings a week", tag: "work" },
+    { image_url: "/photos/cleaning-poster.jpg", caption: "What a deep clean covers", tag: "other" },
+    { image_url: "/photos/site-team.jpg", caption: "The crew you will actually meet", tag: "team" },
+  ],
   banner_url: null,
 };
+
+/** The page's own listings — the same shape `/api/offerings/of/:handle` returns. */
+const DEMO_OFFERS = [
+  {
+    kind: "service", id: "o1", title: "Deep clean — 3-bedroom house",
+    description: "Floors, kitchen, two bathrooms, windows and balcony. Own supplies and equipment.",
+    price: 3500, price_unit: "per visit", price_mode: "fixed", available: true,
+    duration_minutes: 240, service_radius_km: 15, photos: ["/photos/deep-clean-livingroom.jpg"],
+  },
+  {
+    kind: "service", id: "o2", title: "Office cleaning, weekly contract",
+    description: "Two cleaners, three evenings a week. Consumables included and restocked monthly.",
+    price: 18000, price_unit: "per month", price_mode: "negotiable", available: true,
+    duration_minutes: 480, service_radius_km: 25, photos: ["/photos/site-top.jpg"],
+  },
+  {
+    kind: "goods", id: "o3", title: "Cleaning starter pack",
+    description: "Two sprays, gloves, microfibre cloths and a scrub brush. Delivered in Kisumu.",
+    price: 1450, price_unit: "per pack", price_mode: "fixed", available: true,
+    quantity: 24, photos: ["/photos/cleaner-headband.jpg"],
+  },
+  {
+    kind: "tool", id: "o4", title: "Wet-and-dry vacuum for hire",
+    description: "16-litre machine with hose and floor head. Day rate, collected or delivered.",
+    price: 1200, price_unit: "per day", price_mode: "fixed", available: true,
+    service_radius_km: 10, photos: ["/photos/cleaning-poster.jpg"],
+  },
+  {
+    kind: "service", id: "o5", title: "Move-in / move-out clean",
+    description: "Empty-house clean before handover. Priced after a short look at the space.",
+    price: null, price_unit: null, price_mode: "ask_me", available: true,
+    duration_minutes: 240, service_radius_km: 20, photos: [],
+  },
+];
 
 const DEMO_IDENTITY = {
   intent: "offer",
@@ -291,6 +338,7 @@ export default function PreviewPage() {
             profile={DEMO_PROFILE}
             identity={identity}
             rank={rank}
+            offers={DEMO_OFFERS}
             isOwner={false}
             onShare={() => {}}
           />

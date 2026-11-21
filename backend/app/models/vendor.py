@@ -189,5 +189,9 @@ class VendorProfile(Base):
     # {title, summary, outcome, discipline, year, image_url} — carried by the
     # shop front, because that is where a buyer already looks before hiring.
     work_items = Column(JSONB, default=list)
+    # The gallery board (v2.18): the photographs a page is read by before its
+    # words. A list of {image_url, caption, tag} — the tag comes from a fixed
+    # vocabulary (see `services/gallery_showcase.py`) so the chips filter.
+    gallery_items = Column(JSONB, nullable=False, default=list, server_default=sa_text("'[]'::jsonb"))
 
     vendor = relationship("Vendor", back_populates="profile")
