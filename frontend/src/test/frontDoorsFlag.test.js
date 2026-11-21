@@ -5,8 +5,11 @@ describe("feature flags default off", () => {
   it("open front doors is off unless VITE_NEARBY_DOORS_ENABLED=true", () => {
     expect(NEARBY_DOORS_ENABLED).toBe(false);
   });
-  it("desk stays off by default too", () => {
-    expect(DESK_ENABLED).toBe(false);
+  it("desk is on by default: it is the only screen that sets a price", () => {
+    // Changed deliberately. As an opt-in flag the desk was invisible in
+    // production, so a business had no discoverable place to add a service,
+    // a duration or a price. It is now opt-out — VITE_DESK_ENABLED=false hides it.
+    expect(DESK_ENABLED).toBe(true);
   });
 });
 

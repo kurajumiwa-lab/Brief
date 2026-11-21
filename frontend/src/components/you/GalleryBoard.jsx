@@ -337,20 +337,24 @@ export function AddGalleryModal({ open, onClose, onAdd, remaining = MAX_GALLERY_
   };
 
   return (
-    <div className="fixed inset-0 z-40 flex items-end justify-center bg-ink-1/50 sm:items-center" onClick={onClose}>
+    // z-50, above the fixed tab bar (z-40). At z-40 the "Add photos" button was
+    // rendered underneath the tab bar on a phone, which is why the last step of
+    // this sheet looked like it had no save at all.
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink-1/50 sm:items-center" onClick={onClose}>
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="add-gallery-heading"
         data-testid="add-gallery"
-        className="w-full max-w-lg rounded-t-3xl border border-edge-1 bg-surface-1 p-4 sm:rounded-3xl sm:p-5"
+        className="w-full max-w-lg max-h-[92vh] overflow-y-auto rounded-t-3xl border border-edge-1 bg-surface-1 p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] sm:rounded-3xl sm:p-5"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 id="add-gallery-heading" className="text-sm font-extrabold text-ink-1">Add photos</h2>
             <p className="mt-0.5 text-2xs text-ink-3">
-              Pick several at once. Name them and file them under one chip — you can change any of it later.
+              Pick several at once, name them and file them under one chip. This saves straight to your
+              page — there is nothing else to confirm afterwards.
             </p>
           </div>
           <button type="button" onClick={onClose} aria-label="Close" className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-ink-3 hover:bg-surface-2">
@@ -399,7 +403,13 @@ export function AddGalleryModal({ open, onClose, onAdd, remaining = MAX_GALLERY_
 
         <div className="mt-4 flex items-center justify-end gap-2">
           <Button type="button" size="sm" variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button type="button" size="sm" onClick={save} disabled={!picked.length}>
+          <Button
+            type="button"
+            size="sm"
+            onClick={save}
+            disabled={!picked.length}
+            data-testid="gallery-save"
+          >
             Add {picked.length || ""} {picked.length === 1 ? "photo" : "photos"}
           </Button>
         </div>

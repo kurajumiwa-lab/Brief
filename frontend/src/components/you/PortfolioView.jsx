@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   ArrowUpRight, BadgeCheck, Building2, Check, Copy, Facebook, Globe, Mail,
   MapPin, MessageCircle, PenLine, Phone, Send, Share2, ShieldCheck, Sparkles,
@@ -45,7 +45,22 @@ export default function PortfolioView({
 }) {
   const [copied, setCopied] = useState(false);
   const [gallery, setGallery] = useState(() => (Array.isArray(profile.gallery_items) ? profile.gallery_items : []));
-  const [galleryOpen, setGalleryOpen] = useState(false);
+  // A door can open the photo sheet directly: /p/<handle>?add=photos. The setup
+  // checklist and Home both need one address to send someone to, and "open your
+  // page, then find the Portfolio section, then find the small add button" is
+  // three steps we had no business asking for.
+  const [params, setParams] = useSearchParams();
+  const [galleryOpen, setGalleryOpen] = useState(params.get("add") === "photos");
+
+  useEffect(() => {
+    if (params.get("add") !== "photos") return;
+    setGalleryOpen(true);
+    const next = new URLSearchParams(params);
+    next.delete("add");
+    setParams(next, { replace: true });
+    // Only the arrival matters.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [galleryError, setGalleryError] = useState("");
   const [addressCopied, setAddressCopied] = useState(false);
   const initialMerchant = Array.isArray(vendor?.claimed_merchants) && vendor.claimed_merchants.length > 0
@@ -513,7 +528,7 @@ export default function PortfolioView({
                 <h2 className="eyebrow">Selected work</h2>
                 {isOwner && (
                   <Link
-                    to="/you/page"
+                    to={handle ? `/p/${handle}?add=photos` : "/you/page"}
                     className="inline-flex items-center gap-1 text-micro font-bold text-brand-700 hover:underline dark:text-brand-400"
                   >
                     Add or edit work

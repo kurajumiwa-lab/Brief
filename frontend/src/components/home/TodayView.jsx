@@ -8,6 +8,7 @@ import TownDoors from "@/components/home/TownDoors";
 import StreetDoor from "@/components/home/StreetDoor";
 import HappeningShelf from "@/components/home/HappeningShelf";
 import IdentityStrip from "@/components/home/IdentityStrip";
+import CounterShelf from "@/components/home/CounterShelf";
 
 /**
  * TODAY — the command centre, not a second discovery feed.
@@ -16,8 +17,14 @@ import IdentityStrip from "@/components/home/IdentityStrip";
  *
  *   1. Who am I here, and what do I send?   → the identity strip
  *   2. What is my next step?                → the ladder card
- *   3. What can I claim or join now?        → receipt wallet + happening shelf
- *   4. Is anything waiting on a reply?      → the inbox line
+ *   3. Are my own books in order?           → the counter (page, offers,
+ *                                             receipts, every record)
+ *   4. What can I claim or join now?        → receipt wallet + happening shelf
+ *   5. Is anything waiting on a reply?      → the inbox line
+ *
+ * The counter sits above the market deliberately. A business that has not
+ * written down what it sells and what it charges cannot be matched by anything
+ * below it; seeding its own record comes first, and the shelf says so.
  *
  * The full region feed lives in Regions. Home carries only dated rounds and
  * events, because "what can I join this week?" is an action, while "what is
@@ -110,6 +117,10 @@ export default function TodayView({
           </p>
         </section>
       )}
+
+      {/* Your own books, before the market. Settings & records used to be a
+          small text link at the foot of another screen. */}
+      <CounterShelf />
 
       {/* Receipts live in the feed, not behind a settings door: the value of a
           receipt is highest while the person is still in the shop. */}

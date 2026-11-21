@@ -16,9 +16,11 @@ import {
  * Create or edit one offering. The backend is the authority on every rule; this form checks
  * the same things first so the person sees the problem next to the field.
  */
-export default function OfferingForm({ offering, onSaved, onCancel }) {
+export default function OfferingForm({ offering, onSaved, onCancel, initialKind }) {
   const editing = Boolean(offering);
-  const kind = editing ? offering.kind : "goods";
+  // `initialKind` is how a door like "/desk?new=service" says what it means:
+  // the person already chose, so the form opens on that choice.
+  const kind = editing ? offering.kind : (initialKind || "goods");
   const [form, setForm] = useState(editing ? formFromOffering(offering) : emptyForm());
   const [chosenKind, setChosenKind] = useState(kind);
   const [errors, setErrors] = useState({});

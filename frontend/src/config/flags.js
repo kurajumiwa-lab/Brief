@@ -2,10 +2,18 @@
  * Feature flags. Each one reads a Vite build-time variable and defaults OFF, so a
  * build without the variable behaves exactly as before.
  *
- * DESK_ENABLED: the "My desk" screen at /desk (offerings + links to the morning brief
- * and the home office). Set VITE_DESK_ENABLED=true to turn it on.
+ * DESK_ENABLED: the "My desk" screen at /desk — where a business states what it
+ * offers: a service with a duration and a price, goods with a quantity, a tool
+ * with a day rate.
+ *
+ * It is now opt-OUT, not opt-in. It shipped opt-in during the phase 13 rollout,
+ * and the effect in practice was that the only screen in the product that sets a
+ * price was invisible unless someone remembered a build variable — so a new
+ * business could not find where to add its services at all. A capability that
+ * essential must not depend on a flag nobody flips. Set VITE_DESK_ENABLED=false
+ * only to hide it deliberately.
  */
-export const DESK_ENABLED = import.meta.env?.VITE_DESK_ENABLED === "true";
+export const DESK_ENABLED = import.meta.env?.VITE_DESK_ENABLED !== "false";
 
 /**
  * NEARBY_DOORS_ENABLED: "Open front doors" at /doors, the nearby people who currently

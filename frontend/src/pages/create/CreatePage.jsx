@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
-  ArrowLeft, CalendarDays, Check, Eye, ImageIcon, Lock, MapPin, Save, ScanLine, Send,
-  ShieldCheck, Sparkles, Store, Trash2, X,
+  ArrowLeft, ArrowUpRight, CalendarDays, Check, Eye, ImageIcon, Lock, MapPin, Save,
+  ScanLine, Send, ShieldCheck, Sparkles, Store, Trash2, X,
 } from "lucide-react";
 import Media from "@/components/ui/Media";
 import Button from "@/components/ui/Button";
@@ -262,6 +262,53 @@ export default function CreatePage() {
               </Button>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* ── 0B. What I sell: the offer editor, not a post ─────────────────
+          A post is an activity that expires; an offer is a durable line with a
+          price, a duration and a quantity that a buyer can actually book. These
+          were reachable only through an off-by-default flag, which is why a new
+          business could not find where to set a service or a price. */}
+      <section
+        aria-labelledby="sell-heading"
+        data-testid="create-sell-door"
+        className="rounded-card border border-edge-1 bg-surface-1 p-4"
+      >
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <h2 id="sell-heading" className="text-title-section font-semibold text-ink-1">
+              Something you sell
+            </h2>
+            <p className="mt-1 text-xs leading-relaxed text-ink-3">
+              A service with a duration and a price, goods with a quantity, or a tool
+              with a day rate. This is what appears on your page and on the shelf — it
+              does not expire like a post.
+            </p>
+          </div>
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-700 dark:bg-brand-500/10 dark:text-brand-300">
+            <Store size={16} aria-hidden="true" />
+          </span>
+        </div>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Link
+            to="/desk?new=service"
+            className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-brand-700 px-3 text-xs font-bold text-white hover:bg-brand-800"
+          >
+            Add a service <ArrowUpRight size={13} aria-hidden="true" />
+          </Link>
+          <Link
+            to="/desk?new=goods"
+            className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-edge-2 bg-surface-0 px-3 text-xs font-bold text-ink-2 hover:border-edge-3"
+          >
+            Add goods
+          </Link>
+          <Link
+            to="/desk?new=tool"
+            className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-edge-2 bg-surface-0 px-3 text-xs font-bold text-ink-2 hover:border-edge-3"
+          >
+            Rent something out
+          </Link>
         </div>
       </section>
 
