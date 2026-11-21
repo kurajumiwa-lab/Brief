@@ -6,9 +6,13 @@ import { BRAND } from "@/config/brand";
 /**
  * INVITE FRIENDS — the one promotional moment on Home.
  *
- * The background is the plum from the Ogallo design sketch (#963F70), deepened
- * into the theme's orchid and trade-green tokens — so the one promotional
- * surface is the bravest colour in the product, and still the product's own.
+ * The surface is forest green, not plum. It used to run #963F70 → orchid-800 →
+ * brand-800: a magenta nothing else in the product uses, which read as a
+ * different app's banner pasted onto Home. An invitation is a *relationship*
+ * gesture, so it belongs to the identity colour (brand), not to the
+ * merchandising colour (mk-orange, which means "for sale"). The gradient now
+ * stays inside one family, which is what makes it read as depth rather than as
+ * a second brand.
  *
  * A marketplace grows when its members bring the businesses they already trade
  * with, so this sits between the discovery shelves where a vendor is already in
@@ -35,7 +39,7 @@ export default function ReferralBanner({ className }) {
     <section
       aria-labelledby="invite-friends"
       data-testid="invite-friends-banner"
-      className={`relative isolate overflow-hidden rounded-3xl border border-orchid-900/40 bg-gradient-to-br from-[#963F70] via-orchid-800 to-brand-800 text-white shadow-md ${className || ""}`}
+      className={`relative isolate overflow-hidden rounded-3xl border border-brand-900/40 bg-gradient-to-br from-brand-600 via-brand-800 to-brand-900 text-white shadow-md ${className || ""}`}
     >
       {/* Two soft rings — texture belongs to the banner, not to a photo we would have to pretend is real. */}
       <span
@@ -64,7 +68,7 @@ export default function ReferralBanner({ className }) {
         <button
           type="button"
           onClick={invite}
-          className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-white px-5 text-sm font-bold text-[#7a2f59] shadow-sm transition-transform hover:bg-orchid-50 active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-orchid-800"
+          className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-white px-5 text-sm font-bold text-brand-800 shadow-sm transition-transform hover:bg-brand-50 active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-brand-800 dark:text-brand-900"
         >
           <Share2 size={16} aria-hidden="true" />
           Invite friends

@@ -36,7 +36,9 @@ export default function ShelfEmptyState({ icon: Icon, title, description, action
       )}
       <div className="min-w-0 flex-1">
         <p className="text-xs font-semibold text-ink-1">{title}</p>
-        {description && <p className="text-2xs text-ink-4">{description}</p>}
+        {/* Metadata colour, but a description is not metadata: at text-2xs
+            (12px) this is body copy and takes the secondary ink. */}
+        {description && <p className="text-2xs text-ink-3">{description}</p>}
       </div>
       {action}
     </div>

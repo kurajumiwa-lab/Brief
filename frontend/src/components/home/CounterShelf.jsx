@@ -69,11 +69,11 @@ export default function CounterShelf({ progress }) {
           </h2>
         </div>
         {open === 0 ? (
-          <span className="shrink-0 rounded-full bg-brand-50 px-2 py-1 text-micro font-bold text-brand-700 dark:bg-brand-500/10 dark:text-brand-300">
+          <span className="shrink-0 rounded-full bg-white/15 px-2 py-1 text-micro font-bold text-white">
             All in order
           </span>
         ) : open != null ? (
-          <span className="shrink-0 rounded-full bg-accent-50 px-2 py-1 text-micro font-bold text-accent-700 dark:bg-accent-500/10 dark:text-accent-300">
+          <span className="shrink-0 rounded-full bg-white px-2 py-1 text-micro font-bold text-brand-900">
             {open} open
           </span>
         ) : null}
@@ -82,7 +82,7 @@ export default function CounterShelf({ progress }) {
       <div className="overflow-hidden rounded-3xl bg-gradient-to-br from-brand-800 via-brand-900 to-ink-900 text-white shadow-xl shadow-brand-900/20">
         <div className="flex items-start justify-between gap-4 px-5 pb-4 pt-5">
           <div className="min-w-0">
-            <p className="text-micro font-bold uppercase tracking-[0.16em] text-white/50">
+            <p className="text-micro font-bold uppercase tracking-[0.16em] text-white/75">
               {vendor?.business_name || "This business"}
             </p>
             <p className="mt-1 truncate font-mono text-sm text-white/90">
@@ -96,33 +96,40 @@ export default function CounterShelf({ progress }) {
           </span>
         </div>
 
-        <div className="grid grid-cols-2 gap-px bg-white/10">
+        {/* Four rows, not four boxes. The old 2x2 of dark tiles inside a dark
+            slab was three weights of green stacked on each other; a counter
+            reads as a manifest, and a manifest is a list. Every row keeps its
+            own tap target, and the hairline between them is the only division. */}
+        <ul className="divide-y divide-white/10 border-t border-white/10">
           {COUNTERS.map(({ to, step, label, hint, icon: Icon }) => (
-            <Link
-              key={to}
-              to={to}
-              className="group flex min-h-[92px] flex-col justify-between gap-2 bg-brand-900/40 p-4 transition-colors hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/60"
-            >
-              <span className="flex items-center justify-between">
-                <Icon size={16} className="text-white/70" aria-hidden="true" />
-                <span className="font-mono text-micro text-white/40">{step}</span>
-              </span>
-              <span className="space-y-0.5">
-                <span className="flex items-center gap-1 text-xs font-bold text-white">
-                  {label}
-                  <ArrowUpRight
-                    size={12}
-                    className="text-white/40 transition-transform group-hover:-translate-y-0.5 group-hover:text-white"
-                    aria-hidden="true"
-                  />
+            <li key={to}>
+              <Link
+                to={to}
+                className="group flex min-h-[68px] items-center gap-3 px-5 py-3 transition-colors hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/60"
+              >
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white/10 text-white/85">
+                  <Icon size={15} aria-hidden="true" />
                 </span>
-                <span className="block text-micro leading-snug text-white/55">{hint}</span>
-              </span>
-            </Link>
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-center gap-1 text-xs font-bold text-white">
+                    {label}
+                    <ArrowUpRight
+                      size={12}
+                      className="text-white/50 transition-transform group-hover:-translate-y-0.5 group-hover:text-white"
+                      aria-hidden="true"
+                    />
+                  </span>
+                  <span className="mt-0.5 block truncate text-micro leading-snug text-white/75">
+                    {hint}
+                  </span>
+                </span>
+                <span className="shrink-0 font-mono text-micro text-white/50">{step}</span>
+              </Link>
+            </li>
           ))}
-        </div>
+        </ul>
 
-        <p className="border-t border-white/10 px-5 py-3 text-micro leading-relaxed text-white/45">
+        <p className="border-t border-white/10 px-5 py-3 text-micro leading-relaxed text-white/75">
           Records only. Brief holds no money for you and lends you none — a receipt here is a
           receipt, not an account.
         </p>

@@ -23,15 +23,24 @@ const badgeSizes = {
 
 // Deterministic palette: the same business always gets the same colour, which
 // makes avatars function as recognisable identity across every surface.
+//
+// It is one family now — teal and its two neighbours — instead of eight hues
+// including violet, indigo, rose and orange that appear nowhere else in the
+// product. An initials chip does not need to be the most colourful thing on the
+// screen to be recognisable; being the same colour every time is what makes it
+// recognisable, and a page of eight unrelated hues reads as eight unrelated
+// products. Every fill below carries white initials at 4.5:1 or better in BOTH
+// themes, which is why brand-400/500 are not in the list: they are readable in
+// one theme and fail in the other.
 const palette = [
   "bg-brand-600",
-  "bg-blue-600",
-  "bg-accent-600",
-  "bg-orchid-600",
-  "bg-rose-600",
-  "bg-teal-600",
-  "bg-indigo-600",
-  "bg-orange-600",
+  "bg-brand-700",
+  "bg-brand-800",
+  "bg-teal-700",
+  "bg-teal-800",
+  "bg-emerald-700",
+  "bg-brand-900",
+  "bg-teal-900",
 ];
 
 const hue = (s = "") => palette[[...s].reduce((a, c) => a + c.charCodeAt(0), 0) % palette.length];

@@ -507,7 +507,9 @@ function NoticeCreationModal({
                   className={cn(
                     "grid h-6 w-6 place-items-center rounded-full text-2xs font-bold",
                     step > s.number
-                      ? "bg-brand-500 text-white"
+                      // A filled pill carrying white text must be brand-600:
+                      // brand-500 is 2.31:1 with white in dark mode.
+                      ? "bg-brand-600 text-white"
                       : step === s.number
                         ? "bg-brand-500/20 text-brand-700 dark:text-brand-300 ring-2 ring-brand-500/50"
                         : "bg-surface-2 text-ink-4"

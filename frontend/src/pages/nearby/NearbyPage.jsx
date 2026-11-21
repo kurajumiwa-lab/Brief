@@ -136,7 +136,7 @@ export default function NearbyPage() {
             to="/nearby"
             className={cn(
               "shrink-0 rounded-full px-3 h-8 text-xs font-medium flex items-center",
-              !groupParam ? "bg-brand-500 text-white" : "bg-surface-2 text-ink-3 hover:text-ink-1"
+              !groupParam ? "bg-brand-600 text-white" : "bg-surface-2 text-ink-3 hover:text-ink-1"
             )}
           >
             All <span className="opacity-70 font-mono ml-1">{num(allCount)}</span>
@@ -147,7 +147,7 @@ export default function NearbyPage() {
               to={`/nearby/${g.group}`}
               className={cn(
                 "shrink-0 rounded-full px-3 h-8 text-xs font-medium flex items-center",
-                groupParam === g.group ? "bg-brand-500 text-white" : "bg-surface-2 text-ink-3 hover:text-ink-1"
+                groupParam === g.group ? "bg-brand-600 text-white" : "bg-surface-2 text-ink-3 hover:text-ink-1"
               )}
             >
               {g.label} <span className="opacity-70 font-mono ml-1">{num(g.count)}</span>
