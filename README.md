@@ -580,6 +580,22 @@ marketplace** — enforced end to end on the map surfaces only
    "Still there" / "Report gone" actions in the bottom sheet, and a list that
    reads marketplace-first.
 
+## Plans not yet built
+
+Specifications only — no code in these changes, and each says so at the top.
+
+`docs/briefs/open-market-claims-and-priority.md` — **the open market**: a seller sets
+two percentages (our fee, and the cutback the *buyer* keeps, which is what buys
+position); job broadcasts free for direct employers and free forever to the applicant,
+with the hire — not the application — triggering a claim; paid price observations that
+turn a town's wholesalers into a savings figure with a sample count; any customer able
+to advertise a better price, with the business's right of reply; the receipt game as a
+paid task, never wages; template packs per shelf; and the private office whiteboard.
+Money is **claims, not custody**: rows accrue, nothing settles, no wallet, no balance.
+Three rules hold the whole design up — a paying partner never outranks a cheaper
+verified offer, the person looking for work never pays, and nobody gets paid until
+someone is hired.
+
 ## History
 
 This is the second incarnation of the repository. The earlier consumer-facing
