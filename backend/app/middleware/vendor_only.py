@@ -58,7 +58,20 @@ PUBLIC_READ_PREFIXES = ("/api/profiles/", "/api/og/events/", "/api/offers/public
                         # The referral index is browsable before sign-in. Its
                         # share-link landing records a click; claiming is a POST
                         # and stays behind auth.
-                        "/api/town/referral-index/public/")
+                        "/api/town/referral-index/public/",
+                        # 0082 — the open market. Each of these is a read that a
+                        # person deciding whether to join should see first: what
+                        # a cutback is worth, who is hiring, what a day of price
+                        # work pays, and the template packs. Every write under
+                        # these prefixes (reporting a price, applying, assessing
+                        # a day, starting a pack) is a POST and still needs a
+                        # member, checked at the route as well.
+                        "/api/offerings/terms/",
+                        "/api/price-claims/savings",
+                        "/api/hiring/board",
+                        "/api/hiring/broadcasts/",
+                        "/api/hiring/rewards/today",
+                        "/api/template-packs")
 
 OFFICE_OPEN_POST = ("/api/office/links/accept",)
 

@@ -133,6 +133,22 @@ function OfferCard({ item }) {
           {kind && <span className="shrink-0 rounded-full bg-surface-2 px-1.5 py-0.5 text-[0.625rem] font-bold uppercase tracking-wide text-ink-3">{kind.label}</span>}
         </div>
         <p className="mt-0.5 text-2xs font-bold text-ink-2">{priceLine(item)}</p>
+        {/* 0082: a partner offer states what the buyer keeps, in the same line
+            as the price. It is never a reason the card is where it is — a
+            cheaper offer always sits above it. */}
+        {item.cutback_kes > 0 && (
+          <p
+            data-testid="offer-cutback"
+            className="mt-1 inline-flex items-center gap-1 rounded-full bg-brand-50 px-2 py-0.5 text-micro font-bold text-brand-800 dark:bg-brand-500/10 dark:text-brand-200"
+          >
+            KSh {Number(item.cutback_kes).toLocaleString("en-KE")} back for you
+            {item.buyer_price != null && (
+              <span className="font-semibold text-brand-700 dark:text-brand-300">
+                · pay KSh {Number(item.buyer_price).toLocaleString("en-KE")}
+              </span>
+            )}
+          </p>
+        )}
         {item.description && <p className="mt-0.5 line-clamp-2 text-micro leading-relaxed text-ink-3">{item.description}</p>}
         <div className="mt-1 flex flex-wrap items-center gap-2 text-micro text-ink-4">
           {item.kind === "goods" && item.quantity > 0 && <span>{item.quantity} available</span>}

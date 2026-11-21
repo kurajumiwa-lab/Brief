@@ -8,7 +8,9 @@ profile, which the person must accept. Nothing here holds money.
 import uuid
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, Column, DateTime, ForeignKey, Index, String, Text, text
+from sqlalchemy import (
+    Boolean, CheckConstraint, Column, DateTime, ForeignKey, Index, String, Text, text,
+)
 from sqlalchemy.dialects.postgresql import UUID
 
 from app.database import Base
@@ -154,15 +156,29 @@ class OfficePartner(Base):
     updated_at = Column(TS, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
+NOTE_KINDS = ("notice", "sticky")
+NOTE_COLOURS = ("amber", "lime", "sky", "rose", "plain")
+
+
 class OfficeNotice(Base):
     """A noticeboard post for one home office. Members read it; owners and editors post and edit.
 
-    An author may also edit or delete their own post. Mirrors migration 0052_office_notices.
+    An author may also edit or delete their own post. Mirrors migration 0052_office_notices,
+    extended by 0082 with the whiteboard: a `sticky` is the non-permanent marker version of
+    a notice. It carries a colour, may be pinned, and may expire on a date — a sticky that
+    clears itself, which is what a whiteboard with non-permanent markers actually does.
     """
     __tablename__ = "office_notices"
     __table_args__ = (
         CheckConstraint(_nonblank("title"), name="ck_office_notices_title_nonblank"),
         CheckConstraint(_nonblank("body"), name="ck_office_notices_body_nonblank"),
+        CheckConstraint("kind IN ('notice','sticky')", name="ck_office_notices_kind"),
+        CheckConstraint(
+            "colour IN ('amber','lime','sky','rose','plain')",
+            name="ck_office_notices_colour",
+        ),
+        CheckConstraint("expires_at IS NULL OR created_at IS NULL OR expires_at > created_at",
+                        name="ck_office_notices_expiry"),
         Index("ix_office_notices_office_created", "office_id", "created_at"),
     )
 
@@ -174,6 +190,12 @@ class OfficeNotice(Base):
     created_at = Column(TS, nullable=False, default=datetime.utcnow)
     updated_at = Column(TS, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
     edited_at = Column(TS, nullable=True)
+    # The whiteboard (0082). A sticky note is family-shared by default and is
+    # never public unless the owner promotes it deliberately.
+    kind = Column(String(8), nullable=False, default="notice", server_default="notice")
+    colour = Column(String(12), nullable=False, default="plain", server_default="plain")
+    pinned = Column(Boolean, nullable=False, default=False, server_default="false")
+    expires_at = Column(TS, nullable=True)
 
 
 SAVE_PRIVACY = ("public_showcase", "family_shared", "vault_private")

@@ -405,6 +405,24 @@ app.include_router(street_router, prefix="/api/street", tags=["Street engine"])
 from app.modules.blueprints.router import router as blueprints_router  # noqa: E402
 app.include_router(blueprints_router, prefix="/api/blueprints", tags=["Free blueprints"])
 
+# Hiring (0082): free to post for a direct employer, free to apply forever, and
+# money only ever accrues — the applicant never pays and no one is charged until
+# a hire is confirmed. See docs/briefs/open-market-claims-and-priority.md §3.
+# Template packs (0082): a shelf offers a choice of business type, not a blank
+# form. Starting one creates a draft — never a published page, never a price.
+from app.modules.blueprints.packs_router import router as packs_router  # noqa: E402
+app.include_router(packs_router, prefix="/api/template-packs", tags=["Template packs"])
+
+# Price claims (0082): a price anyone can see may be advertised by anyone. The
+# business replies, corrects or disputes; a receipt-backed fact is never deleted.
+from app.modules.intake.claims_router import router as claims_router, public as claims_public  # noqa: E402
+app.include_router(claims_public, prefix="/api/price-claims", tags=["Price claims (public)"])
+app.include_router(claims_router, prefix="/api/price-claims", tags=["Price claims"])
+
+from app.modules.hiring.router import router as hiring_router, public as hiring_public  # noqa: E402
+app.include_router(hiring_public, prefix="/api/hiring", tags=["Hiring (public)"])
+app.include_router(hiring_router, prefix="/api/hiring", tags=["Hiring"])
+
 # Uploaded files (spec sheets, product photos, CSVs), public by unguessable key.
 # One route serves disk AND database bytes — see app/routes/media.py for why a
 # StaticFiles mount was not enough on an ephemeral, read-only host.

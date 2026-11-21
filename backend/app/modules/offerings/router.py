@@ -20,7 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models.vendor import Vendor
-from app.modules.offerings import service
+from app.modules.offerings import service, terms
 from app.modules.offerings.service import OfferingError
 from app.modules.schedule.domains import ServiceDomain
 from app.routes.auth import get_current_vendor
@@ -53,6 +53,10 @@ class OfferingIn(BaseModel):
     photos: list[str] = []
     domain: Optional[ServiceDomain] = None  # Phase 6: services only
     modes: Optional[list[ModeIn]] = None  # services only: each way it is given, with its own price
+    # Seller terms (0082). Our fee never ranks; the buyer's cutback is the one
+    # money-adjacent number ranking may read, and only in the labelled band.
+    platform_fee_pct: Optional[float] = Field(default=None, ge=0, le=terms.MAX_PLATFORM_FEE_PCT)
+    buyer_cutback_pct: Optional[float] = Field(default=None, ge=0, le=terms.MAX_CUTBACK_PCT)
 
 
 class OfferingPatch(BaseModel):
@@ -69,6 +73,8 @@ class OfferingPatch(BaseModel):
     photos: Optional[list[str]] = None
     domain: Optional[ServiceDomain] = None  # Phase 6: services only; null clears it
     modes: Optional[list[ModeIn]] = None  # services only: replaces the whole list of ways it is given
+    platform_fee_pct: Optional[float] = Field(default=None, ge=0, le=terms.MAX_PLATFORM_FEE_PCT)
+    buyer_cutback_pct: Optional[float] = Field(default=None, ge=0, le=terms.MAX_CUTBACK_PCT)
 
 
 class StatusIn(BaseModel):
@@ -78,6 +84,16 @@ class StatusIn(BaseModel):
 
 def _fail(exc: OfferingError):
     raise HTTPException(status_code=exc.status, detail=str(exc))
+
+
+@router.get("/terms/suggestions")
+async def term_suggestions():
+    """Suggested percentages per line of business, with the published ceilings.
+
+    Public on purpose: a seller deciding whether to be a partner should be able
+    to read the rules before creating an account.
+    """
+    return service.suggestions()
 
 
 @router.get("/mine")

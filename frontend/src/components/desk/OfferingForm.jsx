@@ -8,8 +8,8 @@ import { SERVICE_PROFILES_ENABLED } from "@/config/flags";
 import OpeningHours from "@/components/schedule/OpeningHours";
 import { offeringsAPI, apiError } from "@/lib/api";
 import {
-  KINDS, MAX_MODES, PRICE_MODES, SERVICE_DOMAINS, SERVICE_MODES, TOOL_CATEGORIES, buildPayload, emptyForm, emptyMode,
-  formFromOffering, validateOffering,
+  KINDS, MAX_CUTBACK_PCT, MAX_MODES, MAX_PLATFORM_FEE_PCT, PRICE_MODES, SERVICE_DOMAINS, SERVICE_MODES,
+  TOOL_CATEGORIES, buildPayload, cutbackPreview, emptyForm, emptyMode, formFromOffering, validateOffering,
 } from "./offeringRules";
 
 /**
@@ -138,6 +138,51 @@ export default function OfferingForm({ offering, onSaved, onCancel }) {
 
       <Textarea label="Photo links (optional)" rows={3} value={form.photos} onChange={set("photos")} error={errors.photos}
         hint="One https:// link per line, up to 8." />
+
+      {/* ── partner terms ──────────────────────────────────────────────────
+          Two percentages, and the difference between them matters more than
+          either number. Our share buys nothing in the order; the buyer's
+          cutback does, and only inside the labelled partner strip. Left blank,
+          the offer is simply not a partner — which is fine, and is where most
+          sellers start. */}
+      <fieldset className="space-y-2 rounded-card border border-edge-1 bg-surface-1 p-3" data-testid="offering-terms">
+        <legend className="px-1 text-sm font-semibold text-ink-1">Partner terms (optional)</legend>
+        <p className="text-xs leading-relaxed text-ink-3">
+          Give the buyer something back and the offer can appear in the labelled partner
+          strip. <span className="font-semibold text-ink-2">A cheaper offer always wins</span> —
+          money never moves an offer above one that costs the buyer less.
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Input
+            label={`Buyer's cutback (%)`}
+            type="number" min="0" max={MAX_CUTBACK_PCT} step="0.5" inputMode="decimal"
+            value={form.buyer_cutback_pct}
+            onChange={set("buyer_cutback_pct")}
+            error={errors.buyer_cutback_pct}
+            hint={`0 to ${MAX_CUTBACK_PCT}%. The buyer keeps it; this is what can lift the offer.`}
+          />
+          <Input
+            label="Brief's share (%)"
+            type="number" min="0" max={MAX_PLATFORM_FEE_PCT} step="0.5" inputMode="decimal"
+            value={form.platform_fee_pct}
+            onChange={set("platform_fee_pct")}
+            error={errors.platform_fee_pct}
+            hint={`0 to ${MAX_PLATFORM_FEE_PCT}%. Never changes where the offer appears.`}
+          />
+        </div>
+        {(() => {
+          const preview = cutbackPreview(
+            form.price_mode === "ask_me" ? "" : form.price,
+            form.buyer_cutback_pct,
+          );
+          if (!preview) return null;
+          return (
+            <p data-testid="cutback-preview" className="rounded-lg bg-brand-50 px-2.5 py-2 text-xs font-semibold text-brand-800 dark:bg-brand-500/10 dark:text-brand-200">
+              A buyer sees KES {preview.price.toLocaleString()} — they keep KES {preview.saved.toLocaleString()}.
+            </p>
+          );
+        })()}
+      </fieldset>
 
       <div className="flex flex-wrap gap-2">
         <Button type="submit" disabled={saving}>{editing ? "Save changes" : "Add to my desk"}</Button>

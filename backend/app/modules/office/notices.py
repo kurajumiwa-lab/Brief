@@ -13,7 +13,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.vendor import Vendor
-from app.modules.office.models import OfficeMember, OfficeNotice
+from app.modules.office.models import NOTE_COLOURS, NOTE_KINDS, OfficeMember, OfficeNotice
 from app.modules.office.service import OfficeError, _text, get_office
 
 EDIT_ROLES = ("owner", "editor")
@@ -34,23 +34,42 @@ async def _member(db: AsyncSession, office_id: uuid.UUID, vendor: Vendor) -> Off
 
 
 async def list_notices(db: AsyncSession, actor: Vendor, office_id: uuid.UUID) -> list:
+    """The board: live notes first, pinned above the rest, expired ones gone.
+
+    An expired sticky is not deleted — the row stays for the author — but the
+    board stops showing it, which is what a non-permanent marker means.
+    """
     await get_office(db, office_id)
     await _member(db, office_id, actor)
-    rows = (await db.execute(select(OfficeNotice).where(OfficeNotice.office_id == office_id)
-                             .order_by(OfficeNotice.created_at.desc()))).scalars().all()
+    now = _now()
+    rows = (await db.execute(
+        select(OfficeNotice).where(
+            OfficeNotice.office_id == office_id,
+            (OfficeNotice.expires_at.is_(None)) | (OfficeNotice.expires_at > now),
+        ).order_by(OfficeNotice.pinned.desc(), OfficeNotice.created_at.desc())
+    )).scalars().all()
     return rows
 
 
 async def create_notice(db: AsyncSession, actor: Vendor, office_id: uuid.UUID,
-                        *, title: str, body: str) -> OfficeNotice:
+                        *, title: str, body: str, kind: str = "notice",
+                        colour: str = "plain", pinned: bool = False,
+                        expires_at: Optional[datetime] = None) -> OfficeNotice:
     await get_office(db, office_id)
     m = await _member(db, office_id, actor)
     if m.role not in EDIT_ROLES:
         raise OfficeError("Only the owner or an editor can post to the noticeboard.", 403)
+    if kind not in NOTE_KINDS:
+        raise OfficeError("A board post is a notice or a sticky note.", 422)
+    if colour not in NOTE_COLOURS:
+        raise OfficeError("Choose one of the board colours.", 422)
+    if expires_at is not None and expires_at <= _now():
+        raise OfficeError("A note cannot expire in the past. Leave it blank to keep it.", 422)
     row = OfficeNotice(
         office_id=office_id, author_vendor_id=actor.id,
         title=_text(title, 2, 120, "the notice title"),
         body=_text(body, 2, 4000, "the notice text"),
+        kind=kind, colour=colour, pinned=bool(pinned), expires_at=expires_at,
         created_at=_now(), updated_at=_now(),
     )
     db.add(row)

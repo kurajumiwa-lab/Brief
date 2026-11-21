@@ -470,7 +470,14 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
           {/* ── the region masthead scrolls; the search bar below sticks ───── */}
           <div data-testid="discover-masthead" className="flex items-center justify-between gap-2">
             <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-mk-orange">Brief marketplace</p>
-            <RegionPicker region={region} onSelect={chooseRegion} className="relative max-w-[68%]" />
+            {/* The list must open *below* the sticky search bar, never over
+                it — search stays permanent and usable while choosing. */}
+            <RegionPicker
+              region={region}
+              onSelect={chooseRegion}
+              avoidSelector='[data-testid="discover-toolbar"]'
+              className="relative max-w-[68%]"
+            />
           </div>
           {region && (
             <div data-testid="region-context" className="flex min-w-0 items-center gap-1.5 text-[11px] text-mk-ink-soft">

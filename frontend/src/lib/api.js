@@ -862,6 +862,8 @@ export const offeringsAPI = {
   update: (kind, id, body) => api.patch(`/offerings/${kind}/${id}`, body),
   /** pause | resume | archive. Archive cannot be undone. */
   setStatus: (kind, id, action) => api.post(`/offerings/${kind}/${id}/status`, { action }),
+  /** 0082: suggested percentages per line of business, with the published ceilings. */
+  terms: () => api.get("/offerings/terms/suggestions"),
 };
 
 // ── Receipts: a vendor's own payment attempts (v2.15, Track 1) ─────────────
@@ -1251,4 +1253,57 @@ export const corridorAPI = {
     api.get(`/corridors/${regionSlug}/price-hint`, {
       params: { category, ...(town ? { town } : {}) },
     }),
+};
+
+
+// ── 0082: hiring — free to apply, money only on a confirmed hire ────────────
+// The applicant never pays. There is no endpoint here that takes their money,
+// and the payloads say so (`free_to_apply`), because a promise a client can drop
+// is not a promise.
+export const hiringAPI = {
+  /** Open broadcasts. Public: a job is readable before anyone signs up. */
+  board: (params) => api.get("/hiring/board", { params: noEmpty(params) }),
+  broadcast: (id) => api.get(`/hiring/broadcasts/${id}`),
+  /** Post a job. Free for a direct employer; an intermediary is a paid poster. */
+  post: (body) => api.post("/hiring/broadcasts", body),
+  /** Apply. `via` is the broadcaster's code; the first touch wins. */
+  apply: (id, body) => api.post(`/hiring/broadcasts/${id}/apply`, body),
+  shortlist: (applicationId) => api.post(`/hiring/applications/${applicationId}/status`, { status: "shortlisted" }),
+  reject: (applicationId) => api.post(`/hiring/applications/${applicationId}/status`, { status: "rejected" }),
+  /** Mark as hired. Numbers accrue; nobody is paid until a second signal. */
+  hire: (applicationId) => api.post(`/hiring/applications/${applicationId}/status`, { status: "hired" }),
+  /** The employer's confirmation: the accrued claims become payable. */
+  confirm: (applicationId) => api.post(`/hiring/applications/${applicationId}/confirm`),
+  /** The hiree's start check-in: also makes the claims payable. */
+  checkin: (applicationId) => api.post(`/hiring/applications/${applicationId}/checkin`),
+  /** Record a DIRECT payment. Brief never sends this money. */
+  settle: (claimId, payment_reference) => api.post(`/hiring/claims/${claimId}/settle`, { payment_reference }),
+  voidClaim: (claimId, reason) => api.post(`/hiring/claims/${claimId}/void`, { reason }),
+  mine: () => api.get("/hiring/mine"),
+  /** What a full day of price work pays in this town today, published first. */
+  rewardsToday: (town) => api.get("/hiring/rewards/today", { params: noEmpty({ town }) }),
+  assessDay: (body) => api.post("/hiring/rewards", body),
+  markRewardPaid: (id, payment_reference) => api.post(`/hiring/rewards/${id}/paid`, { payment_reference }),
+  myRewards: () => api.get("/hiring/rewards/mine"),
+};
+
+// ── 0082: price claims and the savings figure ───────────────────────────────
+// Anyone may advertise a price they can see; the business always answers. A
+// saving needs five confirmed samples before it is published at all.
+export const priceClaimsAPI = {
+  /** Where the same item is cheaper nearby. Public. Answers `items: []` honestly. */
+  savings: (params) => api.get("/price-claims/savings", { params: noEmpty(params) }),
+  /** Report a price. source: customer | employee | rival | owner. */
+  report: (body) => api.post("/price-claims", body),
+  reply: (id, body) => api.post(`/price-claims/${id}/reply`, { body }),
+  correct: (id, price_kes) => api.post(`/price-claims/${id}/correct`, { price_kes }),
+  dispute: (id, reason) => api.post(`/price-claims/${id}/dispute`, { reason }),
+};
+
+// ── 0082: template packs — a choice of business type, never a blank form ────
+export const templatePacksAPI = {
+  list: (params) => api.get("/template-packs", { params: noEmpty(params) }),
+  one: (key) => api.get(`/template-packs/${key}`),
+  /** Creates the DRAFT the pack describes. Publishes nothing. */
+  start: (key) => api.post(`/template-packs/${key}/start`),
 };

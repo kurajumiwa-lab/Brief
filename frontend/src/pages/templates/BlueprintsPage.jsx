@@ -23,6 +23,14 @@ export default function BlueprintsPage() {
         <p className="text-sm text-ink-3">
           Step-by-step starters for a small venture. Free to read and free to use. Start one and its next step appears in your Today window.
         </p>
+        {/* 0082: the other half of the promise — a ready-made shop for the type
+            of business, so nobody starts from a blank form. */}
+        <Link
+          to="/templates/packs"
+          className="mt-1 inline-flex items-center gap-1 text-xs font-bold text-brand-700 hover:underline dark:text-brand-300"
+        >
+          Or start from a ready-made business page →
+        </Link>
       </header>
       {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
       {!rows && !error && <PageSpinner />}
