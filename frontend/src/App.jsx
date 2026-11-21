@@ -44,6 +44,7 @@ import BlueprintsPage from "@/pages/templates/BlueprintsPage";
 import BlueprintDetailPage from "@/pages/templates/BlueprintDetailPage";
 import TemplatePacksPage, { TemplatePackDetailPage } from "@/pages/templates/TemplatePacksPage";
 import SavingsPage from "@/pages/market/SavingsPage";
+import MeritPage from "@/pages/merit/MeritPage";
 import PriceWorkPage from "@/pages/work/PriceWorkPage";
 import {
   JobDetailPage, JobsBoardPage, MyJobsPage, PostJobPage,
@@ -280,6 +281,9 @@ function AppRoutes() {
       {/* 0082: what the next shop charges. Public — a saving is information
           the whole town should be able to check before joining anything. */}
       <Route path="/savings" element={<SavingsPage />} />
+      {/* 0083: a business's trust record. Public — the point of publishing a
+          score is that a stranger can read it without an account. */}
+      <Route path="/merit/:handle" element={<MeritPage />} />
       {/* Jobs are readable before sign-in; applying needs an account and is
           free. Nothing on either page takes money from the applicant. */}
       <Route path="/jobs" element={<JobsBoardPage />} />

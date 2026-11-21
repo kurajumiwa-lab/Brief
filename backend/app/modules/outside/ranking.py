@@ -22,6 +22,15 @@ Two rules are load-bearing and both are pinned by tests in
    likes is not 500× more relevant than 5. This is the guard against popular
    content overwhelming useful local information.
 
+3. **Trust is a small, capped nudge — and it is never for sale.** 0083 adds a
+   seventh term worth at most `W_TRUST` (0.05) of the range, derived from the
+   author's own Merit score and zero below the first tier. It cannot reorder a
+   shelf on its own, it decays when a business goes quiet, and there is no way
+   to buy it: the score comes from delivered orders, checked documents, kept
+   receipts and vouches from other businesses, in `app/modules/merit/rules.py`.
+   The brief asked for visible-track-record ranking; this is the smallest
+   version of it that still does something.
+
 The function is pure: same item + same context in, same score out. No I/O, no
 clock reads (the caller passes `now`), which is what makes it unit-testable.
 """
@@ -39,6 +48,13 @@ W_TIMING = 0.16
 W_INTEREST = 0.12
 W_SOCIAL = 0.10
 W_ENGAGEMENT = 0.08
+# 0083. Deliberately the smallest weight in the file, and capped again in
+# `trust_signal`, so a record can nudge a shelf but never own it.
+W_TRUST = 0.05
+# The sum of the weights is measured against this, so adding W_TRUST does not
+# silently inflate every score. See `_score_scale()`.
+_WEIGHT_TOTAL = (W_PROXIMITY + W_RECENCY + W_TIMING + W_INTEREST + W_SOCIAL
+                 + W_ENGAGEMENT + W_TRUST)
 
 # Half-lives, in hours. Recency decays over ~3 days; an event's timing signal
 # peaks the day before and falls away after it starts.
@@ -76,6 +92,9 @@ class RankContext:
     # content_kind -> count of that author's commercial items already shown in
     # the window, used only for the promotion decay.
     recent_commercial_by_author: dict = field(default_factory=dict)
+    # 0083: author id -> Merit score (0–100). Absent means "no record", which is
+    # a zero, not a penalty. Filled by the feed from `merit.service.scores_for`.
+    trust_by_author: dict = field(default_factory=dict)
 
 
 @dataclass
@@ -202,6 +221,27 @@ def engagement_signal(item: dict) -> float:
     return min(math.log1p(total) / math.log1p(ENGAGEMENT_SATURATION), 1.0)
 
 
+def trust_signal(author_id: Optional[str], trust_by_author: dict) -> float:
+    """0–1 from the author's Merit score. Zero below the first tier.
+
+    Three deliberate limits:
+      · a business with no record is neutral (0.0), never punished — most of the
+        network has not been here long enough to have one;
+      · the curve stays flat until the first tier, so "signed up" is worth
+        nothing;
+      · the cap is 1.0 of a 0.05 weight, i.e. at most five per cent of relevance.
+    """
+    if not author_id:
+        return 0.0
+    try:
+        score = float(trust_by_author.get(str(author_id), 0.0) or 0.0)
+    except (TypeError, ValueError):
+        return 0.0
+    if score < 20.0:
+        return 0.0
+    return min(score / 100.0, 1.0)
+
+
 def promotion_decay(author_id: Optional[str], is_commercial: bool,
                     prior_in_window: dict) -> float:
     """1.0 normally; a floor of 0.4 for an account flooding commercial posts."""
@@ -230,6 +270,8 @@ def score_item(item: dict, ctx: RankContext) -> RankedItem:
     interest = interest_signal(item.get("category"), item.get("tags") or (), ctx.interests)
     social = social_signal(item.get("owner_id"), ctx.connected_vendor_ids)
     engagement = engagement_signal(item)
+    author = item.get("owner_id") or (item.get("meta") or {}).get("owner_id")
+    trust = trust_signal(author, ctx.trust_by_author)
 
     reasons: list = []
     if distance is not None:
@@ -260,6 +302,8 @@ def score_item(item: dict, ctx: RankContext) -> RankedItem:
         reasons.append("matches your interests")
     if social >= 1.0:
         reasons.append("someone you are connected to")
+    if trust >= 0.5:
+        reasons.append("a business with a record here")
 
     # Timing replaces a slice of the recency weight for undated content, so an
     # event is not penalised twice for being written a while ago.
@@ -268,6 +312,8 @@ def score_item(item: dict, ctx: RankContext) -> RankedItem:
     else:
         timing_component = timing * W_TIMING
 
+    # Divided by the weight total so a score still reads as "share of the
+    # maximum relevance" after 0083 added a seventh term.
     score = (
         W_PROXIMITY * proximity
         + W_RECENCY * recency
@@ -275,7 +321,8 @@ def score_item(item: dict, ctx: RankContext) -> RankedItem:
         + W_INTEREST * interest
         + W_SOCIAL * social
         + W_ENGAGEMENT * engagement
-    )
+        + W_TRUST * trust
+    ) / _WEIGHT_TOTAL
 
     decay = promotion_decay(
         item.get("owner_id"), bool(item.get("is_commercial")), ctx.recent_commercial_by_author,

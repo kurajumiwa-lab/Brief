@@ -787,11 +787,19 @@ async def build_feed(db, viewer, *, kinds=DEFAULT_KINDS, lat=None, lng=None,
         author = str((item.get("meta") or {}).get("owner_id") or "")
         if author:
             commercial_by_author[author] = commercial_by_author.get(author, 0) + 1
+    # 0083: the trust term. One query for the whole page, from stored daily
+    # snapshots, capped at 5% of relevance in `ranking.trust_signal`. A business
+    # with no record is absent here and scores zero — not a penalty.
+    from app.modules.merit import service as merit_service
+    trust_by_author = await merit_service.scores_for(
+        db, {str((i.get("meta") or {}).get("owner_id") or "") for i in items} - {""}
+    )
     ctx = RankContext(
         now=ctx.now, lat=ctx.lat, lng=ctx.lng, radius_km=ctx.radius_km,
         layer=ctx.layer, interests=ctx.interests,
         connected_vendor_ids=ctx.connected_vendor_ids,
         recent_commercial_by_author=commercial_by_author,
+        trust_by_author=trust_by_author,
     )
 
     ranked = rank(items, ctx)

@@ -34,6 +34,8 @@ vi.mock("@/lib/api", () => {
   credentialsAPI: { mine: () => new Promise(() => {}), forMember: () => new Promise(() => {}) },
   professionalAPI: { card: () => new Promise(() => {}), page: vi.fn(() => ok({ handle: "mama_mboga", preset: "shop", payment_tag: { type: "till", number: "123456" }, preset_content: { shops: [], catalog: [], offers: [], rounds: [] } })) },
     socialTrustAPI: { publicCard: vi.fn(() => Promise.reject(new Error("no trust card in this fixture"))) },
+    // 0083: the page's trust ticker. No record in this fixture, so it renders nothing.
+    meritAPI: { card: vi.fn(() => Promise.reject(new Error("no merit card in this fixture"))), ticker: vi.fn(() => Promise.reject(new Error("no ticker"))) },
     default: {},
     apiError,
     authAPI: { login: vi.fn(() => ok({ access_token: "tok" })), register: vi.fn(() => ok({})) },
