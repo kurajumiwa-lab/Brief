@@ -201,3 +201,94 @@ describe("5 · old entry points still drive the one feed", () => {
       expect(within(screen.getByRole("group", {name: /browse by category/i})).getByRole("button", {name: "Goods"})).toHaveAttribute("aria-pressed", "true"));
   });
 });
+
+/**
+ * 6 · THE SEARCH BAR IS PERMANENT WHILE THE KNOB IS OPEN.
+ *
+ * On a 412 × 915 phone the region list used to be an absolutely positioned
+ * child of the scrolling masthead. It landed on top of the sticky search bar
+ * and the TRY chips, so the one control the knob exists to narrow became
+ * unusable. jsdom cannot see paint, but it can see the two things that caused
+ * it: the panel's containing context and the coordinates it is given.
+ */
+describe("6 · the region list never covers the permanent search", () => {
+  const rect = (extra = {}) => ({
+    top: 0, left: 0, right: 0, bottom: 0, width: 0, height: 0, x: 0, y: 0,
+    toJSON: () => ({}), ...extra,
+  });
+
+  function stubPhoneGeometry() {
+    const viewport = { width: window.innerWidth, height: window.innerHeight };
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: 412 });
+    Object.defineProperty(window, "innerHeight", { configurable: true, value: 915 });
+    const spy = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function mockRect() {
+      const id = this.getAttribute?.("data-testid");
+      // The search bar, in flow just under the masthead: 60px header + two rows.
+      if (id === "discover-toolbar") {
+        return rect({ top: 132, bottom: 224, height: 92, left: 0, right: 412, width: 412 });
+      }
+      // The knob: up in the masthead, above the bar, right-aligned.
+      if (id === "region-picker") {
+        return rect({ top: 84, bottom: 116, height: 32, left: 250, right: 398, width: 148 });
+      }
+      return rect();
+    });
+    return () => {
+      spy.mockRestore();
+      Object.defineProperty(window, "innerWidth", { configurable: true, value: viewport.width });
+      Object.defineProperty(window, "innerHeight", { configurable: true, value: viewport.height });
+    };
+  }
+
+  it("opens below the sticky search bar, inside the viewport, out of the masthead", async () => {
+    await renderRegions();
+    const restore = stubPhoneGeometry();
+    try {
+      fireEvent.click(await screen.findByTestId("region-picker"));
+      const panel = await screen.findByTestId("region-picker-panel");
+
+      // Portalled out of the masthead, so the sticky bar can never paint under it.
+      expect(panel.parentElement).toBe(document.body);
+      expect(screen.getByTestId("discover-masthead")).not.toContainElement(panel);
+      expect(panel.className).toMatch(/\bfixed\b/);
+      // …and it loses to the bar if the geometry is ever a frame stale.
+      expect(panel.className).toMatch(/z-\[25\]/);
+
+      // It starts at or below the bar's bottom edge (224px), never over it —
+      // even though the knob itself sits 108px higher up the page.
+      const top = Number.parseFloat(panel.style.top);
+      expect(top).toBeGreaterThanOrEqual(224);
+
+      // It stays on the phone: right edge inside 412, and it scrolls internally.
+      const width = Number.parseFloat(panel.style.width);
+      const left = Number.parseFloat(panel.style.left);
+      expect(width).toBeLessThanOrEqual(412 - 16);
+      expect(left + width).toBeLessThanOrEqual(412 - 8);
+      expect(Number.parseFloat(panel.style.maxHeight)).toBeGreaterThan(0);
+      expect(panel.className).toMatch(/overflow-y-auto/);
+
+      // The permanent search and its chips are still on screen and usable.
+      expect(screen.getByRole("searchbox", { name: /search everything/i })).toBeVisible();
+      expect(screen.getByTestId("discover-quick-filters")).toBeInTheDocument();
+    } finally {
+      restore();
+    }
+  });
+
+  it("closes on Escape and on a press outside, returning focus to the knob", async () => {
+    await renderRegions();
+    const knob = await screen.findByTestId("region-picker");
+
+    fireEvent.click(knob);
+    await screen.findByTestId("region-picker-panel");
+    fireEvent.keyDown(document, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByTestId("region-picker-panel")).not.toBeInTheDocument());
+    expect(knob).toHaveAttribute("aria-expanded", "false");
+    expect(knob).toHaveFocus();
+
+    fireEvent.click(knob);
+    await screen.findByTestId("region-picker-panel");
+    fireEvent.mouseDown(document.body);
+    await waitFor(() => expect(screen.queryByTestId("region-picker-panel")).not.toBeInTheDocument());
+  });
+});

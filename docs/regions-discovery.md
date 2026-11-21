@@ -68,6 +68,21 @@ filters: its name, what it is known for, and one door to its own page. The
 picker in the heading reaches every region; the card makes the current scope
 impossible to miss.
 
+### The search bar is permanent
+
+The masthead scrolls; the search box and the `Try` chips below it stick to the
+top with `sticky top-[var(--header-h)]`. The region list is therefore **never**
+rendered inside the masthead. It is portalled to `document.body`, positioned
+with `fixed` coordinates that start at or below the bottom edge of the sticky
+bar (`avoidSelector='[data-testid="discover-toolbar"]'` in `ExplorePage`), and
+drawn at `z-[25]` — under the bar's `z-30`, so a stale frame can never let the
+list paint over search. It is clamped inside the viewport, scrolls internally,
+and leaves room for the phone's bottom tabs.
+
+The contract the picker keeps: `aria-haspopup="dialog"` on the knob,
+`data-testid="region-picker"` / `region-picker-panel`, Escape closes and returns
+focus to the knob, and a press outside closes it.
+
 On the region-aware Discover screen the posting-type row becomes four intent
 chips: `All`, `Offers`, `Wanted`, `Rounds & Events`. They map to the API's kind
 names in `REGION_INTENTS` and travel in the URL (`?intent=offers`) so Back and
