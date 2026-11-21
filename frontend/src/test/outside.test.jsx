@@ -405,6 +405,22 @@ describe("Location awareness", () => {
       expect.objectContaining({ source: "manual", label: "Milimani, Kisumu" })));
   });
 
+  it("reads a pasted Google/WhatsApp pin without geocoding it", async () => {
+    const LocationBar = await Bar();
+    renderAt("/", <LocationBar />);
+    fireEvent.click(screen.getByRole("button", { name: /^change$/i }));
+    fireEvent.change(await screen.findByTestId("location-input"), {
+      target: { value: "https://maps.google.com/?q=-0.0917,34.7680" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /^save$/i }));
+
+    await waitFor(() => expect(mocks.setLocation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        source: "manual", label: "Pasted pin", geo_lat: -0.0917, geo_lng: 34.768,
+      })));
+    expect(mocks.geocode).not.toHaveBeenCalled();
+  });
+
   it("never turns on location sharing by default", async () => {
     const LocationBar = await Bar();
     renderAt("/", <LocationBar />);

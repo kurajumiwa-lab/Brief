@@ -33,6 +33,7 @@ log = logging.getLogger("brief.geo_data")
 USER_AGENT = "MyShopApp/1.0 (vendor-network open-data ingest; contact: ops@wairo.local)"
 
 NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
+NOMINATIM_REVERSE_URL = "https://nominatim.openstreetmap.org/reverse"
 # overpass-api.de serves GET (its POST path 406s from some egress IPs);
 # maps.mail.ru answers POST. Try each in order, first success wins.
 OVERPASS_MIRRORS = [
@@ -56,6 +57,29 @@ out center tags;
 """
 
 _geocode_cache: dict[str, tuple[float, float, str]] = {}
+_reverse_cache: dict[str, str] = {}
+
+# The context query is deliberately wider than the directory query: a matatu
+# stage and a school gate matter to a table even though neither is a "shop".
+# One named row per fixture, capped in the caller.
+OVERPASS_CONTEXT_QL = """
+[out:json][timeout:{timeout}];
+(
+  node(around:{radius},{lat},{lng})["highway"="bus_stop"];
+  way(around:{radius},{lat},{lng})["highway"="bus_stop"];
+  node(around:{radius},{lat},{lng})["public_transport"="station"];
+  way(around:{radius},{lat},{lng})["public_transport"="station"];
+  node(around:{radius},{lat},{lng})["railway"~"station|halt"];
+  way(around:{radius},{lat},{lng})["railway"~"station|halt"];
+  node(around:{radius},{lat},{lng})["amenity"~"marketplace|supermarket|school|college|university|hospital|clinic|place_of_worship|bank|atm|pharmacy|fuel|bus_station|community_centre|townhall|library|police|post_office"];
+  way(around:{radius},{lat},{lng})["amenity"~"marketplace|supermarket|school|college|university|hospital|clinic|place_of_worship|bank|atm|pharmacy|fuel|bus_station|community_centre|townhall|library|police|post_office"];
+  node(around:{radius},{lat},{lng})["shop"];
+  way(around:{radius},{lat},{lng})["shop"];
+  node(around:{radius},{lat},{lng})["office"="government"];
+  way(around:{radius},{lat},{lng})["office"="government"];
+);
+out center tags;
+"""
 
 
 class GeoError(Exception):
@@ -142,6 +166,142 @@ async def overpass_around(lat: float, lng: float, radius_m: int, timeout_s: int 
             elements = r.json().get("elements", [])
             places = [p for p in (_normalize_element(e) for e in elements) if p]
             return places
+        except Exception as exc:  # timeout, bad json, connection reset
+            last_err = exc
+            continue
+    raise GeoError(f"Every Overpass mirror failed: {last_err}")
+
+
+def _short_reverse_label(payload: dict) -> str:
+    """A human label without the 300-character Nominatim display string."""
+    address = payload.get("address") or {}
+    parts = []
+    for key in ("neighbourhood", "suburb", "road", "town", "city", "county", "state"):
+        value = str(address.get(key) or "").strip()
+        if value and value.lower() not in {p.lower() for p in parts}:
+            parts.append(value)
+    if parts:
+        return ", ".join(parts[:2])[:200]
+    display = str(payload.get("display_name") or "").strip()
+    return ", ".join(display.split(",")[:2])[:200]
+
+
+async def reverse_geocode(lat: float, lng: float) -> str:
+    """Coordinates → one short neighbourhood/road label (Nominatim, free).
+
+    Used once when a hex is first traced. A failure is not fatal: the caller
+    falls back to the nearest fixture's name.
+    """
+    key = f"{round(float(lat), 5)},{round(float(lng), 5)}"
+    if key in _reverse_cache:
+        return _reverse_cache[key]
+    async with httpx.AsyncClient(timeout=8, headers={"User-Agent": USER_AGENT}) as client:
+        r = await client.get(
+            NOMINATIM_REVERSE_URL,
+            params={"format": "jsonv2", "lat": lat, "lon": lng, "zoom": 18, "addressdetails": 1},
+        )
+    if r.status_code != 200:
+        raise GeoError(f"Reverse geocoder answered {r.status_code}")
+    label = _short_reverse_label(r.json())
+    if not label:
+        raise GeoError("Reverse geocoder returned no label")
+    _reverse_cache[key] = label
+    return label
+
+
+def fixture_kind(tags: dict) -> tuple[str, str]:
+    """OSM tags → (group, human label). One place, one useful group."""
+    tags = tags or {}
+    highway = tags.get("highway")
+    public_transport = tags.get("public_transport")
+    railway = tags.get("railway")
+    amenity = tags.get("amenity")
+    shop = tags.get("shop")
+    office = tags.get("office")
+
+    if highway == "bus_stop" or public_transport == "station" or railway in ("station", "halt"):
+        return "transit", "Bus stage" if railway not in ("station", "halt") else "Rail stop"
+    if amenity == "bus_station":
+        return "transit", "Bus station"
+    if amenity == "marketplace":
+        return "commerce", "Market"
+    if shop:
+        return "commerce", "Shop"
+    if amenity in ("supermarket", "convenience", "mall", "department_store"):
+        return "commerce", "Shop"
+    if amenity in ("bank", "atm"):
+        return "commerce", "Bank / ATM"
+    if amenity in ("pharmacy", "fuel"):
+        return "commerce", "Pharmacy" if amenity == "pharmacy" else "Fuel"
+    if amenity in ("school", "college", "university"):
+        return "community", "School"
+    if amenity in ("hospital", "clinic"):
+        return "community", "Health"
+    if amenity == "place_of_worship":
+        return "community", "Worship"
+    if amenity in ("community_centre", "townhall", "library", "police", "post_office"):
+        return "community", "Public place"
+    if office == "government":
+        return "community", "Public office"
+    return "other", "Landmark"
+
+
+def _normalize_context_element(el: dict) -> dict | None:
+    tags = el.get("tags") or {}
+    name = " ".join(str(tags.get("name") or "").split())[:160]
+    if not name:
+        return None
+    lat = el.get("lat") or (el.get("center") or {}).get("lat")
+    lng = el.get("lon") or (el.get("center") or {}).get("lon")
+    if lat is None or lng is None:
+        return None
+    kind, kind_label = fixture_kind(tags)
+    category = (
+        f"shop:{tags['shop']}" if tags.get("shop")
+        else f"amenity:{tags['amenity']}" if tags.get("amenity")
+        else f"highway:{tags['highway']}" if tags.get("highway")
+        else f"railway:{tags['railway']}" if tags.get("railway")
+        else f"office:{tags['office']}" if tags.get("office")
+        else None
+    )
+    street = tags.get("addr:street")
+    suburb = tags.get("addr:suburb") or tags.get("addr:neighbourhood")
+    address = ", ".join(p for p in (street, suburb) if p) or None
+    return {
+        "external_id": f"{el.get('type')}/{el.get('id')}",
+        "name": name,
+        "kind": kind,
+        "kind_label": kind_label,
+        "category": category,
+        "address": address,
+        "lat": float(lat),
+        "lng": float(lng),
+        "source": "openstreetmap",
+    }
+
+
+async def overpass_context_around(lat: float, lng: float, radius_m: int = 900,
+                                  timeout_s: int = 8) -> list[dict]:
+    """Named transit, commerce and community anchors inside a small circle.
+
+    Mirrors and a short timeout, like `overpass_around`. The caller caches the
+    result per H3 cell; this function is never called on a page paint when a
+    fresh cell exists.
+    """
+    ql = OVERPASS_CONTEXT_QL.format(radius=radius_m, lat=lat, lng=lng, timeout=timeout_s)
+    last_err: Exception | None = None
+    for method, url in OVERPASS_MIRRORS:
+        try:
+            async with httpx.AsyncClient(timeout=timeout_s + 6, headers={"User-Agent": USER_AGENT}) as client:
+                if method == "GET":
+                    r = await client.get(url, params={"data": ql})
+                else:
+                    r = await client.post(url, data={"data": ql})
+            if r.status_code != 200:
+                last_err = GeoError(f"Overpass {url} answered {r.status_code}")
+                continue
+            elements = r.json().get("elements", [])
+            return [p for p in (_normalize_context_element(e) for e in elements) if p]
         except Exception as exc:  # timeout, bad json, connection reset
             last_err = exc
             continue

@@ -332,6 +332,14 @@ class Settings(BaseSettings):
     # Corridor price index (0069): hourly rebuild of the 45-day percentile
     # snapshot. Confirmed trades also trigger a refresh opportunistically.
     PRICE_INDEX_REFRESH_INTERVAL: int = 3600
+    # Street tables and the official weekday stamp. A minute is cheap: the
+    # sweep is two indexed UPDATE/INSERT statements and is idempotent.
+    STREET_SWEEP_INTERVAL: int = 60
+    # The free open-data context layer: one Overpass request per H3 block,
+    # cached for a day, with a failure cooldown so an empty cell is cheap.
+    GEO_HEX_RADIUS_M: int = 900
+    GEO_HEX_TTL_HOURS: int = 24
+    GEO_HEX_RETRY_MINUTES: int = 30
     # Cooperative member votes are disabled unless a registered entity and its
     # reviewed legal basis are configured explicitly.
     GOVERNANCE_COOPERATIVE_ENABLED: bool = False

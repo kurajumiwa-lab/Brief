@@ -11,6 +11,9 @@ python-multipart==0.0.6
 websockets==12.0
 redis==5.0.1
 httpx==0.25.2
+# Open-source hexagonal spatial index (Uber H3). No map tile bill: a point
+# becomes a res-9/8/7 cell string and nearby matching is a set lookup.
+h3>=4.1,<5
 pydantic==2.5.2
 pydantic-settings==2.1.0
 email-validator==2.1.1

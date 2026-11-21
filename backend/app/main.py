@@ -32,6 +32,7 @@ from app.modules.town import ops_router as town_ops_routes
 from app.modules.corridor_tasks import router as corridor_task_routes
 from app.modules.routines import router as routine_routes
 from app.modules.routines import sweep as routine_sweep
+from app.modules.street import sweep as street_sweep
 from app.modules.social_trust import router as social_trust_routes
 from app.modules.price_index import router as price_index_routes
 from app.modules.price_index import sweep as price_index_sweep
@@ -204,6 +205,7 @@ async def lifespan(app: FastAPI):
     standing_task = None
     routine_task = None
     price_index_task = None
+    street_task = None
     if settings.RUN_SCHEDULER:
         scheduler = asyncio.create_task(pos_sync.scheduler_loop(async_session, settings.POS_SYNC_INTERVAL))
         payments_scheduler = asyncio.create_task(payment_worker.scheduler_loop(async_session))
@@ -212,6 +214,7 @@ async def lifespan(app: FastAPI):
         standing_task = asyncio.create_task(standing_sweep.scheduler_loop(async_session))
         routine_task = asyncio.create_task(routine_sweep.scheduler_loop(async_session))
         price_index_task = asyncio.create_task(price_index_sweep.scheduler_loop(async_session))
+        street_task = asyncio.create_task(street_sweep.scheduler_loop(async_session))
     else:
         log.info("scheduler disabled here (RUN_SCHEDULER=false) — run `python -m app.worker` once")
     log.info("🏪 Brief_ Vendor Network v%s initialized", settings.VERSION)
@@ -220,7 +223,7 @@ async def lifespan(app: FastAPI):
         yield
     finally:
         for task in (scheduler, payments_scheduler, open_data, outbox_task,
-                     standing_task, routine_task, price_index_task):
+                     standing_task, routine_task, price_index_task, street_task):
             if task:
                 task.cancel()
                 try:
@@ -396,7 +399,9 @@ app.include_router(trust_customer, prefix="/api/trust/customer", tags=["MarketTr
 from app.modules.knowledge.router import router as knowledge_router  # noqa: E402
 app.include_router(knowledge_router, prefix="/api/knowledge", tags=["Knowledge directory"])
 from app.modules.routine.router import router as routine_router  # noqa: E402
+from app.modules.street.router import router as street_router  # noqa: E402
 app.include_router(routine_router, prefix="/api/routine", tags=["Daily routine"])
+app.include_router(street_router, prefix="/api/street", tags=["Street engine"])
 from app.modules.blueprints.router import router as blueprints_router  # noqa: E402
 app.include_router(blueprints_router, prefix="/api/blueprints", tags=["Free blueprints"])
 

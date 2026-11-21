@@ -7,6 +7,7 @@ import { toast } from "@/components/ui/Toast";
 import { geoAPI } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { LAYERS, RADII, locationExplain, locationLabel, useOutsideStore } from "@/stores/outsideStore";
+import { parsePin } from "@/lib/geoPin";
 
 /**
  * THE LOCATION BAR — the one control that decides what "around you" means.
@@ -17,8 +18,9 @@ import { LAYERS, RADII, locationExplain, locationLabel, useOutsideStore } from "
  *     your business address is labelled as such, so the app never quietly
  *     shows you your shop's neighbourhood and calls it your home.
  *   · Denying GPS is a normal path, not a dead end. "Choose your area" types a
- *     place name, geocodes it through the existing `/api/geo/geocode`, and
- *     carries on. Nothing about Outside requires a location permission.
+ *     place name, geocodes it through the existing `/api/geo/geocode`, or
+ *     pastes a Google/WhatsApp pin whose `lat,lng` is read locally. Nothing
+ *     about Outside requires a location permission.
  *   · The radius is a filter, not a wall. Widening it adds content; it never
  *     hides unlocated content, which is enforced on the server.
  */
@@ -83,14 +85,21 @@ export default function LocationBar({ className, showRadius = true }) {
     }
     setLocating(true);
     try {
-      const { data } = await geoAPI.geocode(text);
-      const saved = await setLocation({
-        label: text, geo_lat: data.lat, geo_lng: data.lng, source: "manual",
-      });
+      const pin = parsePin(text);
+      const saved = pin
+        ? await setLocation({
+            label: "Pasted pin", geo_lat: pin.lat, geo_lng: pin.lng, source: "manual",
+          })
+        : await (async () => {
+            const { data } = await geoAPI.geocode(text);
+            return setLocation({
+              label: text, geo_lat: data.lat, geo_lng: data.lng, source: "manual",
+            });
+          })();
       setLocating(false);
       if (saved) {
         setEditing(false);
-        toast.success(`Looking around ${text}.`);
+        toast.success(pin ? "Pinned that map link." : `Looking around ${text}.`);
       } else {
         toast.error("Couldn't save that. Try again.");
       }
@@ -165,8 +174,8 @@ export default function LocationBar({ className, showRadius = true }) {
               value={label}
               onChange={(e) => setLabel(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") saveTyped(); }}
-              placeholder="Kondele, Kisumu"
-              hint="A neighbourhood, a town or a venue. No exact address needed."
+              placeholder="Kondele, Kisumu or paste a map pin"
+              hint="A neighbourhood, a town, a venue, or a Google/WhatsApp map link."
               data-testid="location-input"
             />
             <Button onClick={saveTyped} loading={locating} disabled={locating}>

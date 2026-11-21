@@ -15,6 +15,7 @@ import logging
 from app.config import settings
 from app.database import async_session, engine
 from app.modules.routines import sweep as routine_sweep
+from app.modules.street import sweep as street_sweep
 from app.modules.price_index import sweep as price_index_sweep
 from app.modules.standing import sweep as standing_sweep
 from app.platform import event_outbox
@@ -34,12 +35,13 @@ async def main() -> None:
     standing_task = asyncio.create_task(standing_sweep.scheduler_loop(async_session))
     routine_task = asyncio.create_task(routine_sweep.scheduler_loop(async_session))
     price_index_task = asyncio.create_task(price_index_sweep.scheduler_loop(async_session))
+    street_task = asyncio.create_task(street_sweep.scheduler_loop(async_session))
     try:
         await asyncio.gather(pos_task, payments_task, outbox_task, standing_task,
-                             routine_task, price_index_task)
+                             routine_task, price_index_task, street_task)
     finally:
         for task in (pos_task, payments_task, outbox_task, standing_task,
-                     routine_task, price_index_task):
+                     routine_task, price_index_task, street_task):
             task.cancel()
             try:
                 await task

@@ -5,6 +5,7 @@ import {
 import { RankChip, RankMark } from "@/components/identity/Rank";
 import ReceiptScanCard from "@/components/receipts/ReceiptScanCard";
 import TownDoors from "@/components/home/TownDoors";
+import StreetDoor from "@/components/home/StreetDoor";
 import HappeningShelf from "@/components/home/HappeningShelf";
 import IdentityStrip from "@/components/home/IdentityStrip";
 
@@ -115,6 +116,8 @@ export default function TodayView({
       <ReceiptScanCard />
 
       <TownDoors />
+
+      <StreetDoor />
 
       {unread > 0 && (
         <Link

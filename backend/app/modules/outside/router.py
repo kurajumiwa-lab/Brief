@@ -49,6 +49,7 @@ from app.modules.outside.models import (
 from app.config import settings
 from app.modules.trade.models import BusinessRequest
 from app.routes.auth import get_current_vendor
+from app.services import h3_geo
 
 router = APIRouter()
 
@@ -615,7 +616,7 @@ async def _unregister_from_event(db, vendor, event_id):
 @router.get("/location")
 async def get_location(vendor: Vendor = Depends(get_current_vendor), db: AsyncSession = Depends(get_db)):
     loc = await resolve_location(db, vendor)
-    return {
+    payload = {
         "lat": loc["lat"], "lng": loc["lng"], "label": loc["label"],
         "radius_km": loc["radius_km"], "layer": loc["layer"], "source": loc["source"],
         "interests": loc["interests"], "share_location": loc["share_location"],
@@ -623,6 +624,10 @@ async def get_location(vendor: Vendor = Depends(get_current_vendor), db: AsyncSe
         # "we could not get your location" case explainable rather than broken.
         "explainable": loc["source"] != "unset",
     }
+    if h3_geo.valid_point(loc["lat"], loc["lng"]):
+        info = h3_geo.describe(loc["lat"], loc["lng"])
+        payload["h3"] = {"r9": info["h3_r9"], "r8": info["h3_r8"], "r7": info["h3_r7"]}
+    return payload
 
 
 @router.put("/location")
