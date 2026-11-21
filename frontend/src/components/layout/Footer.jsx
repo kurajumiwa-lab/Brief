@@ -21,7 +21,7 @@ export default function Footer() {
             Prices are stated by the person
           </span>
           <span className="inline-flex items-center gap-1.5 text-2xs text-ink-3">
-            <ShieldCheck size={14} className="text-orchid-600 dark:text-orchid-300" aria-hidden="true" />
+            <ShieldCheck size={14} className="text-brand-600 dark:text-brand-300" aria-hidden="true" />
             Trust is earned through fulfilment
           </span>
           <Link to="/regions" className="inline-flex items-center gap-1 text-2xs font-semibold text-brand-800 hover:text-brand-700 dark:text-brand-300">

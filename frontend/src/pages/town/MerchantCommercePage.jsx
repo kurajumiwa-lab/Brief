@@ -223,7 +223,7 @@ export default function MerchantCommercePage() {
       <Card className="space-y-3 p-4">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div className="flex items-center gap-2">
-            <BarChart3 size={16} className="text-orchid-600 dark:text-orchid-400" />
+            <BarChart3 size={16} className="text-brand-600 dark:text-brand-400" />
             <div>
               <p className="text-sm font-extrabold text-ink-1">Demand & price analytics</p>
               <p className="text-2xs text-ink-3">Item-level lines, demand by day and anonymised regional price bands.</p>

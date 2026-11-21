@@ -49,10 +49,17 @@
   --surface-inverse: 24 37 34;
 
   /* ── Ink ──────────────────────────────────────────────────────────────── */
-  --ink-1: 24 37 34;    /* #182522 titles    15.0:1 on surface-1 */
-  --ink-2: 51 68 63;    /* body               8.9:1 */
-  --ink-3: 86 104 98;   /* secondary          5.0:1 */
-  --ink-4: 116 133 127; /* metadata           3.4:1 — large text & icons only */
+  --ink-1: 24 37 34;    /* #182522 titles    15.83:1 on surface-1 */
+  --ink-2: 51 68 63;    /* body              10.30:1 */
+  --ink-3: 86 104 98;   /* secondary          5.91:1 */
+  --ink-4: 95 113 106;  /* #5F716A metadata. Was #74857F at 3.89:1, which
+                           failed WCAG AA for body text. It carries 1,300+
+                           labels — timestamps, notes, field hints — and 400
+                           of those sit at text-micro (11px). "Metadata only"
+                           cannot mean "may be unreadable"; a person still has
+                           to read it. This value clears 4.5:1 on every light
+                           surface it is used on: card 5.18, page 4.91,
+                           surface-2 4.59, brand-50 4.69. */
   --ink-inverse: 255 255 255;
 
   /* ── Edges ───────────────────────────────────────────────────────────── */
@@ -112,7 +119,14 @@
   --accent-900: 92 40 11;
   --accent-950: 60 24 5;
 
-  /* ── Slate: identity, selected state, focus (legacy name: orchid) ────── */
+  /* ── Slate: identity, selected state, focus (legacy name: orchid) ──────
+     NOTE — this ramp is a cool slate, NOT a purple, and on that technicality
+     violet crept back into the product: MePage painted its workspace headings
+     and a sparkle icon in orchid-600/700, which reads as lilac on cream. A
+     legacy token name is not a licence to use it as an accent. Green is the
+     brand; orange is merchandising; this ramp is for selected states and
+     focus rings only. If you are reaching for orchid as a *colour scheme*,
+     the answer is brand. */
   --orchid-50: 244 247 250;
   --orchid-100: 228 235 243;
   --orchid-200: 200 214 230;
@@ -236,15 +250,23 @@
   --mk-orange-soft: 58 34 28;
   --mk-line: 53 43 67;
 
+  /* 50–200 stay near-black: they are *tinted backgrounds* on a dark page.
+     300 and up are the readable fills, and the order carries meaning —
+     600 is the primary fill that button text sits on, 700 its hover. */
   --brand-50: 12 34 30;
   --brand-100: 16 48 42;
   --brand-200: 20 66 57;
   --brand-300: 128 195 178;
-  --brand-400: 66 178 152;
+  --brand-400: 92 205 175;
   --brand-500: 62 190 160;   /* lifted for 4.5:1 on surface-1 */
-  --brand-600: 37 163 134;
-  --brand-700: 28 132 108;
-  --brand-800: 21 105 86;
+  --brand-600: 26 124 101;   /* #1A7C65 — white on this is 5.10:1.
+                                It was #25A386, where white was 3.15:1: every
+                                primary Button in dark mode failed AA. A filled
+                                action has to be dark enough to carry white, so
+                                the fill steps down and the ramp keeps its
+                                relative order (400 > 500 > 600 > 700 > 800). */
+  --brand-700: 22 104 85;    /* #16684F — hover, 6.5:1 with white */
+  --brand-800: 17 82 67;     /* #115243 — active, 8.4:1 */
 
   /* The teal and electric ramps are readable as-is on a dark surface; only the
      lowest steps move, because a #103C35 chip on #131916 has no edge. */

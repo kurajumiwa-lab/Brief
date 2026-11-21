@@ -92,6 +92,20 @@ export default {
         "5xl": ["2.25rem", { lineHeight: "2.5rem", letterSpacing: "-0.025em" }],
         // Semantic headings: page / section / card. Prefer these over picking
         // a numeric size, so hierarchy is a decision and not a taste.
+        //
+        // THE THREE TEXT LEVELS. A design review asked for exactly three
+        // clearly-defined levels and this is where they are declared, so a
+        // screen can stop inventing a fourth:
+        //
+        //   primary    titles and the one thing a page is about  → ink-1 + title-*
+        //   secondary  descriptions, the sentence under a title   → ink-2/ink-3 + text-xs/sm
+        //   muted      metadata only: timestamps, counts, hints   → ink-4 + text-micro/2xs
+        //
+        // The pairing is the contract: `text-ink-4` at `text-base` is a screen
+        // using muted colour for something a person has to read, which is the
+        // defect the review found. ink-4 clears 4.5:1 on every light surface
+        // (see src/test/contrast.test.js) so the pairing is legible either way,
+        // but the *hierarchy* only holds if the levels are used as declared.
         "title-page": ["1.75rem", { lineHeight: "2.125rem", letterSpacing: "-0.02em" }],
         "title-section": ["1.125rem", { lineHeight: "1.5rem", letterSpacing: "-0.01em" }],
         "title-card": ["0.9375rem", { lineHeight: "1.375rem" }],

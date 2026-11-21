@@ -75,13 +75,18 @@ export default function TodayView({
       {/* ── The one thing to do next ─────────────────────────────────────── */}
       {rank && rank.level < 5 ? (
         <section
-          className="relative overflow-hidden rounded-3xl bg-brand-700 p-5 text-white shadow-sm sm:p-6"
+          // The card is a *dark surface*, so it keeps a dark green fill in both
+          // themes. brand-700 flips to a mid-teal in dark mode, which is what
+          // made the light supporting text on it unreadable. brand-800/900 are
+          // dark in both themes, and the text on them is plain white at
+          // reduced opacity — measured, not guessed: 8.4:1 and above.
+          className="relative overflow-hidden rounded-3xl bg-brand-800 p-5 text-white shadow-sm sm:p-6"
           aria-labelledby="next-step"
         >
           <div className="pointer-events-none absolute -right-10 -top-12 h-40 w-40 rounded-full bg-brand-500/30 blur-2xl" aria-hidden="true" />
           <div className="relative">
             <div className="flex items-center justify-between gap-3">
-              <p className="text-micro font-bold uppercase tracking-[0.14em] text-brand-200">
+              <p className="text-micro font-bold uppercase tracking-[0.14em] text-white/75">
                 Next step · level {rank.level} of 5
               </p>
               <RankMark level={rank.level} className="[&>span]:bg-white/80" />
@@ -89,7 +94,7 @@ export default function TodayView({
             <h2 id="next-step" className="mt-2 text-lg font-extrabold leading-snug tracking-tight sm:text-xl">
               {rank.nextAction ? rank.nextAction.label : `Reach ${rank.next.label}`}
             </h2>
-            <p className="mt-1 max-w-md text-xs leading-relaxed text-brand-100">
+            <p className="mt-1 max-w-md text-xs leading-relaxed text-white/85">
               {rank.nextAction
                 ? rank.nextAction.detail
                 : rank.next.blurb}
@@ -97,7 +102,7 @@ export default function TodayView({
             {rank.nextAction && (
               <Link
                 to={rank.nextAction.to}
-                className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-white px-4 py-2.5 text-xs font-bold text-brand-800 transition-colors hover:bg-brand-50 focus-visible:ring-2 focus-visible:ring-white/70"
+                className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-white px-4 py-2.5 text-xs font-bold text-brand-800 transition-colors hover:bg-brand-50 focus-visible:ring-2 focus-visible:ring-white/70 dark:text-brand-900"
               >
                 {rank.nextAction.label}
                 <ArrowRight size={14} aria-hidden="true" />

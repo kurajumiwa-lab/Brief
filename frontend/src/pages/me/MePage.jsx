@@ -175,7 +175,9 @@ const DESTINATIONS = [
 const TONE_CLASSES = {
   brand: "bg-brand-100 text-brand-800 dark:bg-brand-500/15 dark:text-brand-300",
   green: "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300",
-  purple: "bg-orchid-100 text-orchid-800 dark:bg-orchid-500/15 dark:text-orchid-300",
+  // Kept as a *name* because callers pass tone="purple"; it now resolves to the
+  // identity family. A local tone map is not a place to invent a new colour.
+  purple: "bg-brand-100 text-brand-800 dark:bg-brand-500/15 dark:text-brand-300",
   amber: "bg-accent-100 text-accent-800 dark:bg-accent-500/15 dark:text-accent-300",
   blue: "bg-blue-100 text-blue-800 dark:bg-blue-500/15 dark:text-blue-300",
 };
@@ -757,7 +759,7 @@ export default function MePage() {
         <section key={group} aria-labelledby={`workspace-${group.toLowerCase().replace(/\s+/g, "-")}`}>
           <div className="flex items-end justify-between gap-4 border-b border-edge-1 pb-3">
             <div>
-              <p className="text-micro font-bold uppercase tracking-[0.14em] text-orchid-700 dark:text-orchid-300">
+              <p className="text-micro font-bold uppercase tracking-[0.14em] text-brand-700 dark:text-brand-300">
                 0{index + 1} / Workspace
               </p>
               <h2 id={`workspace-${group.toLowerCase().replace(/\s+/g, "-")}`} className="mt-1 text-xl font-bold text-ink-1">
@@ -774,7 +776,7 @@ export default function MePage() {
       ))}
 
       <p className="flex items-start gap-2 rounded-xl bg-surface-2 px-4 py-3 text-2xs text-ink-3">
-        <Sparkles size={15} className="mt-0.5 shrink-0 text-orchid-600 dark:text-orchid-300" aria-hidden="true" />
+        <Sparkles size={15} className="mt-0.5 shrink-0 text-brand-600 dark:text-brand-400" aria-hidden="true" />
         Scores and fulfilment are calculated from recorded trades. {BRAND.name} does not let businesses enter their own trust metrics.
       </p>
     </div>

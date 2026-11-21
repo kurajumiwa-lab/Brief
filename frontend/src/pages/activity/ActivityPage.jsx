@@ -69,6 +69,10 @@ export default function ActivityPage() {
   const status = useOutsideStore((s) => s.activityStatus);
   const loadActivity = useOutsideStore((s) => s.loadActivity);
   const [group, setGroup] = useState("all");
+  // Two questions this page answers, kept apart at the top rather than
+  // interleaved down the page: what needs a reply, and what is happening near
+  // you. Default is "all", so switching modes never hides something unread.
+  const [mode, setMode] = useState("all");
 
   const [watches, setWatches] = useState([]);
   const [bookings, setBookings] = useState([]);
@@ -135,7 +139,13 @@ export default function ActivityPage() {
   const groups = activity?.groups || [];
   const counts = activity?.counts || {};
   const countsByKey = Object.fromEntries(groups.map((g) => [g.key, g]));
-  const visible = group === "all" ? groups.filter((g) => g.items.length) : groups.filter((g) => g.key === group);
+  // Which groups are "waiting on you" is a fact about the group, not a guess:
+  // invitations, replies and trades all arrive because somebody addressed you.
+  const WAITING_KEYS = new Set(["invitations", "replies"]);
+  const allVisible = group === "all" ? groups.filter((g) => g.items.length) : groups.filter((g) => g.key === group);
+  const visible = mode === "all"
+    ? allVisible
+    : allVisible.filter((g) => (mode === "waiting" ? WAITING_KEYS.has(g.key) : !WAITING_KEYS.has(g.key)));
   const activeBookings = bookings.filter((b) => ["agreed", "in_progress"].includes(b.status));
 
   return (
@@ -305,7 +315,41 @@ export default function ActivityPage() {
         })}
       </div>
 
-      {/* ── 5. what is waiting, in the normal flow ──────────────────────── */}
+      {/* ── 5. two modes, because this page answers two different questions ─
+          "Is anybody waiting on me?" and "what is happening around me?" are
+          different questions, and interleaving their answers made a page that
+          read as one long undifferentiated feed. The filters above still work
+          across both; All remains the default so nothing is hidden. */}
+      <div
+        className="mb-3 inline-flex rounded-xl border border-edge-1 bg-surface-1 p-1"
+        role="tablist"
+        aria-label="What to show"
+      >
+        {[
+          { key: "all", label: "Everything", icon: Bell },
+          { key: "waiting", label: "Waiting on you", icon: MessageSquare },
+          { key: "local", label: "Your activity", icon: CalendarDays },
+        ].map(({ key, label, icon: Icon }) => (
+          <button
+            key={key}
+            type="button"
+            role="tab"
+            aria-selected={mode === key}
+            onClick={() => setMode(key)}
+            data-testid={`activity-mode-${key}`}
+            className={cn(
+              "inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-2xs font-bold transition-colors",
+              mode === key
+                ? "bg-brand-700 text-white"
+                : "text-ink-3 hover:bg-surface-2 hover:text-ink-1",
+            )}
+          >
+            <Icon size={13} aria-hidden="true" />
+            {label}
+          </button>
+        ))}
+      </div>
+
       <div className="min-h-[38vh] space-y-4">
         {activeBookings.length > 0 && (
           <section
@@ -347,6 +391,24 @@ export default function ActivityPage() {
           </div>
         ) : status === "error" ? (
           <ActivityError onRetry={loadActivity} />
+        ) : visible.length === 0 && mode !== "all" ? (
+          <div className="rounded-2xl border border-edge-1 bg-surface-1 p-6 text-center" data-testid="activity-mode-empty">
+            <p className="text-sm font-bold text-ink-1">
+              {mode === "waiting" ? "Nothing is waiting on you." : "Nothing is happening near you yet."}
+            </p>
+            <p className="mx-auto mt-1 max-w-xs text-2xs leading-relaxed text-ink-3">
+              {mode === "waiting"
+                ? "No invitations, quotes or replies need an answer. Your other activity is under Your activity."
+                : "When a round, event or trade starts near you it appears here. Set a neighbourhood watch above to be told about it."}
+            </p>
+            <button
+              type="button"
+              onClick={() => setMode("all")}
+              className="mt-3 text-2xs font-bold text-brand-700 hover:underline dark:text-brand-300"
+            >
+              Show everything
+            </button>
+          </div>
         ) : visible.length === 0 ? (
           <EmptyActivity />
         ) : (

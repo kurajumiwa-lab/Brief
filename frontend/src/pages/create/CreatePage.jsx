@@ -344,7 +344,7 @@ export default function CreatePage() {
                 <span
                   className={cn(
                     "grid h-8 w-8 place-items-center rounded-xl",
-                    active ? "bg-brand-500 text-white" : "bg-surface-2 text-ink-3",
+                    active ? "bg-brand-600 text-white" : "bg-surface-2 text-ink-3",
                   )}
                 >
                   <Icon size={16} aria-hidden="true" />
@@ -400,7 +400,7 @@ export default function CreatePage() {
           data-testid="inferred-template-banner"
           className="flex items-start gap-3 rounded-card border border-brand-500/30 bg-brand-50/70 p-3.5 dark:bg-brand-500/10"
         >
-          <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-brand-500 text-white">
+          <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-brand-600 text-white">
             <Sparkles size={15} aria-hidden="true" />
           </span>
           <div className="min-w-0 flex-1">
