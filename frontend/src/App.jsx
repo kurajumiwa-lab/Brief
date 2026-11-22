@@ -11,7 +11,6 @@ import PlaceProfile from "@/pages/nearby/PlaceProfile";
 import TaskTrack from "@/pages/tasks/TaskTrack";
 import BusinessDeskPage from "@/pages/storefront/BusinessDeskPage";
 import CreatePage from "@/pages/create/CreatePage";
-import MorningBriefPage from "@/pages/brief/MorningBriefPage";
 import LegalPage from "@/pages/legal/LegalPage";
 import SubscriptionPage from "@/pages/billing/SubscriptionPage";
 import MembershipPage from "@/pages/membership/MembershipPage";
@@ -24,7 +23,6 @@ import OffersBrowsePage from "@/pages/offers/OffersBrowsePage";
 import PublicPage from "@/pages/page/PublicPage";
 import PageEditor from "@/pages/page/PageEditor";
 import InviteShopPage from "@/pages/trades/InviteShopPage";
-import IntegrationsPage from "@/pages/integrations/IntegrationsPage";
 import TrustBrowsePage from "@/pages/trust/TrustBrowsePage";
 import TrustBranchPage from "@/pages/trust/TrustBranchPage";
 import TrustMePage from "@/pages/trust/TrustMePage";
@@ -37,9 +35,7 @@ import LearnDetailPage from "@/pages/learn/LearnDetailPage";
 import LearnNewPage from "@/pages/learn/LearnNewPage";
 import DayPage from "@/pages/today/TodayPage";
 import DeskPage from "@/pages/desk/DeskPage";
-import MailPage from "@/pages/mail/MailPage";
-import { DESK_ENABLED, INTEGRATIONS_ENABLED, MAIL_ENABLED, NEARBY_DOORS_ENABLED } from "@/config/flags";
-import FrontDoorsPage from "@/pages/nearby/FrontDoorsPage";
+import { DESK_ENABLED, INTEGRATIONS_ENABLED, NEARBY_DOORS_ENABLED } from "@/config/flags";
 import BlueprintsPage from "@/pages/templates/BlueprintsPage";
 import BlueprintDetailPage from "@/pages/templates/BlueprintDetailPage";
 import TemplatePacksPage, { TemplatePackDetailPage } from "@/pages/templates/TemplatePacksPage";
@@ -57,6 +53,15 @@ import { canSellGoods } from "@/config/identity";
 // The five destinations. Today is the landing page; the rest are lazy like
 // everything else. The old home, Me and Activity screens stay in the tree as
 // deep links, but no navigation points at them.
+/**
+ * `/mail` is the old conversations-only screen. It is not a page any more; it
+ * is the Inbox with its conversation filter already applied. Keeping the URL
+ * alive costs one line and keeps yesterday's links working.
+ */
+function InboxPageMail() {
+  return <InboxPage initialFilter="messages" />;
+}
+
 const TodayPage = lazy(() => import("@/pages/home/TodayPage"));
 const RegionsPage = lazy(() => import("@/pages/regions/RegionsPage"));
 const DiscoverSectionPage = lazy(() => import("@/pages/discover/DiscoverSectionPage"));
@@ -82,6 +87,11 @@ const InboxPage = lazy(() => import("@/pages/inbox/InboxPage"));
 const RoutinesPage = lazy(() => import("@/pages/routines/RoutinesPage"));
 const StreetPage = lazy(() => import("@/pages/street/StreetPage"));
 const MorePage = lazy(() => import("@/pages/more/MorePage"));
+// Flag-gated pages are lazy on purpose: the flag decides whether the route
+// exists, but a page nobody can open should not be downloaded by anybody.
+const IntegrationsPage = lazy(() => import("@/pages/integrations/IntegrationsPage"));
+const FrontDoorsPage = lazy(() => import("@/pages/nearby/FrontDoorsPage"));
+const NoticeBoardPage = lazy(() => import("@/pages/noticeboard/NoticeBoardPage"));
 
 // Every page is lazy. The home screen downloads only what it renders —
 // Leaflet (map), chat, analytics, ops and the rest split into chunks fetched
@@ -101,7 +111,6 @@ const ParksPage = lazy(() =>
 const ParkDetailPage = lazy(() =>
   import("@/pages/parks/ParksPage").then((m) => ({ default: m.ParkDetailPage }))
 );
-const ActivityPage = lazy(() => import("@/pages/activity/ActivityPage"));
 const ActivityDetailPage = lazy(() => import("@/pages/activities/ActivityDetailPage"));
 const ListingPage = lazy(() => import("@/pages/listing/ListingPage"));
 const OrdersPage = lazy(() => import("@/pages/orders/OrdersPage"));
@@ -341,7 +350,14 @@ function AppRoutes() {
           <Route path="/trades/proofs" element={<TradeProofsPage />} />
           <Route path="/regions/all" element={<RegionsIndexPage />} />
           <Route path="/regions/:slug" element={<RegionPage />} />
+          {/* THE ONE INBOX. /activity and /mail are kept because links in
+              WhatsApp threads and old notification payloads point at them, but
+              they no longer render a second and third inbox — they render this
+              one. `/mail` opens it already filtered to conversations, which is
+              the only thing the old Mail page did. */}
           <Route path="/inbox" element={<InboxPage />} />
+          <Route path="/activity" element={<InboxPage />} />
+          <Route path="/mail" element={<InboxPageMail />} />
           <Route path="/routines" element={<RoutinesPage />} />
           <Route path="/street" element={<StreetPage />} />
           {/* 0082: the receipt game as a paid task. Signed in, so a day can be
@@ -354,11 +370,16 @@ function AppRoutes() {
           <Route path="/you/identity" element={<IdentityPage />} />
           <Route path="/you/rank" element={<RankPage />} />
           <Route path="/more" element={<MorePage />} />
+          {/* Linked from the notice-board shelf. The page already existed and
+              was never registered, so the link was a 404 in an empty room. */}
+          <Route path="/notices" element={<NoticeBoardPage />} />
           <Route path="/p/:handle" element={<PortfolioPage />} />
           {/* Old address for the same page. A handle is a URL, not a product. */}
           <Route path="/you/settings" element={<Navigate to="/more" replace />} />
-          {/* v2.15 — the read-only brief, and the trust/data-rights surface */}
-          <Route path="/brief" element={<MorningBriefPage />} />
+          {/* The Morning Brief is the first block of Today, so `/brief` is an
+              old address, not a page. It used to resolve to both a page and a
+              redirect in this same block — the redirect won, which meant the
+              page was unreachable while still being imported into the bundle. */}
           <Route path="/legal" element={<LegalPage />} />
           <Route path="/billing" element={<SubscriptionPage />} />
           {/* Free for now: membership, member directory and group orders */}
@@ -376,7 +397,6 @@ function AppRoutes() {
           {/* Flagged: off unless VITE_DESK_ENABLED=true. A false child is skipped by Routes. */}
           {DESK_ENABLED && <Route path="/desk" element={<DeskPage />} />}
           {/* Flagged: off unless VITE_MAIL_ENABLED=true. */}
-          {MAIL_ENABLED && <Route path="/mail" element={<MailPage />} />}
           {/* Flagged: off unless VITE_NEARBY_DOORS_ENABLED=true. */}
           {NEARBY_DOORS_ENABLED && <Route path="/doors" element={<FrontDoorsPage />} />}
           <Route path="/book/:vendorId" element={<BookPage />} />
@@ -389,7 +409,6 @@ function AppRoutes() {
           <Route path="/parks" element={<ParksPage />} />
           <Route path="/parks/:slug" element={<ParkDetailPage />} />
           <Route path="/create" element={<CreatePage />} />
-          <Route path="/activity" element={<ActivityPage />} />
           <Route path="/activities/:id" element={<ActivityDetailPage />} />
           <Route path="/browse" element={<BrowsePage />} />
           <Route path="/listing/:id" element={<ListingPage />} />

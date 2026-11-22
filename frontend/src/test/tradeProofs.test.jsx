@@ -118,7 +118,7 @@ describe("receipt-backed trades", () => {
     renderPage();
     const rows = await screen.findAllByTestId("trade-proof-row");
     const unmatched = rows.find((row) => within(row).queryByTestId("trade-proof-unmatched"));
-    expect(within(unmatched).getByText(/not on Home Office yet/i)).toBeInTheDocument();
+    expect(within(unmatched).getByText(/not on Brief yet/i)).toBeInTheDocument();
     expect(within(unmatched).getByTestId("trade-proof-unmatched")).toHaveAttribute(
       "href", expect.stringMatching(/^https:\/\/wa\.me\/\?text=/),
     );

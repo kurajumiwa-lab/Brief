@@ -197,7 +197,7 @@ export default function PortfolioView({
           <div className="absolute inset-x-0 top-0 flex items-center justify-between gap-2 p-3 sm:p-4">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-black/25 px-2.5 py-1 text-micro font-bold text-white backdrop-blur-sm">
               <Globe size={11} aria-hidden="true" />
-              Home Office page
+              Brief page
             </span>
             <div className="flex items-center gap-1.5">
               {isOwner && (
@@ -274,7 +274,7 @@ export default function PortfolioView({
             {vendor?.is_verified && !verifiedInstitution && !verifiedLicence && (
               <span className="inline-flex items-center gap-1 rounded-full border border-edge-1 bg-surface-0 px-2.5 py-1 text-2xs font-bold text-ink-2">
                 <ShieldCheck size={12} aria-hidden="true" />
-                Checked by Home Office
+                Checked by Brief
               </span>
             )}
             {(affiliation?.status === "pending" || licence?.status === "pending") && (
@@ -709,7 +709,7 @@ export default function PortfolioView({
           <div className="min-w-0">
             <p className="text-sm font-extrabold tracking-tight">{name}</p>
             <p className="mt-1 text-2xs text-surface-0/60">
-              {[line, region ? `${region.hub}, ${region.name}` : place].filter(Boolean).join(" · ") || "A page on Home Office"}
+              {[line, region ? `${region.hub}, ${region.name}` : place].filter(Boolean).join(" · ") || "A page on Brief"}
             </p>
             {handle && (
               <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 font-mono text-micro text-surface-0/80">
@@ -732,7 +732,7 @@ export default function PortfolioView({
         </div>
         <div className="mt-5 flex flex-wrap items-center justify-between gap-2 border-t border-white/10 pt-3">
           <p className="text-micro text-surface-0/55">
-            © {new Date().getFullYear()} {name}. Powered by Home Office.
+            © {new Date().getFullYear()} {name}. Powered by Brief.
           </p>
           <Link to="/auth?mode=register" className="text-micro font-bold text-surface-0/80 hover:text-surface-0">
             Build your own page

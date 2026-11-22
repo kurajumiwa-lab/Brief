@@ -244,7 +244,7 @@ export default function CreatePage() {
               Verify a trade
             </h2>
             <p className="mt-1 max-w-md text-2xs leading-relaxed text-ink-3">
-              Scan the eTIMS QR on a shop receipt. If the shop is on Home Office,
+              Scan the eTIMS QR on a shop receipt. If the shop is on Brief,
               it gets one tap to confirm; then the trade counts for both of you.
               This is the fifth action — not another listing.
             </p>

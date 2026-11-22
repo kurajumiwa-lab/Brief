@@ -687,7 +687,7 @@ export const growthAPI = {
 
 // ── Enterprise workspaces & managed devices (v2.13) ────────────────────────
 // The paid, private side of the dual model: an organisation workspace inside
-// Brief_, its member register, field-officer activity and managed Android
+// Brief, its member register, field-officer activity and managed Android
 // devices. Commands report `dispatched` honestly — see the plans payload.
 export const enterpriseAPI = {
   plans: () => api.get("/enterprise/plans"),

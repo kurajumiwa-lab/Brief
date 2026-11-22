@@ -11,6 +11,10 @@ const mocks = vi.hoisted(() => ({
   apiDelete: vi.fn(),
   outsideCreate: vi.fn(),
   upload: vi.fn(),
+  // Referenced by the stockStore mock below but never declared, so the Inbox's
+  // mount-time fetch was `undefined` and threw. Declared, and resolving.
+  stockFetchMine: vi.fn(() => Promise.resolve()),
+  stockFetchMovements: vi.fn(() => Promise.resolve()),
   authState: {
     token: null,
     vendor: null,
@@ -46,6 +50,14 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/api", () => ({
+  // The consolidated Inbox loads its week, corridor board and payment queue
+  // alongside the watches. Each of those fails quietly in the page, so an
+  // empty answer is enough for a spec about watch preferences.
+  eventAPI: { paymentQueue: vi.fn(() => ok([])), confirmPayment: vi.fn(() => ok({})) },
+  spottedDealAPI: { jury: vi.fn(() => ok([])), mine: vi.fn(() => ok([])), dispute: vi.fn(() => ok({})) },
+  corridorTaskAPI: { inbox: vi.fn(() => ok({ days: [] })) },
+  recurringRoutineAPI: { mine: vi.fn(() => ok({ share_prompts: [] })) },
+  chatAPI: { rooms: vi.fn(() => ok([])) },
   default: {
     get: mocks.apiGet,
     post: mocks.apiPost,
@@ -53,6 +65,7 @@ vi.mock("@/lib/api", () => ({
     delete: mocks.apiDelete,
   },
   outsideAPI: {
+    agenda: vi.fn(() => ok({ items: [] })),
     create: mocks.outsideCreate,
     remove: mocks.apiDelete,
     location: vi.fn(() => ok(mocks.outsideState.location)),
@@ -506,7 +519,7 @@ describe("Activity watches and Profile utility", () => {
       groups: [],
       counts: { unread_notifications: 0, rooms: 0, rooms_active_today: 0, attending: 0 },
     };
-    const ActivityPage = (await import("@/pages/activity/ActivityPage")).default;
+    const ActivityPage = (await import("@/pages/inbox/InboxPage")).default;
     renderAt("/activity", <ActivityPage />);
 
     expect(await screen.findByTestId("activity-watches-panel")).toBeInTheDocument();

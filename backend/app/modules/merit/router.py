@@ -34,8 +34,39 @@ from app.modules.merit import rules, service
 from app.modules.merit.rules import MeritError
 from app.routes.auth import get_current_vendor
 
+from sqlalchemy import text
+
 router = APIRouter()
 public = APIRouter()
+
+# ── schema guard ────────────────────────────────────────────────────────────
+# Merit needs `merit_snapshots`, `trust_endorsements` and `mentorships`, added by
+# migration 0083. Production was still on 0057 when this module shipped, so a
+# request here raised `UndefinedTable` and surfaced as a 500 — an error page
+# rather than an honest "not available yet". `require_schema` turns the missing
+# table into 503 with the migration named, which is the difference between "this
+# is broken" and "this has not been switched on".
+_MERIT_TABLES = ("merit_snapshots", "trust_endorsements", "mentorships")
+
+
+async def require_schema(db: AsyncSession = Depends(get_db)) -> None:
+    missing = [t for t in _MERIT_TABLES if not await _table_exists(db, t)]
+    if missing:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Merit is not enabled on this database yet: "
+                f"{', '.join(missing)} missing. Apply migration 0083_merit."
+            ),
+        )
+
+
+async def _table_exists(db: AsyncSession, name: str) -> bool:
+    # `to_regclass` returns NULL rather than raising, which is why this is a
+    # probe and not a try/except around a real query.
+    result = await db.execute(text("SELECT to_regclass(:n) IS NOT NULL"), {"n": f"public.{name}"})
+    return bool(result.scalar())
+
 
 
 class EndorseIn(BaseModel):
@@ -71,7 +102,7 @@ async def _by_handle(db: AsyncSession, handle: str) -> Vendor:
 
 # ── public ───────────────────────────────────────────────────────────────────
 
-@public.get("/{handle}")
+@public.get("/{handle}", dependencies=[Depends(require_schema)])
 async def public_card(handle: str, db: AsyncSession = Depends(get_db)):
     """A page's trust card. Public, because a claim nobody can check is a boast."""
     vendor = await _by_handle(db, handle)
@@ -80,20 +111,20 @@ async def public_card(handle: str, db: AsyncSession = Depends(get_db)):
     return out
 
 
-@public.get("/{handle}/ticker")
+@public.get("/{handle}/ticker", dependencies=[Depends(require_schema)])
 async def public_ticker(handle: str, days: int = Query(30, ge=1, le=180),
                         db: AsyncSession = Depends(get_db)):
     vendor = await _by_handle(db, handle)
     return await service.ticker(db, vendor.id, days=days)
 
 
-@public.get("/{handle}/endorsements")
+@public.get("/{handle}/endorsements", dependencies=[Depends(require_schema)])
 async def public_endorsements(handle: str, db: AsyncSession = Depends(get_db)):
     vendor = await _by_handle(db, handle)
     return await service.endorsements_for(db, vendor.id)
 
 
-@public.get("/leaderboard/records")
+@public.get("/leaderboard/records", dependencies=[Depends(require_schema)])
 async def public_leaderboard(limit: int = Query(10, ge=1, le=50),
                              db: AsyncSession = Depends(get_db)):
     return await service.leaderboard(db, limit=limit)
@@ -101,7 +132,7 @@ async def public_leaderboard(limit: int = Query(10, ge=1, le=50),
 
 # ── the owner's own ──────────────────────────────────────────────────────────
 
-@router.get("/me")
+@router.get("/me", dependencies=[Depends(require_schema)])
 async def my_card(vendor: Vendor = Depends(get_current_vendor),
                   db: AsyncSession = Depends(get_db)):
     out = await service.card(db, vendor)
@@ -109,7 +140,7 @@ async def my_card(vendor: Vendor = Depends(get_current_vendor),
     return out
 
 
-@router.post("/endorsements", status_code=201)
+@router.post("/endorsements", status_code=201, dependencies=[Depends(require_schema)])
 async def endorse(body: EndorseIn, vendor: Vendor = Depends(get_current_vendor),
                   db: AsyncSession = Depends(get_db)):
     try:
@@ -126,7 +157,7 @@ async def endorse(body: EndorseIn, vendor: Vendor = Depends(get_current_vendor),
     }
 
 
-@router.delete("/endorsements/{endorsement_id}")
+@router.delete("/endorsements/{endorsement_id}", dependencies=[Depends(require_schema)])
 async def withdraw(endorsement_id: str, vendor: Vendor = Depends(get_current_vendor),
                    db: AsyncSession = Depends(get_db)):
     try:
@@ -138,7 +169,7 @@ async def withdraw(endorsement_id: str, vendor: Vendor = Depends(get_current_ven
     return {"id": str(row.id), "status": row.status}
 
 
-@router.post("/mentorships", status_code=201)
+@router.post("/mentorships", status_code=201, dependencies=[Depends(require_schema)])
 async def start_mentorship(body: MentorshipIn,
                            vendor: Vendor = Depends(get_current_vendor),
                            db: AsyncSession = Depends(get_db)):
@@ -155,13 +186,13 @@ async def start_mentorship(body: MentorshipIn,
     }
 
 
-@router.get("/mentorships")
+@router.get("/mentorships", dependencies=[Depends(require_schema)])
 async def my_mentorships(vendor: Vendor = Depends(get_current_vendor),
                          db: AsyncSession = Depends(get_db)):
     return await service.my_mentorships(db, vendor)
 
 
-@router.post("/mentorships/{mentorship_id}/milestones")
+@router.post("/mentorships/{mentorship_id}/milestones", dependencies=[Depends(require_schema)])
 async def milestone(mentorship_id: str, body: MilestoneIn,
                     vendor: Vendor = Depends(get_current_vendor),
                     db: AsyncSession = Depends(get_db)):
@@ -174,13 +205,13 @@ async def milestone(mentorship_id: str, body: MilestoneIn,
     return out
 
 
-@router.get("/concierge")
+@router.get("/concierge", dependencies=[Depends(require_schema)])
 async def concierge(vendor: Vendor = Depends(get_current_vendor),
                     db: AsyncSession = Depends(get_db)):
     return await service.concierge(db, vendor)
 
 
-@router.get("/report")
+@router.get("/report", dependencies=[Depends(require_schema)])
 async def report(vendor: Vendor = Depends(get_current_vendor),
                  db: AsyncSession = Depends(get_db)):
     """The Pattern Report. Yours to hand to whoever you choose.

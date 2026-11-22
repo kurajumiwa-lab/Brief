@@ -1,28 +1,34 @@
 /**
- * ONE PLACE FOR THE NAME.
+ * ONE PLACE FOR THE NAME — and for deciding which name it is.
  *
- * The product has been called Ogallo since v1. It is now Home Office: the
- * same network, a name that says what it is and that a trader in Kisumu, a
- * shop in Kampala and a buyer in Kigali can all say without explaining it.
+ * The product has been through four names: "Byway", "My Shop App", "Ogallo" and
+ * "Brief". The code carried all of them at once, so a user could read a
+ * different product name on every other screen and the README announced a fifth.
  *
- * "Ogallo" is not deleted. It stays as the parent in the footer, because a
- * name on somebody's receipts, in a WhatsApp thread from last year and on a
- * shopfront board is a promise, and a rebrand is not a reason to make those
- * strangers. `parent` is where that promise is kept.
+ * The name is **Brief**. It is what the rendered interface says — on the rate
+ * card, the referral landing, the trust pages, the tasks portal, the CSV
+ * disclaimer and the enterprise pitch — so the configuration now agrees with the
+ * product instead of contradicting it. `wordmark` is how the mark is set, and
+ * every string that matters reads from here.
  *
- * Renaming the product should be an edit to this file and nothing else. If a
- * one-word European name is preferred — `Mercato` (it), `Marché` (fr),
- * `Vendita` (it) — change `name` and `wordmark` below; every string that
- * matters reads from here.
+ * Deliberately kept:
+ *   · `parent`: "Ogallo" was the name on real shopfront boards and receipts. A
+ *     rebrand is not a reason to make those strangers, so it stays in the
+ *     footer as the thing this grew out of.
+ *   · `Morning Brief` is a *feature* (the read-only daily summary), not the
+ *     product name. It is unrelated and stays.
+ *
+ * Renaming the product is an edit to this file and nothing else. `test/brand.test.js`
+ * fails if the rendered UI and this file disagree again.
  */
 
 export const BRAND = {
   /** Full name, for titles, headings and sentences. */
-  name: "Home Office",
-  /** How the mark is set: lowercase, no space, one word on screen. */
-  wordmark: "homeoffice",
+  name: "Brief",
+  /** How the mark is set on screen. */
+  wordmark: "Brief",
   /** Short form for tight spaces (tab bar, badges). */
-  short: "Homeoffice",
+  short: "Brief",
   /** The name this network was built under; kept, not erased. */
   parent: "Ogallo",
   /**
@@ -40,7 +46,7 @@ export const BRAND = {
   legacyDomain: "vendorworld.kikk",
 };
 
-/** `Home Office — the digital connection layer for everyday trade` */
+/** `Brief — the digital connection layer for everyday trade` */
 export const pageTitle = (suffix = BRAND.tagline) => `${BRAND.name} — ${suffix}`;
 
 export default BRAND;

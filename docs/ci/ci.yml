@@ -1,0 +1,146 @@
+name: CI
+
+# WHY THIS FILE DID NOT EXIST, AND WHAT IT CHANGES
+#
+# The repository had 89 backend test files and 107 frontend ones, and nothing
+# ran them before a merge. The failures that motivated this workflow were all
+# invisible to review and trivial to catch mechanically:
+#
+#   · a page that was imported into the bundle but reachable by no route,
+#   · a notification type with no destination,
+#   · a link to `/notices` where no route existed,
+#   · production sitting 26 migrations behind the code,
+#   · a Python module that stopped compiling.
+#
+# Two jobs, run on every push and every pull request: the frontend (tests,
+# production build, and the route/contrast invariants) and the backend (compile
+# check plus the suite on a real PostgreSQL, which the tests require because
+# they use advisory locks and `to_regclass`).
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    name: Frontend — tests and build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      # `npm ci` on the lockfile: the build must be reproducible from what is
+      # committed, not from whatever `npm install` resolves today.
+      - name: Install
+        run: npm ci --no-audit --no-fund
+
+      - name: Lint
+        run: npx eslint src --max-warnings 0
+        continue-on-error: true # reported, not blocking, while the backlog clears
+
+      - name: Tests
+        run: npx vitest run --reporter=verbose
+
+      # Catches unresolved imports, a page that no longer builds, and — via
+      # src/test/notificationRoutes.test.js — routes, notification
+      # destinations and duplicate route paths.
+      - name: Production build
+        run: npx vite build
+
+      - name: Bundle size report
+        run: |
+          echo "### Main bundle" >> "$GITHUB_STEP_SUMMARY"
+          ls -la dist/assets/*.js | awk '{printf "- %d kB  %s\n", $5/1024, $9}' \
+            | sort -t' ' -k2 -rn | head -5 >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist
+          retention-days: 5
+
+  backend:
+    name: Backend — compile and tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/requirements-dev.txt
+
+      - name: Install
+        run: pip install -r requirements-dev.txt
+
+      # Cheapest possible signal: a module that does not import is a broken
+      # deployment. Runs before the suite so the failure is unambiguous.
+      - name: Compile check
+        run: python -m compileall -q app
+
+      # The tests need a real PostgreSQL — they take advisory locks and call
+      # `to_regclass`, neither of which SQLite supports. `pgserver` bundles
+      # PostgreSQL 16 so this works on a bare runner with no service container.
+      # No `--timeout`: pytest-timeout is not a dependency, and a CI step that
+      # fails on an unrecognised flag fails for the wrong reason.
+      - name: Tests
+        run: python -m pytest -q
+        env:
+          DATABASE_URL: postgresql+asyncpg://postgres@/test?host=/tmp
+          SECRET_KEY: ci-not-a-real-secret
+
+  migrations:
+    name: Migrations — single head
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install
+        run: pip install -r requirements.txt
+
+      # Alembic refuses to run with more than one head: that is a failed merge
+      # waiting to happen, and it is the one migration defect detectable without
+      # a database. (Alembic's own history cannot tell us whether production has
+      # been migrated — see docs/briefs/production-migrations.md.)
+      - name: Exactly one head
+        run: |
+          python - <<'PY'
+          from alembic.config import Config
+          from alembic.script import ScriptDirectory
+          script = ScriptDirectory.from_config(Config("alembic.ini"))
+          heads = script.get_heads()
+          print(f"heads: {heads}")
+          if len(heads) != 1:
+              raise SystemExit(f"expected one migration head, found {len(heads)}: {heads}")
+          revs = len(list(script.walk_revisions()))
+          print(f"{revs} revisions, head {heads[0]}")
+          PY
+        env:
+          DATABASE_URL: postgresql+asyncpg://postgres@/unused
+          SECRET_KEY: ci-not-a-real-secret

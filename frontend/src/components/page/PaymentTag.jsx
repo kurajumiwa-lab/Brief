@@ -34,7 +34,7 @@ export default function PaymentTag({ tag, className = "" }) {
       </p>
       <p className="mt-1 text-xs text-ink-4">
         The owner published this number themselves. Check the recipient before paying;
-        Home Office does not hold the money or confirm the payment.
+        Brief does not hold the money or confirm the payment.
       </p>
       <button
         type="button"

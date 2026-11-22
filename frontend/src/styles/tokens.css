@@ -119,14 +119,18 @@
   --accent-900: 92 40 11;
   --accent-950: 60 24 5;
 
-  /* ── Slate: identity, selected state, focus (legacy name: orchid) ──────
-     NOTE — this ramp is a cool slate, NOT a purple, and on that technicality
-     violet crept back into the product: MePage painted its workspace headings
-     and a sparkle icon in orchid-600/700, which reads as lilac on cream. A
-     legacy token name is not a licence to use it as an accent. Green is the
-     brand; orange is merchandising; this ramp is for selected states and
-     focus rings only. If you are reaching for orchid as a *colour scheme*,
-     the answer is brand. */
+  /* ── Slate (legacy token name: orchid) ─────────────────────────────────
+     A cool blue-grey, not a violet. The name is a leftover from a palette
+     that had a purple in it; the colour has not been purple since the ramp
+     was redefined.
+     
+     What it is FOR: selected states, focus rings, and the `neutral` badge tone.
+     What it is NOT for: an accent, a section colour, or "the colour I have not
+     used yet". A token whose name is wrong is still dangerous: `purple` was
+     being chosen by callers to mean seven unrelated things at once (scheduled,
+     service, rental, shortlisted, moderator, stop, patron). Green is the brand;
+     orange is merchandising. If you want colour on a screen, the answer is one
+     of those two, and this ramp stays in the chrome. */
   --orchid-50: 244 247 250;
   --orchid-100: 228 235 243;
   --orchid-200: 200 214 230;

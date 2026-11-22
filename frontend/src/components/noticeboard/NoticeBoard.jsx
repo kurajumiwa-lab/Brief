@@ -15,7 +15,7 @@ import { num, dayLabel, shortDateTime, currency } from "@/lib/formatters";
 /**
  * NOTICE BOARD — Short AI-assisted articles for promotions and announcements (v3.3).
  *
- * CRITICAL DESIGN REQUIREMENT: Reuse the existing Byway Events page design:
+ * DESIGN NOTE: this follows the Events page layout:
  *   - Same typography
  *   - Same spacing
  *   - Same image assets
@@ -595,7 +595,7 @@ export default function NoticeBoard({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-semibold text-ink-1 tracking-tight">
-            Byway Notice Board
+            Notice Board
           </h2>
           <p className="text-xs text-ink-4 mt-0.5">
             Short AI-assisted articles promoting products, services, events, and announcements
