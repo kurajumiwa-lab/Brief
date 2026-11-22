@@ -15,8 +15,8 @@ export default function VoucherConfirmationCard({ confirmation, compact = false,
   const origin = typeof window !== "undefined" && window.location?.origin ? window.location.origin : "";
   const shareUrl = customer?.handle ? `${origin}/p/${customer.handle}` : origin;
   const shareText = customer?.handle
-    ? `I just used a voucher at ${confirmation.merchant_name} on Home Office. Local shops, receipt-backed:`
-    : `A voucher was just confirmed at ${confirmation.merchant_name} on Home Office.`;
+    ? `I just used a voucher at ${confirmation.merchant_name} on Brief. Local shops, receipt-backed:`
+    : `A voucher was just confirmed at ${confirmation.merchant_name} on Brief.`;
 
   return (
     <div
@@ -76,7 +76,7 @@ export default function VoucherConfirmationCard({ confirmation, compact = false,
         <ShieldCheck size={14} className="mt-0.5 shrink-0" aria-hidden="true" />
         <p>
           Standing: {confirmation.verified_trades || 0} verified{" "}
-          {confirmation.verified_trades === 1 ? "trade" : "trades"} on Home Office.
+          {confirmation.verified_trades === 1 ? "trade" : "trades"} on Brief.
           This voucher is a discount, not a payment.
         </p>
       </div>

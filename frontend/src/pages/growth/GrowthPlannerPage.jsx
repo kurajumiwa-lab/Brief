@@ -292,7 +292,7 @@ export default function GrowthPlannerPage() {
             Five-Gear Resources Motion
           </h2>
           <p className="text-xs text-ink-3 mt-0.5">
-            How stock, pooled demand, physical tools, labor requests, and capital move through Brief_.
+            How stock, pooled demand, physical tools, labor requests, and capital move through Brief.
           </p>
         </div>
 

@@ -378,3 +378,26 @@ async def test_the_snapshot_is_one_row_per_day(client, owner):
     ticker = await client.get(f"/api/merit/public/{(await client.get('/api/vendors/me', headers=h)).json()['vendor_handle']}/ticker")
     points = ticker.json()["points"]
     assert len(points) == 1, "recomputing must not duplicate the day"
+
+
+async def test_missing_schema_is_a_503_that_names_the_migration(client, owner, monkeypatch):
+    """A database without 0083 must say so, not 500.
+
+    Production ran 26 migrations behind this module: every Merit request raised
+    `UndefinedTable` and surfaced as a 500, which reads as "the feature is
+    broken". This asserts the honest answer — 503, and the migration named —
+    so an operator knows to apply it rather than to debug the code.
+    """
+    from app.modules.merit import router as merit_router
+
+    async def nothing_exists(db, name):
+        return False
+
+    monkeypatch.setattr(merit_router, "_table_exists", nothing_exists)
+    h, handle = owner
+    r = await client.get(f"/api/merit/public/{handle}")
+    assert r.status_code == 503, r.text
+    detail = r.json()["detail"]
+    assert "not enabled" in detail
+    assert "0083" in detail
+    assert "merit_snapshots" in detail

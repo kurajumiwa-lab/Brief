@@ -6,7 +6,7 @@ import { num } from "@/lib/formatters";
 /* ═══════════════════════════════════════════════════════════════════════════
    TRUST SIGNALS
    ---------------------------------------------------------------------------
-   Brief_ already computes everything a buyer needs to judge a supplier —
+   Brief already computes everything a buyer needs to judge a supplier —
    fulfilment rate, completed movements, reliability score, patron tier,
    verification, POS liveness. It just never added up to a single judgement.
 

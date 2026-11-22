@@ -58,10 +58,31 @@ const ACTIVITY = {
 
 const mocks = vi.hoisted(() => ({ activity: vi.fn(), watches: vi.fn(), bookings: vi.fn() }));
 
+// The consolidated Inbox also reads rooms, movements, its week, the corridor
+// board and the event payment queue. Each one fails quietly in the page, so a
+// stub that resolves empty is enough — these specs are about layout, not data.
 vi.mock("@/lib/api", () => ({
   apiError: (_e, fallback) => fallback,
-  outsideAPI: { activity: mocks.activity },
+  outsideAPI: { activity: mocks.activity, agenda: vi.fn(() => ok({ items: [] })) },
+  eventAPI: { paymentQueue: vi.fn(() => ok([])), confirmPayment: vi.fn(() => ok({})) },
+  spottedDealAPI: { jury: vi.fn(() => ok([])), mine: vi.fn(() => ok([])), dispute: vi.fn(() => ok({})) },
+  corridorTaskAPI: { inbox: vi.fn(() => ok({ days: [] })) },
+  recurringRoutineAPI: { mine: vi.fn(() => ok({ share_prompts: [] })) },
+  chatAPI: { rooms: vi.fn(() => ok([])) },
+  default: {},
 }));
+
+vi.mock("@/lib/receiptsApi", () => ({
+  receiptsAPI: {
+    ledger: vi.fn(() => ok({ receipts: [] })),
+    myMerchants: vi.fn(() => ok([])),
+  },
+}));
+
+// The stores are real zustand stores, not mocks: the page reads them through
+// selectors and the test resets them in beforeEach, which a stub cannot do.
+// Only the API layer is faked, which is the same boundary the app uses.
+
 
 vi.mock("@/lib/ledgerApi", () => ({
   ledgerAPI: {
@@ -88,7 +109,9 @@ const renderAt = (element) =>
     </MemoryRouter>,
   );
 
-const ActivityPage = async () => (await import("@/pages/activity/ActivityPage")).default;
+// The page these assertions describe is now the consolidated Inbox — the
+// three-number grid, the watches row and the filters all moved there with it.
+const ActivityPage = async () => (await import("@/pages/inbox/InboxPage")).default;
 
 beforeEach(async () => {
   mocks.activity.mockReset().mockImplementation(() => ok(ACTIVITY));
@@ -98,7 +121,7 @@ beforeEach(async () => {
   useOutsideStore.setState({ activity: null, activityStatus: "idle" });
 });
 
-describe("Activity — the three statistics", () => {
+describe("Inbox — the three statistics", () => {
   it("puts all three in one three-column grid, with no carousel and no horizontal scroller", async () => {
     const Page = await ActivityPage();
     renderAt(<Page />);
@@ -165,13 +188,14 @@ describe("Activity — the three statistics", () => {
   });
 });
 
-describe("Activity — the compact header", () => {
-  it("says Activity, and nothing else", async () => {
+describe("Inbox — the compact header", () => {
+  it("says Inbox, and nothing else", async () => {
     const Page = await ActivityPage();
     renderAt(<Page />);
 
-    // The tab is "Connect" (v2.18); the route is still /activity.
-    const heading = await screen.findByRole("heading", { level: 1, name: "Connect" });
+    // The tab, the route and this page now agree on one name. Before the merge
+    // the tab said Inbox, the heading said Connect and the URL said /activity.
+    const heading = await screen.findByRole("heading", { level: 1, name: "Inbox" });
     expect(heading).toBeInTheDocument();
     expect(screen.queryByText(/what's waiting for you/i)).toBeNull();
     expect(screen.queryByText(/measured by real follow-through/i)).toBeNull();
@@ -181,7 +205,7 @@ describe("Activity — the compact header", () => {
   });
 });
 
-describe("Activity — neighbourhood watches", () => {
+describe("Inbox — neighbourhood watches", () => {
   it("is one compact row with the short description and an Add action", async () => {
     const Page = await ActivityPage();
     renderAt(<Page />);
@@ -206,7 +230,7 @@ describe("Activity — neighbourhood watches", () => {
   });
 });
 
-describe("Activity — filters", () => {
+describe("Inbox — filters", () => {
   it("keeps all seven in one non-wrapping, horizontally scrollable row", async () => {
     const Page = await ActivityPage();
     renderAt(<Page />);
@@ -248,7 +272,7 @@ describe("Activity — filters", () => {
   });
 });
 
-describe("Activity — feed states", () => {
+describe("Inbox — feed states", () => {
   it("states a failure in one compact line, with a working Try again", async () => {
     mocks.activity.mockImplementation(() => Promise.reject(new Error("boom")));
     const Page = await ActivityPage();
@@ -295,7 +319,7 @@ describe("Activity — feed states", () => {
   });
 });
 
-describe("Activity — bottom navigation clearance", () => {
+describe("Inbox — bottom navigation clearance", () => {
   it("pads the scroll area by the tab bar plus the device safe area", async () => {
     const { default: Shell } = await import("@/components/layout/Shell");
     render(

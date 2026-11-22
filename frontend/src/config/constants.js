@@ -69,7 +69,7 @@ export const POS_SYSTEMS = [
   { value: "csv", label: "CSV Import", desc: "Upload your till's spreadsheet export", mode: "push" },
   { value: "square", label: "Square POS", desc: "Auto-sync from Square", mode: "pull" },
   { value: "shopify", label: "Shopify", desc: "Auto-sync from Shopify", mode: "pull" },
-  { value: "custom_api", label: "Custom API", desc: "Your system posts stock to Home Office", mode: "push" },
+  { value: "custom_api", label: "Custom API", desc: "Your system posts stock to Brief", mode: "push" },
 ];
 
 export const PRICE_UNITS = [
@@ -144,36 +144,76 @@ export const PATRON_TIERS = [
 
 // backend/app/models/notification.py · NotificationType → where a click should land
 export const NOTIFICATION_ROUTES = {
+  // ── Stock and sources ────────────────────────────────────────────────
   source_request: "/stock?tab=movements&direction=outgoing",
   source_accepted: "/stock?tab=movements&direction=incoming",
   source_shipped: "/stock?tab=movements&direction=incoming",
   source_received: "/stock?tab=movements&direction=outgoing",
   source_cancelled: "/stock?tab=movements",
+  stock_low: "/stock",
+  stock_verified: "/stock",
+
+  // ── Deals and conversations ──────────────────────────────────────────
   deal_proposal: "/chat",
   deal_accepted: "/chat",
   deal_countered: "/chat",
   deal_declined: "/chat",
+  delivery_quote_request: "/logistics",
+
+  // ── Groups, lists and memberships ────────────────────────────────────
   group_invite: "/groups",
   group_join_request: "/groups?tab=mine",
   group_approved: "/groups?tab=mine",
+  collective_update: "/groups?tab=mine",
   list_registration: "/lists?tab=mine",
   list_approved: "/lists",
   list_rejected: "/lists",
-  collective_update: "/groups?tab=mine",
-  event_payment_submitted: "/inbox",
-  event_payment_confirmed: "/inbox",
+  list_review: "/lists?tab=mine",
+
+  // ── Events. These used to say "/inbox", which is the page the notification
+  // already appears on: a tap that did nothing. An event notification now
+  // opens the event. ──────────────────────────────────────────────────────
+  event_payment_submitted: "/events?tab=mine",
+  event_payment_confirmed: "/events?tab=mine",
   event_payment_rejected: "/events?tab=mine",
   event_waitlist_promoted: "/events?tab=mine",
   event_hold_expired: "/events?tab=mine",
   event_registration: "/events?tab=mine",
   event_reminder: "/events",
-  stock_low: "/stock",
-  stock_verified: "/stock",
-  parasitism_milestone: "/network",
-  patron_promotion: "/profile",
+  event_host_update: "/events?tab=mine",
+
+  // ── Bookings, routes, logistics ──────────────────────────────────────
+  booking_request: "/calendar",
+  booking_update: "/calendar",
+  route_update: "/logistics",
   shipment_update: "/tools?tab=shipments",
+  payment_update: "/payments",
+
+  // ── Trade proof ──────────────────────────────────────────────────────
   trade_proof_request: "/trades/proofs",
   trade_proof_confirmed: "/trades/proofs",
   trade_proof_disputed: "/trades/proofs",
+
+  // ── Verification, claims, standing ───────────────────────────────────
+  claim_verification_requested: "/trust/me",
+  claim_verified: "/trust/me",
+  claim_rejected: "/trust/me",
+  claim_expiring: "/trust/me",
+  business_follow: "/trust/me",
+  appeal_update: "/trust/me",
+
+  // ── Money and markets ────────────────────────────────────────────────
+  chama_update: "/savings",
+  benefit_update: "/receipt-rewards",
+  flash_drop_claim: "/locks",
+  opportunity_match: "/work",
+  parasitism: "/analytics",
+  // The backend emits `parasitism`; this key was the old spelling and is kept
+  // only so a notification written before the rename still resolves.
+  parasitism_milestone: "/analytics",
+  patron_promotion: "/you/rank",
+
+  // ── Governance and office ────────────────────────────────────────────
+  governance_update: "/governance",
   system: "/",
 };

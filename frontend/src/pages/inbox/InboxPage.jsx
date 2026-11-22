@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  CalendarDays, ChevronRight, Inbox, MessageSquare, Package, ShoppingBag, Users,
+  Bell, CalendarDays, CheckCircle2, Inbox, MessageSquare, Package,
+  ShoppingBag, Store, UserPlus,
 } from "lucide-react";
-import { PageSpinner } from "@/components/ui/Spinner";
+import Button from "@/components/ui/Button";
+import WatchesPanel from "@/components/inbox/WatchesPanel";
+import InboxFeed from "@/components/inbox/InboxFeed";
 import { toast } from "@/components/ui/Toast";
 import InboxTimeline from "@/components/inbox/InboxTimeline";
 import { receiptsAPI } from "@/lib/receiptsApi";
@@ -20,52 +23,116 @@ import { NOTIFICATION_ROUTES } from "@/config/constants";
 import { apiError, outsideAPI, eventAPI, spottedDealAPI, corridorTaskAPI, recurringRoutineAPI } from "@/lib/api";
 import { DEFAULT_REGION, regionFromPlace } from "@/config/regions";
 import ledgerAPI from "@/lib/ledgerApi";
-import { relativeTime } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 
 /**
- * INBOX — the week first, then what is waiting.
+ * INBOX — THE ONE INBOX.
  *
- * Connect, Work, Mail and the notification bell were four names for one
- * question. This is the question, answered once. The top of the page is the
- * part a flat list could never answer: joined rounds, event RSVPs and bookings,
- * on real dates, with a pass for the ones that are actually confirmed. The
- * messages, requests and trades that need a reply stay below, newest first.
+ * This screen is the only place activity is read. It used to be one of four:
+ * `pages/activity/ActivityPage` (a full second inbox, reached only by old deep
+ * links), `pages/mail/MailPage` (conversations, behind a flag), and the
+ * notification bell — each with its own filters, its own empty states and its
+ * own idea of where a notification should send you. The tab pointed at this
+ * one, so the others were the ones that were wrong, and they are gone:
  *
- * The filters are four words, not seven categories. A person who wants the
- * long tail can use the search in the header.
+ *   /activity  → renders this page (the tab's own component)
+ *   /mail      → renders this page with conversations selected
+ *
+ * Activity was not deleted, it was *absorbed*. Four things it had and this
+ * page did not now live here, because they were the real content:
+ *
+ *   · the three-number summary (conversations / events / unread),
+ *   · the neighbourhood watches panel — the setting that decides what you are
+ *     told about, which belongs next to the list it feeds,
+ *   · grouped notifications with a read/unread distinction per group,
+ *   · the "waiting on you" vs "your activity" split.
+ *
+ * Order is deliberate, top to bottom: what is on your calendar this week, then
+ * what is actually waiting on a reply, then the long tail. The week comes first
+ * because a flat list can answer "who spoke last" but never "where do I have to
+ * be?".
  */
+
+/**
+ * The filter set is the union of the two screens that were merged, and it is
+ * rendered from this table rather than from whatever the server returned this
+ * minute: a filter that vanishes when it happens to be empty reads as a filter
+ * that no longer exists.
+ */
+const GROUP_META = {
+  messages: { label: "Messages", icon: MessageSquare, blurb: "Conversations that moved" },
+  invitations: { label: "Invitations", icon: UserPlus, blurb: "Requests to join, invites and approvals" },
+  events: { label: "Events", icon: CalendarDays, blurb: "Reminders and changes to things you're going to" },
+  replies: { label: "Replies", icon: MessageSquare, blurb: "Answers, quotes and stop requests" },
+  trades: { label: "Trades & bookings", icon: ShoppingBag, blurb: "Orders, repairs and local bookings in progress" },
+  community: { label: "Communities", icon: Store, blurb: "News from your groups and lists" },
+  account: { label: "Account", icon: Bell, blurb: "Verification, watches and everything else" },
+};
+
+/** Everything that is addressed to this person and can wait on a reply. */
+const WAITING_KEYS = new Set(["invitations", "replies", "trades"]);
 
 const FILTERS = [
   { value: "all", label: "All" },
-  { value: "messages", label: "Messages" },
-  { value: "requests", label: "Requests" },
-  { value: "trades", label: "Trades" },
+  ...Object.entries(GROUP_META).map(([value, meta]) => ({ value, label: meta.label })),
 ];
 
-const GROUP_ICON = {
-  invitations: Users,
-  events: CalendarDays,
-  replies: MessageSquare,
-  trades: ShoppingBag,
-  community: Users,
-  account: Inbox,
-};
+const GROUP_ICON = Object.fromEntries(
+  Object.entries(GROUP_META).map(([key, meta]) => [key, meta.icon]),
+);
+
+/**
+ * WHERE A NOTIFICATION OPENS.
+ *
+ * The payload wins over the type, because "a group invite" is less useful than
+ * "this group". Order runs from the most specific record to the least; the
+ * type-to-route table is the fallback and the sender's page is the last resort,
+ * so a notification can never open on the Inbox it is displayed in — landing
+ * back on the list you tapped from reads as a failure, not as navigation.
+ *
+ * This ordering was the only part of the deleted `NotificationBell` worth
+ * keeping: it is more precise than a type table, because the backend already
+ * knows which room, order or group it is writing about.
+ */
+export function destinationFor(item) {
+  const d = item.data || {};
+  if (d.market_lock_cluster_id || (d.window_id && d.zone_id)) return "/locks";
+  if (d.room_id) return `/chat?room=${d.room_id}`;
+  if (d.support_case) return "/orders?support=1";
+  if (d.movement_id) return `/orders/${d.movement_id}`;
+  if (d.group_id && item.type?.startsWith("collective")) {
+    return `/groups?tab=mine&group=${d.group_id}&panel=collective`;
+  }
+  if (d.group_id) return `/groups?tab=mine&group=${d.group_id}`;
+  if (d.list_id) return `/lists?list=${d.list_id}`;
+  if (d.event_id) return `/events?event=${d.event_id}`;
+  if (d.shipment_id || d.tracking_number) return "/tools?tab=shipments";
+  return (
+    NOTIFICATION_ROUTES[item.type] ||
+    d.to ||
+    (item.sender_handle ? `/p/${item.sender_handle}` : "/")
+  );
+}
 
 function notificationRow(item, group) {
   return {
     key: `n:${item.id}`,
-    kind: group === "replies" ? "messages" : group === "trades" ? "trades" : "requests",
+    notificationId: item.id,
+    // The notification's own group IS its kind. It used to be flattened into
+    // "requests" for a single-column list, which left the grouped feed with
+    // nothing to group by — every notification arrived as the same kind.
+    kind: GROUP_META[group] ? group : "account",
+    waiting: WAITING_KEYS.has(group),
     icon: GROUP_ICON[group] || Inbox,
     title: item.title || "Notification",
     body: item.body || "",
     at: item.created_at,
-    to: NOTIFICATION_ROUTES[item.type] || "/inbox",
+    to: destinationFor(item),
     unread: !item.is_read,
   };
 }
 
-export default function InboxPage() {
+export default function InboxPage({ initialFilter = "all" }) {
   const activity = useOutsideStore((s) => s.activity);
   const activityStatus = useOutsideStore((s) => s.activityStatus);
   const loadActivity = useOutsideStore((s) => s.loadActivity);
@@ -103,7 +170,12 @@ export default function InboxPage() {
   }, []);
   const [paymentQueue, setPaymentQueue] = useState([]);
   const [paymentBusy, setPaymentBusy] = useState(null);
-  const [filter, setFilter] = useState("all");
+  // `initialFilter` is how /mail opens this page on conversations instead of
+  // keeping a second component that did nothing else.
+  const [filter, setFilter] = useState(initialFilter);
+  // The question the page is answering. "waiting" is what needs a reply;
+  // "activity" is everything else, including things you joined months ago.
+  const [mode, setMode] = useState("all");
   const [agenda, setAgenda] = useState([]);
   const [agendaStatus, setAgendaStatus] = useState("idle");
   const [agendaError, setAgendaError] = useState("");
@@ -167,6 +239,7 @@ export default function InboxPage() {
     const messages = rooms.map((room) => ({
       key: `r:${room.id}`,
       kind: "messages",
+      waiting: (room.unread_count || 0) > 0,
       icon: MessageSquare,
       title: room.name || "Conversation",
       body:
@@ -180,6 +253,7 @@ export default function InboxPage() {
     const trades = movements.map((movement) => ({
       key: `m:${movement.id}`,
       kind: "trades",
+      waiting: ["requested", "confirmed", "pending"].includes(movement.status),
       icon: Package,
       title: movement.item_name || movement.listing_name || "Trade",
       body: `${String(movement.status || "in progress").replaceAll("_", " ")}${movement.counterparty_name ? ` · ${movement.counterparty_name}` : ""}`,
@@ -193,18 +267,59 @@ export default function InboxPage() {
       .slice(0, 60);
   }, [activity, rooms, movements]);
 
-  const counts = useMemo(
-    () => ({
-      all: rows.filter((row) => row.unread).length,
-      messages: rows.filter((row) => row.kind === "messages" && row.unread).length,
-      requests: rows.filter((row) => row.kind === "requests" && row.unread).length,
-      trades: rows.filter((row) => row.kind === "trades" && row.unread).length,
-    }),
-    [rows],
-  );
+  // One count per filter, computed from the same rows that are rendered below:
+  // a chip cannot promise items the list then refuses to show.
+  const counts = useMemo(() => {
+    const byKind = { all: rows.filter((row) => row.unread).length };
+    for (const key of Object.keys(GROUP_META)) {
+      byKind[key] = rows.filter((row) => row.kind === key && row.unread).length;
+    }
+    return byKind;
+  }, [rows]);
 
-  const shown = filter === "all" ? rows : rows.filter((row) => row.kind === filter);
+  const flagged = (row) => row.waiting ?? WAITING_KEYS.has(row.kind);
+  const byMode = mode === "all" ? rows : rows.filter((row) => (mode === "waiting" ? flagged(row) : !flagged(row)));
+  const shown = filter === "all" ? byMode : byMode.filter((row) => row.kind === filter);
   const loading = activityStatus === "loading" && rows.length === 0;
+
+  // Old test ids, kept on purpose: these three tiles moved here from the
+  // Activity screen and the specs that guard them should not have to change
+  // name just because the page did.
+  const statTestId = {
+    conversations: "activity-rooms",
+    events: "activity-attending",
+    unread: "activity-unread",
+  };
+
+  // The three numbers Activity put at the top of the screen. They are the same
+  // three the tab bar badges, read from the same store, so the two can never
+  // disagree.
+  const stats = [
+    {
+      key: "conversations",
+      icon: MessageSquare,
+      value: activity?.counts?.rooms_active_today ?? 0,
+      label: "Conversations",
+      hint: "active today",
+      to: "/chat",
+    },
+    {
+      key: "events",
+      icon: CalendarDays,
+      value: activity?.counts?.attending ?? 0,
+      label: "Events",
+      hint: "upcoming",
+      to: "/events?tab=mine",
+    },
+    {
+      key: "unread",
+      icon: Bell,
+      value: activity?.counts?.unread_notifications ?? 0,
+      label: "Unread",
+      hint: "notifications",
+      to: null,
+    },
+  ];
   const taskDays = useMemo(
     () => (taskData?.days || []).filter((day) => day.available + day.claimed > 0).map((day) => day.date),
     [taskData],
@@ -222,6 +337,48 @@ export default function InboxPage() {
           reply that is actually waiting carries a count.
         </p>
       </header>
+
+      {/* Three numbers, one row, always all three: a count you have to swipe to
+          see is a count that is not being shown. */}
+      <ul
+        className="mt-4 grid grid-cols-3 gap-2"
+        data-testid="activity-stats"
+        aria-label="Inbox at a glance"
+      >
+        {stats.map(({ key, icon: Icon, value, label, hint, to }) => {
+          const body = (
+            <>
+              <span className="grid h-7 w-7 place-items-center rounded-[10px] bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300">
+                <Icon size={14} aria-hidden="true" />
+              </span>
+              <span className="mt-1 block text-2xl font-bold leading-none tabular-nums text-ink-1 max-[360px]:text-xl">
+                {value}
+              </span>
+              <span className="mt-1 block text-2xs font-semibold leading-tight text-ink-2 hyphens-auto break-words max-[380px]:text-micro">
+                {label}
+              </span>
+              <span className="block text-micro leading-tight text-ink-4">{hint}</span>
+            </>
+          );
+          const cls = cn(
+            "flex min-h-[104px] min-w-0 flex-col justify-center rounded-2xl border border-edge-1 bg-surface-1 p-2.5 shadow-xs",
+            to && "transition-colors hover:border-edge-2 hover:bg-surface-2",
+          );
+          return (
+            <li key={key} className="min-w-0" data-testid={statTestId[key]}>
+              {to ? (
+                <Link to={to} className={cn(cls, "h-full")}>
+                  {body}
+                </Link>
+              ) : (
+                <div className={cn(cls, "h-full")}>{body}</div>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+
+      <WatchesPanel />
 
       {jury.length > 0 && <section className="mt-5 space-y-2"><h2 className="font-bold">Corridor review</h2>{jury.map(a => <CorridorJuryCard key={a.assignment_id} assignment={a} onChanged={loadSpottedInbox} />)}</section>}
       {hiddenDeals.length > 0 && <section className="mt-5 space-y-2"><h2 className="font-bold">Your hidden spotted sales</h2>{hiddenDeals.map(d => <div key={d.id} className="rounded-xl border border-edge-1 p-3 text-sm space-y-2"><p>{d.title} · {d.status === "DISPUTED_REVIEW" ? "Hidden during review" : "Hidden after removal request"}</p>{d.status === "PAUSED_OPT_OUT" && <><p>Deadline: {new Date(d.opt_out_deadline).toLocaleString()}. A parsed receipt does not prove the advertised discount.</p><label>Your parsed receipt<select className="block w-full border rounded p-2" value={disputeIds[d.id] || ""} onChange={e=>setDisputeIds({...disputeIds,[d.id]:e.target.value})}><option value="">Select a receipt</option>{disputeReceipts.filter(r=>r.source === "qr" && r.status === "verified").map(r=><option key={r.id} value={r.id}>{r.merchant_name} · {r.issued_at ? new Date(r.issued_at).toLocaleDateString() : "date unavailable"}</option>)}</select></label><button disabled={!disputeIds[d.id]?.trim()} className="rounded bg-brand-700 text-white p-2 disabled:opacity-50" onClick={async()=>{try {await spottedDealAPI.dispute(d.id,disputeIds[d.id].trim()); await loadSpottedInbox(); toast.success("Submitted for review");}catch(e){toast.error(apiError(e));}}}>Submit parsed receipt for review</button></>}</div>)}</section>}
@@ -262,7 +419,45 @@ export default function InboxPage() {
         <h2 className="mt-1 text-base font-extrabold tracking-tight text-ink-1">Waiting on a reply</h2>
       </div>
 
-      <div className="mt-3 flex gap-1.5 overflow-x-auto no-scrollbar" role="group" aria-label="Inbox filter">
+      {/* Two questions, kept apart: what needs an answer, and everything else
+          that happened. "All" is the default so switching never hides anything
+          unread — the tab only narrows, it never discards. */}
+      <div
+        className="mt-3 inline-flex rounded-xl border border-edge-1 bg-surface-1 p-1"
+        role="tablist"
+        aria-label="What to show"
+      >
+        {[
+          { key: "all", label: "Everything", icon: Bell },
+          { key: "waiting", label: "Waiting on you", icon: MessageSquare },
+          { key: "activity", label: "Your activity", icon: CalendarDays },
+        ].map(({ key, label, icon: Icon }) => (
+          <button
+            key={key}
+            type="button"
+            role="tab"
+            aria-selected={mode === key}
+            onClick={() => setMode(key)}
+            data-testid={`inbox-mode-${key}`}
+            className={cn(
+              "inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-2xs font-bold transition-colors",
+              mode === key
+                ? "bg-brand-700 text-white"
+                : "text-ink-3 hover:bg-surface-2 hover:text-ink-1",
+            )}
+          >
+            <Icon size={13} aria-hidden="true" />
+            {label}
+          </button>
+        ))}
+      </div>
+
+      <div
+        className="mt-3 flex flex-nowrap gap-1.5 overflow-x-auto no-scrollbar"
+        role="group"
+        aria-label="Inbox filter"
+        data-testid="activity-filters"
+      >
         {FILTERS.map((item) => {
           const active = filter === item.value;
           return (
@@ -271,6 +466,7 @@ export default function InboxPage() {
               type="button"
               onClick={() => setFilter(item.value)}
               aria-pressed={active}
+              data-testid={`activity-group-${item.value}`}
               className={cn(
                 "shrink-0 rounded-full border px-3.5 py-1.5 text-2xs font-bold transition-colors",
                 active
@@ -278,7 +474,7 @@ export default function InboxPage() {
                   : "border-edge-1 bg-surface-1 text-ink-3 hover:border-edge-2 hover:text-ink-1",
               )}
             >
-              {item.label}
+              {item.value === "all" ? "Everything" : item.label}
               {counts[item.value] > 0 && (
                 <span
                   className={cn(
@@ -295,51 +491,36 @@ export default function InboxPage() {
       </div>
 
       {loading ? (
-        <PageSpinner label="Loading what is waiting…" />
-      ) : shown.length === 0 ? (
-        <div className="mt-6 rounded-2xl border border-dashed border-edge-2 bg-surface-0 px-5 py-12 text-center">
-          <Inbox size={22} className="mx-auto text-ink-4" aria-hidden="true" />
-          <p className="mt-2 text-sm font-bold text-ink-1">Nothing else is waiting</p>
-          <p className="mx-auto mt-1 max-w-xs text-2xs leading-relaxed text-ink-3">
-            Your week is above. When somebody replies, asks for something or moves
-            a trade, it lands here — and nowhere else.
+        <InboxFeed rows={[]} meta={GROUP_META} status="loading" onRetry={loadActivity} emptyBody="" />
+      ) : shown.length === 0 && mode !== "all" ? (
+        <div
+          className="mt-6 rounded-2xl border border-edge-1 bg-surface-1 px-5 py-10 text-center"
+          data-testid="inbox-mode-empty"
+        >
+          <CheckCircle2 size={22} className="mx-auto text-brand-600" aria-hidden="true" />
+          <p className="mt-2 text-sm font-bold text-ink-1">
+            {mode === "waiting" ? "Nothing is waiting on you." : "Nothing else has happened yet."}
           </p>
+          <p className="mx-auto mt-1 max-w-xs text-2xs leading-relaxed text-ink-3">
+            {mode === "waiting"
+              ? "No invitations, quotes or trades need an answer. Your other activity is under Your activity."
+              : "When somebody replies, joins or moves a trade, it appears here."}
+          </p>
+          <Button size="xs" variant="secondary" className="mt-3" onClick={() => setMode("all")}>
+            Show everything
+          </Button>
         </div>
       ) : (
-        <ul className="mt-2 divide-y divide-edge-1">
-          {shown.map((row) => {
-            const Icon = row.icon;
-            return (
-              <li key={row.key}>
-                <Link
-                  to={row.to}
-                  className="group flex items-start gap-3 py-3.5 px-1 -mx-1 rounded-xl hover:bg-surface-2 focus-visible:ring-2 focus-visible:ring-brand-500"
-                >
-                  <span className="relative mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-surface-2 text-ink-2">
-                    <Icon size={16} aria-hidden="true" />
-                    {row.unread && (
-                      <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-brand-600 ring-2 ring-surface-1" aria-label="Unread" />
-                    )}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="flex items-baseline gap-2">
-                      <span className={cn("min-w-0 flex-1 truncate text-xs", row.unread ? "font-bold text-ink-1" : "font-semibold text-ink-2")}>
-                        {row.title}
-                      </span>
-                      {row.at && (
-                        <span className="shrink-0 text-micro text-ink-4">{relativeTime(row.at)}</span>
-                      )}
-                    </span>
-                    {row.body && (
-                      <span className="mt-0.5 line-clamp-1 block text-2xs text-ink-3">{row.body}</span>
-                    )}
-                  </span>
-                  <ChevronRight size={15} className="mt-1 shrink-0 text-ink-4 group-hover:text-ink-1" aria-hidden="true" />
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+        <InboxFeed
+          rows={shown}
+          meta={GROUP_META}
+          status={activityStatus === "error" ? "error" : "ready"}
+          onRetry={loadActivity}
+          emptyBody="Nothing is waiting on you. When somebody replies, asks for something or moves a trade, it lands here."
+          actOn={(row) => {
+            if (row.notificationId) ledgerAPI.markNotificationActed(row.notificationId).catch(() => {});
+          }}
+        />
       )}
 
       <p className="mt-6 text-center text-micro text-ink-4">

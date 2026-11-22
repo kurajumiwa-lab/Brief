@@ -1,621 +1,197 @@
-# My Shop App — the trade information network
+# Brief
 
-**The information layer around the shop.** Home is a shelf — News, Suppliers, Stock, Rentals, Groups, Events — and the vendor workspace (Brief: stock, deals, chat, analytics, POS) lives inside as a feature. *You source today, you sell tomorrow.*
+**The digital connection layer for everyday trade.** A network for people who
+already trade with each other — market traders, kiosk owners, wholesalers,
+couriers, hotel suppliers — where every account is a business and the record of
+what was bought, sold and delivered is what makes the next trade possible.
 
-**Home is a hub, and everything on it is a door.** A tile opens a secondary screen, and a secondary screen opens a detail: `/nearby` → `/nearby/{group}` → `/place/{id}` or `/@handle`; `/markets` → `/markets/{id}`; `/tasks` → `/tasks/squad` · `/tasks/brief`; `/news/{kind}`; `/search/{tab}`. Where a surface cannot be a hub it is rewired, not duplicated — see [`docs/briefs/home-secondary-screens.md`](docs/briefs/home-secondary-screens.md).
+This README describes the application as it is built today. It was previously
+621 lines announcing a product called "My Shop App", alongside nine root
+documents describing a fifth product called "Byway" that no longer exists. Those
+are gone.
 
-Brief_ is a vendor-centric community commerce platform: distribution-and-economic
-infrastructure for people who already trade with each other — market women,
-kiosk owners, wholesalers, couriers, hotel suppliers. Every account is a
-business. There is no shopper side, no cart, no "buy now". There is stock, and
-there are the vendors who move it between each other.
+> **Before you run this:** the production database is 26 migrations behind the
+> code. Read [`docs/briefs/production-migrations.md`](docs/briefs/production-migrations.md)
+> before deploying anything that touches a feature added after migration `0057`.
 
-## What is in the box
+---
 
-| module | what it does |
+## What the application is
+
+Five destinations, and everything else is a row inside one of them.
+
+| Tab | Route | What it answers |
+|---|---|---|
+| **Home** | `/` | What is happening for *me* today |
+| **Regions** | `/regions` | What is happening *here* |
+| **Create** | `/create` | Publish one thing |
+| **Inbox** | `/inbox` | What is waiting on me |
+| **You** | `/you` | My page, my rank, my identity |
+
+The full sitemap is `frontend/src/App.jsx` (138 routes). The five destinations
+are declared in `frontend/src/config/navigation.js`, which is the single source
+of truth for navigation. Old URLs still resolve — a link in a WhatsApp thread
+must keep working — but only five are *navigation*.
+
+### The Inbox
+
+One screen. `pages/inbox/InboxPage.jsx`. It used to be four:
+
+| was | now |
 |---|---|
-| **Vendor identity** | `@handle`, business categories, a *fluid role* — sourcing / selling / both / dormant — switched with one click. `network_score` and `parasitism_index` are earned, not entered. |
-| **Stock Room** | Stock, not listings: `quantity_in_stock`, `quantity_reserved`, `quantity_available`. Manual entry, CSV bulk import, or POS sync. Browse *network stock* (never your own), **compare alternatives** (same category, cheapest first, with vendor reliability) and `POST /source` it. |
-| **Quality & provenance** | Every item carries a `quality_status`: `unverified → self_declared → patron_verified → lab_certified`. Vendors declare batch / origin / expiry and attach a spec sheet; a patron of a list the vendor is on can vouch for it. |
-| **Movements** | Every sourcing request is a movement: `pending → confirmed → shipped → received` (or cancelled). Reservation on request (holds expire after `RESERVATION_HOLD_HOURS`), shelves debited/credited on receipt, connection created, scores recomputed. |
-| **Deals** | A deal room per stock item. Proposals are structured — quantity, price per unit, delivery and payment terms — and the other side **accepts** (stock reserved, movement confirmed), **counters** (new round) or **declines**. |
-| **Parasitism engine** | Live score per vendor: fulfilment rate 40 % · reciprocity 30 % · network contribution 20 % · reliability 10 %, recomputed on every movement and nightly. Pair scores still feed the dashboard's "strongest links" and the `/graph`. |
-| **Patrons & Vendor Lists** | Any vendor can become a patron (starter → established → mogul → legend, promoted automatically by vendors sponsored, events run and reputation) and run curated lists with registration, approval, capacity and entry criteria. Groups can create lists without a patron. |
-| **Vendor Groups & collective sourcing** | niche / regional / trade / sourcing / event / open groups with roles, approval and an auto-created chat room. Members pool an order: open a collective request, pledge units, the organiser moves it `gathering → quota_met → negotiating → ordered → fulfilled`. |
-| **Daily Flash Locks** | Named market zones, a once-per-30-days vendor zone selection, canonical products, spotter-entered supplier MOQs and daily 15:00–20:00 EAT pick windows. SQL sums demand by product + zone; `ceil(MOQ × 0.85)` qualifies a cluster to bid. Unmet clusters roll once, then dissolve. Negotiators record supplier quotes at the exact pooled volume; a human negotiator compares them and selects the supplier. |
-| **Chat** | group, vendor-list, deal, direct and open niche-topic rooms. Messages go over HTTP; a receive-only WebSocket broadcasts them (Redis fan-out across workers). Share stock or send a previewable voice note (up to 15 seconds) straight into a room; voice audio is fetched only on tap and served through room-authorized endpoints. |
-| **Vendor Tools & couriers** | warehouse, cold storage, transport, courier, pop-up shop, hotel sourcing, equipment, packaging. Courier registration, warehouse booking, and **shipments**: book a courier for a movement, tracking number, forward-only status history, receiver rating. |
-| **Events** | market days, sourcing trips, trade fairs — capacity, fee, requirements, optionally scoped to a list or group. Vendors **check in** on the day (or the organiser does it at the door); organisers get fill rate, attendance and category analytics. |
-| **Notifications** | Every consequential action (sourcing steps, deals, list/group decisions, collective progress, shipments, reviews, bookings, routes, low stock, verification, promotions) lands in the bell — `GET /notifications`, polled every 30 s by the UI. |
-| **POS Bridge** | Square / Shopify pulled on a schedule; CSV / manual / custom API pushed from the shop by `pos-extension/sync_daemon.py` (idempotent, back-off, health file) or a CSV upload. Every sync is logged. |
-| **Trade analytics dashboard** | `/analytics` — what you supplied and sourced over 30/90/180/365 days, stacked trend, top counterparties, category mix, **price position** against the network average per category, your share of the network and your parasitism index/live score, plus a per-counterparty drill-down (net position, history, top items). `GET /analytics/*`. |
-| **Vendor-list reviews** | Approved members rate a list 1–5 with a title and body; the drawer shows the star distribution, sorts by recent / rating / helpful, and lets each vendor edit or delete their one review. Aggregates (`avg_rating`, `review_count`) are denormalised onto the list for browse and sort, and the patron is notified on every new review. |
-| **Discovery / recommendation** | `GET /vendors/discover` ranks vendors you have not connected to yet on six weighted factors — complementarity, reciprocity, trade evidence, proximity, graph distance and reputation — with the weights exposed at `/discover/weights` and a human-readable `reasons` list per candidate (the Network → Suggested tab). |
-| **Courier route optimisation** | A courier plans a run from explicit stops or straight from their undelivered shipments; nearest-neighbour + 2-opt ordering, per-leg distance, cumulative km and ETA, and an honest `saved_km` against the booking order. Dispatch notifies the senders whose parcels are on the run; stops are ticked off one by one. |
-| **Bookings & calendars** | One dated-hold model for the three tool flows: **warehouse / cold-storage space**, **pop-up shop pitches** (shared spaces) and **hotel sourcing rooms** for travelling vendors. Live day-by-day availability calendar, request → confirm/decline → complete, and cancellation that frees the window. |
-| **Marketplace map** | A supplier-first, viewport-driven Leaflet map over the open-data directory: `GET /api/map/viewport?bbox=…&zoom=…&external=…` returns **grid clusters** when zoomed out ("7.6K places" → "1,240") and a **capped list of pins** when zoomed in — never the 7,640-row directory. Every row carries its tier (`network` / `external` / `stale`): the verified network draws first and in colour, external public data is hidden by default and muted when shown, stale rows are revalidated or archived. Counters double as filters (one dataset at a time), details load on tap, pins are drawn on one canvas, and tiles are configurable so the public OSM server is never a production dependency. `backend/app/services/map_viewport.py`, `frontend/src/pages/map/MapPage.jsx` |
-| **Enterprise workspaces (v2.13)** | The paid, private side of the dual model: an organisation (trade association, cooperative, employer, county programme) buys a branded workspace *inside* Brief_ — member register with roles (owner/admin/field_officer/member/viewer), field officers who register vendors by `@handle`, a field-activity dashboard (named registration counts, never an officer score), and a managed-Android-device register. Remote lock / company-data removal are enrolment-mode-gated (`work_profile` can never wipe a whole phone) and are only reported *dispatched* when the organisation's own Android Enterprise/EMM is bound and dispatch is enabled — otherwise they are audited requests that say so. Plans in KSh: Pilot free · Association 24,500/mo · Enterprise 145,000/mo, caps enforced server-side. `GET/POST /api/enterprise/*`, `/enterprise`. Plan: [`docs/briefs/enterprise-scope-upgrade.md`](docs/briefs/enterprise-scope-upgrade.md). |
-| **Market Runs (v2.15)** | Scheduled buying runs on Market Locks — Run A Ruiru Fresh (chicken/fish, cold-chain plan required), Run B Githurai Sukari (sugar: wholesale bags vs repacked retail on one pooled line), Daraja Mbili consolidated supply (customers outside the walkable ring order in; hub/collection-shop/delivery fulfilment). Each run is an order ledger: request ≠ confirmed order ≠ supplier purchase; pooled demand, confirmed demand and the wholesale threshold are three separate figures; actual prices, receipts, weight loss/rejected stock, allocations, fees, amount paid and balance due are recorded per order. Payment is the customer's choice — advance, cash/M-Pesa on delivery, or shop-backed collection — with money responsibility named per order and large on-delivery orders flagged (never blocked) with a deposit recommendation. `GET/POST /api/locks/runs/*`, Market Runs section of `/locks`. Model: [`docs/briefs/market-runs-model.md`](docs/briefs/market-runs-model.md). |
-| **Town commerce (v3.2)** | Three engines on one ledger discipline, no payout wallet: **receipt rewards** (photo or pasted OCR text → line items → points funded only from the merchant's prepaid credit), a **referral index** for Kisumu and Kisii (seeded share links, click attribution, operator-verified conversions, labelled sponsored slots capped at 3, funder-paid bounties), and a **scout marketplace** on the corridor board (QR distribution, customer acquisition, ratings, merchant-confirmed direct payment). Every reward shows calculated *and* funded points; every fee accrues as a disclosed runtime percentage (`2%` campaign, `6%` verified lead, 5–8% scout task fees) and is suppressed while `FREE_FOR_NOW`; expired credit is reported separately from spend and revenue; only `paid` fees are recognised. Trust is evidence-backed (New → Trusted) and a click never moves it. `/receipt-rewards`, `/referral-index`, `/scout`, `/merchant`, `/ops/commerce`. Architecture: [`docs/TOWN_COMMERCE.md`](docs/TOWN_COMMERCE.md) · legal launch gates: [`docs/TOWN_COMMERCE_LEGAL.md`](docs/TOWN_COMMERCE_LEGAL.md). |
-| **Page portfolio (v2.18)** | A public page is judged before it is read, so `/p/:handle` now carries two more surfaces beside Selected work. **The gallery board** (`vendor_profiles.gallery_items`, migration `0081`) is up to 30 photographs, each with a caption and one tag from a fixed list (`work`, `before-after`, `premises`, `team`, `product`, `event`, `other` — an unknown tag is filed as `other`, never invented as a chip), laid out in columns so each photo keeps its own shape, filterable by real per-tag counts (`gallery_tags`) and openable at full size. **The listings** are the page's own offers from `/api/offerings/of/:handle` — service prices and duration, goods quantities, tool day rates, and `ask_me` shown as "Ask", never as zero. The owner adds many photos at once (one caption and one tag for the batch) and removes one from the board; both write the whole list and re-read it, and a visitor never sees either control. `PUT /api/vendors/me/profile` follows the same silence-vs-empty contract as work items, and a photo must be an uploaded path or an http(s) URL — `data:` and `blob:` are refused by name. Demo content: `python backend/seed_showcase.py` fills `@glow_cleaning` through the public API with 8 photos, 3 work cards and 5 priced offers; the design preview at `/preview` renders the same fixture board. Guide: [`docs/page-portfolio-gallery.md`](docs/page-portfolio-gallery.md). |
-| **Storefront catalogue (v2.14)** | Sell what businesses already buy: 12 offers in three lines — digital services (one-off, people-delivered), business software (subscriptions on what is operational), field operations (setup + monthly, BYOD-first) — each with a KSh test price, readiness (`available_now`/`pilot`/`service`/`scoped`), deliverables and exclusions fixed before payment. Account tiers Junior (KSh 0, public label "Junior — Free account") → Professional → Business → Enterprise sit beside, never instead of, Passport verification; the 30-day Business trial discloses its exact first charge and stays `not_yet_live` until recurring billing is verified. Public `GET /api/catalog`, enquiries `POST /api/catalog/enquiries`, storefront at `/storefront`. Plan: [`docs/briefs/storefront-catalogue-and-pricing.md`](docs/briefs/storefront-catalogue-and-pricing.md). |
-| **Monitoring & ops** | In-process metrics registry (`/metrics`, Prometheus text) with per-route percentiles and a slow-request list, `X-Request-ID` on every response, and an **Ops** console (`/ops`) showing version, environment, p50/p95/p99, error rate, pool and the raw scrape. Prometheus + Grafana + alerts ship in `deploy/monitoring/`. |
-| **Security boundary (v2.15)** | Production refuses to start on a default or short `SECRET_KEY`/`PSP_WEBHOOK_SECRET` (validated at construction *and* at boot), `/api/ops/*` requires an explicit `OPERATOR_HANDLES` allowlist (empty = nobody), `/api/metrics` is 404 in production without `METRICS_TOKEN`, and production never runs DDL at boot unless `ALLOW_SCHEMA_AUTOCREATE_IN_PRODUCTION` says so for one first boot. The two reproduced exploits — a JWT forged with the shipped secret and a webhook signed with the shipped secret — are regression-tested and return `401`. Payment failures return `503` with a stated reason and the provider name. |
-| **Data rights (v2.15)** | `GET /api/vendors/me/export` returns the member's own account, stock, movements, requests, offers, claims and sent-message metadata (counterparty notes and evidence excluded by design); `POST /api/vendors/me/close` takes a typed handle, anonymises identity, withdraws claims, zeroes sellable stock, destroys the password **and kills live sessions** — an old token cannot resurrect a closed account. Surfaces at `/legal`: privacy, terms, refunds and disputes, data rights, support. |
-| **Go-live guide (v2.15)** | [`docs/ops/go-live-guide.md`](docs/ops/go-live-guide.md) — the human-side sequence: secrets, environment variables, the production migration (Vercel does **not** run `entrypoint.sh`, so `alembic upgrade head` is manual), deploy verification with expected outputs, claiming the operator account, the real-money drill, the restore drill, and how to turn subscriptions on only after both are proven. |
-| **Offline reading (v2.15)** | The Morning Brief and Receipts keep the last good copy per account in `localStorage`, paint it instantly when the radio is off (with the time it was saved and a disabled refresh rather than a control that lies), and drop it on logout and on account closure. A second account on the same phone removes the first account's copy instead of showing it. `src/lib/offline.js`. |
-| **Morning Brief (v2.15)** | `GET /api/brief/morning`, no parameters, scope from the token. Five deterministic signals — low stock (≤5 sellable), **money to follow up** (delivered movements with no settled payment, critical after 7 days), movements stale over 48 h, claims expiring within 30 days, open requests in the last 14 days — each carrying `record_ids`, `severity`, `occurred_at` and the route that opens the source. One failing signal degrades to a labelled line instead of blanking the screen; a failed refresh keeps the last brief and marks it stale. No model, no writes: nothing on the screen can move money, stock or a permission. `/brief`. |
-| **Receipts (v2.15, Track 1)** | `/payments` lists every payment attempt the vendor made with the state the provider actually reported: paid, awaiting provider, failed (with the provider's reason), refunded. A receipt number appears only once the provider confirms it; a pending payment says so and warns against paying twice; a failed one links to support and the refund policy. Reads `GET /api/payments/intents`; moves no money. |
-| **Subscription billing (v2.15, Track 2)** | Kept strictly separate from transaction payments. `subscriptions` + `subscription_invoices` (migration `0023`), one live subscription per vendor enforced by a partial unique index, and a unique `psp_reference` as the idempotency key. Plans activate only from a **verified** provider event (`subscription.paid` through the same HMAC-verified webhook as money), failures enter a 7-day grace period, and a lapse returns the account to Starter without touching records or verification. One trial per vendor, ever. `billing.live` is false on the mock provider and the UI says so; the mock-only payment simulator refuses to run once a real provider is configured. `/billing`. |
-| **Measurement (v2.15)** | `GET /api/ops/measurement` (operator only): registered → activated → repeated-use funnel, payment completion rate, movements, with **every definition returned alongside the number** and a `not_measured` list naming what the platform cannot honestly measure (cost per vendor, brief opens, revenue) and why. Includes a **`benchmark_gate`** — ≥25 vendors with settled trade, ≥3 publishable categories, ≥5 vendors per published cell (k-anonymity), ≥30-day window — that returns the reasons it refuses and the categories it suppressed. Shown in the Ops console. |
-| **Home discovery feed (v3.1)** | `/` leads with the market, not with your own shelf: six compact shortcuts (goods · people · services · equipment · rentals & logistics · jobs), then eight curated shelves of real records — stock, storefront services, vendors, tools & rentals, requests + call-ups, events, groups/vendor lists, markets — each with a **See all** door into its own module and its own loading / empty / error state (an empty shelf hides; one failed shelf cannot take the feed down). A Fiverr-style invite banner sits between the shelves and calls the app's existing share flow, promising no reward. **Your own stock never appears on a public shelf** (filtered at the API and again by owner handle/id) and My Shop ends the feed collapsed, with live counts and the way back to full management. Every shelf reuses an existing endpoint — with optional `skip`/`limit` added to `/groups/browse`, `/vendor-lists/browse` and `/markets` — and no new dependency, model or category. Plan: [`docs/briefs/home-discovery-feed.md`](docs/briefs/home-discovery-feed.md). |
-
-## Stack
-
-* **Backend** — FastAPI 0.104, SQLAlchemy 2 (async, asyncpg), PostgreSQL 16, Alembic, JWT access + refresh tokens (python-jose) + bcrypt, Redis (rate limiter, login lockout, WebSocket fan-out) with an in-process fallback, local or S3-compatible file storage. `backend/`
-* **Frontend** — React 18, Vite 5, Tailwind 3, zustand, axios, lucide-react. Dark theme, sidebar: Dashboard · Stock Room · Network · Analytics · Vendor Lists · Groups · Chat · Tools · Events · POS Bridge · Ops. `frontend/`
-* **POS extension** — Python daemon + adapters (csv, manual, square, shopify). `pos-extension/`
-* **Ops** — `docker-compose.yml` for development, `docker-compose.prod.yml` (Caddy TLS, nginx, 4 API workers, scheduler worker, nightly `pg_dump`, optional POS daemon), a GitHub Actions pipeline in `deploy/github-deploy.yml`, an observability stack in `deploy/monitoring/` (Prometheus scrape of `/metrics`, alert rules, Grafana dashboard) and a load-test harness in `loadtest/`.
-
-## Run it
-
-### Docker (everything)
-
-```bash
-cp .env.example .env            # set SECRET_KEY at least
-docker compose up --build
-# frontend http://localhost:3000 · API http://localhost:8000 · docs http://localhost:8000/docs
-```
-
-### Production
-
-```bash
-cp .env.example .env            # SECRET_KEY, POSTGRES_PASSWORD, DOMAIN, CORS_ORIGINS, (S3_* optional)
-docker compose -f docker-compose.prod.yml up -d --build
-docker compose -f docker-compose.prod.yml --profile pos up -d pos-daemon   # optional: push ./pos-data/stock.csv
-```
-
-The backend entrypoint runs `alembic upgrade head` before starting; the API runs
-with 4 uvicorn workers and `RUN_SCHEDULER=false`, and the single `worker`
-service owns the scheduler (POS pulls, hold expiry, nightly score recompute and
-event reminders). Caddy terminates TLS for `$DOMAIN`; `db-backup` keeps 14
-nightly dumps in the `backups` volume.
-
-### Railway (single container)
-
-`railway.json` + the root `Dockerfile` build one image that serves both halves:
-the API serves `frontend/dist` itself and answers `/api` on the same origin, so
-there is no second service and no CORS to configure.
-
-1. **Add Postgres** to the project, then on the app service set
-   `DATABASE_URL=${{Postgres.DATABASE_URL}}`. Variable changes are staged until
-   you deploy.
-2. Set `SECRET_KEY`. Everything else has a working default.
-3. Deploy. The entrypoint waits for Postgres, runs `alembic upgrade head`, then
-   starts uvicorn on `$PORT`. `/api/health` is the healthcheck.
-
-### Railway (single container) — the deploy succeeds but nothing renders
-
-The most common cause is `alembic upgrade head` failing inside the entrypoint.
-`entrypoint.sh` runs under `set -e`, so a failed migration exits the container
-before uvicorn ever starts: Railway reports a crashed deploy and the URL
-returns nothing at all. The whole traceback is in the deploy log — scroll to
-the last error before `Waiting for application startup` (which will be absent).
-
-To reproduce it locally against a throwaway database:
-
-```bash
-cd backend
-python -m pytest tests/test_migrations.py   # migrates a scratch DB from zero
-```
-
-Other things that produce a blank page on a single-container deploy:
-
-| symptom | cause | fix |
-|---|---|---|
-| `GET /` returns the JSON API index, not the app | `FRONTEND_DIST` points somewhere without an `index.html`, so main.py never mounts the SPA | Leave it at the Dockerfile default (`/app/frontend/dist`); check the build log's `npm run build` step |
-| one line of `{"detail":"Not Found"}` | the SPA catch-all is not registered because the dist check failed | as above |
-| assets 404 but HTML loads | a stale `index.html` hashed against an older build | redeploy; the asset filenames are content-hashed per build |
-
-`deploy/github-deploy.yml` is a ready CI/CD pipeline (backend pytest with
-migrations applied, checked and rolled back on the Postgres service; a
-load-test smoke run against a booted API; frontend tests + build; image build
-to GHCR; SSH deploy). Copy it to `.github/workflows/deploy.yml` in a commit
-made with your own credentials — the bot that opened this branch is not allowed
-to write under `.github/workflows/`.
-
-### Monitoring
-
-`GET /api/metrics` is a Prometheus scrape target served from the API's own
-in-process registry (per-route counters and latency histogram, in-flight and
-5xx counters) — no exporter sidecar. Point a scraper at it, or bring up the
-bundled stack:
-
-```bash
-docker compose -f docker-compose.prod.yml -f deploy/monitoring/docker-compose.observability.yml up -d
-# Prometheus :9090 (alert rules for down / p95 / 5xx / 429 storms)
-# Grafana    :3001 (the "Brief_ API" dashboard is provisioned)
-```
-
-`/ops` in the UI reads the same registry: version and environment, p50/p95/p99,
-error rate, DB pool, rate-limit budget and the busiest/slowest routes.
-
-### Load testing
-
-```bash
-python loadtest/brief_load.py --smoke                    # CI: 2 vendors, 40 requests, SLO gate
-python loadtest/brief_load.py --vendors 25 --duration 60 --p95 800 --error-rate 2
-k6 run loadtest/k6-brief.js                              # same scenario, k6 reporting
-```
-
-Both harnesses drive the read paths a vendor actually uses and exit non-zero
-when p95 or the error rate misses the budget. See `loadtest/README.md`.
-
-### Local, no Docker
-
-The backend can bring its own PostgreSQL (via `pgserver`) so you need nothing installed but Python and Node.
-
-```bash
-# API
-cd backend
-python -m venv .venv && . .venv/bin/activate
-pip install -r requirements-dev.txt
-python dev_local.py             # embedded Postgres in ./.pgdata, API on :8000
-# …or against your own Postgres:
-#   export DATABASE_URL=postgresql+asyncpg://user:pass@localhost:5432/brief_vendors
-#   alembic upgrade head && uvicorn app.main:app --reload
-
-# Frontend (separate terminal)
-cd frontend
-npm install
-npm run dev                     # http://localhost:3000, proxies /api (+ WebSocket) to :8000
-```
-
-`npm run build` produces `frontend/dist/`; when it exists the API serves it at
-`/`, which is what the single-container `Dockerfile` / `railway.json` deploy does.
-
-### Demo data
-
-```bash
-cd backend && python seed_demo.py            # BASE_URL=https://… for a remote API
-```
-
-Seeds four vendors through the public API (idempotent) and exercises the whole
-v2.1 loop — verification, a deal, a collective buy, a shipment, an event
-check-in. Password for all four is `Brief-demo-2026`, email
-`{handle}@brief-demo.co.ke`:
-
-| handle | role | what they have |
-|---|---|---|
-| `@mama_mboga` | patron · selling | fresh produce, the *Nairobi Fresh Produce Vendors* list, the *Wakulima Sourcing Collective* group with a tomato collective, a farm-gate Saturday event, a CSV POS connection |
-| `@kibanda_kitchen` | sourcing | a small eatery buying from the network, an open deal room |
-| `@gikomba_textiles` | both | second-hand textiles (one patron-verified line), runs *Eastlands Traders* and a niche topic |
-| `@boda_express` | courier | registered courier with one delivered, rated shipment |
-
-### Tests
-
-```bash
-cd backend && pytest            # boots an embedded Postgres, walks the whole vendor loop (incl. v2.1, v2.2, v2.5 payment/chama and v2.6 halal flows)
-cd frontend && npm test         # renders every page against a fake API
-cd frontend && npm run lint     # eslint 9, flat config (eslint.config.js) — 0 errors
-cd backend && alembic upgrade head && alembic check && alembic downgrade base   # migrations replay cleanly
-```
-
-## API in one screen
-
-All routes are under `/api` and, apart from `auth/*` and `health`, require
-`Authorization: Bearer <token>`. A middleware refuses anything else with
-*"Not authenticated. All users must be vendors."*
-
-```
-POST /auth/register  /auth/login (form: username = email or @handle)  /auth/refresh  /auth/change-password
-GET  /vendors/me  /vendors/network  /vendors/connections  /vendors/suggested  /vendors/graph  /vendors/{handle}  /vendors/{handle}/performance
-POST /vendors/switch-role/{role}  /vendors/connect/{id}  /vendors/become-patron          GET /vendors/me/patron
-POST /stock/add  /stock/bulk-import(csv)   GET /stock/my-stock  /stock/network-stock  /stock/movements  /stock/{id}/alternatives
-POST /stock/{id}/source  /stock/{id}/verify (multipart)  /stock/{id}/patron-verify   POST /stock/movements/{id}/{confirm|ship|receive|cancel}
-POST /vendor-lists/create  /{id}/register  /{id}/approve/{vendor}  GET /vendor-lists/browse  /mine  /{id}/members
-POST /groups/create  /{id}/join  /{id}/create-vendor-list           GET /groups/browse  /mine  /{id}  /{id}/members
-POST /collective/create  /{id}/pledge  /{id}/withdraw  /{id}/status   GET /collective?group_id=  /collective/{id}
-POST /chat/niche-topic  /chat/direct/{vendor}  /chat/deal/{stock}  /chat/{room}/message
-GET  /locks/me  /locks/zones  POST /locks/me/zone  POST /locks/windows/{id}/picks
-GET  /locks/ops/board   POST /locks/ops/{zones|products|offers|windows}  POST /locks/ops/clusters/{id}/quotes
-POST /chat/{room}/voice (multipart audio + duration_seconds; max 15s / 512 KiB)
-GET  /chat/{room}/voice/{message} (authenticated room member only)
-POST /chat/{room}/deals/{message}/{accept|counter|decline}
-GET  /chat/rooms  /chat/{room}/messages       WS /chat/{room}/ws?token=<jwt>   (frames: hello · message · message_update)
-POST /tools/list  /tools/courier/register  /tools/{id}/book-warehouse   GET /tools/browse  /mine  /couriers
-POST /tools/couriers/{courier}/shipments  /tools/shipments/{id}/status  /tools/shipments/{id}/rate   GET /tools/shipments?role=  /tools/shipments/track/{tn}
-POST /events/create  /{id}/register  /{id}/status  /{id}/check-in  /{id}/check-in/{vendor}   GET /events/browse  /mine  /{id}/registrations  /{id}/analytics
-GET  /notifications?unread_only=  /notifications/unread-count     POST /notifications/read-all  /notifications/{id}/read
-POST /files/upload (multipart)   GET /files/limits
-POST /pos/connect  /pos/{id}/sync  /pos/{id}/push  /pos/{id}/push-csv  GET /pos/connections  /pos/sync-logs/{id}
-# v2.2
-GET  /analytics/overview  /trend  /counterparties  /categories  /price-position  /network  /counterparty/{handle}  /weights
-GET  /vendors/discover  /vendors/discover/weights
-GET  /vendor-lists/{id}/reviews  /{id}/reviews/mine  /{id}/rating      POST /{id}/reviews  /{id}/reviews/{review_id}/helpful   PUT|DELETE /{id}/reviews/mine
-POST /tools/{id}/book  /tools/{id}/book-warehouse (legacy alias)  /tools/bookings/{id}/status?status=   GET /tools/{id}/availability-calendar  /tools/bookings?role=
-POST /tools/couriers/{courier}/routes  /{courier}/routes/from-shipments   GET /tools/routes?role=  /tools/routes/{id}
-POST /tools/routes/{id}/status?status=  /tools/routes/{id}/stops/{stop_id}/solve       GET /metrics  /ops/status  /ops/slow
-# v2.7 — the marketplace map (see "The map" below)
-GET  /map/config  /map/counts           GET /map/viewport?bbox=minLng,minLat,maxLng,maxLat&zoom=&kind=&q=&filter=&scope=&external=hide|muted|only
-GET  /map/places/{id}  /map/vendors/{id}  /map/markets/{id}      (lazy detail, on tap)
-POST /map/places/{id}/report            {"verdict": "confirmed" | "gone"}   (street-level revalidation)
-GET  /map/maintenance/sweep             where the directory went quiet (stale rows by zone)
-POST /map/maintenance/sweep?archive=true  archive what the source stopped confirming
-# retired: GET /api/surface/map — the whole-directory dump that hung the phone
-```
-
-Auth returns an `access_token` (24 h) and a `refresh_token` (30 d); the frontend
-refreshes transparently on a 401. Passwords need 8+ characters, an uppercase
-letter and a digit. Five failed logins for one account or from one client lock
-it out for `LOGIN_LOCKOUT_MINUTES`; `RATE_LIMIT_AUTH` / `RATE_LIMIT_API`
-requests per minute apply on top.
-
-Interactive docs at `/docs`.
-
-## The map
-
-The map is a **supplier-first marketplace with an optional map**, not a map
-with businesses pinned to it. Its first version selected every public place
-(7,640 rows), shipped them to the phone and built a Leaflet marker per row —
-which is why it froze on mobile. The fix is architectural, not a tuning flag:
-
-```
-map viewport ──▶ GET /api/map/viewport?bbox=…&zoom=…&kind=…&filter=…&external=…
-                        │  indexed bbox range scan (public_places (lat, lng))
-                        ▼
-                 clusters below the threshold zoom · ≤300 pins above it
-                        │  ETag / 304 / Cache-Control · 60 s server cache
-                        ▼
-                 ~20–200 objects on the phone, drawn on one <canvas>
-```
-
-| zoom | what you see |
-|---|---|
-| 2–7 | region clusters — *"7.6K places" · "25 markets"* |
-| 8–11 | city and market clusters — *Nairobi 1,240 · Kampala 840* |
-| 12–14 | individual markets and vendors |
-| 15+ | individual businesses, with details on tap |
-
-* **A pin is not a member (v2.8).** Every place row is in a tier: `network`
-  (claimed by a vendor), `external` (unclaimed public data, fresh), `stale`
-  (the source stopped confirming it). The map opens network-only; one toggle
-  brings external places back, muted. Suppliers, working markets and claimed
-  places rank first everywhere — on the canvas, in the list, in the counters.
-* **Clustering happens in Postgres** (`GROUP BY floor(lat/cell)` over the
-  bbox-limited rows), so the database never hands the app 7,640 rows and the app
-  never hands the phone more than a few hundred objects.
-* **Counters are filters.** `Suppliers 4 · Markets 25 · Places 91` load one
-  dataset each — never all three at once. The Places chip counts network
-  members; the external directory has its own muted switch, always counted.
-* **Details are lazy.** Tapping a pin fetches one place (phone, hours, source,
-  freshness); a bottom sheet shows it. Nothing fetches images.
-* **Pins are canvas, not DOM.** `preferCanvas` plus `circleMarker` keeps a few
-  hundred pins at one element; tiles use `updateWhenIdle` and
-  `detectRetina: false` so a pan does not request a screenful of 2× PNGs.
-* **Indexes are part of the schema** (alembic `0011`): composite `(lat, lng)`
-  btrees make a bounding box two range scans. `EXPLAIN` on the seeded 7,640-row
-  table: *Bitmap Index Scan on ix_public_places_mappable_lat_lng, 0.8 ms.*
-
-Run it against real volume:
-
-```bash
-python backend/seed_demo.py            # vendors, stock, movements
-python backend/seed_map_demo.py        # 7,640 places around 25 real markets
-# then: /map shows the directory at production scale
-```
-
-### Tiles: MapTiler by default, everything else one setting away
-
-The public OpenStreetMap tile server is community-funded, rate-limited, and its
-tile usage policy forbids bulk downloading and heavy use — so it is the
-**development** default only, and `/api/ops/status` keeps reporting
-`tile_dev_only: true` / `tile_warning` until it is replaced.
-
-**Production default: MapTiler** — OSM-derived (so the basemap and the directory
-share the ODbL credit), raster tiles that drop straight into Leaflet, keyed with
-a free tier and a global CDN, and a self-host migration that is a URL change
-(OpenMapTiles + `tileserver-gl`) once volume makes hosting cheaper than paying
-per 1,000 tiles.
-
-```bash
-MAP_TILE_PROVIDER=auto     # maptiler when MAP_TILE_KEY is set, else osm (dev)
-MAP_TILE_KEY=…             # fills {key} in the provider template
-# or: MAP_TILE_PROVIDER=stadia|thunderforest|custom   MAP_TILE_URL=https://tiles.you/{z}/{x}/{y}.png
-```
-
-The provider is resolved server-side and served to the client by
-`GET /api/map/config` with the attribution its licence requires, so the phone
-never hardcodes a tile URL and the ODbL credit cannot drift. A keyed provider
-with no key falls back to the dev tiles and says so (`key_missing`, `warning`)
-rather than handing the client a URL that can only 401.
-
-Offline note: the app caches the last screenful of *its own* data for a dead
-connection, and never caches or pre-fetches tiles — bulk-downloading the public
-OSM tile servers is exactly what their policy prohibits. Offline **maps** need a
-licensed provider. Full rationale, measurements and the PostGIS upgrade path:
-[`docs/briefs/map-performance.md`](docs/briefs/map-performance.md).
-
-### The home hub and its secondary screens (v2.8)
-
-`/` is a shelf of ten tiles, each with a live count, and every tile opens a
-screen: `/nearby` (with `/nearby/{group}` and `/place/{id}` behind it),
-`/news/{kind}`, `/search/{tab}`, `/markets/{id}`, and `/tasks/squad` ·
-`/tasks/brief`. Filters that are screens live in the URL; filters that are
-views of one screen (radius, search term) stay local. Surfaces that cannot be
-a hub are rewired rather than cloned — the orphaned shelf became the hub, the
-public business got `/place/{id}` instead of a bounce to the map, the unlisted
-`/squad` became a task track, and `/tasks/brief` hands over to the workspace
-that already owns itself.
-[`docs/briefs/home-secondary-screens.md`](docs/briefs/home-secondary-screens.md).
-
-## Configuration
-
-See `.env.example`. `DATABASE_URL` accepts `postgres://`, `postgresql://` or
-`postgresql+asyncpg://`; Alembic derives the sync URL, and a TLS option may be
-written `?sslmode=require` or `?ssl=require` (each driver gets its own spelling).
-The container entrypoint waits `DB_WAIT_TIMEOUT` seconds (60) for Postgres before
-it migrates and serves — see Troubleshooting if it gives up. `CORS_ORIGINS` and
-`ALLOWED_POS_SYSTEMS` are comma-separated. `REDIS_URL` empty → in-memory rate
-limiter, login guard and single-process WebSocket fan-out (fine for one
-worker). Uploads are served at `/static/<key>`. `MEDIA_STORE=auto` (the default) uses
-`S3_BUCKET` when set, the `media_objects` table in production otherwise (a
-serverless `/tmp` and a container disk are both wiped, so a locally-stored photo
-would 404 on the next request), and `UPLOAD_DIR` in development; force it with
-`MEDIA_STORE=s3|db|local` and set `S3_ENDPOINT` for R2 / MinIO / Spaces.
-`RUN_SCHEDULER=false` on the API when you run `python -m app.worker`
-separately. Chat voice notes are capped by `VOICE_MAX_SECONDS` (15) and
-`VOICE_MAX_BYTES` (512 KiB); local files use `VOICE_UPLOAD_DIR`, separate from
-public `/static`. S3 voice objects omit public ACLs and are streamed only to
-room members, so configure the bucket itself as private. Voice notes are not
-transcribed in this release. Daily Flash staff access is allow-listed with
-`MARKET_OPS_ROLES=admin:handle,clerk:handle,spotter:handle,negotiator:handle`;
-set real, registered vendor handles to expose the staff desk. Supplier MOQs are
-entered from human-verified price sheets. Lock quotes do not move money; PSP,
-deposits, escrow and supplier settlement are deliberately not implemented.
-`AUTO_CREATE_TABLES=false` in production — migrations own the schema
-(`alembic upgrade head`; `0002_v21_upgrade` carries the v2.1 features,
-`0003_v22_marketplace` the reviews, bookings and route-plan tables, and `0004_market_locks` the Daily Flash schema).
-`METRICS_ENABLED=false` removes the timing middleware entirely; `METRICS_TOKEN`
-gates `/api/metrics` behind `?token=` or a bearer token;
-`SLOW_REQUEST_MS` (1000) is the threshold `/ops/slow` lists against;
-`BOOKING_MAX_DAYS` (365) caps one booking window and
-`ROUTE_DEFAULT_SPEED_KMH` (25) seeds the route ETA.
-
-## Troubleshooting
-
-### `database never became reachable`
-
-`backend/entrypoint.sh` waits up to `DB_WAIT_TIMEOUT` seconds (default 60) for
-Postgres, then exits 1. That message is only the verdict — the lines around it name
-the target, say which setting supplied the URL, quote the driver's own error and
-suggest a fix (abridged):
-
-```
-[wait-for-db] waiting up to 60s for brief@db:5432/brief_vendors (from the built-in default — DATABASE_URL is not set)
-[wait-for-db] not ready: could not translate host name "db" to address: Name or service not known
-[wait-for-db] database never became reachable: brief@db:5432/brief_vendors (from …) — gave up after 60s and 61 attempts
-[wait-for-db] hint: DATABASE_URL is not set, so the built-in default was used and its host "db" only exists inside docker compose. …
-```
-
-| last error | usual cause | fix |
-|---|---|---|
-| `could not translate host name "db"` (source: *built-in default*) | `DATABASE_URL` is not set. The default host `db` exists only inside docker compose. | Set `DATABASE_URL` on the service. **Railway:** add a Postgres service, then on the app service set `DATABASE_URL=${{Postgres.DATABASE_URL}}` and deploy — variable changes are staged until you do. |
-| `Connection refused` | Nothing listens on that host:port — often `localhost` copied from `.env.example`; inside a container that is the container itself. | Use the database's service or host name; check it is running. |
-| `password authentication failed` | Wrong credentials, or `POSTGRES_PASSWORD` was changed after the data volume was created (the image reads it only on first init). | Fix the URL, or reset the volume (`docker compose down -v`, **deletes data**) / `ALTER USER`. |
-| `database "x" does not exist` | The URL names a database the server lacks. | Create it or fix the last path segment. |
-| `server does not support SSL` · `pg_hba.conf` | TLS mismatch, or the host's allow-list excludes this machine. | `?sslmode=require` if the server demands TLS, `?sslmode=disable` if it has none; allow this host. |
-| `timeout expired` · `Network is unreachable` | Firewall / IP allow-list, wrong host or port, private network not up yet. | Check reachability from the same network; raise `DB_WAIT_TIMEOUT` for slow starters. |
-| `DATABASE_URL has a second "@"` | An unencoded `@` in the password. | Write it as `%40` (other reserved characters: `%3A` `%2F` `%3F` `%23` `%25`). |
-| `DATABASE_URL is empty` · `not a valid database URL` | The variable is empty, or a `${{…}}` placeholder was not resolved by the platform. | Check the variable and the referenced service's name. |
-
-The last two rows fail at once (waiting cannot fix them); everything else is retried
-for the full budget. To re-check a running container without restarting it:
-
-```bash
-docker compose exec backend python -m app.wait_for_db --timeout 5
-```
-
-### `type "someenum" does not exist` while migrating
-
-A migration referenced a PostgreSQL enum type the database does not have under
-that name. Enum names are not a style choice: SQLAlchemy derives them from the
-Python class (`RequestType` → `requesttype`) and emits that name in DDL and in
-casts, so a migration creating the type under any other spelling produces a
-schema the ORM cannot address. The schema still builds — the mismatch stays
-invisible until something names the type in DDL, which is usually a later
-migration, i.e. a deploy.
-
-Name enum types after the lower-cased Python class, and let
-`tests/test_migrations.py` check your work: it migrates a scratch database from
-empty and asserts every enum the models declares exists under that name and is
-the type the column is actually bound to.
+| `pages/activity/ActivityPage` | absorbed — its three-number summary, neighbourhood watches and grouped feed live in the Inbox |
+| `pages/mail/MailPage` | absorbed — `/mail` renders the Inbox filtered to conversations |
+| the notification bell | the same feed, same page |
+| `/inbox` | the page itself |
+
+`/activity` and `/mail` are kept as routes so old links work, and both render
+the one Inbox. Every notification type the backend can emit maps to a real route
+in `frontend/src/config/constants.js`; `tests/notificationRoutes.test.js` fails
+the build if one does not.
+
+---
 
 ## Repository layout
 
 ```
-backend/     app/{models,services,routes,middleware,worker.py,wait_for_db.py}, alembic/versions/{0001_initial…0011_map_viewport_indexes}.py,
-             tests/, dev_local.py, seed_demo.py, seed_map_demo.py, entrypoint.sh
-             models: bookings.py (tool bookings) · reviews.py (list reviews) · routing.py (route plans & stops)
-                    payments.py (intents, custody ledger, payouts, reconciliation, dispute holds) · chamas.py (groups, pool, loans, dividends)
-                    halal.py (murabaha contracts)
-             services: psp_client.py (provider + mock) · payments.py · custody.py · chamas.py · lock_settlement.py · halal.py · biashara.py
-             routes: analytics.py · reviews.py · bookings.py · route_planner.py · ops.py · payments.py · chamas.py · murabaha.py · map.py
-             services: map_viewport.py (bbox queries, grid clustering, viewport cache) · map_indexes.py (the bbox DDL)
-frontend/    eslint.config.js (flat config for `npm run lint`), vite.config.js (incl. the vitest setup)
-             src/{config,lib,stores,components/{layout,ui,vendor,stock,chat,groups,tools,lists,notifications,forms,map,home},pages/*,test}
-             components/home/ (the discovery feed: shelves, carousels, cards) · config/homeShelves.js (shelf registry)
-             pages/analytics/ (trade dashboard) · pages/ops/ (monitoring console)
-             components/map/{MarketMap,MapSheet}.jsx · lib/{mapViewport,useMapViewport}.js (viewport maths, debounce, cancel)
-             components/tools/{RoutePlanner,BookingPanel}.jsx · components/lists/ReviewPanel.jsx
-pos-extension/  sync_daemon.py, adapters/, Dockerfile
-deploy/      github-deploy.yml (copy to .github/workflows/) · monitoring/ (Prometheus, alerts, Grafana)
-loadtest/    brief_load.py (repo-only harness, CI gate) · k6-brief.js · README.md
-docker-compose.yml  docker-compose.prod.yml  Dockerfile  railway.json  .env.example
+backend/            FastAPI application
+  app/routes/       older route modules (43 files)
+  app/modules/      newer feature modules (48 packages)
+  alembic/versions/ 83 migrations, single head
+  tests/            89 test files, 1071 tests
+frontend/           React + Vite single-page app
+  src/pages/        route-level screens
+  src/components/   shared UI
+  src/styles/tokens.css   every colour, spacing and shadow
+  src/test/         93 test files
+docs/briefs/        design and scope notes that are still true
+.github/workflows/  CI: tests, build, compile check, migration-head check
 ```
 
-## What v2.2 added
+**The backend has two generations of structure** — `routes/` and `modules/` —
+and both are live: `main.py` registers routers from both. New features go in
+`modules/`; the older `routes/` modules are not dead, they are just older.
 
-Every item below is implemented end to end — model, migration, route, service,
-UI and tests — not just named:
+---
 
-| # | feature | where |
+## Running it locally
+
+### Everything, with Docker
+
+```bash
+docker compose up --build
+```
+
+`db` (PostgreSQL 16), `redis`, `backend` on `:8000`, `frontend` on `:3000`.
+The backend entrypoint waits for Postgres, applies migrations, then serves.
+
+### Frontend only, against any API
+
+```bash
+cd frontend
+npm ci
+npm run dev          # http://localhost:3000, proxies /api to VITE_API_URL
+npm test             # vitest
+npm run build        # production bundle
+```
+
+`frontend/.env` holds the dev proxy target and contains no secrets.
+
+### Backend only
+
+```bash
+cd backend
+pip install -r requirements-dev.txt
+uvicorn app.main:app --reload --port 8000
+```
+
+`requirements-dev.txt` includes `pgserver`, which bundles PostgreSQL 16 — the
+tests need a real Postgres because they take advisory locks and call
+`to_regclass`. SQLite will not work.
+
+Environment variables that matter:
+
+| Variable | Default | What it does |
 |---|---|---|
-| 1 | **Trade analytics dashboard** | `pages/analytics/Analytics.jsx`, `routes/analytics.py`, `services/analytics_service.py`, `GET /api/analytics/*` |
-| 2 | **Vendor-list reviews** | `components/lists/ReviewPanel.jsx`, `routes/reviews.py`, `models/reviews.py`, `GET|POST /api/vendor-lists/{id}/reviews` |
-| 3 | **Discovery / recommendation algorithm** | Network → Suggested, `services/discovery.py`, `routes/vendors.py`, `GET /api/vendors/discover(+weights)` |
-| 4 | **Courier route optimisation** | `components/tools/RoutePlanner.jsx`, `services/routing.py`, `routes/route_planner.py`, `POST /api/tools/couriers/{id}/routes` |
-| 5 | **Warehouse calendar / pop-up / hotel flows** | `components/tools/BookingPanel.jsx`, `services/booking_service.py`, `routes/bookings.py`, `POST /api/tools/{id}/book` + `/availability-calendar` |
-| 6 | **Monitoring & load-test harnesses** | `middleware/metrics.py`, `routes/ops.py`, `pages/ops/Ops.jsx`, `deploy/monitoring/`, `loadtest/` |
+| `DATABASE_URL` | required | `postgresql+asyncpg://…` |
+| `SECRET_KEY` | required | JWT signing |
+| `RUN_MIGRATIONS` | `true` (container) | runs `alembic upgrade head` on boot |
+| `RUN_SCHEDULER` | `true` | nightly standing recompute and sweeps |
+| `AUTO_CREATE_TABLES` | `false` | dev only; never in production |
 
-## What v2.5 added (payments & digital chamas — backend)
+### Tests
 
-The PSP payment stack and digital chama flows, implemented end to end in the
-backend (models, migration `0006_payments_chamas.py`, services, routes,
-worker jobs and 15 E2E tests). The corresponding member/admin UIs ship in
-Layer 3 of the roadmap; the briefs are saved under `docs/briefs/`.
+```bash
+cd frontend && npx vitest run
+cd backend  && python -m pytest -q     # 1071 tests
+```
 
-| # | feature | where |
-|---|---|---|
-| 1 | **PSP provider abstraction** (collections, payouts, balance, sub-accounts; HMAC webhook client + in-process **mock** with fail-mode and real-log **replay**) | `services/psp_client.py` |
-| 2 | **Payment intents + append-only custody ledger** (DB trigger blocks UPDATE/DELETE; corrections are reversal rows) | `models/payments.py`, `services/payments.py` |
-| 3 | **Webhook sink** — the only place money is booked; HMAC-verified, idempotent, safe-duplicate/stale handling, retry-safe | `POST /api/payments/webhook` (`routes/payments.py`) |
-| 4 | **Payouts with dual approval + in-flight freeze** (pending payouts can never be double-sent; freeze/unfreeze for disputes) | `services/payments.py`, `GET /api/payments/payouts/in-flight` |
-| 5 | **Daily reconciliation** (wallet per wallet, variance detection, resolution) | `services/custody.py`, `/api/payments/reconciliation/*` |
-| 6 | **Custody desk** (intent/disbursement status, holds, in-flight alerts, pending-approval queue) | `/api/payments/ops/*` |
-| 7 | **Digital chamas** (groups, pool, deposits, dual-approved loans + quorum, repayment, dividend payouts, Biashara Score events, overdue-worker flags) | `models/chamas.py`, `services/chamas.py`, `routes/chamas.py` |
-| 8 | **Lock settlement flow** (pay selected supplier from pick escrow, fee to platform wallet, dispute freeze/refund with dual approval, settle books + score) | `services/lock_settlement.py`, `routes/locks.py` |
+One backend test, `tests/test_smoke.py::test_full_loop`, fails on a clean
+checkout. It is a pre-existing failure and not a signal about your change.
 
-## What v2.6 added (Halal trade — backend)
+---
 
-Halal-compliant money flows from the halal-trade brief
-(`docs/briefs/halal-trade-finance.md`): migration `0007_halal_finance.py`,
-services, routes and 8 E2E tests. Branding and the after-hours Vibe-Tag pins
-stay out of backend scope (Layer 3 / social layer).
+## Migrations
 
-| # | feature | where |
-|---|---|---|
-| 1 | **Vendor `finance_mode`** (`halal_sharia` vendors are blocked from interest chamas and interest loans — Riba gate) | `PUT /api/vendors/me`, `services/chamas.py` |
-| 2 | **Halal chama pools** (`qard_hasan` / `musharakah_trade` / `murabaha_credit`): zero-interest loans, flat admin fee netted from the payout, dividend base = fees + remitted profits (never interest) | `chamas.model_type`, `services/chamas.py` (`pool_distributable`) |
-| 3 | **Musharakah profit remittance** (real PSP collection into the pool → distributable surplus) | `POST /api/chamas/{id}/profit` |
-| 4 | **Murabaha (cost-plus) stock advances** (fixed cost + disclosed margin at signing, staff desk, PSP repayment into `SACCO_ADVANCES`, default worker with grace — no late-payment interest) | `models/halal.py`, `services/halal.py`, `routes/murabaha.py` (`/api/murabaha/*`) |
-| 5 | **Pick hedging as Bay' al-Salam** | already satisfied by the v2.5 lock-escrow flow (physical goods, escrow, settle-on-delivery) |
+```bash
+cd backend
+alembic current    # what this database has
+alembic heads      # must print exactly one: 0083_merit
+```
 
-Ops notes: the webhook endpoint is public (PSPs can't authenticate as vendors)
-and verifies an `HMAC-SHA256` signature of the raw body against
-`PSP_WEBHOOK_SECRET`; unknown or not-yet-applicable events get a **502** so
-real PSPs retry. `PSP_PROVIDER=mock` (the default) keeps the whole stack
-self-contained in dev and tests. Architecture and invariants:
-`docs/briefs/payment-custody-architecture.md`.
+**Migrations are applied by hand.** `RUN_MIGRATIONS` is `false` in production.
+Before applying any, read
+[`docs/briefs/production-migrations.md`](docs/briefs/production-migrations.md) —
+it lists what each unapplied revision enables and the safe order to apply them
+(one at a time, never `upgrade head`).
 
-## What v2.7 added (the marketplace map)
+Features whose tables are missing report `503` with the migration named, rather
+than crashing. See `backend/app/modules/merit/router.py`.
 
-1. **Viewport loading** — `GET /api/map/viewport?bbox=…&zoom=…` replaces the
-   whole-directory dump. The map asks for one screenful at a time.
-2. **Server-side clustering** — `GROUP BY floor(lat/cell)` inside the bbox, with
-   screen-sized, world-fixed cells. The phone receives aggregates, not rows.
-3. **Progressive disclosure** — regions → cities → markets → businesses, each
-   layer with its own zoom threshold.
-4. **Counters as filters** — Markets / Vendors / Places each load one dataset.
-5. **Lazy details** — tapping a pin fetches one place; a bottom sheet shows it.
-   No images are fetched on the map at all.
-6. **Canvas pins** — `preferCanvas` + `circleMarker`: a few hundred pins cost one
-   DOM node, and tiles use `updateWhenIdle` / `keepBuffer: 1` / no retina.
-7. **Debounce, cancel, guard** — 250 ms debounce, `AbortController` on the
-   previous request, and a request id so a slow response cannot overwrite a newer
-   one.
-8. **HTTP + server caching** — 60 s process cache, ETag/304 and
-   `Cache-Control: private, max-age=30`.
-9. **Offline honesty** — the last screenful of our own data is kept for a dead
-   connection and labelled; tiles are never cached or bulk-downloaded.
-10. **Production-ready tile configuration** — `MAP_TILE_URL` (plus attribution
-    and subdomains) served to the client from the server, with the public OSM
-    server flagged dev-only in `/api/ops/status` until it is changed.
-11. **Spatial indexes** — `0011_map_viewport_indexes`: composite `(lat, lng)`
-    btrees on places, vendors and markets, installed by both `init_db()` and
-    `alembic upgrade head`. A bbox is now two range scans (0.8 ms on 7,640 rows).
-13. **A tile backend that is production-grade** — MapTiler by default
-    (`MAP_TILE_PROVIDER=auto` + `MAP_TILE_KEY`), with Stadia, Thunderforest and
-    self-hosted presets one setting away, resolved in
-    `app/services/tile_providers.py` and served to the client with its
-    attribution. The public OSM server stays development-only and keeps warning.
-14. **`GET /api/surface/map` retired** — deleted rather than capped, along with
-    `surfaceAPI.map`, so the whole-directory dump cannot be reintroduced by
-    accident.
-12. **Scale you can reproduce** — `backend/seed_map_demo.py` seeds 7,640 places
-    around 25 real East-African markets.
+---
 
-Details, measurements and the PostGIS/Vector-tile upgrade paths:
-[`docs/briefs/map-performance.md`](docs/briefs/map-performance.md).
+## Deployment
 
-## What v2.8 added (the network-first map)
+Production is a Vercel project with two services (`vercel.json`): FastAPI at
+`backend/app/main.py` for `/api/*` and `/static/*`, and the Vite SPA for
+everything else with a history-API rewrite. The database is Supabase PostgreSQL.
 
-The v2.7 map was fast but commercially flat: 7,640 external rows could
-outshout twenty real suppliers. The correction is one non-negotiable rule —
-**a location on the map does not automatically make it part of the
-marketplace** — enforced end to end on the map surfaces only
-([the brief](docs/briefs/network-first-map.md)):
+Deployment protection (SSO) is enabled on the production aliases, so the running
+app is not publicly reachable.
 
-1. **Tiers on the wire** — every place row states `network` / `external` /
-   `stale`; the viewport's `external=hide|muted|only` picks what the caller
-   sees (`hide` is the client default: the clean, supplier-first map).
-2. **Staleness with a lifecycle** — rows the source stopped confirming for
-   `MAP_PLACE_STALE_DAYS` leave every map view, stay counted, and are brought
-   back by a vendor's street-level "confirmed" report or the next ingest; the
-   `POST /api/map/maintenance/sweep` archive (dry-run first, capped) retires
-   what has been quiet for `MAP_PLACE_ARCHIVE_DAYS`. Claimed rows are never
-   touched by any of it.
-3. **Supplier-first ranking** — vendor pins order by current offers
-   (in-stock lines → verification → network score → distance), never by
-   distance alone; markets rank working (registered suppliers) before
-   unworked, and carry `active_members` — the number of registrants with
-   something on the shelf right now.
-4. **Honest counters** — `counts` always reports the tier split
-   (`network` / `external` / `stale`, `vendors_with_offers`,
-   `markets_networked`) whatever was asked to draw, so a hidden directory is
-   counted, never erased from the truth.
-5. **The UI says which side of the rule a pin is on** — emerald clusters for
-   network cells, grey translucent pins and "external" tags for the
-   directory, "no suppliers yet" for unworked markets, a staleness line with
-   "Still there" / "Report gone" actions in the bottom sheet, and a list that
-   reads marketplace-first.
+---
 
-## The open market (built)
+## CI
 
-`docs/briefs/open-market-claims-and-priority.md` — **the open market**: a seller sets
-two percentages (our fee, and the cutback the *buyer* keeps, which is what buys
-position); job broadcasts free for direct employers and free forever to the applicant,
-with the hire — not the application — triggering a claim; paid price observations that
-turn a town's wholesalers into a savings figure with a sample count; any customer able
-to advertise a better price, with the business's right of reply; the receipt game as a
-paid task, never wages; template packs per shelf; and the private office whiteboard.
-Money is **claims, not custody**: rows accrue, nothing settles, no wallet, no balance.
-Three rules hold the whole design up — a paying partner never outranks a cheaper
-verified offer, the person looking for work never pays, and nobody gets paid until
-someone is hired.
+The workflow is committed at `docs/ci/ci.yml` and needs one `cp` to activate —
+see [`docs/ci/README.md`](docs/ci/README.md). Once installed, on every push and
+pull request:
 
-## Merit (built)
+- **Frontend** — `npm ci`, tests, production build, bundle-size report.
+- **Backend** — `compileall`, then the full suite on a bundled PostgreSQL.
+- **Migrations** — asserts exactly one Alembic head.
 
-`docs/briefs/merit-and-trust-ticker.md` — **the Trust Score**: six capped evidence
-families summing to 100, no fee or plan as an input (asserted against the source),
-Blue Chip requiring two independent families, decay floored at 40% so quiet is not
-misconduct, mentoring capped below the first tier, and a Pattern Report the business
-exports itself and hands to a lender of its choosing. Discovery position moves by at
-most five per cent. `alembic/versions/0083_merit.py`, `app/modules/merit/`, the
-`TrustTicker` on every public page and `/merit/:handle` for the full record.
+The frontend tests include repository-wide invariants that no single component
+test could catch:
 
-Built as `alembic/versions/0082_open_market.py` plus: `offerings/terms.py` (the two
-percentages, the ceilings, the band); `hiring/` (broadcasts, applications, the claim
-ledger, the reward ladder); `intake/claims.py` (public price claims and the savings
-figure); `blueprints/packs.py` (twelve template packs, drafts only); and the office
-whiteboard's `kind`/`colour`/`pinned`/`expires_at`. On the frontend: `/savings`,
-`/price-work`, `/jobs`, `/jobs/post`, `/jobs/mine`, `/templates/packs`, the partner
-terms in the offer form, the cutback line on a public page, and stickies on the office
-noticeboard.
+| test | what it prevents |
+|---|---|
+| `notificationRoutes.test.js` | a notification type with no destination; a link to a route that does not exist; a duplicate route path |
+| `contrast.test.js` | unreadable text — it reads the real tokens and computes WCAG ratios |
+| `brand.test.js` | a second product name reaching the interface |
 
-## History
+---
 
-This is the second incarnation of the repository. The earlier consumer-facing
-app (market / shops / trade doors, townhubs, dukabook) lives in git history at
-commit `26ffa9d` and on `main`; `git checkout 26ffa9d -- <path>` recovers any
-part of it.
+## Conventions worth knowing before you change something
+
+- **Colour** lives in `frontend/src/styles/tokens.css` and nowhere else. Adding a
+  hex literal to a component is how this product ended up with a magenta banner
+  in a green interface.
+- **Navigation** lives in `frontend/src/config/navigation.js`. Adding a route
+  does not make it a destination.
+- **Money**: Brief never holds client funds and never lends. Payments go directly
+  between the parties; Brief records that they happened.
+- **Discovery position** is capped at 5% of ranking weight, and no feature may
+  spend Brief's own capital.
+- **Design notes** for anything non-obvious go in `docs/briefs/`, named for the
+  decision rather than the sprint.

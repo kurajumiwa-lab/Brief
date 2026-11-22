@@ -77,7 +77,7 @@ export default function StartView({
   return (
     <div className="mx-auto w-full max-w-lg">
       <header className="text-center">
-        <p className="eyebrow">Home Office</p>
+        <p className="eyebrow">Brief</p>
         <h1 className="mt-1.5 text-2xl font-extrabold tracking-tight text-ink-1">
           {step === 0 ? (name ? `${heading}, ${name}` : heading) : step === 1 ? "What can you do today?" : "Before you start"}
         </h1>

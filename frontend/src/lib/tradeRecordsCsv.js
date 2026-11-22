@@ -1,7 +1,7 @@
 // A CSV of the *displayed* server-bounded page. Re-fetching on download could
 // export different rows if an order arrived or changed state in the meantime.
 // This is a vendor's working record, never a receipt or a tax document.
-const DISCLAIMER = "This is your record of trades on Brief_. It is not a receipt, an invoice, or a tax document.";
+const DISCLAIMER = "This is your record of trades on Brief. It is not a receipt, an invoice, or a tax document.";
 const COLUMNS = [
   "date", "reference", "counterparty handle", "item", "quantity", "unit",
   "unit price KES", "total KES", "goods status", "settlement status",

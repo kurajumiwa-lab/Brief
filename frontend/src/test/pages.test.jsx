@@ -97,17 +97,13 @@ import * as api from "@/lib/api";
 import { useAuthStore } from "@/stores/authStore";
 import { useChatStore } from "@/stores/chatStore";
 import { useStockStore } from "@/stores/stockStore";
-import { useNotificationStore } from "@/stores/notificationStore";
 import App from "@/App";
-import Dashboard from "@/pages/dashboard/Dashboard";
 import StockRoom from "@/pages/stock/StockRoom";
 import ChatPage from "@/pages/chat/ChatPage";
 import Network from "@/pages/network/Network";
 import Sidebar from "@/components/layout/Sidebar";
 import AccountMenu from "@/components/layout/AccountMenu";
 import MePage from "@/pages/me/MePage";
-import SetupChecklist from "@/components/onboarding/SetupChecklist";
-import BusinessPulse from "@/components/home/BusinessPulse";
 import { SidebarContent } from "@/components/layout/Sidebar";
 
 const mount = (ui, path = "/") =>
@@ -125,15 +121,11 @@ function LocationProbe() {
 }
 
 beforeEach(async () => {
-  // the discovery feed caches its shelves; a new test gets an empty one
-  const { useHomeFeedStore } = await import("@/stores/homeFeedStore");
-  useHomeFeedStore.setState({ shelves: {} });
   window.scrollTo = vi.fn();
   window.localStorage.clear();
   useAuthStore.setState({ token: "tok", vendor: ME, ready: true, loading: false });
   useChatStore.setState({ rooms: [], activeRoom: null, messages: [], live: false });
   useStockStore.setState({ mine: [], network: [], movements: [], categories: [] });
-  useNotificationStore.setState({ notifications: [], unreadCount: 0, loading: false, loaded: false });
   vi.clearAllMocks();
 });
 
@@ -202,141 +194,11 @@ describe("Me workspace", () => {
   });
 });
 
-describe("Onboarding handoff", () => {
-  // v3.2 moved the live business read out of onboarding and into the home
-  // screen's own business band (components/home/BusinessPulse), so these two
-  // specs now protect two independent promises:
-  //
-  //   · the checklist disappears the moment there is nothing left to do, and
-  //   · the home pulse is a real read of the vendor's own records — loaded
-  //     shelf, open movements, recorded connections — not a marketing panel.
-  // The vital-information half is hard-coded on purpose. A vendor can dismiss
-  // the trading list, but the four things that make their shop presentable —
-  // a photo on a listing, shop photos, a description, a category — stay on the
-  // home screen until they are done. This is the product requirement: entering
-  // the app must show the task, every time, until it is finished.
-  it("keeps the vital-information tasks visible even after dismissal", async () => {
-    useStockStore.setState({ mine: STOCK, movements: [] });
-
-    // first visit: everything is outstanding, so there is nothing to dismiss
-    const first = mount(<SetupChecklist />, "/");
-    expect(await screen.findByText("Photograph what you sell")).toBeInTheDocument();
-    expect(screen.getByText("Put a face on the shop")).toBeInTheDocument();
-    expect(screen.getByText("Describe the business in a sentence")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /dismiss setup checklist/i })).not.toBeInTheDocument();
-    first.unmount();
-
-    // a vendor who dismissed the card on an earlier version, with the vital half
-    // still blank, must still be told
-    localStorage.setItem("brief-setup-done:mama_mboga", "1");
-    const second = mount(<SetupChecklist />, "/");
-    expect(await screen.findByText("Photograph what you sell")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /missing its details/i })).toBeInTheDocument();
-    // and the trading half, which they dismissed, stays dismissed
-    expect(screen.queryByText("Connect with a supplier")).not.toBeInTheDocument();
-    second.unmount();
-    localStorage.clear();
-  });
-
-  it("disappears once the shop is complete and the loop has run", async () => {
-    useStockStore.setState({
-      mine: [...STOCK.map((i) => ({ ...i, images: ["/api/files/test/veg.jpg"] }))],
-      movements: MOVEMENTS,
-    });
-    useAuthStore.setState({
-      token: "tok",
-      vendor: { ...ME, business_description: "Fresh vegetables, delivered around Kisumu." },
-      ready: true,
-    });
-    api.vendorAPI.profile.mockResolvedValueOnce(ok({ portfolio_images: ["/api/files/test/stall.jpg"] }));
-
-    mount(<SetupChecklist />, "/");
-    await waitFor(() =>
-      expect(screen.queryByRole("heading", { name: /get trading|missing its details/i })).not.toBeInTheDocument()
-    );
-  });
-
-  it("lets a shop photo be picked from the checklist itself", async () => {
-    useStockStore.setState({ mine: STOCK, movements: [] });
-    mount(<SetupChecklist />, "/");
-
-    const picker = await screen.findByLabelText(/choose shop photos from your gallery/i);
-    fireEvent.change(picker, {
-      target: { files: [new File(["x"], "stall.jpg", { type: "image/jpeg" })] },
-    });
-
-    await waitFor(() => expect(api.fileAPI.uploadMany).toHaveBeenCalled());
-    await waitFor(() =>
-      expect(api.vendorAPI.updateProfile).toHaveBeenCalledWith({
-        portfolio_images: ["/api/files/test/stall.jpg"],
-      })
-    );
-  });
-
-  it("reads the home business pulse from the vendor's own records", async () => {
-    useStockStore.setState({ mine: STOCK, movements: MOVEMENTS, mineLoaded: true });
-    api.vendorAPI.connections.mockResolvedValueOnce(ok([{ id: "c-1" }]));
-    mount(<BusinessPulse />, "/");
-
-    const pulse = await screen.findByRole("region", { name: /your business today/i });
-    expect(within(pulse).getByText("Listings live").parentElement).toHaveTextContent("1");
-    expect(within(pulse).getByText("Open trades").parentElement).toHaveTextContent("1");
-    // an unknown figure stays unknown: connections only become real when the
-    // endpoint answers, and a vendor with no completed trades shows no rate
-    await waitFor(() => expect(within(pulse).getByText("Supplier links").parentElement).toHaveTextContent("1"));
-    expect(within(pulse).getByText("Fulfilment").parentElement).toHaveTextContent("—");
-    // and it never invents a word it cannot back: no scores, no rates
-    expect(pulse.textContent).not.toMatch(/market rate|popular|trending/i);
-  });
-});
-
-describe("Dashboard", () => {
-  it("shows stats, actionable movements and suggested vendors", async () => {
-    mount(<Dashboard />);
-    expect(await screen.findByText("Mama Mboga Fresh")).toBeInTheDocument();
-    expect(await screen.findByText("Tomatoes")).toBeInTheDocument(); // pending outgoing movement needs my confirm
-    expect(screen.getByRole("button", { name: /confirm/i })).toBeInTheDocument();
-    expect(await screen.findByText("Boda Express")).toBeInTheDocument();
-    expect(screen.getByText(/they source what you stock/i)).toBeInTheDocument();
-    expect(screen.getByText("4")).toBeInTheDocument(); // network pulse vendor count
-  });
-
-  it("renders notifications and routes market-lock notifications to the locks desk", async () => {
-    api.notificationAPI.list.mockResolvedValueOnce(ok({
-      unread_count: 1,
-      notifications: [{
-        id: "n-lock",
-        type: "market_lock_locked",
-        title: "Market lock reached",
-        body: "Your zone reached its buying threshold.",
-        is_read: false,
-        created_at: new Date().toISOString(),
-        data: { market_lock_cluster_id: "cluster-1" },
-      }],
-    }));
-
-    render(
-      <MemoryRouter initialEntries={["/"]}>
-        <Dashboard />
-        <LocationProbe />
-      </MemoryRouter>
-    );
-
-    const notification = await screen.findByRole("button", { name: /market lock reached/i });
-    expect(notification).toHaveTextContent("just now");
-    fireEvent.click(notification);
-    await waitFor(() => expect(screen.getByTestId("current-location")).toHaveTextContent("/locks"));
-  });
-
-  it("advances a movement from the dashboard", async () => {
-    mount(<Dashboard />);
-    fireEvent.click(await screen.findByRole("button", { name: /confirm/i }));
-    await waitFor(() => expect(api.stockAPI.advance).toHaveBeenCalledWith("m1", "confirm"));
-    const details = await screen.findByRole("link", { name: /order details/i });
-    expect(details).toHaveAttribute("href", "/orders/m1");
-    expect(screen.queryByRole("button", { name: /mark shipped/i })).not.toBeInTheDocument();
-  });
-});
+/* The "Onboarding handoff" spec tested `components/onboarding/SetupChecklist`,
+ * which was an earlier onboarding pass: nothing linked to it, and the live start
+ * flow is `pages/start/StartView`. The product requirement it protected — the
+ * four things that make a shop presentable stay visible until they are done —
+ * is still enforced, on the counter shelf (see `counterShelf.test.jsx`). */
 
 describe("Stock Room", () => {
   it("lists my shelf with owner controls", async () => {

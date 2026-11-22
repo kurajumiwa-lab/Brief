@@ -53,7 +53,7 @@ SHELVES: tuple[dict, str] = (
     {"key": "events", "label": "Events", "blurb": "Market days and meetups", "words": ("event", "events", "market day", "meetup", "training", "expo")},
     {"key": "community", "label": "Community", "blurb": "Groups and lists", "words": ("group", "groups", "community", "chama", "circle", "association")},
     {"key": "markets", "label": "Markets", "blurb": "Physical markets", "words": ("market", "markets", "stall", "shed", "kibanda")},
-    {"key": "notices", "label": "Notices", "blurb": "The byway board", "words": ("notice", "notices", "announcement", "board", "byway")},
+    {"key": "notices", "label": "Notices", "blurb": "The notice board", "words": ("notice", "notices", "announcement", "board", "byway")},
 )
 
 SHELF_BY_KEY = {s["key"]: s for s in SHELVES}

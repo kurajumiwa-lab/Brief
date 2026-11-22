@@ -80,8 +80,6 @@ import * as api from "@/lib/api";
 import { useAuthStore } from "@/stores/authStore";
 import { useChatStore } from "@/stores/chatStore";
 import { useStockStore } from "@/stores/stockStore";
-import { useNotificationStore } from "@/stores/notificationStore";
-import NotificationBell, { routeFor } from "@/components/notifications/NotificationBell";
 import QualityBadge from "@/components/stock/QualityBadge";
 import VendorCard from "@/components/vendor/VendorCard";
 import CollectivePanel from "@/components/groups/CollectivePanel";
@@ -105,30 +103,27 @@ beforeEach(() => {
   useAuthStore.setState({ token: "tok", vendor: ME, ready: true, loading: false });
   useChatStore.setState({ rooms: [], activeRoom: null, messages: [], live: false });
   useStockStore.setState({ mine: [], network: [], movements: [], categories: [] });
-  useNotificationStore.getState().reset();
   vi.clearAllMocks();
 });
 
-describe("NotificationBell", () => {
-  it("polls the unread count, lists notifications on open and follows one after marking it read", async () => {
-    mount(<NotificationBell pollMs={60_000} />);
-    await waitFor(() => expect(api.notificationAPI.unreadCount).toHaveBeenCalled());
-    expect(await screen.findByTestId("unread-badge")).toHaveTextContent("1");
-    fireEvent.click(screen.getByRole("button", { name: /1 unread notifications/i }));
-    const panel = await screen.findByRole("dialog", { name: /notifications/i });
-    expect(api.notificationAPI.list).toHaveBeenCalledWith({ limit: 30 });
-    expect(await within(panel).findByText(/proposed a deal/i)).toBeInTheDocument();
-    fireEvent.click(within(panel).getByText(/proposed a deal/i));
-    await waitFor(() => expect(api.notificationAPI.markRead).toHaveBeenCalledWith("n1"));
-    expect(useNotificationStore.getState().unreadCount).toBe(0);
+describe("notification destinations (destinationFor)", () => {
+  // These assertions moved here from the deleted NotificationBell's
+  // `routeFor`, which the Inbox now owns as `destinationFor`. The behaviour is
+  // identical on purpose: the payload names the exact record, and the
+  // type-to-route table is only the fallback.
+  it("routes each notification to the right screen", async () => {
+    const { destinationFor } = await import("@/pages/inbox/InboxPage");
+    expect(destinationFor(NOTIFICATIONS[0])).toBe("/chat?room=deal1");
+    expect(destinationFor(NOTIFICATIONS[1])).toBe("/groups?tab=mine&group=g1&panel=collective");
+    expect(destinationFor({ type: "shipment_update", data: { tracking_number: "BRF-1" } })).toBe("/tools?tab=shipments");
+    expect(destinationFor({ type: "event_reminder", data: { event_id: "e1" } })).toBe("/events?event=e1");
+    expect(destinationFor({ type: "source_request", data: {} })).toBe("/stock?tab=movements&direction=outgoing");
   });
 
-  it("routes each notification to the right screen", () => {
-    expect(routeFor(NOTIFICATIONS[0])).toBe("/chat?room=deal1");
-    expect(routeFor(NOTIFICATIONS[1])).toBe("/groups?tab=mine&group=g1&panel=collective");
-    expect(routeFor({ type: "shipment_update", data: { tracking_number: "BRF-1" } })).toBe("/tools?tab=shipments");
-    expect(routeFor({ type: "event_reminder", data: { event_id: "e1" } })).toBe("/events?event=e1");
-    expect(routeFor({ type: "source_request", data: {} })).toBe("/stock?tab=movements&direction=outgoing");
+  it("never sends a notification back to the Inbox it is shown in", async () => {
+    const { destinationFor } = await import("@/pages/inbox/InboxPage");
+    expect(destinationFor({ type: "event_payment_submitted", data: {} })).toBe("/events?tab=mine");
+    expect(destinationFor({ type: "system", data: {} })).toBe("/");
   });
 });
 

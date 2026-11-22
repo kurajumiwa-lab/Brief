@@ -104,7 +104,15 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/api", () => ({
+  // Sections of the consolidated Inbox that this spec does not exercise.
+  eventAPI: { paymentQueue: vi.fn(() => ok([])), confirmPayment: vi.fn(() => ok({})) },
+  spottedDealAPI: { jury: vi.fn(() => ok([])), mine: vi.fn(() => ok([])), dispute: vi.fn(() => ok({})) },
+  corridorTaskAPI: { inbox: vi.fn(() => ok({ days: [] })) },
+  recurringRoutineAPI: { mine: vi.fn(() => ok({ share_prompts: [] })) },
+  chatAPI: { rooms: vi.fn(() => ok([])) },
+  default: { get: vi.fn(() => ok([])), post: vi.fn(() => ok({})), put: vi.fn(() => ok({})), delete: vi.fn(() => ok({})) },
   outsideAPI: {
+    agenda: vi.fn(() => ok({ items: [] })),
     shelves: vi.fn(() => ok(SHELF_MANIFEST)),
     feed: vi.fn(() => ok({ items: ITEMS, next_cursor: null, center: {}, location: LOCATION })),
     search: vi.fn(() => ok({ items: ITEMS, next_cursor: null, query: null, filters: {}, location: LOCATION })),
@@ -138,12 +146,15 @@ vi.mock("@/stores/homeFeedStore", () => ({
   feedSettled: () => true,
   STALE_MS: 1000,
 }));
+const noopAsync = () => Promise.resolve();
 vi.mock("@/stores/stockStore", () => ({
-  useStockStore: (s) => s({ movements: [], fetchMovements: vi.fn() }),
+  // Stable function identities: a selector that builds a new `vi.fn()` on every
+  // call makes every effect that depends on it re-run, which hangs the run.
+  useStockStore: (s) => s({ movements: [], fetchMovements: noopAsync }),
   needsMyAction: () => false,
 }));
 vi.mock("@/stores/chatStore", () => ({
-  useChatStore: (s) => s({ rooms: [] }),
+  useChatStore: (s) => s({ rooms: [], fetchRooms: noopAsync }),
 }));
 
 beforeEach(async () => {
@@ -497,7 +508,7 @@ describe("Explore", () => {
 /* ── 6. Activity ───────────────────────────────────────────────────────────── */
 
 describe("Activity", () => {
-  const Activity = async () => (await import("@/pages/activity/ActivityPage")).default;
+  const Activity = async () => (await import("@/pages/inbox/InboxPage")).default;
 
   it("groups notifications instead of showing one undifferentiated wall", async () => {
     const ActivityPage = await Activity();
