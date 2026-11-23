@@ -10,6 +10,7 @@ import HappeningShelf from "@/components/home/HappeningShelf";
 import IdentityStrip from "@/components/home/IdentityStrip";
 import CounterShelf from "@/components/home/CounterShelf";
 import DiscoveryBand from "@/components/home/DiscoveryBand";
+import PromoBanner from "@/components/home/PromoBanner";
 
 /**
  * TODAY — the command centre, not a second discovery feed.
@@ -73,6 +74,11 @@ export default function TodayView({
           are and what is for sale; the business's own books come after. Both
           orderings are defensible, and this one is a marketplace's. */}
       <DiscoveryBand place={region?.name || region?.hub || null} />
+
+      {/* The brief's step 4: one promotional plate, directly under the doors.
+          It is the only saturated block this high on the page — everything
+          around it is white — which is what makes it read as an offer. */}
+      <PromoBanner plate="produce" />
 
       {/* Identity sits under the discovery band: one box, one share
           action, and the office the person belongs to. */}
