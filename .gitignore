@@ -31,3 +31,6 @@ frontend/coverage/
 backend/static/
 backend/voice_uploads/
 pos-data/
+
+# Migration SQL generated for an apply run (throwaway, contains no secrets)
+.migration-run/
