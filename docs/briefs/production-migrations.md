@@ -11,6 +11,28 @@
 | Columns | **2,744** |
 | Vendors / profiles | 3 / 3 (unchanged) |
 
+## Live deployment (verified 2026-11-23)
+
+`https://brief-production-52d7.up.railway.app` — Railway, `host: railway`,
+`environment: production`.
+
+```json
+{"status":"ok","database":true,"schema":true,"managed_host":true,"media_store":"db",
+ "media_durable":true,
+ "schema_state":{"current":"0083_merit","head":"0083_merit","at_head":true,
+                 "pending":[],"missing_tables":[],"drifted":{}}}
+```
+
+`media_store: "db"` with `media_durable: true` matters more than it looks: the
+uploads go to the database, not to a container disk, so a Railway restart does
+not discard every photograph. That was the fault documented in `app/schema.py`
+under a Vercel deployment writing to `/tmp`.
+
+Merit serves from the migrated schema — `/api/merit/public/{brav,nyabere,wasafi}`
+all return **200** with a computed breakdown ("Seed", 0/100, six components with
+reasons), not the `503` that names `0083_merit`. An unknown handle returns 404,
+so the route distinguishes "no such business" from "not migrated".
+
 ## Which database is production
 
 There were two Supabase projects. `Brief` (`hdxhoovnleuepnnulsel`, PG 17.6.1,
