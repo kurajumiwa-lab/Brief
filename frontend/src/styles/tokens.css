@@ -208,8 +208,8 @@
 
   /* ── The filled green surface the hero and network bands sit on. Solid,
      never a gradient: the gradient is what read as glassmorphism. ──────── */
-  --market-1: 8 127 91;  /* #087F5B — brand-600 */
-  --market-2: 7 106 76;  /* one step darker, for pressed state and scrims */
+  --market-1: 18 61 53;  /* #123D35 — brand-600, the teal */
+  --market-2: 14 49 42;  /* one step darker, for pressed state and scrims */
 
   /* ── Spacing scale. New layout uses this and nothing else ───────────────
      4px base, so the rhythm is 4/8/12/16/24/32/48/64. Tailwind's own scale

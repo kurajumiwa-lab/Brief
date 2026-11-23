@@ -1,5 +1,7 @@
 import { Link } from "react-router-dom";
 import { MapPin, Package, Truck, Wrench, CalendarDays, ChevronRight } from "lucide-react";
+import Media from "@/components/ui/Media";
+import { photoUrl } from "@/lib/photos";
 
 /**
  * THE DISCOVERY BAND — the brief's steps 2, 3 and 5.
@@ -15,10 +17,10 @@ import { MapPin, Package, Truck, Wrench, CalendarDays, ChevronRight } from "luci
  */
 
 const CATEGORIES = [
-  { to: "/discover?kind=listing", label: "Goods", hint: "Produce, stock, wares", Icon: Package, tone: "goods" },
-  { to: "/discover?kind=service", label: "Services", hint: "Fundis and trades", Icon: Truck, tone: "services" },
-  { to: "/discover?kind=rental", label: "Rentals", hint: "Tools, rooms, vans", Icon: Wrench, tone: "rentals" },
-  { to: "/discover?kind=event", label: "Events", hint: "Rounds and meetups", Icon: CalendarDays, tone: "events" },
+  { to: "/discover?kind=listing", label: "Goods", hint: "Produce, stock, wares", Icon: Package, tone: "goods", subject: "goods-produce" },
+  { to: "/discover?kind=service", label: "Services", hint: "Fundis and trades", Icon: Truck, tone: "services", subject: "services-tailor" },
+  { to: "/discover?kind=rental", label: "Rentals", hint: "Tools, rooms, vans", Icon: Wrench, tone: "rentals", subject: "goods-kiosk" },
+  { to: "/discover?kind=event", label: "Events", hint: "Rounds and meetups", Icon: CalendarDays, tone: "events", subject: "events-gathering" },
 ];
 
 const TONE = {
@@ -54,17 +56,30 @@ export default function DiscoveryBand({ place }) {
       )}
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {CATEGORIES.map(({ to, label, hint, Icon, tone }) => (
+        {CATEGORIES.map(({ to, label, hint, Icon, tone, subject }) => (
           <Link
             key={label}
             to={to}
-            className="group flex flex-col gap-2 rounded-2xl border border-edge-1 bg-surface-1 p-3 transition-colors hover:border-edge-2"
+            className="group overflow-hidden rounded-2xl border border-edge-1 bg-surface-1 transition-colors hover:border-edge-2"
           >
-            <span className={`grid h-10 w-10 place-items-center rounded-xl ${TONE[tone]}`}>
-              <Icon size={18} aria-hidden="true" />
-            </span>
-            <span className="text-card-title font-bold text-ink-1">{label}</span>
-            <span className="text-2xs leading-snug text-ink-4">{hint}</span>
+            {/* A real photograph of the category, so the door looks like the
+                thing behind it. Purely decorative: the label below carries the
+                meaning, and the tile still works with no image at all. */}
+            <div className="relative aspect-[16/10] overflow-hidden bg-surface-3">
+              <Media
+                src={photoUrl(subject)}
+                alt=""
+                className="h-full w-full object-cover transition-transform duration-3 group-hover:scale-[1.04]"
+                fallback={<span className={`block h-full w-full ${TONE[tone]}`} aria-hidden="true" />}
+              />
+              <span className={`absolute left-2 top-2 grid h-8 w-8 place-items-center rounded-lg bg-surface-1/95 shadow-sm ${TONE[tone]}`}>
+                <Icon size={15} aria-hidden="true" />
+              </span>
+            </div>
+            <div className="p-2.5">
+              <span className="block text-sm font-bold text-ink-1">{label}</span>
+              <span className="block text-2xs leading-snug text-ink-4">{hint}</span>
+            </div>
           </Link>
         ))}
       </div>
