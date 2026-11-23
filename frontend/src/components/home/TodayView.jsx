@@ -78,7 +78,7 @@ export default function TodayView({
       {/* The brief's step 4: one promotional plate, directly under the doors.
           It is the only saturated block this high on the page — everything
           around it is white — which is what makes it read as an offer. */}
-      <PromoBanner plate="produce" />
+      <PromoBanner plate="city" />
 
       {/* Identity sits under the discovery band: one box, one share
           action, and the office the person belongs to. */}

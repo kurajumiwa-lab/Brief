@@ -22,10 +22,12 @@ describe("the photo library", () => {
     // Every subject the library claims must resolve to a real file. A typo here
     // is a broken <img> in production, and tests are the only place it shows.
     const subjects = [
-      "goods-produce", "goods-kiosk", "goods-bananas", "goods-fruit",
-      "goods-tomatoes", "services-tailor", "services-boda", "services-artisan",
-      "events-gathering", "events-dance", "banner-street", "banner-produce",
-      "banner-community", "hero-market",
+      "city-skyline", "city-cbd", "city-street", "city-hero",
+      "commerce-street", "commerce-traffic", "commerce-city",
+      "work-technician", "people-street",
+      "culture-conference",
+      "banner-street", "banner-produce", "banner-community", "banner-people",
+      "banner-skyline", "hero-market",
     ];
     for (const subject of subjects) {
       const url = photoUrl(subject);
@@ -41,7 +43,7 @@ describe("the photo library", () => {
 
   it("credits every file it ships, because a licence we cannot show is a risk", () => {
     const credits = readFileSync(CREDITS, "utf8");
-    for (const subject of ["goods-produce", "services-tailor", "events-gathering", "hero-market"]) {
+    for (const subject of ["commerce-street", "work-technician", "culture-conference", "hero-market"]) {
       const file = photoUrl(subject).split("/").pop();
       expect(credits, `${file} is not credited`).toContain(file);
     }
@@ -74,7 +76,7 @@ describe("photoFor", () => {
   it("reads an Available offer's sub-category before its umbrella kind", () => {
     const offer = { id: "o", kind: "available", meta: { primary_category: "service" } };
     const url = photoFor(offer);
-    expect(url).toMatch(/services-/);
+    expect(url).toMatch(/work-|people-|commerce-/);
   });
 
   it("survives junk without throwing", () => {

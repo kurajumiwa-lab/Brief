@@ -20,26 +20,26 @@ const PLATES = {
   street: {
     subject: "banner-street",
     eyebrow: "Live Street",
-    title: "See what is selling near you today",
-    body: "Real shops, real stock, from people one street over.",
+    title: "See what is trading in the city today",
+    body: "Real shops and real stock, from people a street over.",
     cta: "Open Live Street",
     to: "/street",
   },
-  produce: {
-    subject: "banner-produce",
-    eyebrow: "Fair corridor price",
-    title: "Know the going rate before you bargain",
-    body: "Median prices from your own corridor, shown on every stall.",
-    cta: "Browse goods",
-    to: "/discover?kind=listing",
+  city: {
+    subject: "banner-skyline",
+    eyebrow: "Your town",
+    title: "Every business in your city, on one map",
+    body: "Goods, services, rentals and events, by neighbourhood.",
+    cta: "Browse the city",
+    to: "/regions",
   },
-  community: {
-    subject: "banner-community",
+  people: {
+    subject: "banner-people",
     eyebrow: "Town network",
-    title: "Rounds, chamas and meetups this week",
-    body: "Join a group that is already organising near you.",
-    cta: "Find an event",
-    to: "/discover?kind=event",
+    title: "The people who keep the city moving",
+    body: "Fundis, traders and specialists, with a record behind them.",
+    cta: "Find someone",
+    to: "/discover?kind=service",
   },
 };
 
