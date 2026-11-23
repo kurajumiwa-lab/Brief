@@ -189,7 +189,7 @@ export default function BookingPanel() {
                       key={d.date}
                       className={cn(
                         "rounded-lg border p-2.5 space-y-1",
-                        d.full ? "border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-500/15" : d.committed > 0 ? "border-accent-200 dark:border-accent-800 bg-accent-50 dark:bg-accent-500/15" : "border-edge-1 bg-surface-1"
+                        d.full ? "border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-500/15" : d.committed > 0 ? "border-accent-200 dark:border-accent-800 bg-accent-50 dark:bg-accent-600/15" : "border-edge-1 bg-surface-1"
                       )}
                     >
                       <p className="text-2xs text-ink-4">{dayLabel(d.date)}</p>

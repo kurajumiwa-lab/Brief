@@ -129,7 +129,7 @@ export default function Analytics() {
                 {trend.map((t) => (
                   <div key={t.period} className="flex-1 min-w-[36px] flex flex-col items-center gap-1" title={`${t.movements} movements · ${currency(t.value)}`}>
                     <div className="w-full flex flex-col justify-end gap-0.5 h-32">
-                      <div className="w-full rounded-t bg-accent-500/10" style={{ height: `${(t.supplied_value / maxTrend) * 100}%` }} />
+                      <div className="w-full rounded-t bg-accent-600/10" style={{ height: `${(t.supplied_value / maxTrend) * 100}%` }} />
                       <div className="w-full rounded-b bg-blue-500/70" style={{ height: `${(t.sourced_value / maxTrend) * 100}%` }} />
                     </div>
                     <span className="text-2xs text-ink-4 font-mono whitespace-nowrap">{shortDate(t.period).replace(/ \d{4}$/, "")}</span>

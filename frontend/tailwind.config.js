@@ -23,6 +23,27 @@ export default {
         // Merchandising only: a spotlit sale, a trending lane, a discount, or
         // the Level 3+ verified badge. Never a status or a price claim.
         hot: { DEFAULT: token("hot"), soft: token("hot-soft") },
+        // Warm secondary (the brief's amber). Surface and highlight only —
+        // white on amber-400 is 1.97:1, so it never carries white text.
+        amber: scale("amber", RAMP),
+        // Category colours. These classify a listing (goods / services /
+        // rentals / events), which is the one job that justifies a hue
+        // outside the brand family. `-soft` is the chip background, the
+        // DEFAULT is the icon or border, `-text` is a label on the tint.
+        cat: {
+          goods: token("cat-goods"),
+          "goods-soft": token("cat-goods-soft"),
+          "goods-text": token("cat-goods-text"),
+          services: token("cat-services"),
+          "services-soft": token("cat-services-soft"),
+          "services-text": token("cat-services-text"),
+          rentals: token("cat-rentals"),
+          "rentals-soft": token("cat-rentals-soft"),
+          "rentals-text": token("cat-rentals-text"),
+          events: token("cat-events"),
+          "events-soft": token("cat-events-soft"),
+          "events-text": token("cat-events-text"),
+        },
         // Legacy name, cool slate value: identity, selected state, focus.
         orchid: scale("orchid", RAMP),
         // v2.18 (direction C). `tech` is confirmation and live state — the
@@ -66,6 +87,10 @@ export default {
         // The Outside spacing scale. Tailwind's own numeric scale still
         // resolves; these are the eight values a page is expected to choose
         // from, which is what stops arbitrary margins coming back.
+        // The brief's 8px rhythm. These are the values new layout should
+        // reach for; the 4px scale above stays for the 1,000+ existing usages.
+        g1: "0.5rem", g2: "1rem", g3: "1.5rem", g4: "2rem",
+        g5: "2.5rem", g6: "3rem", g7: "4rem", g8: "5rem",
         s1: "var(--space-1)", s2: "var(--space-2)", s3: "var(--space-3)",
         s4: "var(--space-4)", s5: "var(--space-5)", s6: "var(--space-6)",
         s7: "var(--space-7)", s8: "var(--space-8)",
@@ -111,6 +136,15 @@ export default {
         "title-card": ["0.9375rem", { lineHeight: "1.375rem" }],
         meta: ["0.8125rem", { lineHeight: "1.25rem" }],
         caption: ["0.75rem", { lineHeight: "1.125rem" }],
+        // The brief's type ramp (section 2), named so a screen picks a level
+        // rather than a number:
+        //   page heading 26–30px · section 19–22px · card title 16–18px
+        //   body 14–15px · metadata 12–13px · button 15–16px
+        "page": ["1.75rem", { lineHeight: "2.125rem", letterSpacing: "-0.02em" }],
+        "section": ["1.25rem", { lineHeight: "1.75rem", letterSpacing: "-0.01em" }],
+        "card-title": ["1.0625rem", { lineHeight: "1.5rem" }],
+        "body-lg": ["0.9375rem", { lineHeight: "1.5rem" }],
+        "button": ["0.9375rem", { lineHeight: "1.25rem" }],
       },
       borderRadius: {
         xl: "0.75rem", "2xl": "1rem", "3xl": "1.5rem", "4xl": "2rem",

@@ -40,7 +40,7 @@ const INTENTS = [
 ];
 
 const INTENT_TONE = {
-  co_buy: "bg-accent-50 text-accent-700 dark:bg-accent-500/15 dark:text-accent-300",
+  co_buy: "bg-accent-50 text-accent-700 dark:bg-accent-600/15 dark:text-accent-300",
   source: "bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300",
   delivery: "bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300",
   gig: "bg-orchid-50 text-orchid-700 dark:bg-orchid-500/15 dark:text-orchid-300",

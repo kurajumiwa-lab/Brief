@@ -194,7 +194,7 @@ export default function TradeProofsPage() {
       </div>
 
       {error && (
-        <div className="flex items-start gap-2 rounded-xl border border-accent-200 bg-accent-50 px-3 py-2 text-2xs text-accent-800 dark:border-accent-500/30 dark:bg-accent-500/10 dark:text-accent-200">
+        <div className="flex items-start gap-2 rounded-xl border border-accent-200 bg-accent-50 px-3 py-2 text-2xs text-accent-800 dark:border-accent-500/30 dark:bg-accent-600/10 dark:text-accent-200">
           <AlertTriangle size={14} className="mt-0.5 shrink-0" aria-hidden="true" />
           <span className="flex-1">{error}</span>
           <button type="button" onClick={load} className="font-bold underline">Retry</button>

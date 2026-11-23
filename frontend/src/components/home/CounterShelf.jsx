@@ -63,13 +63,13 @@ export default function CounterShelf({ progress }) {
     <section aria-labelledby="counter-heading" data-testid="counter-shelf" className="space-y-2">
       <div className="flex items-end justify-between gap-3 px-1">
         <div className="min-w-0">
-          <p className="eyebrow text-ink-4">The counter</p>
+          <p className="eyebrow text-ink-4">For shop owners</p>
           <h2 id="counter-heading" className="mt-0.5 text-title-section font-bold tracking-tight text-ink-1">
-            Settle your own books first
+            Your business today
           </h2>
         </div>
         {open === 0 ? (
-          <span className="shrink-0 rounded-full bg-white/15 px-2 py-1 text-micro font-bold text-white">
+          <span className="shrink-0 rounded-full bg-white/20 px-2 py-1 text-micro font-bold text-white">
             All in order
           </span>
         ) : open != null ? (

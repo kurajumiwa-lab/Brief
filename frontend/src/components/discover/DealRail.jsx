@@ -45,7 +45,7 @@ export default function DealRail({ items = [], viewAllTo = "/discover?public_sal
                 {item.image ? (
                   <img src={item.image} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover transition-transform duration-3 group-hover:scale-[1.04]" />
                 ) : (
-                  <span className="absolute inset-0 grid place-items-center bg-gradient-to-br from-[#7A2E0E] to-mk-orange text-white/80">
+                  <span className="absolute inset-0 grid place-items-center bg-gradient-to-br from-accent-700 to-mk-orange text-white/80">
                     <BadgePercent size={28} aria-hidden="true" />
                   </span>
                 )}

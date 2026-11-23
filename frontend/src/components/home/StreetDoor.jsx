@@ -11,12 +11,21 @@ export default function StreetDoor() {
     <Link
       to="/street"
       data-testid="home-street-door"
-      className="shelf-card group relative block overflow-hidden bg-ink-1 p-4 text-white"
+      // The brief asks for a dark-teal gradient here specifically: Live Street
+      // is the one panel allowed a gradient, because it is a *live* surface and
+      // the sweep reads as movement. Everywhere else is flat.
+      className="shelf-card group relative block overflow-hidden bg-gradient-to-br from-brand-700 via-brand-800 to-brand-900 p-4 text-white"
     >
-      <span className="pointer-events-none absolute -right-8 -top-10 h-32 w-32 rounded-full bg-accent-400/40 blur-3xl" aria-hidden="true" />
+      <span className="pointer-events-none absolute -right-8 -top-10 h-32 w-32 rounded-full bg-accent-400/25 blur-3xl" aria-hidden="true" />
       <div className="relative">
         <div className="flex items-center justify-between gap-2">
-          <p className="inline-flex items-center gap-1.5 text-2xs font-extrabold uppercase tracking-[0.16em] text-[#FFD7A8]">
+          <p className="inline-flex items-center gap-1.5 text-2xs font-extrabold uppercase tracking-[0.16em] text-amber-300">
+            {/* A live dot: the brief asks for a visible activity indicator, and
+                a static word is what a dead page looks like. */}
+            <span className="relative flex h-1.5 w-1.5" aria-hidden="true">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-300 opacity-75 motion-reduce:hidden" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-amber-300" />
+            </span>
             <Radio size={12} aria-hidden="true" /> Meet nearby
           </p>
           <ArrowRight size={15} className="text-white/60 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />

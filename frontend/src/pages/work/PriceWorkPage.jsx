@@ -123,7 +123,7 @@ export default function PriceWorkPage() {
             </div>
           </div>
 
-          <p className="flex items-start gap-1.5 rounded-lg bg-accent-50 p-2.5 text-micro leading-relaxed text-accent-900 dark:bg-accent-500/10 dark:text-accent-100">
+          <p className="flex items-start gap-1.5 rounded-lg bg-accent-50 p-2.5 text-micro leading-relaxed text-accent-900 dark:bg-accent-600/10 dark:text-accent-100">
             <AlertTriangle size={12} className="mt-0.5 shrink-0" aria-hidden="true" />
             {today.payment_note} Below half of a day, nothing is earned — and every rejected
             line must carry a reason, so you always know what went wrong.

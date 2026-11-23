@@ -120,8 +120,8 @@ export function spotlightSlides({ items = [], spotted = [], region = null }) {
 
 const TONES = {
   forest: "from-brand-700 to-brand-900",
-  hot: "from-[#7A2E0E] to-hot",
-  amber: "from-[#6B3F12] to-[#B8792A]",
+  hot: "from-accent-700 to-accent-400",
+  amber: "from-amber-600 to-amber-400",
 };
 
 export default function SpotlightRail({ items, spotted, region, onSpotSale }) {

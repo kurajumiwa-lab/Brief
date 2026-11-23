@@ -151,7 +151,7 @@ export default function ReviewsDrawer({ list, onClose }) {
                 <div key={star} className="flex items-center gap-2">
                   <span className="text-2xs text-ink-4 font-mono w-3">{star}</span>
                   <div className="flex-1 h-1.5 rounded-full bg-surface-3 overflow-hidden">
-                    <div className="h-full rounded-full bg-accent-500/10" style={{ width: `${(100 * (distribution[String(star)] || 0)) / maxBar}%` }} />
+                    <div className="h-full rounded-full bg-accent-600/10" style={{ width: `${(100 * (distribution[String(star)] || 0)) / maxBar}%` }} />
                   </div>
                   <span className="text-2xs text-ink-4 font-mono w-4 text-right">{distribution[String(star)] || 0}</span>
                 </div>

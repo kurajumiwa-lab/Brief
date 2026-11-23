@@ -186,3 +186,45 @@ describe("the type floor", () => {
     expect(offenders, `text below the 12px floor:\n  ${offenders.join("\n  ")}`).toEqual([]);
   });
 });
+
+/**
+ * THE REDESIGN BRIEF'S PALETTE, ASSERTED.
+ *
+ * The brief specified hexes, and three of them cannot be used literally if the
+ * brief's own section 8 requirement ("ensure WCAG AA contrast") is to hold:
+ *
+ *   coral #F06443 with white text      3.18:1  → a filled control uses accent-600
+ *   amber #E9AE55 with white text      1.97:1  → amber is a surface, never a fill
+ *   slate #737B77 as body text on ivory 3.99:1 → body sits at ink-3/ink-4
+ *
+ * These assertions are the record of that: they fail if someone "restores" the
+ * literal hex where it is unreadable, and they document where each value is
+ * allowed to appear.
+ */
+describe("the brief's palette, where it can and cannot be used", () => {
+  for (const [name, t] of Object.entries(themes)) {
+    it(`${name}: teal brand-600 carries white (the identity fill)`, () => {
+      expect(ratio(t["brand-600"], WHITE)).toBeGreaterThanOrEqual(AA);
+    });
+
+    // The brief's own category colours, as label text on their own tint.
+    for (const cat of ["goods", "services", "rentals", "events"]) {
+      it(`${name}: category ${cat} text on its soft tint`, () => {
+        const r = ratio(t[`cat-${cat}-text`], t[`cat-${cat}-soft`]);
+        expect(r, `${name}: cat-${cat}-text on cat-${cat}-soft is ${r.toFixed(2)}:1`).toBeGreaterThanOrEqual(AA);
+      });
+    }
+  }
+
+  it("light: amber-400 is a surface, so it is never claimed to carry white", () => {
+    // Deliberately asserting the FAILURE mode, so a future change that starts
+    // using amber as a button fill is caught by a comment that says why not.
+    const r = ratio(light["amber-400"], WHITE);
+    expect(r, "amber-400 with white text must stay the reason it is surface-only").toBeLessThan(AA);
+  });
+
+  it("light: the brief's literal coral is not used as a fill under white", () => {
+    const r = ratio(light["accent-400"], WHITE);
+    expect(r, "accent-400 is #F06443; at 3.18:1 it may not carry white text").toBeLessThan(AA);
+  });
+});

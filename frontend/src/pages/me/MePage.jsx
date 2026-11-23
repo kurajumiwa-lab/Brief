@@ -178,7 +178,7 @@ const TONE_CLASSES = {
   // Kept as a *name* because callers pass tone="purple"; it now resolves to the
   // identity family. A local tone map is not a place to invent a new colour.
   purple: "bg-brand-100 text-brand-800 dark:bg-brand-500/15 dark:text-brand-300",
-  amber: "bg-accent-100 text-accent-800 dark:bg-accent-500/15 dark:text-accent-300",
+  amber: "bg-accent-100 text-accent-800 dark:bg-accent-600/15 dark:text-accent-300",
   blue: "bg-blue-100 text-blue-800 dark:bg-blue-500/15 dark:text-blue-300",
 };
 

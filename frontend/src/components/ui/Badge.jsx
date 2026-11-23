@@ -20,7 +20,7 @@ import { cn } from "@/lib/utils";
 const variants = {
   brand: "bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300",
   blue: "bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300",
-  amber: "bg-accent-50 text-accent-700 dark:bg-accent-500/15 dark:text-accent-300",
+  amber: "bg-accent-50 text-accent-700 dark:bg-accent-600/15 dark:text-accent-300",
   red: "bg-red-50 text-red-700 dark:bg-red-500/15 dark:text-red-300",
   neutral: "bg-orchid-50 text-orchid-700 dark:bg-orchid-500/15 dark:text-orchid-300",
   // Deprecated alias — same classes, kept so existing call sites keep working.

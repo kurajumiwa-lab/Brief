@@ -232,7 +232,7 @@ export default function MarketLocks() {
                               <span>{pct}%</span>
                             </div>
                             <div className="h-1.5 rounded-full bg-surface-3 overflow-hidden">
-                              <div className={cn("h-full rounded-full", pct >= 100 ? "bg-brand-600" : "bg-accent-500")} style={{ width: `${pct}%` }} />
+                              <div className={cn("h-full rounded-full", pct >= 100 ? "bg-brand-600" : "bg-accent-600")} style={{ width: `${pct}%` }} />
                             </div>
                           </div>
                         )}
@@ -333,7 +333,7 @@ function OperationsDesk({ role, board, onRefresh }) {
   const toggleZone = (zone) => perform(`zone-status-${zone.id}`, () => locksAPI.updateZone(zone.id, { is_active: !zone.is_active }), `Market zone ${zone.is_active ? "deactivated" : "reactivated"}`);
 
   return (
-    <Card padding="p-4" className="bg-accent-500/10">
+    <Card padding="p-4" className="bg-accent-600/10">
       <button type="button" className="flex w-full items-start justify-between gap-3 text-left" onClick={() => setOpen((value) => !value)} aria-expanded={open}>
         <div>
           <div className="flex items-center gap-2"><ShieldCheck size={16} className="text-accent-700 dark:text-accent-300" /><h2 className="text-sm font-semibold text-ink-1">Market operations desk</h2><Badge variant="amber" size="xs">{role}</Badge></div>

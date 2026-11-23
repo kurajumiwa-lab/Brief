@@ -5,56 +5,30 @@
    `tailwind.config.js` resolves through `rgb(var(--token) / <alpha-value>)`,
    so `.dark` is a true peer theme rather than a pile of `dark:` overrides.
 
-   What changed in v3.0 (direction D — vibrant commerce):
+   What changed in v3.1 (the complete redesign brief):
 
-   A design review called the interface "muted, atmospheric and artificially
-   generated rather than like a real, active product people use every day".
-   The three named faults were too much grey, too many dark gradient panels,
-   and a weak hierarchy. All three were decisions taken in this file, so all
-   three are corrected here.
+   The owner supplied a full palette. It supersedes direction D's emerald and
+   orange. Teal is the identity, coral is the action, amber and mint support it,
+   and the canvas is warm ivory.
 
-     · BRAND is emerald, not forest. 600 is #087F5B (white on it is 5.47:1,
-       so a primary button still carries white) and 500 is the working
-       #12A879. The old 600 was a near-black #103C35; it read as
-       infrastructure and vanished on a page. The identity is unchanged —
-       this is the same green, stopped halfway to daylight.
-     · CANVAS is warm paper (#F7F8F5) instead of cool grey (#F8F9FA). Warm
-       white is what makes a white card look placed on a surface rather than
-       floating on fog, and it is the one change that most affected how
-       "generated" the product felt.
-     · INK gains contrast: 18 43 36 rather than 24 37 34. Every ink step is
-       re-measured against the new canvas in src/test/contrast.test.js.
-     · ORANGE is promoted from "merchandising only" to the second voice:
-       referral, rewards, scan actions, the accent ramp. Kept to a supporting
-       role — the brand green is still the action colour, and orange is never
-       the colour of a primary button.
-     · SURFACE-1 is still pure white. Cards are white on warm paper in both
-       themes; the "dark gradient panel" pattern is retired below.
-
-   What v2.18 had changed (kept for the record):
-
-     · BRAND was deep forest teal (#103C35 at 600) — the colour of
-       infrastructure, not agriculture.
-     · TECH (#19A783) is the second voice: confirmation, live states, the
-       "this exists and works" green. It is NOT a second action colour.
-     · ELECTRIC (#5265E8) is the accent: links inside dark surfaces, focus on
-       the teal, and the one place a screen points forward.
-     · SURFACES moved to a neutral-cool #F5F7F6 and ink to #182522, so the
-       teal read as an identity instead of tinting the whole page.
-
-   What Outside had changed, and why:
-
-     · BRAND was pine green (#176344 at 500) — the colour of going outside.
-     · SURFACES stay near-neutral on purpose. Content and media are the
-       colour on this screen; chrome is not.
-     · SEMANTIC colours are named by meaning (ok / warn / danger / info),
-       not by hue, so a screen never has to invent a status colour.
-     · A SPACING SCALE and CARD tokens exist so a screen can stop choosing
-       arbitrary margins. `--space-*` is the only scale new layout should use.
-     · The type scale is compressed at the top end. `4xl`/`5xl` were hero
-       figures for a trading dashboard; on a discovery feed they competed
-       with the content. They are smaller now, and `--title-*` names the
-       three sizes a page is actually allowed to use.
+     · BRAND is deep teal #123D35 at 600 — 12.04:1 with white, so it is a
+       strong identity fill and a strong text colour.
+     · ACCENT is coral #F06443. It is the *action* colour, and it is used as a
+       fill ONLY where it does not carry small white text: coral with white is
+       3.18:1, so a filled button uses accent-600 (a darkened coral, 5.1:1).
+       This is the one place the brief's hex could not be used literally
+       without failing WCAG AA, which section 8 asks us to meet.
+     · AMBER #E9AE55 is a surface and highlight colour only: white on it is
+       1.97:1. It is never a fill under white text and never body text.
+     · CANVAS is warm ivory #F7F5F0 — the brief's background, and the warmest
+       of the three canvases this product has had.
+     · CATEGORY colours (goods terracotta, services forest, rentals blue,
+       events purple) are new and deliberate: they are the one place a hue
+       outside the brand family is allowed, because they classify rather than
+       decorate. Each has a -soft tint for backgrounds.
+     · TEXT: charcoal #202522 (14.29:1 on ivory) and slate #737B77. The
+       brief's slate is 3.99:1 on ivory, below AA for body text, so ink-3 takes
+       the brief's slate and ink-4 is darkened for metadata.
 
    Compatibility: the token *names* are unchanged, so every existing
    `bg-brand-500` / `text-ink-3` / `border-edge-1` usage keeps working.
@@ -65,42 +39,43 @@
 :root {
   color-scheme: light;
 
-  /* ── Surfaces: warm paper. A white card on warm paper reads as placed;
-     a white card on cool grey reads as floating in fog. ────────────────── */
-  --surface-0: 247 248 245; /* page   #F7F8F5 — warm canvas */
+  /* ── Surfaces: warm ivory #F7F5F0, the brief's background ─────────────── */
+  --surface-0: 247 245 240; /* page   #F7F5F0 — ivory */
   --surface-1: 255 255 255; /* card   #FFFFFF */
-  --surface-2: 240 243 238; /* quiet field / hover */
-  --surface-3: 229 235 228;
-  --surface-4: 212 221 212;
-  --surface-inverse: 18 43 36;
+  --surface-2: 241 238 231; /* quiet field / hover, warmed to match */
+  --surface-3: 231 228 220;
+  --surface-4: 214 211 203;
+  --surface-inverse: 18 61 53;
 
-  /* ── Ink: darker than v2.18, because the canvas is lighter-warm ──────── */
-  --ink-1: 18 43 36;    /* #122B24 titles  14.2:1 on surface-1 */
-  --ink-2: 42 66 57;    /* body             9.8:1 */
-  --ink-3: 78 99 90;    /* secondary        6.3:1 */
-  --ink-4: 90 110 100;  /* #5A6E64 metadata. Every step is measured against
-                           surface-0/1/2 and brand-50 in contrast.test.js; this
-                           one carries 1,300+ labels at text-micro, so it has to
-                           clear 4.5:1 on all four, not just on a card. */
+  /* ── Ink: charcoal and slate from the brief ──────────────────────────── */
+  --ink-1: 32 37 34;    /* #202522 charcoal — 14.29:1 on ivory */
+  --ink-2: 61 69 64;
+  --ink-3: 98 106 101;  /* #626A65 — the brief's slate #737B77 is 3.99:1 on
+                           ivory, below AA for body text, so body sits here
+                           (5.6:1) and metadata in ink-4. */
+  --ink-4: 96 104 98;   /* #606862 — metadata. Needs >=4.5:1 on all four light
+                           surfaces, and mint (brand-50) is the tightest: at
+                           #6E7670 it was 4.00:1 there. This is 4.91:1 mint,
+                           5.27 ivory, 4.96 surface-2, 5.75 white. */
   --ink-inverse: 255 255 255;
 
   /* ── Edges ───────────────────────────────────────────────────────────── */
-  --edge-1: 231 235 230; /* #E7EBE6 — the one hairline */
-  --edge-2: 213 219 211;
-  --edge-3: 190 199 188;
+  --edge-1: 231 232 227; /* #E7E8E3 — the brief's soft grey hairline */
+  --edge-2: 212 214 208;
+  --edge-3: 187 190 183;
 
-  /* ── Brand: emerald. 600 carries white on a filled action (5.47:1) ───── */
-  --brand-50: 232 247 240;
-  --brand-100: 204 238 225;
-  --brand-200: 165 226 205;
-  --brand-300: 111 207 176;
-  --brand-400: 56 186 150;
-  --brand-500: 18 168 121;  /* #12A879 — the working green */
-  --brand-600: 8 127 91;    /* #087F5B — the primary. White on it: 5.47:1 */
-  --brand-700: 7 106 76;    /* #076A4C — hover, 7.4:1 with white */
-  --brand-800: 6 86 62;
-  --brand-900: 5 66 48;
-  --brand-950: 3 44 32;
+  /* ── Brand: deep teal #123D35. Identity, not just an action. ─────────── */
+  --brand-50: 221 242 233;  /* #DDF2E9 — the brief's mint */
+  --brand-100: 199 233 219;
+  --brand-200: 160 217 197;
+  --brand-300: 110 191 164;
+  --brand-400: 58 155 126;
+  --brand-500: 35 118 92;   /* #23765C — the brief's services green */
+  --brand-600: 18 61 53;    /* #123D35 — primary. White on it: 12.04:1 */
+  --brand-700: 14 49 42;
+  --brand-800: 11 38 33;
+  --brand-900: 8 28 24;
+  --brand-950: 5 18 15;
 
   /* ── Tech: the second voice. Confirmation and live state — never a CTA ─ */
   --tech-50: 232 248 243;
@@ -128,19 +103,56 @@
   --electric-900: 34 42 108;
   --electric-950: 19 23 68;
 
-  /* ── Accent: orange — the second voice. Money, market cues, referrals,
-     rewards. Never the fill of a primary action: green is the action. ──── */
-  --accent-50: 255 243 235;
-  --accent-100: 255 228 211;
-  --accent-200: 255 203 168;
-  --accent-300: 255 172 117;
-  --accent-400: 255 140 61;  /* #FF8A3D — the brand's orange */
-  --accent-500: 235 106 25;
-  --accent-600: 194 82 15;   /* #C2520F — 4.9:1 on white, so it can be text */
-  --accent-700: 158 65 12;
-  --accent-800: 128 53 12;
-  --accent-900: 100 42 11;
-  --accent-950: 60 25 6;
+  /* ── Accent: coral #F06443 — the brief's action colour. ────────────────
+     Coral under white text is 3.18:1, so it is NOT used as the fill of a
+     button that carries white. accent-400 is the brief's coral for tinted
+     panels and large decoration; accent-600 is the darkened coral that a
+     filled control uses (white on it is 5.10:1). Text sits at accent-700. */
+  --accent-50: 254 238 233;
+  --accent-100: 253 220 210;
+  --accent-200: 251 189 172;
+  --accent-300: 246 148 122;
+  --accent-400: 240 100 67;  /* #F06443 — the brief's coral */
+  --accent-500: 214 78 46;
+  --accent-600: 190 66 37;   /* white on this is 5.10:1 — the filled control */
+  --accent-700: 163 54 29;   /* 6.4:1 on white — coral text */
+  --accent-800: 133 44 24;
+  --accent-900: 106 36 20;
+  --accent-950: 62 21 12;
+
+  /* ── Amber #E9AE55: the brief's warm secondary. ────────────────────────
+     White on it is 1.97:1, so it is a SURFACE and a highlight only — a
+     banner tint, a badge background, a progress fill. It is never the fill
+     of a control with white text and never body text on white. */
+  --amber-50: 253 247 238;
+  --amber-100: 250 236 213;
+  --amber-200: 245 217 172;
+  --amber-300: 239 194 121;
+  --amber-400: 233 174 85;   /* #E9AE55 */
+  --amber-500: 212 152 60;
+  --amber-600: 168 116 38;   /* 4.6:1 on white — amber as text */
+  --amber-700: 138 94 31;
+  --amber-800: 112 76 26;
+  --amber-900: 88 60 21;
+  --amber-950: 52 36 13;
+
+  /* ── Category colours. The one place a hue outside the brand family is
+     allowed, because these classify rather than decorate. Each has a -soft
+     tint for a chip or card background; the vivid value is for icons and
+     borders, the -text value for a label on the tint. The brief's blue and
+     purple are kept: they are how a person tells Rentals from Events. ──── */
+  --cat-goods: 185 87 53;        /* terracotta #B95735 */
+  --cat-goods-soft: 250 235 229;
+  --cat-goods-text: 150 66 38;
+  --cat-services: 35 118 92;     /* forest #23765C */
+  --cat-services-soft: 226 243 236;
+  --cat-services-text: 26 94 73;
+  --cat-rentals: 71 125 170;     /* blue #477DAA */
+  --cat-rentals-soft: 231 241 249;
+  --cat-rentals-text: 55 99 138;
+  --cat-events: 128 100 169;     /* purple #8064A9 */
+  --cat-events-soft: 241 236 249;
+  --cat-events-text: 105 80 141;
 
   /* ── Slate (legacy token name: orchid) ─────────────────────────────────
      A cool blue-grey, not a violet. The name is a leftover from a palette
@@ -249,26 +261,48 @@
 .dark {
   color-scheme: dark;
 
-  --market-1: 10 143 102;
-  --market-2: 8 122 87;
+  --market-1: 18 61 53;
+  --market-2: 14 49 42;
 
-  /* Warm-dark, not cool-grey: the same paper idea after dark. */
-  --surface-0: 14 22 19;
-  --surface-1: 23 33 28;
-  --surface-2: 31 43 37;
-  --surface-3: 42 57 49;
-  --surface-4: 55 73 63;
-  --surface-inverse: 247 248 245;
+  /* Warm-dark teal: the ivory canvas after dark. */
+  --surface-0: 16 20 18;
+  --surface-1: 26 31 28;
+  --surface-2: 35 41 37;
+  --surface-3: 46 53 49;
+  --surface-4: 59 67 62;
+  --surface-inverse: 247 245 240;
 
-  --ink-1: 246 250 247;
-  --ink-2: 213 224 217;
-  --ink-3: 170 184 175;
-  --ink-4: 148 163 154;
-  --ink-inverse: 14 22 19;
+  --ink-1: 246 247 245;
+  --ink-2: 213 217 214;
+  --ink-3: 172 178 173;
+  --ink-4: 150 157 152;
+  --ink-inverse: 16 20 18;
 
-  --edge-1: 45 58 50;
-  --edge-2: 61 77 67;
-  --edge-3: 84 102 90;
+  --edge-1: 45 52 48;
+  --edge-2: 61 70 65;
+  --edge-3: 84 94 88;
+
+  /* The brief's coral is a mid-tone; on a dark card it needs lifting to stay
+     a readable label, and its -soft tint must become a deep warm brown. */
+  --accent-50: 58 28 21;
+  --accent-100: 78 36 26;
+  --accent-300: 248 160 137;
+  --accent-700: 247 145 120;   /* 8.1:1 on surface-1 — coral text after dark */
+  --accent-800: 250 178 158;
+
+  /* Amber is a surface tint after dark, never a text colour on white. */
+  --amber-50: 45 34 18;
+  --amber-100: 62 47 24;
+  --amber-400: 240 190 116;
+
+  --cat-goods-soft: 58 32 23;
+  --cat-goods-text: 240 164 137;
+  --cat-services-soft: 20 46 38;
+  --cat-services-text: 128 217 187;
+  --cat-rentals-soft: 22 38 54;
+  --cat-rentals-text: 138 184 228;
+  --cat-events-soft: 38 30 52;
+  --cat-events-text: 186 158 224;
 
   --mk-cream: 20 15 28;
   --mk-warm: 32 25 42;
@@ -282,15 +316,15 @@
   /* 50–200 stay near-black: they are *tinted backgrounds* on a dark page.
      300 and up are the readable fills, and the order carries meaning —
      600 is the primary fill that button text sits on, 700 its hover. */
-  --brand-50: 12 38 30;
-  --brand-100: 15 53 42;
-  --brand-200: 18 72 56;
-  --brand-300: 126 214 180;
-  --brand-400: 88 206 166;
-  --brand-500: 46 197 152;   /* the bright green, readable on dark */
-  --brand-600: 10 132 95;    /* white on this is 4.58:1 — the filled action */
-  --brand-700: 8 116 84;     /* hover, 5.5:1 with white */
-  --brand-800: 7 96 69;      /* active, 7.1:1 */
+  --brand-50: 13 33 29;
+  --brand-100: 17 45 39;
+  --brand-200: 22 62 53;
+  --brand-300: 110 191 164;
+  --brand-400: 74 174 145;
+  --brand-500: 46 168 137;   /* mint-teal, readable on a dark card */
+  --brand-600: 35 118 92;    /* white on this is 5.50:1 — the filled action */
+  --brand-700: 30 102 79;    /* hover, 6.4:1 with white */
+  --brand-800: 25 86 67;     /* active, 7.8:1 */
 
   /* Orange has two jobs and they need two values. 600 is a FILL and must
      carry white (dark mode keeps the light value: 4.66:1). 700 is TEXT on a

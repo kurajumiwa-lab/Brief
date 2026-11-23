@@ -1228,7 +1228,7 @@ export default function Ops() {
         </div>
 
         {slow?.slow_routes?.length > 0 && (
-          <Card padding="p-4" className="bg-accent-500/10">
+          <Card padding="p-4" className="bg-accent-600/10">
             <CardHeader>
               <CardTitle sub={`p95 above ${slow.threshold_ms} ms — usually the first thing to look at`}>
                 Slow endpoints

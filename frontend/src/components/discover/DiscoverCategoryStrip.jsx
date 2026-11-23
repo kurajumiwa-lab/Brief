@@ -15,12 +15,12 @@ import { cn } from "@/lib/utils";
  * on this device and never become a public signal.
  */
 const CATEGORIES = [
-  { key: "all", label: "All", value: "", Icon: LayoutGrid, tone: "from-ink-1 to-brand-800" },
-  { key: "goods", label: "Goods", value: "listing", Icon: Package, tone: "from-accent-700 to-accent-400", match: (i) => i.kind === "listing" || i.meta?.primary_category === "goods" },
-  { key: "services", label: "Services", value: "service", Icon: Truck, tone: "from-brand-800 to-brand-500", match: (i) => ["service", "provider"].includes(i.kind) || i.meta?.primary_category === "service" },
-  { key: "rentals", label: "Rentals", value: "rental", Icon: Wrench, tone: "from-ink-2 to-ink-4", match: (i) => i.kind === "rental" || i.meta?.primary_category === "rental" },
-  { key: "rounds", label: "Rounds", value: "rounds", Icon: CalendarDays, tone: "from-accent-800 to-accent-500", match: (i) => ["scheduled", "event"].includes(i.kind) },
-  { key: "spotted", label: "Spotted", value: "spotted", Icon: BadgePercent, tone: "from-brand-900 to-brand-600", match: (i) => i.feed_kind === "SPOTTED_DEAL" },
+  { key: "all", label: "All", value: "", Icon: LayoutGrid, tone: "from-brand-700 to-brand-500" },
+  { key: "goods", label: "Goods", value: "listing", Icon: Package, tone: "from-cat-goods-text to-cat-goods", match: (i) => i.kind === "listing" || i.meta?.primary_category === "goods" },
+  { key: "services", label: "Services", value: "service", Icon: Truck, tone: "from-cat-services-text to-cat-services", match: (i) => ["service", "provider"].includes(i.kind) || i.meta?.primary_category === "service" },
+  { key: "rentals", label: "Rentals", value: "rental", Icon: Wrench, tone: "from-cat-rentals-text to-cat-rentals", match: (i) => i.kind === "rental" || i.meta?.primary_category === "rental" },
+  { key: "rounds", label: "Rounds", value: "rounds", Icon: CalendarDays, tone: "from-cat-events-text to-cat-events", match: (i) => ["scheduled", "event"].includes(i.kind) },
+  { key: "spotted", label: "Spotted", value: "spotted", Icon: BadgePercent, tone: "from-accent-700 to-accent-400", match: (i) => i.feed_kind === "SPOTTED_DEAL" },
 ];
 
 function photoFor(match, items) {

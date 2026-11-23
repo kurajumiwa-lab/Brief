@@ -50,7 +50,7 @@ export default function ReceiptScanCard() {
         className="overflow-hidden rounded-2xl border border-edge-1 bg-surface-1 shadow-xs"
       >
         <div className="flex items-start gap-3 p-4 sm:p-5">
-          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-accent-50 text-accent-700 dark:bg-accent-500/15 dark:text-accent-300">
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-accent-50 text-accent-700 dark:bg-accent-600/15 dark:text-accent-300">
             <QrCode size={22} aria-hidden="true" />
           </span>
           <div className="min-w-0 flex-1">

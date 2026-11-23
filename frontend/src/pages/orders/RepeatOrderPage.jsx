@@ -135,7 +135,7 @@ export default function RepeatOrderPage() {
             <strong className="text-ink-1">{selected.item}</strong> from @{selected.supplier_handle}
             <p className="mt-1 text-2xs">Last recorded order: {num(selected.quantity)} {selected.unit} at {preciseCurrency(selected.last_unit_price_kes)} each.</p>
           </div>
-          {selected.current_unit_price_kes !== selected.last_unit_price_kes && <p role="status" className="rounded-xl border border-accent-500/40 bg-accent-50 p-3 text-xs text-accent-900 dark:bg-accent-500/10 dark:text-accent-200">
+          {selected.current_unit_price_kes !== selected.last_unit_price_kes && <p role="status" className="rounded-xl border border-accent-500/40 bg-accent-50 p-3 text-xs text-accent-900 dark:bg-accent-600/10 dark:text-accent-200">
             Last recorded {preciseCurrency(selected.last_unit_price_kes)}/{selected.unit} · supplier’s current posted price {preciseCurrency(selected.current_unit_price_kes)}/{selected.unit}. You are proposing the old price; the supplier can accept or ask to renegotiate.
           </p>}
           <div className="grid grid-cols-2 gap-3">

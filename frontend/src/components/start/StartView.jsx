@@ -336,7 +336,7 @@ export default function StartView({
               />
             </div>
 
-            <p className="rounded-xl bg-accent-50 px-3 py-2 text-micro leading-relaxed text-accent-900 dark:bg-accent-500/10 dark:text-accent-200">
+            <p className="rounded-xl bg-accent-50 px-3 py-2 text-micro leading-relaxed text-accent-900 dark:bg-accent-600/10 dark:text-accent-200">
               The claim starts as <strong>waiting</strong>. It becomes a badge only
               when the institution answers the test. Until then your page says so.
             </p>

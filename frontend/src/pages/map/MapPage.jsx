@@ -296,7 +296,7 @@ export default function MapPage() {
                     : areaSummary(shownCounts, kind, { externalHidden: !showExternal })}
               </p>
               {offline && (
-                <p className="text-2xs px-2 py-1 rounded-full bg-accent-500/10 text-accent-700 dark:text-accent-300 inline-flex items-center gap-1">
+                <p className="text-2xs px-2 py-1 rounded-full bg-accent-600/10 text-accent-700 dark:text-accent-300 inline-flex items-center gap-1">
                   <CloudOff size={10} /> last loaded area
                 </p>
               )}

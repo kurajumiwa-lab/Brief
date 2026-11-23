@@ -9,6 +9,7 @@ import StreetDoor from "@/components/home/StreetDoor";
 import HappeningShelf from "@/components/home/HappeningShelf";
 import IdentityStrip from "@/components/home/IdentityStrip";
 import CounterShelf from "@/components/home/CounterShelf";
+import DiscoveryBand from "@/components/home/DiscoveryBand";
 
 /**
  * TODAY — the command centre, not a second discovery feed.
@@ -68,7 +69,12 @@ export default function TodayView({
         </div>
       </header>
 
-      {/* Identity sits immediately under the greeting: one box, one share
+      {/* Discovery before ownership. The brief's journey opens with where you
+          are and what is for sale; the business's own books come after. Both
+          orderings are defensible, and this one is a marketplace's. */}
+      <DiscoveryBand place={region?.name || region?.hub || null} />
+
+      {/* Identity sits under the discovery band: one box, one share
           action, and the office the person belongs to. */}
       <IdentityStrip name={name} page={page} institution={institution} />
 

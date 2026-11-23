@@ -25,8 +25,8 @@ const TONE = {
     mark: "text-brand-700",
   },
   amber: {
-    chip: "bg-accent-50 text-accent-800 border-accent-200 dark:bg-accent-500/15 dark:text-accent-300 dark:border-accent-500/30",
-    bar: "bg-accent-500",
+    chip: "bg-accent-50 text-accent-800 border-accent-200 dark:bg-accent-600/15 dark:text-accent-300 dark:border-accent-500/30",
+    bar: "bg-accent-600",
     mark: "text-accent-700",
   },
 };

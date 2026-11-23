@@ -105,7 +105,7 @@ export default function TradeRecordsPage() {
         <Button size="sm" type="submit" icon={Search}>Search</Button>
       </form>
 
-      {!online && <p role="status" className="rounded-xl bg-accent-50 p-3 text-xs text-accent-900 dark:bg-accent-500/10 dark:text-accent-200">You are offline. Results and CSV exports use your last loaded view, not a live status. Search and page changes need a connection.</p>}
+      {!online && <p role="status" className="rounded-xl bg-accent-50 p-3 text-xs text-accent-900 dark:bg-accent-600/10 dark:text-accent-200">You are offline. Results and CSV exports use your last loaded view, not a live status. Search and page changes need a connection.</p>}
       {isStale && <p role="status" className="text-2xs text-ink-4">Last updated {relativeTime(loadedAt)} · <button type="button" className="underline" onClick={load}>Refresh</button></p>}
       {error && page && <p role="alert" className="text-2xs text-red-700 dark:text-red-400">{error} — showing your last loaded view. <button type="button" className="underline" onClick={load}>Retry</button></p>}
       {error && !page ? <ErrorState title="Records unavailable" description={error} onRetry={load} /> : loading && !page ? <SkeletonRows count={3} /> : page?.items?.length === 0 ? (

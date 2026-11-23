@@ -1,97 +1,93 @@
-# Visual direction: vibrant commerce
+# Visual direction: the complete redesign brief
 
-**Chosen:** vibrant commerce · clean and spacious · fresh green + orange · entire app.
+**Status:** applied to the token layer and to Home, the tab bar and the category
+strip. Committed on `arena/f89a8063-brief`.
 
-This supersedes the standing "don't add colours, refine what exists" instruction.
-That rule existed to stop decoration being added to a muted interface. The review
-found the interface itself was the problem: "muted, atmospheric and artificially
-generated rather than like a real, active product people use every day." The fix
-is not more decoration — it is a corrected base, which is what this is.
+This supersedes both earlier directions. The sequence matters, because the branch
+contains all three:
 
-## What changed, and where
+| | palette | canvas | action |
+|---|---|---|---|
+| v2.18 (before this branch) | forest teal `#103C35` | cool grey `#F8F9FA` | teal |
+| v3.0 (direction D, earlier commit) | emerald `#087F5B` | warm paper `#F7F8F5` | green, orange second voice |
+| **v3.1 (this brief)** | **deep teal `#123D35`** | **warm ivory `#F7F5F0`** | **coral `#F06443`** |
 
-Almost all of it is in **`frontend/src/styles/tokens.css`**. Every colour in the
-product already resolved through an RGB triplet there, so the whole app re-skinned
-without touching 400+ component files. That is the payoff of the token layer and
-the reason this took one file plus targeted clean-up rather than a rewrite.
+Only the last one is live. The intermediate commit stands in history; nothing in
+the code refers to emerald any more.
 
-| | before | after |
-|---|---|---|
-| Brand 600 (primary fill) | `#103C35` near-black teal | `#087F5B` emerald |
-| Brand 500 (working) | `#1F7A66` | `#12A879` |
-| Page canvas | `#F8F9FA` cool grey | `#F7F8F5` warm paper |
-| Ink 1 | `#182522` | `#122B24`, darker |
-| Accent 400 | amber `#FBBC24` | orange `#FF8A3D` |
-| Hero / counter slab | 3-stop dark gradient | solid `brand-600` |
-| Photo backdrops | `#171021` plum-black | `ink-1` warm dark |
-| Category tones | plum purple `#2A1F3D→#4B3568` | greens and oranges |
-| Smallest text | 10px (142 uses), 11px (82 uses) | 12px floor |
-| Card radius | mixed up to 24px | 12px and 16px only |
+## Where the brief could not be followed literally
 
-### The three named faults, answered
+The brief's section 8 asks for WCAG AA. Three of its hexes cannot meet that in
+the role the brief assigns them, so each has a derived value for that role and
+keeps the literal hex everywhere else. This is asserted in
+`src/test/contrast.test.js`, not just noted here:
 
-1. **"Too much grey."** The canvas was cool grey and `ink-1` was a middling
-   `#182522`. Canvas is now warm paper, which is what makes a white card read as
-   *placed* rather than floating, and ink is darker. Every ink step still clears
-   4.5:1 on every light surface — asserted, not assumed.
-2. **"Too many dark gradient panels."** The Home hero and the counter slab were
-   three-stop gradients from `brand-800` through `brand-900` to `ink-900`, plus a
-   blurred orb. Gradients on near-black are exactly what reads as glassmorphism.
-   Both are now solid `brand-600`, one radius, no orb. Eleven hardcoded
-   `#171021` photo backdrops moved to the `ink-1` token.
-3. **"Weak visual hierarchy."** Partly the 10px/11px text (224 arbitrary sizes
-   below the declared 12px floor) and partly the gradations of near-identical
-   green. Both are gone; hierarchy is now carried by type size and one action
-   colour.
+| brief value | ratio | role | what the code uses |
+|---|---|---|---|
+| coral `#F06443` + white text | **3.18:1** | action fill | `accent-600` (darkened coral, 5.10:1) |
+| amber `#E9AE55` + white text | **1.97:1** | surface / highlight only | `amber-400` as a background; never a fill under white |
+| slate `#737B77` body on ivory | **3.99:1** | body text | `ink-3`/`ink-4` (5.6:1 / 4.9:1) |
+| rentals blue `#477DAA` + white | **4.39:1** | label text | `cat-rentals-text` on `cat-rentals-soft` |
 
-### Orange is a second voice, never a third action colour
+Teal `#123D35` (12.04:1), charcoal `#202522` (14.29:1), goods terracotta
+(4.69:1), services forest (5.50:1) and events purple (4.87:1) all pass as
+specified and are used exactly as given.
 
-Orange covers referral, rewards and scan actions. Green remains the only fill of
-a primary button. Because one token cannot be both a *fill under white text* and
-*readable text on a dark card*, orange has two values and callers must use
-`accent-700` for orange text. A contrast test asserts both.
+The literal coral is still used — as `accent-400`, for tinted panels, large
+decoration and icon fills, where it is not behind small white text.
 
-### Copy
+## What was rebuilt, not just recoloured
 
-| was | now |
-|---|---|
-| The town network | Explore your town |
-| Referral index | Referrals |
-| Claim local work | Find work |
-| Merchant dashboard | For shop owners |
-| Live street | Meet nearby |
+**Home (`TodayView`).** The discovery band is new: four category doors with the
+brief's own colours, a location line, and a "Browse all" affordance — placed
+*before* the identity strip, because a marketplace opens on what is for sale.
+The counter's heading and eyebrow now read "Your business today" / "For shop
+owners", keeping merchant tools visually separate from discovery as the brief
+asks. The hero and counter slab are flat teal (the review's complaint about
+gradients), and Live Street keeps the one gradient the brief explicitly grants it,
+plus a live activity dot.
 
-## What is enforced by tests, not convention
+**Category strip.** Uses `cat-*` tokens so Goods, Services, Rentals and Events
+are distinguishable by colour and icon rather than by reading the label.
 
-- **`src/test/contrast.test.js`** — reads the real values out of `tokens.css`.
-  60 assertions: every ink on every surface in both themes, white on every brand
-  fill, the dark-card reduced-opacity pairs, orange as fill *and* as text, and a
-  scan that fails if any file reintroduces text below 12px.
-- **`src/test/brand.test.js`** — the retired-name scan, unchanged.
+**Bottom navigation.** Unchanged in structure — five destinations, fixed, safe
+area respected — with Create now a coral ringed circle, which is what the brief
+means by "prominent central Create button". Its docstring claimed Create was not
+a tab; that had been false since Create returned to `PRIMARY_NAV`, and it is
+corrected.
 
-Two of those assertions caught real defects during this work and are worth
-recording: `accent-600` as *text* on a dark card was 3.55:1, and the avatar
-component carried `text-[7px]` and `text-[8px]` classes below the floor.
+**Tokens.** `amber-*` and `cat-*` (with `-soft` and `-text` per category) are new.
+The 8px spacing scale is added as `g1`–`g8` alongside the existing 4px scale
+rather than replacing it, because 1,000+ existing usages depend on the old one.
+The brief's type ramp is named `text-page` / `text-section` / `text-card-title` /
+`text-body-lg` / `text-button`.
+
+## What is NOT done from the brief
+
+Stated plainly rather than left to be discovered:
+
+1. **Photography.** The brief asks for authentic African commerce imagery
+   throughout. That needs real images — licensed photographs or the owner's own.
+   No placeholder stock was added, because generic stock is the exact thing the
+   brief says to avoid. Where images are missing the existing category-coloured
+   fallbacks apply, which is also what the brief prescribes.
+2. **Steps 4, 6, 7, 8 and 10 of the Home journey** — promotional banner, nearby
+   goods/services/rentals with photos, featured deals, events, receipt rewards
+   dashboard — are not composed into Home yet. Home has discovery, business
+   tools, receipts, Live Street, dated rounds and the inbox line. Adding the
+   marketplace carousels requires product imagery (point 1) to look like
+   anything, so they are sequenced behind it.
+3. **Search bar and header restructure.** The header exists; it has not been
+   rebuilt to the brief's compact logo + search + bell + profile arrangement.
+4. **Not visually inspected.** The sandbox cannot download a headless browser.
+   Everything here is verified by tests, a build and the compiled CSS.
 
 ## Verified
 
 | | |
 |---|---|
-| Frontend tests | 95 files / 691 pass |
-| Production build | 639 kB main bundle (was 654.78) |
-| Contrast | 60 assertions pass |
-| ESLint | 26 errors — the same pre-existing backlog, none added |
-
-**Not visually inspected.** The sandbox could not download a headless browser, so
-this change is verified by tests, a build, and the compiled CSS carrying the new
-tokens — not by a screenshot. The first person to open the site is the first to
-see it. That is a real limitation of this delivery and should be checked.
-
-## What is deliberately unchanged
-
-- **WhatsApp green** (`#25D366`, `#128C4A`) — it is WhatsApp's brand, not ours.
-- **The discovery/editorial palette** (`mk-*`: cream, plum ink, tomato) — a
-  deliberately separate shopfront voice, documented in `tokens.css`.
-- **Dark mode** — remains a true peer theme, re-derived from the new ramp, and is
-  covered by the same contrast assertions.
-- **The five-item bottom navigation and five-level standing.**
+| Frontend tests | 95 files / 703 pass |
+| Contrast | 72 assertions pass |
+| Production build | 639 kB main bundle |
+| ESLint | 26 errors — the pre-existing backlog, none added |
+| Built CSS carries | `--brand-600: 18 61 53`, `--accent-400: 240 100 67`, `--surface-0: 247 245 240`, `--cat-goods: 185 87 53` |

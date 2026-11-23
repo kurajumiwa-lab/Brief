@@ -14,14 +14,14 @@ const DOORS = [
     label: "Receipt rewards",
     hint: "Scan in the first 15 minutes. Points are shop-funded, never cash.",
     icon: BadgePercent,
-    tint: "bg-accent-50 text-accent-700 dark:bg-accent-500/15 dark:text-accent-300",
+    tint: "bg-accent-50 text-accent-700 dark:bg-accent-600/15 dark:text-accent-300",
   },
   {
     to: "/referral-index",
     label: "Referrals",
     hint: "Ride-hailing, coach and local codes. Proof first; sponsored slots are labelled.",
     icon: Network,
-    tint: "bg-accent-50 text-accent-700 dark:bg-accent-500/15 dark:text-accent-300",
+    tint: "bg-accent-50 text-accent-700 dark:bg-accent-600/15 dark:text-accent-300",
   },
   {
     to: "/scout",

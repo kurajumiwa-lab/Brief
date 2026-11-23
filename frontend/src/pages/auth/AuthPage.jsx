@@ -228,7 +228,7 @@ export default function AuthPage() {
               <p
                 role="status"
                 data-testid="session-ended"
-                className="mb-4 rounded-xl border border-accent-200 bg-accent-50 px-3 py-2 text-2xs leading-snug text-ink-2 dark:border-accent-500/30 dark:bg-accent-500/10"
+                className="mb-4 rounded-xl border border-accent-200 bg-accent-50 px-3 py-2 text-2xs leading-snug text-ink-2 dark:border-accent-500/30 dark:bg-accent-600/10"
               >
                 {endedReason}
               </p>

@@ -76,7 +76,7 @@ const RATE_TONES = {
   none: { text: "text-ink-4", bar: "bg-edge-3" },
   high: { text: "text-brand-600 dark:text-brand-400", bar: "bg-brand-500" },
   good: { text: "text-blue-600 dark:text-blue-400", bar: "bg-blue-500" },
-  fair: { text: "text-accent-700 dark:text-accent-300", bar: "bg-accent-500" },
+  fair: { text: "text-accent-700 dark:text-accent-300", bar: "bg-accent-600" },
   poor: { text: "text-red-600 dark:text-red-400", bar: "bg-red-500" },
 };
 
