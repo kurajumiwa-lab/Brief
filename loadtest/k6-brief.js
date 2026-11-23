@@ -1,4 +1,4 @@
-// Brief_ k6 scenario (Directive v2.1 §6.2).
+// Brief k6 scenario (Directive v2.1 §6.2).
 //
 //   k6 run loadtest/k6-brief.js
 //   BASE_URL=https://staging.brief.example VENDORS=25 k6 run loadtest/k6-brief.js

@@ -101,8 +101,8 @@ async def list_plans(vendor: Vendor = Depends(get_current_vendor)):
                 "Remote lock and company-data removal, subject to the enrolment mode",
             ],
             "what_it_does_not_provide": [
-                "The vendor marketplace, stock, deals or job matching — those stay in Brief_",
-                "A separate app: the workspace renders inside Brief_ for members and officers",
+                "The vendor marketplace, stock, deals or job matching — those stay in Brief",
+                "A separate app: the workspace renders inside Brief for members and officers",
             ],
             "enrolment_modes": [
                 {"mode": mode, "allowed_commands": list(cmds),

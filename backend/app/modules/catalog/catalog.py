@@ -5,7 +5,7 @@ This file is DATA, not promises. Every offer carries:
 * a **test price** (a range in KSh taken from existing business spending,
   explicitly *not* a market-verified average and not a commitment);
 * a **readiness** that says how it can truthfully be sold today —
-  `available_now` (operational in Brief_), `pilot` (operational for a
+  `available_now` (operational in Brief), `pilot` (operational for a
   small, supervised rollout), `service` (productised work delivered by
   people, booked as an implementation), or `scoped` (quotation only,
   because hardware/EMM/third-party costs decide the price);
@@ -148,7 +148,7 @@ OFFERS: tuple[Offer, ...] = (
         name="Customer and sales records",
         price_min_kes=1500, price_max_kes=4000, price_unit="monthly",
         readiness="available_now",
-        readiness_note="Operational today in Brief_: stock, orders/movements, counterparties and trade analytics. Sold as a Business-tier subscription once billing is live; until then, manual invoicing.",
+        readiness_note="Operational today in Brief: stock, orders/movements, counterparties and trade analytics. Sold as a Business-tier subscription once billing is live; until then, manual invoicing.",
         turnaround="Account active on signup; onboarding session within 2 working days",
         deliverables=("Stock and sales record-keeping on the vendor account", "Orders and counterparty history", "Trade analytics views"),
         exclusions=("A point-of-sale till or accounting package replacement", "Data migration from paper ledgers unless scoped"),
@@ -161,7 +161,7 @@ OFFERS: tuple[Offer, ...] = (
         readiness="pilot",
         readiness_note="Enterprise workspace member register and field-officer tracking are built (v2.13). Sold as a supervised pilot/manual contract until subscription billing is verified live.",
         turnaround="Pilot workspace configured within 3 working days of receiving the member list",
-        deliverables=("Branded workspace inside Brief_ with member register", "Roles for admins, field officers, members and viewers", "Field-registration activity dashboard"),
+        deliverables=("Branded workspace inside Brief with member register", "Roles for admins, field officers, members and viewers", "Field-registration activity dashboard"),
         exclusions=("Bulk SMS/USSD campaigns", "Physical membership cards"),
         customer_must_provide=("Member list the organisation is entitled to share (ODPC duties apply)", "A named association admin"),
     ),
@@ -215,7 +215,7 @@ OFFERS: tuple[Offer, ...] = (
         name="Android device enrolment and configuration",
         price_min_kes=None, price_max_kes=None, price_unit="scoped",
         readiness="scoped",
-        readiness_note="Scoped setup fee. Enrolment runs through the organisation's Android Enterprise/EMM; Brief_ keeps the device register and command audit. Capabilities depend on enrolment mode — work-profile (BYOD) devices can never be fully wiped or personally controlled.",
+        readiness_note="Scoped setup fee. Enrolment runs through the organisation's Android Enterprise/EMM; Brief keeps the device register and command audit. Capabilities depend on enrolment mode — work-profile (BYOD) devices can never be fully wiped or personally controlled.",
         turnaround="Quoted per fleet size and enrolment mode",
         deliverables=("Enrolment plan: BYOD work-profile or fully-managed, chosen per device", "Devices registered in the workspace with policy names", "Lost-device procedure agreed in writing"),
         exclusions=("The EMM licence itself unless separately quoted", "Unrestricted control over personally owned devices — never promised"),
@@ -372,7 +372,7 @@ BYOD_VS_MANAGED: tuple[dict, ...] = (
         ),
         "limits": (
             "Hardware, EMM licences and support are quoted separately",
-            "Remote actions are delivered by Android Enterprise/the EMM, not by Brief_ itself",
+            "Remote actions are delivered by Android Enterprise/the EMM, not by Brief itself",
         ),
     },
 )

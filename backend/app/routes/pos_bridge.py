@@ -96,7 +96,7 @@ async def connect_pos(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Connect your POS/inventory system to Brief_.
+    Connect your POS/inventory system to Brief.
     Your stock syncs automatically. Earn more through network exposure.
     """
     if data.pos_type not in settings.allowed_pos_systems:

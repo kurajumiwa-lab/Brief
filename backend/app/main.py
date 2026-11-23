@@ -217,7 +217,7 @@ async def lifespan(app: FastAPI):
         street_task = asyncio.create_task(street_sweep.scheduler_loop(async_session))
     else:
         log.info("scheduler disabled here (RUN_SCHEDULER=false) — run `python -m app.worker` once")
-    log.info("🏪 Brief_ Vendor Network v%s initialized", settings.VERSION)
+    log.info("🏪 Brief Vendor Network v%s initialized", settings.VERSION)
     log.info("📦 People, households, artisans, institutions and businesses.")
     try:
         yield
@@ -446,7 +446,7 @@ app.include_router(profile_handles_router, prefix="/api", tags=["Profile handles
 @app.get("/api/", include_in_schema=False)
 async def api_root():
     return {
-        "platform": "Brief_",
+        "platform": "Brief",
         "philosophy": "People, households, artisans, institutions and businesses.",
         "message": "Post what is available, wanted, scheduled, or an opportunity — and keep a record that helps next time.",
         "version": settings.VERSION,

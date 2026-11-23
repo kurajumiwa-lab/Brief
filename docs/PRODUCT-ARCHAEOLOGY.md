@@ -1,4 +1,4 @@
-# Product Archaeology — Brief_ / "My Shop App"
+# Product Archaeology — Brief / "My Shop App"
 
 **Date:** 2026-10-08
 **Scope:** the whole product as it exists on `main` (FastAPI backend, React/Vite frontend, POS daemon).
@@ -9,7 +9,7 @@
 
 ## 0. One-paragraph summary
 
-Brief_ is a **vendor-to-vendor (B2B) trade network** for informal and semi-formal commerce: market traders, kiosk owners, wholesalers, couriers, hotel suppliers. Every account is a business; there is no consumer side, no cart, no checkout. The unit of value is **stock that already exists on a shelf**, and the unit of work is a **movement** — one vendor sourcing from another, tracked through a short, honest state machine. Around that core sits a reputation engine, a chat/deal layer, group buying, logistics rental, events and a public-data market map.
+Brief is a **vendor-to-vendor (B2B) trade network** for informal and semi-formal commerce: market traders, kiosk owners, wholesalers, couriers, hotel suppliers. Every account is a business; there is no consumer side, no cart, no checkout. The unit of value is **stock that already exists on a shelf**, and the unit of work is a **movement** — one vendor sourcing from another, tracked through a short, honest state machine. Around that core sits a reputation engine, a chat/deal layer, group buying, logistics rental, events and a public-data market map.
 
 ---
 
@@ -309,7 +309,7 @@ Nothing is deleted. These are **de-emphasised in navigation** while remaining fu
 
 ## 11. Opportunities for a better modern UX
 
-1. **Make the listing page the centre of gravity.** Every marketplace that works has a canonical, linkable, shareable item page. Brief_ has the data (price, unit, MOQ, provenance, vendor reliability, alternatives) and no page to put it on.
+1. **Make the listing page the centre of gravity.** Every marketplace that works has a canonical, linkable, shareable item page. Brief has the data (price, unit, MOQ, provenance, vendor reliability, alternatives) and no page to put it on.
 2. **Collapse "source" and "negotiate" into one decision surface.** Today they are two separate affordances on a card; on a listing page they are the primary and secondary button of the same order panel.
 3. **Lead with "what needs you".** Actionable movements, deal proposals awaiting reply, and closing collectives are the reason to open the app. They belong above the fold on home.
 4. **Search deserves scope.** One field, one scope selector (Stock · Vendors · Markets · Tools) → the existing endpoints already back all four.
@@ -377,9 +377,9 @@ Every existing route keeps working. Nothing is removed; the change is **weightin
 
 Layers 1 and 2 are already cleanly separated in this codebase (zustand stores and a single axios surface). **That is why the presentation layer can be replaced without touching a single business rule** — the modernization is additive at Layer 3–5.
 
-### 13.3 Fiverr → Brief_ pattern map (presentation only)
+### 13.3 Fiverr → Brief pattern map (presentation only)
 
-| Fiverr pattern | Brief_ equivalent | existing mechanic reused |
+| Fiverr pattern | Brief equivalent | existing mechanic reused |
 |---|---|---|
 | Scoped marketplace search in the header | search over stock / vendors / markets / tools | `stockAPI.network`, `vendorAPI.network`, surface search |
 | Category rail under the header | the 10 home doors + stock categories | `stockAPI.categories` |

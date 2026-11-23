@@ -532,7 +532,7 @@ function DeskShell({ children, signedIn }) {
       <header className="border-b border-edge-1 bg-surface-0">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-2 px-4 py-3">
           <Link to="/storefront" className="min-w-0 text-base font-extrabold tracking-tight text-ink-1">
-            {BRAND.wordmark || "Brief"}_ <span className="font-medium text-ink-3">Business Desk</span>
+            {BRAND.wordmark || "Brief"} <span className="font-medium text-ink-3">Business Desk</span>
           </Link>
           <div className="flex shrink-0 items-center gap-2">
             <Link

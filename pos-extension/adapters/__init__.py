@@ -1,6 +1,6 @@
 """
 POS adapters. Each adapter turns one till's data into the row shape the
-Brief_ push endpoint accepts:
+Brief push endpoint accepts:
 
     {"name": str, "sku": str|None, "pos_item_id": str|None, "category": str|None,
      "quantity": int, "unit_price": float, "wholesale_price": float|None,

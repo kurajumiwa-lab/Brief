@@ -56,7 +56,7 @@ def workspace_out(ws: EnterpriseWorkspace, *, my_role: Optional[str] = None) -> 
             "emm_provider": ws.emm_provider or "none",
             "dispatch_enabled": bool(settings.ENTERPRISE_DEVICE_COMMANDS_DISPATCH_ENABLED),
             "note": (
-                "Android Enterprise / your EMM manages the phones. Brief_ keeps the "
+                "Android Enterprise / your EMM manages the phones. Brief keeps the "
                 "device register and the command audit trail and sends nothing to a "
                 "device until an EMM is bound and dispatch is enabled."
             ),
@@ -296,7 +296,7 @@ async def update_workspace(db: AsyncSession, ws: EnterpriseWorkspace, vendor: Ve
                 status=400)
         ws.plan_key = key
     # Binding the Android Enterprise organisation is an owner-only act: it
-    # asserts an external fact (the ID in Google's console) that Brief_
+    # asserts an external fact (the ID in Google's console) that Brief
     # cannot check, so it is kept narrow and auditable via updated_at.
     if "android_enterprise_id" in fields or "emm_provider" in fields:
         if m.role != "owner":
@@ -474,7 +474,7 @@ async def request_command(db: AsyncSession, ws: EnterpriseWorkspace, vendor: Ven
         dispatched=dispatch,
         dispatched_at=now if dispatch else None,
         result_note=(
-            f"Sent to {ws.emm_provider} for delivery. Brief_ has not confirmed the "
+            f"Sent to {ws.emm_provider} for delivery. Brief has not confirmed the "
             "device carried it out — check the EMM console for acknowledgement."
             if dispatch else
             "Recorded for audit. NOT sent to the device: no Android Enterprise / EMM "

@@ -1,6 +1,6 @@
 # The Sacco Moat: Why You're Right and How to Build It
 
-> **Provenance.** Strategy brief for the Brief_ platform, captured verbatim from the
+> **Provenance.** Strategy brief for the Brief platform, captured verbatim from the
 > planning conversation of 2026-10-01. It defines the three-layer path from a
 > procurement/voice funnel to a licensed member-owned Sacco, with digital table
 > banking (chamas) as the bridge. See `payment-custody-architecture.md` for the

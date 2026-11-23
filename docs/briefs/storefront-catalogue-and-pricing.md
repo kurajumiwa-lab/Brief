@@ -1,7 +1,7 @@
 # Storefront catalogue & pricing architecture (v2.14)
 
 > **Decision:** don't invent demand, and don't build a second storefront.
-> Package existing spending into offers inside Brief_ — data in
+> Package existing spending into offers inside Brief — data in
 > `backend/app/modules/catalog/catalog.py`, public at `/storefront`
 > (`GET /api/catalog`), purchases start as enquiries
 > (`POST /api/catalog/enquiries`) that a human invoices and delivers.

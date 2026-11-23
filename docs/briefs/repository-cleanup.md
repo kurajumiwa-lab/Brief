@@ -102,7 +102,7 @@ the referral landing, the trust pages, the tasks portal and the CSV disclaimer.
 
 - `config/brand.js`: `Home Office` → `Brief`. `parent: "Ogallo"` kept — that name
   was on real shopfront boards and receipts.
-- 24 rendered `Home Office` strings → `Brief`; 7 files with `Brief_` fixed.
+- 24 rendered `Home Office` strings → `Brief`; 7 files with `Brief` fixed.
 - `<title>` now derives the same name.
 - Notice board heading "Byway Notice Board" → "Notice Board".
 - **Nine root documents deleted** (~5,700 lines): `CHANGES_SUMMARY`,

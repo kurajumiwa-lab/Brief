@@ -3,7 +3,7 @@
 The public marketplace already exists (vendors, stock, requests, orders,
 the map). This module adds the second half of the dual model without a
 second app: an organisation (trade association, cooperative, employer,
-county programme) buys a workspace *inside* Brief_, registers its members
+county programme) buys a workspace *inside* Brief, registers its members
 and field officers, keeps a register of managed Android devices, and —
 once its own Android Enterprise / EMM is bound — requests remote actions
 whose dispatch state is reported honestly.

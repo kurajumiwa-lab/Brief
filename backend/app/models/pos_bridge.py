@@ -11,7 +11,7 @@ from app.database import Base
 class POSConnection(Base):
     """
     Bridge to vendor's existing POS/inventory system.
-    This is what makes Brief_ an EXTENSION of their business,
+    This is what makes Brief an EXTENSION of their business,
     not a replacement.
     """
     __tablename__ = "pos_connections"

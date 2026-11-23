@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Brief_ POS sync daemon — runs on the shop computer and keeps a push-type POS
+Brief POS sync daemon — runs on the shop computer and keeps a push-type POS
 connection (csv / manual / custom_api, or a locally-read Square/Shopify) in
 step with your shelf on the vendor network.
 
@@ -48,8 +48,8 @@ log = logging.getLogger("brief.sync")
 
 
 def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(description="Push local POS stock to the Brief_ vendor network")
-    p.add_argument("--api", default=os.environ.get("BRIEF_API", "http://localhost:8000"), help="Brief_ base URL")
+    p = argparse.ArgumentParser(description="Push local POS stock to the Brief vendor network")
+    p.add_argument("--api", default=os.environ.get("BRIEF_API", "http://localhost:8000"), help="Brief base URL")
     p.add_argument("--connection", required=True, help="POS connection id from the POS Bridge page")
     p.add_argument("--adapter", choices=sorted(ADAPTERS), default="csv")
     p.add_argument("--interval", type=int, default=0, help="seconds between passes; 0 or --once pushes a single time")
@@ -186,7 +186,7 @@ def main(argv=None) -> int:
     client = BriefClient(args.api, args.token)
     email, password = args.email, args.password
     if not client.token:
-        email = email or input("Brief_ email or @handle: ")
+        email = email or input("Brief email or @handle: ")
         password = password or getpass.getpass("password: ")
         try:
             client.login(email, password)

@@ -10,7 +10,7 @@ module enforces its rules in code:
    allows depends on how the device was enrolled — a work-profile phone
    can lose its *company data*, never its owner's personal data, so
    `wipe_device` on a work-profile device is refused whatever the plan.
-3. **No EMM, no claim.** Brief_ is not an MDM. Until an organisation binds
+3. **No EMM, no claim.** Brief is not an MDM. Until an organisation binds
    its Android Enterprise / EMM (`android_enterprise_id` + `emm_provider`)
    and dispatch is enabled in deployment config, a command is recorded
    as `requested` with `dispatched=False`. It is an audited request, and
@@ -56,7 +56,7 @@ WORKSPACE_PLANS: dict[str, WorkspacePlan] = {
         max_field_officers=3,
         max_devices=5,
         features=(
-            "Branded workspace inside Brief_ (name, colour, logo) — no separate app or website",
+            "Branded workspace inside Brief (name, colour, logo) — no separate app or website",
             "Member register: vendors the association has brought onto the network",
             "Field-officer registration tracking (who registered whom, as counts)",
             "Up to 5 managed devices on the register, commands audit-only until an EMM is bound",
