@@ -204,7 +204,7 @@ export default function AuthPage() {
             <span className="text-micro text-ink-4 border-l border-edge-2 pl-2.5">neighbourhood activity & trade</span>
           </div>
 
-          <div className="rounded-3xl border border-edge-1 bg-surface-0 shadow-sm p-6 sm:p-7">
+          <div className="rounded-2xl border border-edge-1 bg-surface-0 shadow-sm p-6 sm:p-7">
             <div className="flex items-center gap-1 p-1 rounded-xl bg-surface-2 w-fit mb-6" role="tablist">
               {["login", "register"].map((m) => (
                 <button
@@ -228,7 +228,7 @@ export default function AuthPage() {
               <p
                 role="status"
                 data-testid="session-ended"
-                className="mb-4 rounded-xl border border-accent-200 bg-accent-50 px-3 py-2 text-2xs leading-snug text-ink-2 dark:border-accent-500/30 dark:bg-accent-500/10"
+                className="mb-4 rounded-xl border border-accent-200 bg-accent-50 px-3 py-2 text-2xs leading-snug text-ink-2 dark:border-accent-500/30 dark:bg-accent-600/10"
               >
                 {endedReason}
               </p>

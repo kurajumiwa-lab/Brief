@@ -32,7 +32,7 @@ export default function HowBriefWorks({ open, onClose }) {
             </span>
             <span className="min-w-0">
               <span className="block text-[13px] font-extrabold text-mk-ink">{title}</span>
-              <span className="mt-0.5 block text-[11px] leading-relaxed text-mk-ink-soft">{note}</span>
+              <span className="mt-0.5 block text-2xs leading-relaxed text-mk-ink-soft">{note}</span>
             </span>
           </li>
         ))}

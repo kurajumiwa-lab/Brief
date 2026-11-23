@@ -12,10 +12,12 @@ name: CI
 #   · production sitting 26 migrations behind the code,
 #   · a Python module that stopped compiling.
 #
-# Two jobs, run on every push and every pull request: the frontend (tests,
-# production build, and the route/contrast invariants) and the backend (compile
+# Four jobs, run on every push and every pull request: the frontend (tests,
+# production build, and the route/contrast invariants), the backend (compile
 # check plus the suite on a real PostgreSQL, which the tests require because
-# they use advisory locks and `to_regclass`).
+# they use advisory locks and `to_regclass`), a migration-applies-over-data
+# drill, and a schema-drift check that would have caught a hand-written
+# migration that did not match its model.
 
 on:
   push:
@@ -99,7 +101,7 @@ jobs:
 
       # The tests need a real PostgreSQL — they take advisory locks and call
       # `to_regclass`, neither of which SQLite supports. `pgserver` bundles
-      # PostgreSQL 16 so this works on a bare runner with no service container.
+      # PostgreSQL so this works on a bare runner with no service container.
       # No `--timeout`: pytest-timeout is not a dependency, and a CI step that
       # fails on an unrecognised flag fails for the wrong reason.
       - name: Tests
@@ -109,7 +111,7 @@ jobs:
           SECRET_KEY: ci-not-a-real-secret
 
   migrations:
-    name: Migrations — single head
+    name: Migrations — single head and drill
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -122,7 +124,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install
-        run: pip install -r requirements.txt
+        run: pip install -r requirements-dev.txt
 
       # Alembic refuses to run with more than one head: that is a failed merge
       # waiting to happen, and it is the one migration defect detectable without
@@ -143,4 +145,38 @@ jobs:
           PY
         env:
           DATABASE_URL: postgresql+asyncpg://postgres@/unused
+          SECRET_KEY: ci-not-a-real-secret
+
+      # The check that matters most, and the one this repository learned the
+      # hard way: a database is only migrated correctly if the result matches
+      # the models. A hand-written migration can advance `alembic_version`
+      # while creating the wrong columns, and nothing else in this workflow
+      # would notice. Drill first (proves the chain applies over live-shaped
+      # data), then parity (proves the result matches the code).
+      - name: Migrations apply over existing data
+        run: python scripts/migration_drill.py
+        env:
+          SECRET_KEY: ci-not-a-real-secret
+
+      - name: Schema parity with the models
+        run: |
+          python - <<'PY'
+          import os, subprocess, sys, tempfile
+          import pgserver
+
+          # schema_parity.py inspects whatever DATABASE_URL names, so point it at
+          # a real database built by `alembic upgrade head` — same code path as
+          # a deploy, not a `create_all`.
+          with tempfile.TemporaryDirectory() as tmp:
+              uri = pgserver.get_server(tmp).get_uri()
+              env = {**os.environ,
+                     "DATABASE_URL": uri.replace("postgresql://", "postgresql+asyncpg://"),
+                     "SECRET_KEY": "ci-not-a-real-secret"}
+              up = subprocess.run([sys.executable, "-m", "alembic", "upgrade", "head"], env=env)
+              if up.returncode:
+                  raise SystemExit("alembic upgrade head failed")
+              rc = subprocess.run([sys.executable, "scripts/schema_parity.py"], env=env).returncode
+              raise SystemExit(rc)
+          PY
+        env:
           SECRET_KEY: ci-not-a-real-secret

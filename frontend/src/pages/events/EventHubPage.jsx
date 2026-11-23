@@ -236,7 +236,7 @@ function MessagesCard({ event, isHost, isParticipant }) {
             return (
               <li key={m.id} className={mine ? "ml-auto max-w-[80%] rounded-2xl bg-brand-600 px-3 py-2 text-sm text-white" : "max-w-[80%] rounded-2xl bg-surface-2 px-3 py-2 text-sm text-ink-1"}>
                 <p className="whitespace-pre-wrap">{m.body}</p>
-                <p className={mine ? "mt-1 text-[10px] text-white/70" : "mt-1 text-[10px] text-ink-4"}>{shortDateTime(m.created_at)}</p>
+                <p className={mine ? "mt-1 text-2xs text-white/70" : "mt-1 text-2xs text-ink-4"}>{shortDateTime(m.created_at)}</p>
               </li>
             );
           })}

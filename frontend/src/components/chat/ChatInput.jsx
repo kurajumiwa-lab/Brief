@@ -282,7 +282,7 @@ export default function ChatInput({ onSend, onSendVoice, disabled, sending, plac
           <Input type="number" min="0" step="any" placeholder="Price / unit" prefix="KES" value={deal.price} onChange={(e) => setDeal({ ...deal, price: e.target.value })} aria-label="Deal price per unit" />
           <Select value={deal.delivery_terms} onChange={(e) => setDeal({ ...deal, delivery_terms: e.target.value })} options={DELIVERY_TERMS} aria-label="Delivery terms" />
           <Select value={deal.payment_terms} onChange={(e) => setDeal({ ...deal, payment_terms: e.target.value })} options={PAYMENT_TERMS} aria-label="Payment terms" />
-          <div className="col-span-2 sm:col-span-4 h-8 flex items-center justify-between px-2 rounded-lg bg-surface-2 border border-edge-1 text-2xs font-mono text-accent-600 dark:text-accent-400">
+          <div className="col-span-2 sm:col-span-4 h-8 flex items-center justify-between px-2 rounded-lg bg-surface-2 border border-edge-1 text-2xs font-mono text-accent-700 dark:text-accent-300">
             <span className="text-ink-4">{dealItem ? `list ${currency(dealItem.wholesale_price ?? dealItem.unit_price ?? 0)} / ${dealItem.unit_of_measure || "unit"}` : "the API reserves stock when the other side accepts"}</span>
             <span>{dealTotal ? `total ${currency(dealTotal)}` : "total —"}</span>
           </div>

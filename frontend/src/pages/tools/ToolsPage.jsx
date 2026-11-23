@@ -250,7 +250,7 @@ export default function ToolsPage() {
                       {c.base_rate != null ? ` · base ${currency(c.base_rate)}` : ""}
                     </span>
                     <span className="inline-flex items-center gap-1 text-ink-3">
-                      <Star size={11} className="text-accent-600 dark:text-accent-400" /> {Number(c.rating || 0).toFixed(1)} · {num(c.total_deliveries || 0)} runs
+                      <Star size={11} className="text-accent-700 dark:text-accent-300" /> {Number(c.rating || 0).toFixed(1)} · {num(c.total_deliveries || 0)} runs
                     </span>
                   </div>
                   {c.vendor_handle !== me?.vendor_handle && (
@@ -388,7 +388,7 @@ function ToolCard({ tool: t, mine, onBook, onDetails, onToggle, onRemove }) {
             </span>
             {t.avg_rating > 0 && (
               <span className="inline-flex items-center gap-1 rounded-lg bg-surface-0 border border-edge-1 px-2 py-0.5 text-micro font-semibold text-ink-1 shadow-2xs shrink-0">
-                <Star size={10} className="text-accent-600" /> {Number(t.avg_rating).toFixed(1)}
+                <Star size={10} className="text-accent-700" /> {Number(t.avg_rating).toFixed(1)}
               </span>
             )}
           </div>
@@ -588,7 +588,7 @@ function FacilityDetailsModal({ tool, mine, onClose, onBook, onRemove }) {
                 >
                   <p className="text-micro text-ink-4">{dayLabel(d.date)}</p>
                   <p className="text-xs font-bold font-mono mt-0.5">{d.free}</p>
-                  <p className="text-[10px] text-ink-4">free</p>
+                  <p className="text-2xs text-ink-4">free</p>
                 </div>
               ))}
             </div>
@@ -688,7 +688,7 @@ function BookingModal({ tool, onClose }) {
                     d.full
                       ? "border-red-200 dark:border-red-800 bg-red-50 dark:bg-surface-2 text-red-600 dark:text-red-400"
                       : d.committed > 0
-                      ? "border-accent-200 dark:border-accent-800 bg-accent-50 dark:bg-surface-2 text-accent-600 dark:text-accent-400"
+                      ? "border-accent-200 dark:border-accent-800 bg-accent-50 dark:bg-surface-2 text-accent-700 dark:text-accent-300"
                       : "border-edge-1 bg-surface-1 text-ink-4"
                   )}
                 >

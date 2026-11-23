@@ -173,7 +173,7 @@ export default function ReceiptScanner({ open, onClose }) {
             </div>
 
             {(error || cameraError) && (
-              <p data-testid="receipt-error" className="flex items-start gap-2 rounded-xl border border-accent-200 bg-accent-50 px-3 py-2 text-2xs text-accent-800 dark:border-accent-500/30 dark:bg-accent-500/10 dark:text-accent-200">
+              <p data-testid="receipt-error" className="flex items-start gap-2 rounded-xl border border-accent-200 bg-accent-50 px-3 py-2 text-2xs text-accent-800 dark:border-accent-500/30 dark:bg-accent-600/10 dark:text-accent-200">
                 <AlertTriangle size={14} className="mt-0.5 shrink-0" aria-hidden="true" />
                 {error || cameraError}
               </p>
@@ -235,7 +235,7 @@ export default function ReceiptScanner({ open, onClose }) {
                   className={
                     status === "verified"
                       ? "inline-flex shrink-0 items-center gap-1 rounded-full border border-brand-200 bg-brand-50 px-2 py-1 text-micro font-bold text-brand-800 dark:border-brand-500/30 dark:bg-brand-500/15 dark:text-brand-300"
-                      : "inline-flex shrink-0 items-center gap-1 rounded-full border border-accent-200 bg-accent-50 px-2 py-1 text-micro font-bold text-accent-800 dark:border-accent-500/30 dark:bg-accent-500/10 dark:text-accent-300"
+                      : "inline-flex shrink-0 items-center gap-1 rounded-full border border-accent-200 bg-accent-50 px-2 py-1 text-micro font-bold text-accent-800 dark:border-accent-500/30 dark:bg-accent-600/10 dark:text-accent-300"
                   }
                 >
                   <ShieldCheck size={11} aria-hidden="true" />
@@ -281,7 +281,7 @@ export default function ReceiptScanner({ open, onClose }) {
             )}
 
             {error && (
-              <p data-testid="receipt-error" className="rounded-xl border border-accent-200 bg-accent-50 px-3 py-2 text-2xs text-accent-800 dark:border-accent-500/30 dark:bg-accent-500/10 dark:text-accent-200">
+              <p data-testid="receipt-error" className="rounded-xl border border-accent-200 bg-accent-50 px-3 py-2 text-2xs text-accent-800 dark:border-accent-500/30 dark:bg-accent-600/10 dark:text-accent-200">
                 {error}
               </p>
             )}
@@ -331,7 +331,7 @@ export default function ReceiptScanner({ open, onClose }) {
               onChange={(event) => setManual((current) => ({ ...current, total: event.target.value }))}
             />
             {error && (
-              <p data-testid="receipt-error" className="rounded-xl border border-accent-200 bg-accent-50 px-3 py-2 text-2xs text-accent-800 dark:border-accent-500/30 dark:bg-accent-500/10 dark:text-accent-200">
+              <p data-testid="receipt-error" className="rounded-xl border border-accent-200 bg-accent-50 px-3 py-2 text-2xs text-accent-800 dark:border-accent-500/30 dark:bg-accent-600/10 dark:text-accent-200">
                 {error}
               </p>
             )}
@@ -348,7 +348,7 @@ export default function ReceiptScanner({ open, onClose }) {
 
         {step === "done" && result && (
           <div className="space-y-3 text-center" data-testid="receipt-success">
-            <span className="mx-auto grid h-14 w-14 place-items-center rounded-3xl bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300">
+            <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300">
               <Check size={26} aria-hidden="true" />
             </span>
             <div>

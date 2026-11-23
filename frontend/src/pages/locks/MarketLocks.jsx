@@ -160,7 +160,7 @@ export default function MarketLocks() {
           </form>
         )}
         {home.vendor_zone?.walkable_ring && <p className="mt-2 text-2xs text-ink-4">Zone boundary: {home.vendor_zone.walkable_ring}</p>}
-        {!canChangeZone && home.zone_change_available_at && <p className="mt-2 text-2xs text-accent-600 dark:text-accent-400">Zone change available {dateLabel(home.zone_change_available_at.slice(0, 10))} (30-day rule).</p>}
+        {!canChangeZone && home.zone_change_available_at && <p className="mt-2 text-2xs text-accent-700 dark:text-accent-300">Zone change available {dateLabel(home.zone_change_available_at.slice(0, 10))} (30-day rule).</p>}
       </Card>
 
       <MarketRunsSection currentHandle={currentHandle} />
@@ -194,7 +194,7 @@ export default function MarketLocks() {
                   <Button type="submit" loading={pickBusy} disabled={!isAccepting(activeWindow, new Date(clock)) || !home.catalog.length} icon={ArrowRight}>Lock request</Button>
                 </form>
                 {selectedProduct && <p className="text-2xs text-ink-4">Your zone has {selectedProduct.supplier_count} supplier price-sheet{selectedProduct.supplier_count === 1 ? "" : "s"}; the lowest configured 85% MOQ threshold is {num(selectedProduct.minimum_to_bid)} {selectedProduct.unit_of_measure}. Bids are collected only at the cluster's actual volume.</p>}
-                {!home.catalog.length && <p className="text-xs text-accent-600 dark:text-accent-400">The spotter hasn't entered any supplier MOQs for this zone yet.</p>}
+                {!home.catalog.length && <p className="text-xs text-accent-700 dark:text-accent-300">The spotter hasn't entered any supplier MOQs for this zone yet.</p>}
               </div>
             ) : (
               <p className="text-xs text-ink-4">No pick window is open right now. Daily Flash normally runs 3–8 PM East Africa Time. You can still review the latest zone totals below.</p>
@@ -232,7 +232,7 @@ export default function MarketLocks() {
                               <span>{pct}%</span>
                             </div>
                             <div className="h-1.5 rounded-full bg-surface-3 overflow-hidden">
-                              <div className={cn("h-full rounded-full", pct >= 100 ? "bg-brand-600" : "bg-accent-500")} style={{ width: `${pct}%` }} />
+                              <div className={cn("h-full rounded-full", pct >= 100 ? "bg-brand-600" : "bg-accent-600")} style={{ width: `${pct}%` }} />
                             </div>
                           </div>
                         )}
@@ -333,10 +333,10 @@ function OperationsDesk({ role, board, onRefresh }) {
   const toggleZone = (zone) => perform(`zone-status-${zone.id}`, () => locksAPI.updateZone(zone.id, { is_active: !zone.is_active }), `Market zone ${zone.is_active ? "deactivated" : "reactivated"}`);
 
   return (
-    <Card padding="p-4" className="bg-accent-500/10">
+    <Card padding="p-4" className="bg-accent-600/10">
       <button type="button" className="flex w-full items-start justify-between gap-3 text-left" onClick={() => setOpen((value) => !value)} aria-expanded={open}>
         <div>
-          <div className="flex items-center gap-2"><ShieldCheck size={16} className="text-accent-600 dark:text-accent-400" /><h2 className="text-sm font-semibold text-ink-1">Market operations desk</h2><Badge variant="amber" size="xs">{role}</Badge></div>
+          <div className="flex items-center gap-2"><ShieldCheck size={16} className="text-accent-700 dark:text-accent-300" /><h2 className="text-sm font-semibold text-ink-1">Market operations desk</h2><Badge variant="amber" size="xs">{role}</Badge></div>
           <p className="mt-1 text-xs text-ink-4">Supplier price sheets, daily windows and cluster bidding. No payments are collected here.</p>
         </div>
         <span className="text-xs text-ink-4">{open ? "Hide" : "Open"}</span>
@@ -445,7 +445,7 @@ function OpsCluster({ cluster, canNegotiate, busy, perform }) {
           <p className="mt-1 text-2xs text-ink-4">Status: {readableState(cluster.status)}{cluster.bid_quantity ? ` · bid volume ${num(cluster.bid_quantity)} ${cluster.product?.unit_of_measure}` : ""}{cluster.minimum_to_bid ? ` · nearest eligible floor ${num(cluster.minimum_to_bid)}` : ""}</p></div>
         <Badge size="xs" variant={stateBadge[cluster.status] || "gray"}>{readableState(cluster.status)}</Badge>
       </div>
-      {cluster.dissolved_reason && <p className="mt-2 text-2xs text-accent-600 dark:text-accent-400">Reason: {cluster.dissolved_reason}</p>}
+      {cluster.dissolved_reason && <p className="mt-2 text-2xs text-accent-700 dark:text-accent-300">Reason: {cluster.dissolved_reason}</p>}
       {cluster.supplier_offers?.length > 0 && <div className="mt-2 flex flex-wrap gap-1.5">{cluster.supplier_offers.map((offer) => <span key={offer.id} className={cn("rounded-md border px-2 py-1 text-2xs", offer.eligible ? "border-brand-200 dark:border-brand-800 bg-brand-50 dark:bg-brand-500/15 text-brand-600 dark:text-brand-400" : "border-edge-1 text-ink-4")}>@{offer.supplier_handle} · MOQ {num(offer.minimum_order_quantity)} · bid ≥ {num(offer.minimum_to_bid)} {offer.eligible ? "✓" : ""}</span>)}</div>}
 
       {cluster.status === "bidding" && canNegotiate && <form onSubmit={addQuote} className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_8rem_minmax(0,1fr)_auto] sm:items-end">
@@ -459,11 +459,11 @@ function OpsCluster({ cluster, canNegotiate, busy, perform }) {
       {cluster.quotes?.length > 0 && <div className="mt-3 space-y-1.5">
         {cluster.quotes.map((quote) => <div key={quote.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-edge-1 bg-surface-1 px-2.5 py-2 text-xs">
           <span><strong className="text-ink-1">{quote.supplier_business}</strong><span className="ml-1 text-ink-4">@{quote.supplier_handle}</span><span className="ml-2 font-mono text-brand-600 dark:text-brand-400">{currency(quote.unit_price)} / unit</span><span className="ml-2 text-ink-4">for exactly {num(quote.quoted_quantity)}</span>{quote.notes && <span className="ml-2 text-ink-4">· {quote.notes}</span>}</span>
-          <span className="inline-flex items-center gap-2"><Badge size="xs" variant={quote.status === "selected" ? "brand" : quote.status === "passed" ? "gray" : "blue"}>{quote.status}</Badge>{cluster.status === "bidding" && canNegotiate && quote.status === "offered" && <><span className={cn("text-2xs", quote.unit_price > bestPrice ? "text-accent-600 dark:text-accent-400" : "text-brand-600 dark:text-brand-400")}>{quote.unit_price > bestPrice ? "Above lowest" : "Lowest price"}</span><Button size="xs" variant="secondary" loading={busy === `select-${cluster.id}-${quote.id}`} onClick={() => perform(`select-${cluster.id}-${quote.id}`, () => locksAPI.selectQuote(cluster.id, quote.id), "Supplier quote selected at the cluster volume")}>Select bid</Button></>}</span>
+          <span className="inline-flex items-center gap-2"><Badge size="xs" variant={quote.status === "selected" ? "brand" : quote.status === "passed" ? "gray" : "blue"}>{quote.status}</Badge>{cluster.status === "bidding" && canNegotiate && quote.status === "offered" && <><span className={cn("text-2xs", quote.unit_price > bestPrice ? "text-accent-700 dark:text-accent-300" : "text-brand-600 dark:text-brand-400")}>{quote.unit_price > bestPrice ? "Above lowest" : "Lowest price"}</span><Button size="xs" variant="secondary" loading={busy === `select-${cluster.id}-${quote.id}`} onClick={() => perform(`select-${cluster.id}-${quote.id}`, () => locksAPI.selectQuote(cluster.id, quote.id), "Supplier quote selected at the cluster volume")}>Select bid</Button></>}</span>
         </div>)}
       </div>}
       {cluster.status === "locked" && <p className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-brand-600 dark:text-brand-400"><Check size={13} />Locked at {currency(cluster.locked?.unit_price)} / unit · {num(cluster.locked?.quantity)} units</p>}
-      {cluster.status === "collecting" && !cluster.supplier_offers?.length && <p className="mt-2 inline-flex items-center gap-1 text-2xs text-accent-600 dark:text-accent-400"><AlertTriangle size={12} />No verified supplier MOQ is available for this cluster.</p>}
+      {cluster.status === "collecting" && !cluster.supplier_offers?.length && <p className="mt-2 inline-flex items-center gap-1 text-2xs text-accent-700 dark:text-accent-300"><AlertTriangle size={12} />No verified supplier MOQ is available for this cluster.</p>}
     </div>
   );
 }

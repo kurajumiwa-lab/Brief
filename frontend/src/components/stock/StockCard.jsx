@@ -259,7 +259,7 @@ export default function StockCard({
               </p>
             </div>
             <div className="text-right shrink-0">
-              <p className={cn("text-sm font-bold tabular-nums", out ? "text-red-600 dark:text-red-400" : low ? "text-accent-600 dark:text-accent-400" : "text-ink-1")}>
+              <p className={cn("text-sm font-bold tabular-nums", out ? "text-red-600 dark:text-red-400" : low ? "text-accent-700 dark:text-accent-300" : "text-ink-1")}>
                 {num(available)}
               </p>
               <p className="text-micro text-ink-4">{unit} available</p>
@@ -271,7 +271,7 @@ export default function StockCard({
               Min order: <strong className="text-ink-1 tabular-nums">{num(moq)} {unit}</strong>
             </span>
             {mode === "mine" && item.quantity_reserved > 0 ? (
-              <span className="text-accent-600 dark:text-accent-400 font-semibold tabular-nums">
+              <span className="text-accent-700 dark:text-accent-300 font-semibold tabular-nums">
                 {num(item.quantity_reserved)} reserved
               </span>
             ) : item.updated_at ? (

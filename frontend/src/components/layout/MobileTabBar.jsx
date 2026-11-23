@@ -11,9 +11,9 @@ import { cn } from "@/lib/utils";
  *
  *   Home · Local network · Mall · Connect · My World
  *
- * Create is no longer a tab. It is a header action on every screen (see
- * AppHeader), so the bar holds five destinations. The `action` branch below is
- * kept for any future prominent tab and is not used by PRIMARY_NAV today.
+ * Create IS the central tab, and the brief asks for it to be the prominent one:
+ * a filled circle between Inbox and the rest, not a sixth equal-weight icon.
+ * The `action` branch below renders that treatment.
  *
  * Badges are only shown where they mean work is waiting: Activity carries
  * unread notifications plus conversations that moved today. A count that
@@ -63,10 +63,10 @@ export default function MobileTabBar() {
                 >
                   <span
                     className={cn(
-                      "grid h-10 w-10 place-items-center rounded-full shadow-sm transition-colors",
+                      "grid h-11 w-11 place-items-center rounded-full shadow-sm ring-4 ring-surface-1 transition-colors",
                       active
-                        ? "bg-brand-700 text-white"
-                        : "bg-brand-600 text-white hover:bg-brand-700 active:bg-brand-800",
+                        ? "bg-accent-700 text-white"
+                        : "bg-accent-600 text-white hover:bg-accent-700 active:bg-accent-800",
                     )}
                   >
                     <Icon size={20} strokeWidth={2.4} aria-hidden="true" />
@@ -74,7 +74,7 @@ export default function MobileTabBar() {
                   <span
                     className={cn(
                       "truncate max-w-full text-2xs font-semibold",
-                      active ? "text-brand-800 dark:text-brand-300" : "text-ink-2",
+                      active ? "text-accent-700 dark:text-accent-300" : "text-ink-2",
                     )}
                   >
                     {item.label}

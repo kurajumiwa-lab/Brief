@@ -102,7 +102,7 @@ export default function CorridorTaskBoard({ data, onChanged, defaultRegion = "na
         <div>
           <p className="eyebrow">Work-from-home</p>
           <h2 id="work-board-heading" className="mt-0.5 text-sm font-extrabold tracking-tight text-ink-1">
-            Claim local work
+            Find work
           </h2>
         </div>
         <div className="flex items-center gap-2">
@@ -141,15 +141,15 @@ export default function CorridorTaskBoard({ data, onChanged, defaultRegion = "na
               <li key={task.id} className="flex flex-col gap-2 p-3 sm:flex-row sm:items-start sm:gap-3" data-testid="corridor-task-row">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <span className={cn("rounded-md px-1.5 py-0.5 text-[10px] font-bold", TYPE_TONE[task.task_type])}>
+                    <span className={cn("rounded-md px-1.5 py-0.5 text-2xs font-bold", TYPE_TONE[task.task_type])}>
                       {task.type_label} • {task.town}
                     </span>
-                    <span className={cn("rounded-md border px-1.5 py-0.5 text-[10px] font-semibold", STATUS_TONE[task.status])}>
+                    <span className={cn("rounded-md border px-1.5 py-0.5 text-2xs font-semibold", STATUS_TONE[task.status])}>
                       {task.status_label}
                     </span>
                   </div>
                   <p className="mt-1 truncate text-xs font-bold text-ink-1">{task.title}</p>
-                  <p className="mt-0.5 flex items-center gap-1 text-[11px] text-ink-4">
+                  <p className="mt-0.5 flex items-center gap-1 text-2xs text-ink-4">
                     <Clock3 size={10} aria-hidden="true" />
                     {dueLabel(task.due_at)}
                     {task.claim_expires_at && task.status === "CLAIMED" && (
@@ -159,7 +159,7 @@ export default function CorridorTaskBoard({ data, onChanged, defaultRegion = "na
                     )}
                   </p>
                   {task.is_creator && task.handoff_code && task.status !== "COMPLETED" && (
-                    <p className="mt-1 text-[11px] text-ink-3">
+                    <p className="mt-1 text-2xs text-ink-3">
                       Handoff code <span className="font-mono font-bold text-ink-1">{task.handoff_code}</span> — give it
                       to the recipient, not the worker.
                     </p>
@@ -197,7 +197,7 @@ export default function CorridorTaskBoard({ data, onChanged, defaultRegion = "na
                   )}
                   {task.status === "COMPLETED" && task.payment_tag?.number && (
                     <div className="mt-1.5">
-                      <p className="max-w-[10rem] truncate text-[10px] font-semibold text-brand-700 dark:text-brand-300">
+                      <p className="max-w-[10rem] truncate text-2xs font-semibold text-brand-700 dark:text-brand-300">
                         Pay {paymentText(task.payment_tag)}
                       </p>
                       <Button
@@ -219,12 +219,12 @@ export default function CorridorTaskBoard({ data, onChanged, defaultRegion = "na
                     </div>
                   )}
                   {task.status === "COMPLETED" && task.is_assignee && !task.payment_tag?.number && (
-                    <p className="mt-1.5 max-w-[9rem] text-[10px] leading-tight text-brand-700 dark:text-brand-300">
+                    <p className="mt-1.5 max-w-[9rem] text-2xs leading-tight text-brand-700 dark:text-brand-300">
                       Approved — the poster pays you directly.
                     </p>
                   )}
                   {task.can_claim === false && task.claim_blocked_reason && !task.is_creator && !task.is_assignee && (
-                    <p className="mt-1 max-w-[9rem] text-[10px] leading-tight text-ink-4">{task.claim_blocked_reason}</p>
+                    <p className="mt-1 max-w-[9rem] text-2xs leading-tight text-ink-4">{task.claim_blocked_reason}</p>
                   )}
                 </div>
               </li>
@@ -257,13 +257,13 @@ export default function CorridorTaskBoard({ data, onChanged, defaultRegion = "na
               Copy
             </Button>
           </div>
-          <p className="mt-1.5 text-[11px] leading-relaxed text-brand-800/80 dark:text-brand-200/80">
+          <p className="mt-1.5 text-2xs leading-relaxed text-brand-800/80 dark:text-brand-200/80">
             {payment.payment_instruction || "The platform never holds this money."}
           </p>
         </div>
       )}
 
-      <p className="px-1 text-[10px] leading-relaxed text-ink-4">
+      <p className="px-1 text-2xs leading-relaxed text-ink-4">
         Completed tasks add no standing credit. Photographs, handoff codes and
         pasted M-Pesa text are signals, not platform verification.
       </p>
@@ -361,7 +361,7 @@ function ProofSheet({ task, onClose, onSaved }) {
         </label>
         {photo && <img src={mediaUrl(photo)} alt="" className="h-24 w-full rounded-lg object-cover" />}
 
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-2.5 text-[11px] leading-relaxed text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-2.5 text-2xs leading-relaxed text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
           Your M-Pesa details are shown only to the poster after they approve. The
           platform does not hold or move this money.
         </div>
@@ -498,7 +498,7 @@ function TaskComposer({ open, onClose, onCreated, defaultRegion, town }) {
             </select>
           </label>
         </div>
-        <p className="text-[11px] leading-relaxed text-ink-4">
+        <p className="text-2xs leading-relaxed text-ink-4">
           A 5–8% platform fee is recorded on your ledger. The worker&apos;s payout is
           paid by you directly; the platform holds no money.
         </p>

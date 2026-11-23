@@ -1,6 +1,6 @@
 # M-Pesa + PSP Fund Custody Architecture
 
-> **Provenance.** Complete build specification for the money layer of Brief_,
+> **Provenance.** Complete build specification for the money layer of Brief,
 > captured verbatim from the planning conversation of 2026-10-01 in its two
 > iterations. **Iteration 2 ("Payment Architecture Without Daraja", the
 > PSP-as-abstraction model) is the chosen architecture** and is what v2.5

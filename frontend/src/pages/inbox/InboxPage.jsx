@@ -406,7 +406,7 @@ export default function InboxPage({ initialFilter = "all" }) {
           }
         />
         {taskStatus === "ready" && taskError && (
-          <p className="mt-1 px-1 text-[11px] text-ink-4">{taskError}</p>
+          <p className="mt-1 px-1 text-2xs text-ink-4">{taskError}</p>
         )}
       </div>
 

@@ -26,7 +26,7 @@ export function Stars({ value = 0, size = 12, className }) {
   return (
     <span className={cn("inline-flex items-center gap-0.5", className)} title={`${Number(value || 0).toFixed(1)} / 5`}>
       {[1, 2, 3, 4, 5].map((n) => (
-        <Star key={n} size={size} className={n <= filled ? "text-accent-600 dark:text-accent-400 fill-amber-400" : "text-ink-4/50"} />
+        <Star key={n} size={size} className={n <= filled ? "text-accent-700 dark:text-accent-300 fill-amber-400" : "text-ink-4/50"} />
       ))}
     </span>
   );
@@ -151,7 +151,7 @@ export default function ReviewsDrawer({ list, onClose }) {
                 <div key={star} className="flex items-center gap-2">
                   <span className="text-2xs text-ink-4 font-mono w-3">{star}</span>
                   <div className="flex-1 h-1.5 rounded-full bg-surface-3 overflow-hidden">
-                    <div className="h-full rounded-full bg-accent-500/10" style={{ width: `${(100 * (distribution[String(star)] || 0)) / maxBar}%` }} />
+                    <div className="h-full rounded-full bg-accent-600/10" style={{ width: `${(100 * (distribution[String(star)] || 0)) / maxBar}%` }} />
                   </div>
                   <span className="text-2xs text-ink-4 font-mono w-4 text-right">{distribution[String(star)] || 0}</span>
                 </div>
@@ -185,7 +185,7 @@ export default function ReviewsDrawer({ list, onClose }) {
                       onClick={() => setForm({ ...form, rating: n })}
                       className="p-0.5"
                     >
-                      <Star size={20} className={n <= form.rating ? "text-accent-600 dark:text-accent-400 fill-amber-400" : "text-ink-4/50"} />
+                      <Star size={20} className={n <= form.rating ? "text-accent-700 dark:text-accent-300 fill-amber-400" : "text-ink-4/50"} />
                     </button>
                   ))}
                 </div>

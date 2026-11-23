@@ -18,7 +18,7 @@ const apiMocks = vi.hoisted(() => ({
     data: {
       model: "both",
       plans: [
-        { key: "pilot", name: "Kisumu Pilot", price_kes_monthly: 0, price_kes_annual: 0, audience: "One association", max_members: 25, max_field_officers: 3, max_devices: 5, features: ["Branded workspace inside Brief_"] },
+        { key: "pilot", name: "Kisumu Pilot", price_kes_monthly: 0, price_kes_annual: 0, audience: "One association", max_members: 25, max_field_officers: 3, max_devices: 5, features: ["Branded workspace inside Brief"] },
         { key: "association", name: "Association", price_kes_monthly: 24500, price_kes_annual: 245000, audience: "Trade associations", max_members: 200, max_field_officers: 10, max_devices: 30, features: ["Public workspace listing"] },
         { key: "enterprise", name: "Enterprise / County", price_kes_monthly: 145000, price_kes_annual: 1450000, audience: "County programmes", max_members: 2000, max_field_officers: 100, max_devices: 500, features: ["Android Enterprise binding support"] },
       ],

@@ -345,7 +345,7 @@ function ObservationRow({ row, onDecide }) {
           {row.wholesale ? " · wholesale" : ""}
         </p>
         {row.raw_line && (
-          <p className="mt-0.5 truncate font-mono text-[10px] text-ink-4">{row.raw_line}</p>
+          <p className="mt-0.5 truncate font-mono text-2xs text-ink-4">{row.raw_line}</p>
         )}
       </div>
 

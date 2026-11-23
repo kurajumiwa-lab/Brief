@@ -42,8 +42,8 @@ export default function TaskTrack() {
       <div className="grid grid-cols-2 gap-3">
         {Object.entries(TRACKS).map(([value, { label, icon: Icon, blurb }]) => (
           <Link key={value} to={`/tasks/${value}`}
-            className="glass glass-hover rounded-3xl p-4 text-left">
-            <Icon size={16} className={value === "squad" ? "text-brand-600 dark:text-brand-400" : "text-accent-600 dark:text-accent-400"} />
+            className="glass glass-hover rounded-2xl p-4 text-left">
+            <Icon size={16} className={value === "squad" ? "text-brand-600 dark:text-brand-400" : "text-accent-700 dark:text-accent-300"} />
             <p className="text-sm font-semibold text-ink-1 mt-2">{label}</p>
             <p className="text-2xs text-ink-4 mt-0.5">{blurb}</p>
           </Link>

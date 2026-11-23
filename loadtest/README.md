@@ -1,4 +1,4 @@
-# Load testing Brief_
+# Load testing Brief
 
 Two harnesses, same scenario, same SLOs. Both drive the read paths a vendor
 actually uses — network stock, their own shelf and movements, notifications,

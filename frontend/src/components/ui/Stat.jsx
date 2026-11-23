@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 const TONES = {
   default: "text-ink-1",
   brand: "text-brand-600 dark:text-brand-400",
-  amber: "text-accent-600 dark:text-accent-400",
+  amber: "text-accent-700 dark:text-accent-300",
   blue: "text-blue-600 dark:text-blue-400",
   red: "text-red-600 dark:text-red-400",
 };

@@ -13,7 +13,7 @@ export default function MarketplaceHero({ region, onShopSale, onBrowseAll, onHow
   return (
     <section
       data-testid="discover-hero"
-      className="soft-card relative overflow-hidden rounded-3xl bg-mk-cream px-5 py-6 text-center sm:px-10 sm:py-9"
+      className="soft-card relative overflow-hidden rounded-2xl bg-mk-cream px-5 py-6 text-center sm:px-10 sm:py-9"
     >
       <span
         className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-mk-orange/10 blur-2xl"
@@ -24,7 +24,7 @@ export default function MarketplaceHero({ region, onShopSale, onBrowseAll, onHow
         aria-hidden="true"
       />
 
-      <p className="relative inline-flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-[0.18em] text-mk-orange">
+      <p className="relative inline-flex items-center gap-1.5 text-2xs font-extrabold uppercase tracking-[0.18em] text-mk-orange">
         <Sparkles size={12} aria-hidden="true" />
         Brief marketplace · {place}
       </p>
@@ -58,7 +58,7 @@ export default function MarketplaceHero({ region, onShopSale, onBrowseAll, onHow
       </div>
 
       <div className="relative mt-3 flex flex-wrap items-center justify-center gap-1.5">
-        <p className="text-[11px] font-medium text-mk-ink-soft/80">
+        <p className="text-2xs font-medium text-mk-ink-soft/80">
           Ranked by proximity, timing and real activity. Never paid placement.
         </p>
         <button

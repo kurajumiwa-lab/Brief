@@ -71,7 +71,7 @@ export default function RepeatWeeklyCard({ draft }) {
           <Repeat size={15} className="mt-0.5 shrink-0 text-brand-700 dark:text-brand-300" aria-hidden="true" />
           <span>
             <span className="block text-xs font-extrabold text-ink-1">Repeat weekly (market day / routine)</span>
-            <span className="mt-0.5 block text-[11px] leading-relaxed text-ink-3">
+            <span className="mt-0.5 block text-2xs leading-relaxed text-ink-3">
               Keep this post as a weekly slot. Publish still posts this week only.
             </span>
           </span>
@@ -89,7 +89,7 @@ export default function RepeatWeeklyCard({ draft }) {
       {open && (
         <div className="mt-3 space-y-2.5 border-t border-edge-1 pt-3">
           <div>
-            <p className="text-[11px] font-bold text-ink-2">Which day?</p>
+            <p className="text-2xs font-bold text-ink-2">Which day?</p>
             <div className="mt-1.5 grid grid-cols-7 gap-1" role="group" aria-label="Repeat day">
               {DAYS.map((option) => {
                 const active = day === option.value;
@@ -100,7 +100,7 @@ export default function RepeatWeeklyCard({ draft }) {
                     aria-pressed={active}
                     onClick={() => setDay(option.value)}
                     className={cn(
-                      "rounded-lg border py-2 text-[11px] font-bold",
+                      "rounded-lg border py-2 text-2xs font-bold",
                       active
                         ? "border-brand-700 bg-brand-700 text-white"
                         : "border-edge-2 bg-surface-0 text-ink-2 hover:border-edge-3",
@@ -112,7 +112,7 @@ export default function RepeatWeeklyCard({ draft }) {
               })}
             </div>
           </div>
-          <label className="flex items-center justify-between gap-2 text-[11px] font-bold text-ink-2">
+          <label className="flex items-center justify-between gap-2 text-2xs font-bold text-ink-2">
             Starts (EAT)
             <input
               type="time"
@@ -132,11 +132,11 @@ export default function RepeatWeeklyCard({ draft }) {
             {saved ? "Saved as a routine" : "Save as weekly routine"}
           </Button>
           {!ready && (
-            <p className="text-[10px] leading-relaxed text-ink-4">
+            <p className="text-2xs leading-relaxed text-ink-4">
               Add a title, a description and a place above; the routine copies them.
             </p>
           )}
-          <p className="text-[10px] leading-relaxed text-ink-4">
+          <p className="text-2xs leading-relaxed text-ink-4">
             A weekly badge is a schedule, not a reliability guarantee, and it
             awards no standing credit.{" "}
             <Link to="/routines" className="font-semibold underline">Manage routines</Link>

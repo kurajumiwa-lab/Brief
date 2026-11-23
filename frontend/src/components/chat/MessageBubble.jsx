@@ -85,7 +85,7 @@ export default function MessageBubble({ message: m, mine, showHeader = true }) {
               </Badge>
             )}
             <span className="text-ink-4">{timeOnly(m.sent_at)}</span>
-            {m.is_pinned && <Pin size={10} className="text-accent-600 dark:text-accent-400" />}
+            {m.is_pinned && <Pin size={10} className="text-accent-700 dark:text-accent-300" />}
           </div>
         )}
         <div

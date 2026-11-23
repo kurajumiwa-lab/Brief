@@ -1,4 +1,4 @@
-# Brief_ — current capabilities report
+# Brief — current capabilities report
 
 Date: 2026-10-11 · Branch: `arena/435dc440-brief` (working tree on top of `main` @ `1d6cfba`,
 v2.11) · Scope: what the platform can actually do today, plus an audit of how the v2.11 work

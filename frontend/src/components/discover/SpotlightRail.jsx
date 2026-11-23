@@ -120,8 +120,8 @@ export function spotlightSlides({ items = [], spotted = [], region = null }) {
 
 const TONES = {
   forest: "from-brand-700 to-brand-900",
-  hot: "from-[#7A2E0E] to-hot",
-  amber: "from-[#6B3F12] to-[#B8792A]",
+  hot: "from-accent-700 to-accent-400",
+  amber: "from-amber-600 to-amber-400",
 };
 
 export default function SpotlightRail({ items, spotted, region, onSpotSale }) {
@@ -140,10 +140,10 @@ export default function SpotlightRail({ items, spotted, region, onSpotSale }) {
     <section
       aria-label="Spotlight"
       data-testid="discover-spotlight"
-      className="overflow-hidden rounded-3xl bg-mk-card/70"
+      className="overflow-hidden rounded-2xl bg-mk-card/70"
     >
       <div className="flex items-center justify-between gap-3 px-4 pt-4">
-        <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-mk-orange">Our top picks</p>
+        <p className="text-2xs font-extrabold uppercase tracking-[0.18em] text-mk-orange">Our top picks</p>
         <div className="flex items-center gap-1.5">
           <button
             type="button"
@@ -167,7 +167,7 @@ export default function SpotlightRail({ items, spotted, region, onSpotSale }) {
       <div
         data-testid="spotlight-poster"
         data-poster="true"
-        className="relative m-4 aspect-[4/5] overflow-hidden rounded-2xl bg-[#171021] sm:aspect-[16/10]"
+        className="relative m-4 aspect-[4/5] overflow-hidden rounded-2xl bg-ink-1 sm:aspect-[16/10]"
       >
         {slide.image ? (
           <img src={slide.image} alt="" className="absolute inset-0 h-full w-full object-cover" />
@@ -178,33 +178,33 @@ export default function SpotlightRail({ items, spotted, region, onSpotSale }) {
         )}
 
         <div
-          className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#171021]/55 via-transparent to-transparent"
+          className="pointer-events-none absolute inset-0 bg-gradient-to-b from-ink-1/55 via-transparent to-transparent"
           aria-hidden="true"
         />
 
         <div className="absolute left-3 top-3 z-20 flex flex-wrap items-center gap-1.5">
-          <span className="inline-flex items-center gap-1 rounded-md border border-white/20 bg-black/55 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.08em] text-white backdrop-blur-sm">
+          <span className="inline-flex items-center gap-1 rounded-md border border-white/20 bg-black/55 px-2.5 py-1 text-2xs font-extrabold uppercase tracking-[0.08em] text-white backdrop-blur-sm">
             <Icon size={11} aria-hidden="true" /> {slide.badge}
           </span>
           {slide.spot && (
-            <span className="rounded-md border border-white/20 bg-black/45 px-2 py-1 text-[10px] font-bold text-white/80 backdrop-blur-sm">
+            <span className="rounded-md border border-white/20 bg-black/45 px-2 py-1 text-2xs font-bold text-white/80 backdrop-blur-sm">
               Live record
             </span>
           )}
         </div>
 
         {slides.length > 1 && (
-          <span className="absolute right-3 top-3 z-20 rounded-md border border-white/20 bg-black/45 px-2 py-1 text-[10px] font-bold tabular-nums text-white/80 backdrop-blur-sm">
+          <span className="absolute right-3 top-3 z-20 rounded-md border border-white/20 bg-black/45 px-2 py-1 text-2xs font-bold tabular-nums text-white/80 backdrop-blur-sm">
             {active + 1} / {slides.length}
           </span>
         )}
 
-        <div className="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-[#171021] via-[#171021]/90 to-transparent px-4 pb-4 pt-24 text-white">
-          <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#FFB38F]">{slide.location}</p>
+        <div className="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-ink-1 via-ink-1/90 to-transparent px-4 pb-4 pt-24 text-white">
+          <p className="text-2xs font-extrabold uppercase tracking-[0.16em] text-[#FFB38F]">{slide.location}</p>
           <h2 className="mt-1 line-clamp-2 text-xl font-black leading-tight tracking-tight text-white sm:text-2xl">
             {slide.title}
           </h2>
-          {slide.meta && <p className="mt-1 line-clamp-1 text-[11px] font-semibold text-white/70">{slide.meta}</p>}
+          {slide.meta && <p className="mt-1 line-clamp-1 text-2xs font-semibold text-white/70">{slide.meta}</p>}
 
           <div className={cn("mt-3 flex items-end gap-3", slide.price ? "justify-between" : "justify-end")}>
             <div className="min-w-0">
@@ -238,12 +238,12 @@ export default function SpotlightRail({ items, spotted, region, onSpotSale }) {
             </Link>
           </div>
 
-          {slide.note && <p className="mt-2 line-clamp-1 text-[10px] text-white/55">{slide.note}</p>}
+          {slide.note && <p className="mt-2 line-clamp-1 text-2xs text-white/55">{slide.note}</p>}
           {slide.spot && onSpotSale && (
             <button
               type="button"
               onClick={onSpotSale}
-              className="mt-2 inline-flex h-8 items-center gap-1 rounded-lg border border-white/30 px-2.5 text-[10px] font-bold text-white/85 hover:bg-white/10"
+              className="mt-2 inline-flex h-8 items-center gap-1 rounded-lg border border-white/30 px-2.5 text-2xs font-bold text-white/85 hover:bg-white/10"
             >
               Spot a public sale
             </button>

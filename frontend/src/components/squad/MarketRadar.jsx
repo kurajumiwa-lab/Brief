@@ -111,7 +111,7 @@ export default function MarketRadar({ nearby, onRefresh, compact = false }) {
         <Row
           key={`c-${c.id}`}
           icon={Swords}
-          tint="text-accent-600 dark:text-accent-400"
+          tint="text-accent-700 dark:text-accent-300"
           title={c.title}
           meta={`KES ${num(c.pay_kes)} · ${c.skill}${c.squad ? " · squad" : ""}`}
           distance={c.distance_km}

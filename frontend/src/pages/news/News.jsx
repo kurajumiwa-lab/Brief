@@ -32,9 +32,9 @@ const KIND_FILTERS = [
 ];
 
 const STATUS_TONE = {
-  pending: "text-accent-600 dark:text-accent-400", confirmed: "text-blue-600 dark:text-blue-400", in_transit: "text-blue-600 dark:text-blue-400",
+  pending: "text-accent-700 dark:text-accent-300", confirmed: "text-blue-600 dark:text-blue-400", in_transit: "text-blue-600 dark:text-blue-400",
   shipped: "text-blue-600 dark:text-blue-400", received: "text-brand-600 dark:text-brand-400", completed: "text-brand-600 dark:text-brand-400",
-  cancelled: "text-red-600 dark:text-red-400", failed: "text-red-600 dark:text-red-400", open: "text-brand-600 dark:text-brand-400", rolling: "text-accent-600 dark:text-accent-400",
+  cancelled: "text-red-600 dark:text-red-400", failed: "text-red-600 dark:text-red-400", open: "text-brand-600 dark:text-brand-400", rolling: "text-accent-700 dark:text-accent-300",
 };
 
 const QualityLabel = { unverified: "unverified", self_declared: "self-declared", patron_verified: "patron-verified", lab_certified: "lab-certified" };

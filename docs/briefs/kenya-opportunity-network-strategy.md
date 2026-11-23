@@ -1,6 +1,6 @@
 # The Opportunity Network — Kenya-first go-to-market and product-gap strategy
 
-> **Provenance.** Strategy brief for the Brief_ platform, written 2026-10-11 against
+> **Provenance.** Strategy brief for the Brief platform, written 2026-10-11 against
 > the repository at v2.11 (`main` + the `standing` module) and against public
 > sources listed in Appendix A. It answers the go-to-market request: initial
 > niche, validated unmet needs, competitor differentiation, MVP backlog,
@@ -129,7 +129,7 @@ dispute hold — that is a second product, not a beachhead. **[Evidence]**
 
 ### 3.2 The differentiation statement
 
-> **Brief_ is the workflow layer where a small business's verified facts, its
+> **Brief is the workflow layer where a small business's verified facts, its
 > relationships and its opportunities live together — with a reason attached to
 > every claim, a consent record attached to every introduction, and an audit
 > trail attached to both. We are not a system of record, not a tender board and
@@ -257,7 +257,7 @@ Mandatory systems stay authoritative; the platform records *what the business
 proved, to whom, when*, plus the workflow around it.
 
 ```
- external systems (authoritative)         Brief_ (workflow layer)
+ external systems (authoritative)         Brief (workflow layer)
  ┌───────────────────────────┐           ┌──────────────────────────────────┐
  │ e-GP · county portals     │◄─ links ──│ trade    requests · offers · fits │
  │ eTIMS · KRA · BRS         │◄─imports─►│ standing claims · evidence ·      │

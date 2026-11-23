@@ -469,7 +469,7 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
         <>
           {/* ── the region masthead scrolls; the search bar below sticks ───── */}
           <div data-testid="discover-masthead" className="flex items-center justify-between gap-2">
-            <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-mk-orange">Brief marketplace</p>
+            <p className="text-2xs font-extrabold uppercase tracking-[0.18em] text-mk-orange">Brief marketplace</p>
             {/* The list must open *below* the sticky search bar, never over
                 it — search stays permanent and usable while choosing. */}
             <RegionPicker
@@ -480,7 +480,7 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
             />
           </div>
           {region && (
-            <div data-testid="region-context" className="flex min-w-0 items-center gap-1.5 text-[11px] text-mk-ink-soft">
+            <div data-testid="region-context" className="flex min-w-0 items-center gap-1.5 text-2xs text-mk-ink-soft">
               <MapPin size={11} className="shrink-0 text-mk-orange" aria-hidden="true" />
               <span className="truncate font-extrabold text-mk-ink">{regionLabel(region)}</span>
               <span className="hidden truncate sm:inline">· {region.knownFor.slice(0, 3).join(" · ")}</span>
@@ -510,7 +510,7 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
               data-testid="discover-quick-filters"
               className="no-scrollbar mt-2 flex items-center gap-1.5 overflow-x-auto pb-0.5"
             >
-              <span className="shrink-0 pr-0.5 text-[10px] font-extrabold uppercase tracking-[0.1em] text-mk-ink-soft">
+              <span className="shrink-0 pr-0.5 text-2xs font-extrabold uppercase tracking-[0.1em] text-mk-ink-soft">
                 Try
               </span>
               {QUICK_FILTERS.map(({ value, label }) => {
@@ -523,7 +523,7 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
                     data-testid={`discover-quick-${value}`}
                     onClick={() => selectCategory(active ? "" : value)}
                     className={cn(
-                      "inline-flex h-8 shrink-0 items-center rounded-full border px-3 text-[11px] font-extrabold transition-colors",
+                      "inline-flex h-8 shrink-0 items-center rounded-full border px-3 text-2xs font-extrabold transition-colors",
                       active
                         ? "border-mk-ink bg-mk-ink text-mk-cream"
                         : "border-mk-line bg-mk-card text-mk-ink hover:border-mk-orange hover:text-mk-orange",
@@ -560,20 +560,20 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
           <section aria-labelledby="discover-departments-heading" className="space-y-3">
             <div className="flex items-end justify-between gap-3">
               <div>
-                <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-mk-orange">Shop by department</p>
+                <p className="text-2xs font-extrabold uppercase tracking-[0.18em] text-mk-orange">Shop by department</p>
                 <h2 id="discover-departments-heading" className="mt-1 text-2xl font-black tracking-tight text-mk-ink">
                   Popular categories
                 </h2>
               </div>
               <div className="flex shrink-0 items-center gap-2">
-                <Link to="/regions/all" className="text-[11px] font-extrabold text-mk-ink hover:text-mk-orange">
+                <Link to="/regions/all" className="text-2xs font-extrabold text-mk-ink hover:text-mk-orange">
                   View all
                 </Link>
                 {!isServices && (
                   <button
                     type="button"
                     onClick={() => setSpottedOpen(true)}
-                    className="inline-flex h-9 items-center gap-1 rounded-full border border-mk-line bg-mk-card px-3 text-[11px] font-extrabold text-mk-ink hover:border-mk-orange hover:text-mk-orange"
+                    className="inline-flex h-9 items-center gap-1 rounded-full border border-mk-line bg-mk-card px-3 text-2xs font-extrabold text-mk-ink hover:border-mk-orange hover:text-mk-orange"
                   >
                     <BadgePercent size={12} aria-hidden="true" /> Spot a sale
                   </button>
@@ -786,7 +786,7 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
               onClick={() => patchParams({ trust: trust === "3" ? "" : "3" })}
               data-testid="regions-trust"
               className={cn(
-                "inline-flex h-7 items-center gap-1 rounded-full border px-2.5 text-[10px] font-extrabold transition-colors",
+                "inline-flex h-7 items-center gap-1 rounded-full border px-2.5 text-2xs font-extrabold transition-colors",
                 trust === "3"
                   ? "border-mk-ink bg-mk-ink text-mk-cream"
                   : "border-mk-line bg-mk-cream text-mk-ink-soft hover:border-mk-ink/40 hover:text-mk-ink",
@@ -878,11 +878,11 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
               {regionAware && spottedStandard.length > 0 && (
                 <section aria-labelledby="discover-spotted-heading" className="space-y-2">
                   <div>
-                    <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-mk-orange">Community reports</p>
+                    <p className="text-2xs font-extrabold uppercase tracking-[0.18em] text-mk-orange">Community reports</p>
                     <h2 id="discover-spotted-heading" className="mt-1 text-2xl font-black tracking-tight text-mk-ink">
                       Spotted public sales
                     </h2>
-                    <p className="text-[11px] text-mk-ink-soft">Walked to, seen and confirmed on the ground.</p>
+                    <p className="text-2xs text-mk-ink-soft">Walked to, seen and confirmed on the ground.</p>
                   </div>
                   <MerchGrid
                     items={spottedStandard}

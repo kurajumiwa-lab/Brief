@@ -128,7 +128,7 @@ export default function RequestComposer({ open, onClose, defaultType = "stock", 
       <button type="button" aria-label="Close" className="absolute inset-0 bg-ink-1/50 cursor-default" onClick={onClose} />
       <form
         onSubmit={submit}
-        className="relative w-full sm:max-w-lg max-h-[92vh] overflow-y-auto bg-surface-0 rounded-t-3xl sm:rounded-3xl border border-edge-1 shadow-2xl p-4 sm:p-5 space-y-4 animate-slide-up"
+        className="relative w-full sm:max-w-lg max-h-[92vh] overflow-y-auto bg-surface-0 rounded-t-3xl sm:rounded-2xl border border-edge-1 shadow-2xl p-4 sm:p-5 space-y-4 animate-slide-up"
       >
         <div className="flex items-start justify-between gap-3">
           <div>

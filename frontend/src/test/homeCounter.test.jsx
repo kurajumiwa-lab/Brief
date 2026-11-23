@@ -34,7 +34,7 @@ describe("Home carries the counter", () => {
   it("shows the records shelf on the home screen, not only at the foot of /you", () => {
     renderHome();
     expect(screen.getByTestId("counter-shelf")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /Settle your own books first/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Your business today/i })).toBeInTheDocument();
   });
 
   it("keeps the identity strip and the next step above it", () => {

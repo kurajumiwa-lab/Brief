@@ -170,7 +170,7 @@ export default function CommunityPage() {
       {/* Status line: the one place that admits a stale or failed read. */}
       {(failed || stale) && (
         <p role="status" className="flex items-center gap-1.5 text-2xs text-ink-3" data-testid="community-status">
-          <span className="h-2 w-2 rounded-full bg-accent-500" aria-hidden="true" />
+          <span className="h-2 w-2 rounded-full bg-accent-600" aria-hidden="true" />
           {stale ? "Couldn't refresh · showing the posts last read" : "Couldn't load the feed"}
         </p>
       )}

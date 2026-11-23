@@ -22,7 +22,7 @@ from app.modules.orders.audit import kes_integer
 from app.modules.orders.models import OrderTransaction
 
 DISCLAIMER = (
-    "This is your record of trades on Brief_. It is not a receipt, an invoice, or a tax document."
+    "This is your record of trades on Brief. It is not a receipt, an invoice, or a tax document."
 )
 CSV_COLUMNS = (
     "date", "reference", "counterparty handle", "item", "quantity", "unit",

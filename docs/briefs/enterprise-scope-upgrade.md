@@ -1,13 +1,13 @@
 # Scope upgrade (v2.13) — public marketplace + enterprise workspaces, Kisumu first
 
-> **Decision:** do not build a new app. Upgrade the scope of Brief_ from a
+> **Decision:** do not build a new app. Upgrade the scope of Brief from a
 > vendor network into **both** of the models below, in one product:
 >
 > 1. **Public marketplace** — anyone (as a vendor) can find vendors, workers,
 >    freelancers and suppliers. *This already exists:* vendors, Stock Room,
 >    Business Requests, orders, tools/couriers, the map and markets.
 > 2. **Enterprise SaaS** — associations and companies pay for their own
->    private workspace *inside* Brief_: a branded membership portal, a
+>    private workspace *inside* Brief: a branded membership portal, a
 >    member register, field officers, a field-activity dashboard, and a
 >    managed-Android-device register. **New in v2.13:**
 >    `backend/app/modules/enterprise/` + `/enterprise` in the frontend.
@@ -24,12 +24,12 @@ Example: a trade association purchases the platform and receives —
 
 | Promised item | Where it lives | State |
 |---|---|---|
-| Branded business & membership portal | Workspace branding (name, colour, logo) rendered inside Brief_ at `/enterprise`; members are ordinary `@handle` vendors | **[Built]** v2.13 |
+| Branded business & membership portal | Workspace branding (name, colour, logo) rendered inside Brief at `/enterprise`; members are ordinary `@handle` vendors | **[Built]** v2.13 |
 | Member register & controlled access | `enterprise_memberships` with roles `owner / admin / field_officer / member / viewer`; non-members get 403; server-side plan caps | **[Built]** v2.13 |
 | App for registering vendors & verifying membership | Existing vendor registration + the officer flow: a field officer adds a vendor by `@handle`; the registration is recorded against that officer. Verification *standing* stays in the Business Passport — a workspace role never verifies a claim | **[Built]** v2.13 on **[Existing]** passport (v2.11) |
 | Dashboard for field registration activity | `GET /api/enterprise/workspaces/{id}/dashboard`: members by role, registrations per named officer (30 days), devices by status/mode, pending commands. Counts an official can audit — no officer score | **[Built]** v2.13 |
-| Android phones configured for field officers | Enrolment is done in the organisation's **Android Enterprise / EMM console**; Brief_ keeps the device register (`managed_devices`: label, assignee, mode, policy, status) | Register **[Built]**; enrolment **[External]** |
-| Controlled access to business records & work apps | Workspace roles gate workspace records; app/work-app control on the phone is an EMM policy, not a Brief_ feature | Workspace **[Built]**; device policy **[External]** |
+| Android phones configured for field officers | Enrolment is done in the organisation's **Android Enterprise / EMM console**; Brief keeps the device register (`managed_devices`: label, assignee, mode, policy, status) | Register **[Built]**; enrolment **[External]** |
+| Controlled access to business records & work apps | Workspace roles gate workspace records; app/work-app control on the phone is an EMM policy, not a Brief feature | Workspace **[Built]**; device policy **[External]** |
 | Remote lock & company-data removal | `POST …/devices/{id}/commands` with reasons, an enrolment-mode matrix, and an audit trail. Only reported `dispatched` when an EMM is bound **and** `ENTERPRISE_DEVICE_COMMANDS_DISPATCH_ENABLED` is on — otherwise the response says, in words, *not sent to the device* | **[Built]** v2.13 (audit + rules); delivery **[External]** |
 
 ## 2. Where Android Enterprise fits — and where it stops
@@ -47,7 +47,7 @@ So the integration is deliberately thin and honest:
 ```
 Field officer's phone ──enrolled by──▶ organisation's EMM (Android Enterprise)
                                               │ policy, apps, lock/wipe
-Association office ──▶ Brief_ /enterprise     │
+Association office ──▶ Brief /enterprise     │
    member register · field activity · device register · command requests ──▶ EMM (only when bound)
 ```
 
@@ -129,7 +129,7 @@ Commissioner (ODPC) where required before onboarding a real association.
 ## 6. What v2.13 deliberately does not do
 
 - No new consumer app, no second codebase, no MDM: Android Enterprise/EMM
-  stays external and Brief_ never claims a device action it did not send.
+  stays external and Brief never claims a device action it did not send.
 - No workspace billing collection: plans change entitlements today (the
   growth-module pattern); collecting the KSh waits for the licensed-PSP
   path already specified for trade payments.

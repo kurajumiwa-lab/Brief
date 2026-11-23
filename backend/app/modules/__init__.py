@@ -1,4 +1,4 @@
-"""Modules — the domain boundaries of Brief_.
+"""Modules — the domain boundaries of Brief.
 
 Each module owns its business rules, its data access and its HTTP adapter.
 Modules talk to each other only through the service layer of the target

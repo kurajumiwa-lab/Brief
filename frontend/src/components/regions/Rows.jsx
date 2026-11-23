@@ -66,9 +66,9 @@ export function PersonRow({ vendor }) {
 
 const KIND = {
   available: { label: "Offer", icon: Package, tone: "text-brand-700 bg-brand-50 dark:bg-brand-500/15 dark:text-brand-300" },
-  wanted: { label: "Need", icon: Wrench, tone: "text-accent-700 bg-accent-50 dark:bg-accent-500/15 dark:text-accent-300" },
+  wanted: { label: "Need", icon: Wrench, tone: "text-accent-700 bg-accent-50 dark:bg-accent-600/15 dark:text-accent-300" },
   scheduled: { label: "Scheduled", icon: CalendarDays, tone: "text-orchid-700 bg-orchid-50 dark:bg-orchid-500/15 dark:text-orchid-300" },
-  event: { label: "Event", icon: CalendarDays, tone: "text-accent-700 bg-accent-50 dark:bg-accent-500/15 dark:text-accent-300" },
+  event: { label: "Event", icon: CalendarDays, tone: "text-accent-700 bg-accent-50 dark:bg-accent-600/15 dark:text-accent-300" },
   opportunity: { label: "Opportunity", icon: HeartHandshake, tone: "text-ink-2 bg-surface-2" },
   listing: { label: "Goods", icon: Package, tone: "text-blue-700 bg-blue-50 dark:bg-blue-500/15 dark:text-blue-300" },
   service: { label: "Service", icon: Wrench, tone: "text-orchid-700 bg-orchid-50 dark:bg-orchid-500/15 dark:text-orchid-300" },

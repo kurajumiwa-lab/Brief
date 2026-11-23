@@ -797,7 +797,7 @@ function ReceiptCard({
         </div> : <p className="text-2xs text-ink-3">{expired ? "The previous code expired. Generate a new one while connected." : "Create the code when the goods are physically with you. A new code needs a connection."}</p>}
         <Button size="sm" variant={receiptCode && !expired ? "secondary" : "primary"} loading={busy === "Creating receipt code"} onClick={createCode}>{receiptCode && !expired ? "Replace one-time code" : "Create receipt code"}</Button>
       </div>}
-      {canEnter && pendingReceipt && <div role="status" className="mt-4 rounded-xl border border-accent-500/50 bg-accent-50 p-3 text-xs text-accent-900 dark:bg-accent-500/10 dark:text-accent-200">
+      {canEnter && pendingReceipt && <div role="status" className="mt-4 rounded-xl border border-accent-500/50 bg-accent-50 p-3 text-xs text-accent-900 dark:bg-accent-600/10 dark:text-accent-200">
         <strong>Queued locally — NOT confirmed.</strong> This device will retry when online. Do not hand over goods based on this status; wait for server confirmation.
         {!pendingReceipt.saved && <p className="mt-1">Keep this page open: this browser blocked session storage.</p>}
         <Button size="xs" variant="ghost" className="mt-2" onClick={discardPendingReceipt}>Discard pending code</Button>

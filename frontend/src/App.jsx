@@ -161,7 +161,7 @@ function SessionProblem() {
   const logout = useAuthStore((s) => s.logout);
   return (
     <div className="min-h-screen grid place-items-center p-6 bg-surface-0">
-      <div className="w-full max-w-md rounded-3xl border border-edge-1 bg-surface-0 shadow-sm p-6 space-y-4 animate-fade-in">
+      <div className="w-full max-w-md rounded-2xl border border-edge-1 bg-surface-0 shadow-sm p-6 space-y-4 animate-fade-in">
         <h1 className="text-lg font-extrabold tracking-tight text-ink-1">Almost in</h1>
         <p className="text-sm text-ink-3 leading-relaxed">{authError}</p>
         <div className="flex flex-wrap gap-2">
@@ -213,7 +213,7 @@ function StockRoute() {
 
   if (!allowed) {
     return (
-      <div className="mx-auto max-w-md rounded-3xl border border-edge-1 bg-surface-1 p-6 text-center">
+      <div className="mx-auto max-w-md rounded-2xl border border-edge-1 bg-surface-1 p-6 text-center">
         <h1 className="text-lg font-extrabold text-ink-1">Stock is off</h1>
         <p className="mt-2 text-sm leading-relaxed text-ink-3">
           You have not said you sell goods, so there is no shelf to manage. If

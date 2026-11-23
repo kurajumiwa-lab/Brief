@@ -239,7 +239,7 @@ Never show the words *paid* or *settled* anywhere on this screen in P0.
   amount, goods status, **and settlement status shown separately** (Rule 2.2).
 - `Export` → CSV. Columns: date, reference, counterparty handle, item,
   quantity, unit, unit price KES, total KES, goods status, settlement status.
-- **Footer, always visible:** *"This is your record of trades on Brief_. It is
+- **Footer, always visible:** *"This is your record of trades on Brief. It is
   not a receipt, an invoice, or a tax document."*
 
 ---
@@ -346,7 +346,7 @@ trustworthy. Preserve every one and cover each with a test:
 - CSV, UTF-8, one row per movement, amounts in whole KES.
 - Server-side cap and pagination; never build the whole file in memory for a
   vendor with a long history.
-- Export is a **record of trades on Brief_** and carries the §4.4 disclaimer in
+- Export is a **record of trades on Brief** and carries the §4.4 disclaimer in
   the file's first line, not only on screen.
 
 ---

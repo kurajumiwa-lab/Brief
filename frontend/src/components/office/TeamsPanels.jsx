@@ -10,7 +10,7 @@ const ACTIVE_OR_PENDING = ["invited", "active"];
 // notice is the thing you keep. Same board, different weight — colour is the
 // only cue, so the words still carry the meaning for anyone who cannot see it.
 const STICKY_SKIN = {
-  amber: "bg-accent-50 border-accent-200 dark:bg-accent-500/10 dark:border-accent-500/30",
+  amber: "bg-accent-50 border-accent-200 dark:bg-accent-600/10 dark:border-accent-500/30",
   lime: "bg-tech-50 border-tech-200 dark:bg-tech-500/10 dark:border-tech-500/30",
   sky: "bg-blue-50 border-blue-200 dark:bg-blue-500/10 dark:border-blue-500/30",
   rose: "bg-red-50 border-red-200 dark:bg-red-500/10 dark:border-red-500/30",

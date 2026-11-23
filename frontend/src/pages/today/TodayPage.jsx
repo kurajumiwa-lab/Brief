@@ -77,7 +77,7 @@ export default function TodayPage() {
           <li key={item.key}>
             <Card padding="p-3" className="space-y-2">
               <div className="flex items-center gap-3">
-                <span aria-label={item.dot ? "Waiting" : "Clear"} className={`inline-block h-2.5 w-2.5 shrink-0 rounded-full ${item.dot ? "bg-accent-500" : "bg-edge-3"}`} />
+                <span aria-label={item.dot ? "Waiting" : "Clear"} className={`inline-block h-2.5 w-2.5 shrink-0 rounded-full ${item.dot ? "bg-accent-600" : "bg-edge-3"}`} />
                 <div className="min-w-0 flex-1">
                   <p className={`text-sm font-medium ${item.done ? "text-ink-3 line-through" : "text-ink-1"}`}>{item.label}</p>
                   <p className="text-xs text-ink-3">

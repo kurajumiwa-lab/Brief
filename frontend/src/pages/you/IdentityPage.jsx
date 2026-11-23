@@ -98,7 +98,7 @@ export default function IdentityPage() {
       </header>
 
       {identity.status === "local" && (
-        <p className="rounded-xl border border-accent-200 bg-accent-50 px-3 py-2 text-2xs leading-relaxed text-accent-900 dark:border-accent-500/30 dark:bg-accent-500/10 dark:text-accent-200">
+        <p className="rounded-xl border border-accent-200 bg-accent-50 px-3 py-2 text-2xs leading-relaxed text-accent-900 dark:border-accent-500/30 dark:bg-accent-600/10 dark:text-accent-200">
           The check service did not answer, so changes are saved on this device
           only. Nothing below is shown as confirmed.
         </p>

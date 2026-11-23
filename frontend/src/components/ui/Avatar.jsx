@@ -8,15 +8,15 @@ const sizes = {
   sm: "w-8 h-8 text-2xs rounded-lg",
   md: "w-10 h-10 text-xs rounded-xl",
   lg: "w-14 h-14 text-base rounded-2xl",
-  xl: "w-20 h-20 text-2xl rounded-3xl",
-  "2xl": "w-24 h-24 text-3xl rounded-3xl",
+  xl: "w-20 h-20 text-2xl rounded-2xl",
+  "2xl": "w-24 h-24 text-3xl rounded-2xl",
 };
 
 const badgeSizes = {
-  xs: "w-3.5 h-3.5 text-[7px] -bottom-0.5 -right-0.5 rounded",
-  sm: "w-4 h-4 text-[8px] -bottom-0.5 -right-0.5 rounded-md",
-  md: "w-5 h-5 text-[9px] -bottom-1 -right-1 rounded-md",
-  lg: "w-6 h-6 text-[10px] -bottom-1 -right-1 rounded-lg",
+  xs: "w-3.5 h-3.5 -bottom-0.5 -right-0.5 rounded",
+  sm: "w-4 h-4 -bottom-0.5 -right-0.5 rounded-md",
+  md: "w-5 h-5 -bottom-1 -right-1 rounded-md",
+  lg: "w-6 h-6 text-2xs -bottom-1 -right-1 rounded-lg",
   xl: "w-7 h-7 text-2xs -bottom-1 -right-1 rounded-lg",
   "2xl": "w-8 h-8 text-xs -bottom-1 -right-1 rounded-xl",
 };

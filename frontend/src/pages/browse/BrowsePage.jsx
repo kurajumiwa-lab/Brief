@@ -82,7 +82,7 @@ function ActionCenter({ search, onSearch, onPost, goType, refreshKey }) {
   return (
     <>
       {/* ── the ask: what does your business need today? ──────────────── */}
-      <section className="rounded-3xl border border-edge-1 bg-surface-1 p-4 sm:p-5 space-y-3">
+      <section className="rounded-2xl border border-edge-1 bg-surface-1 p-4 sm:p-5 space-y-3">
         <div>
           <p className="text-2xs font-semibold tracking-wide text-ink-4 uppercase">{where} · Kenya</p>
           <h1 className="text-xl sm:text-2xl font-bold text-ink-1 tracking-tight mt-1">

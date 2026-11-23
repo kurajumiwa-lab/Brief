@@ -25,9 +25,9 @@ import { num, relativeTime } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 
 const STATUS_TONE = {
-  accepted: "text-accent-600 dark:text-accent-400",
+  accepted: "text-accent-700 dark:text-accent-300",
   in_progress: "text-blue-600 dark:text-blue-400",
-  proof_pending: "text-accent-600 dark:text-accent-400",
+  proof_pending: "text-accent-700 dark:text-accent-300",
   completed: "text-brand-600 dark:text-brand-400",
   cancelled: "text-red-600 dark:text-red-400",
 };
@@ -195,7 +195,7 @@ export default function TasksPortal() {
               {me.streak > 0 && (
                 <>
                   <span>·</span>
-                  <span className="inline-flex items-center gap-0.5 text-accent-600 font-semibold">
+                  <span className="inline-flex items-center gap-0.5 text-accent-700 font-semibold">
                     <Flame size={11} /> {me.streak}d streak
                   </span>
                 </>
@@ -230,7 +230,7 @@ export default function TasksPortal() {
                   <span className="font-semibold text-ink-1">{c.label || categoryForSkill(c.skill).shortLabel}</span>
                   <span className="font-mono text-ink-3 capitalize">{c.tier}</span>
                   {c.avg_rating > 0 && (
-                    <span className="text-accent-600 font-mono">★{Number(c.avg_rating).toFixed(1)}</span>
+                    <span className="text-accent-700 font-mono">★{Number(c.avg_rating).toFixed(1)}</span>
                   )}
                 </div>
               ))}
@@ -354,7 +354,7 @@ export default function TasksPortal() {
                       <p className="text-2xs text-ink-4 mt-0.5 flex items-center gap-2">
                         <span>{w.completed_at ? relativeTime(w.completed_at) : "Completed"}</span>
                         {w.client_rating && (
-                          <span className="inline-flex items-center gap-0.5 text-accent-600 dark:text-accent-400 font-semibold">
+                          <span className="inline-flex items-center gap-0.5 text-accent-700 dark:text-accent-300 font-semibold">
                             <Star size={10} className="fill-amber-400" /> {w.client_rating}.0
                           </span>
                         )}
@@ -423,7 +423,7 @@ export default function TasksPortal() {
           onClick={() => navigate("/tasks/brief")}
           className="rounded-2xl border border-edge-1 bg-surface-0 p-4 text-left shadow-xs glass-hover cursor-pointer"
         >
-          <Briefcase size={16} className="text-accent-600 dark:text-accent-400" />
+          <Briefcase size={16} className="text-accent-700 dark:text-accent-300" />
           <p className="text-sm font-semibold text-ink-1 mt-2">Brief</p>
           <p className="text-2xs text-ink-4 mt-0.5">Your workspace — numbers, feed &amp; suggestions</p>
         </button>

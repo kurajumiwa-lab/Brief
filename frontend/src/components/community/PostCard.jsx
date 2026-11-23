@@ -212,7 +212,7 @@ export default function PostCard({ entry, circleName, onReact, onReport, onBlock
           className={cn(
             "inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50",
             mine === "down"
-              ? "border-accent-600 bg-accent-100 text-accent-700 dark:bg-accent-500/15 dark:text-accent-300"
+              ? "border-accent-600 bg-accent-100 text-accent-700 dark:bg-accent-600/15 dark:text-accent-300"
               : "border-edge-2 text-ink-3 hover:bg-surface-2 hover:text-ink-1"
           )}
         >

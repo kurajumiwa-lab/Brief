@@ -20,11 +20,13 @@ copy, not a rewrite — the file is complete and was exercised locally:
 
 | step | verified how |
 |---|---|
-| `npx vitest run` | 94 files, 678 tests |
+| `npx vitest run` | 95 files, 686 tests |
 | `npx vite build` | 19s, 654.78 kB / 174.55 kB gzip |
 | `python -m compileall -q app` | clean |
-| `python -m pytest -q` | 1070 passed (1 pre-existing failure, `test_smoke::test_full_loop`) |
+| `python -m pytest -q` | 1071 passed, 1 skipped (1 pre-existing failure, `test_smoke::test_full_loop`, fails identically with the app/ changes stashed) |
 | Alembic single head | `0083_merit`, 83 revisions |
+| `scripts/migration_drill.py` | PASS — 74 migrations over seeded data, rows unchanged |
+| `scripts/schema_parity.py` | PASS — 234 model tables, 240 live, no missing tables or columns |
 
 ## What it checks
 
@@ -33,8 +35,17 @@ copy, not a rewrite — the file is complete and was exercised locally:
 - **Backend** — compile check first (cheapest signal for a broken deploy), then
   the suite against a bundled PostgreSQL 16 via `pgserver`, because the tests
   take advisory locks and call `to_regclass`; SQLite cannot run them.
-- **Migrations** — asserts exactly one Alembic head, which is a failed merge
-  waiting to happen and is detectable without a database.
+- **Migrations** — three checks, in increasing strength: exactly one Alembic
+  head; `scripts/migration_drill.py`, which builds a months-old schema, seeds it
+  with rows, then applies every remaining migration and verifies the rows are
+  unchanged and readable through the models; and `scripts/schema_parity.py`
+  against a database built by a real `alembic upgrade head`.
+
+  The third one is the answer to a real incident. On 2026-11-22 an agent applied
+  a migration by hand-writing SQL from memory instead of running Alembic. The
+  revision number advanced; the columns were wrong. Parity compares the live
+  schema to `Base.metadata`, so that class of mistake fails the build instead of
+  reaching production.
 
 ESLint runs and reports but does not block: there are 26 pre-existing errors in
 `NoticeBoard.jsx`, `AuthPage.jsx` and `NoticeBoardPage.jsx`. Gating on them today

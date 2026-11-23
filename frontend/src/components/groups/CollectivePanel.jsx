@@ -215,7 +215,7 @@ function RequestRow({ request: r, onChange, compact }) {
         <div>
           <div className="h-2 rounded-full bg-surface-3 overflow-hidden">
             <div
-              className={cn("h-full rounded-full transition-all", r.progress_pct >= 100 ? "bg-brand-600" : "bg-accent-500")}
+              className={cn("h-full rounded-full transition-all", r.progress_pct >= 100 ? "bg-brand-600" : "bg-accent-600")}
               style={{ width: `${Math.min(100, r.progress_pct || 0)}%` }}
             />
           </div>

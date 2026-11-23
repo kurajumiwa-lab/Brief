@@ -64,7 +64,7 @@ const Stars = ({ n, onChange }) => (
 function PlayerPlate({ me }) {
   const e = me.energy;
   return (
-    <div className="glass-strong rounded-3xl p-5">
+    <div className="glass-strong rounded-2xl p-5">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
@@ -86,7 +86,7 @@ function PlayerPlate({ me }) {
             <p className="text-2xs text-ink-4 mt-1">Gold</p>
           </div>
           <div>
-            <div className="digital text-2xl text-accent-600 dark:text-accent-400">{num(me.streak)}</div>
+            <div className="digital text-2xl text-accent-700 dark:text-accent-300">{num(me.streak)}</div>
             <p className="text-2xs text-ink-4 mt-1">day streak</p>
           </div>
           <div>
@@ -245,7 +245,7 @@ function Matches({ me, onChanged }) {
 
   return (
     <div className="space-y-3">
-      <div className="glass-strong rounded-3xl p-5">
+      <div className="glass-strong rounded-2xl p-5">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="min-w-0">
             <p className="text-base font-medium text-ink-1 truncate">{c.title}</p>
@@ -254,7 +254,7 @@ function Matches({ me, onChanged }) {
               {c.location ? ` · ${c.location}` : ""} · agreed KES {num(c.pay_kes)}
             </p>
           </div>
-          <Badge variant="outline" size="sm" className={c.status === "proof_pending" ? "text-accent-600 dark:text-accent-400" : "text-brand-600 dark:text-brand-400"}>
+          <Badge variant="outline" size="sm" className={c.status === "proof_pending" ? "text-accent-700 dark:text-accent-300" : "text-brand-600 dark:text-brand-400"}>
             {c.status.replaceAll("_", " ")}
           </Badge>
         </div>

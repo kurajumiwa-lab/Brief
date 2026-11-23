@@ -93,7 +93,7 @@ def validate_production_settings(settings: "Settings") -> None:
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    APP_NAME: str = "Brief_ Vendor Network"
+    APP_NAME: str = "Brief Vendor Network"
     VERSION: str = "2.2.0"
     DESCRIPTION: str = "Local activity and trade for people, households, artisans, institutions and businesses."
     DEBUG: bool = False
@@ -105,7 +105,7 @@ class Settings(BaseSettings):
     SIX_MONTH_PROGRAM_ENABLED: bool = True
     SIX_MONTH_PROGRAM_END_DATE: str = "2027-04-12"
 
-    # Enterprise workspaces & managed devices (v2.13). Brief_ is not an MDM:
+    # Enterprise workspaces & managed devices (v2.13). Brief is not an MDM:
     # device commands are only dispatched when a workspace has bound its own
     # Android Enterprise / EMM *and* this deployment switch is on. Otherwise
     # commands stay `requested` (audited, never reported as carried out).

@@ -165,7 +165,7 @@ export default function MarketDataPage() {
                       </Badge>
                     )}
                     {row.created_at && (
-                      <span className="text-[10px] text-ink-4">
+                      <span className="text-2xs text-ink-4">
                         seen {new Date(row.created_at).toLocaleDateString()}
                       </span>
                     )}

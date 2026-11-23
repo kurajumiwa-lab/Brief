@@ -27,7 +27,7 @@ log = logging.getLogger("brief.worker")
 async def main() -> None:
     logging.basicConfig(level=logging.DEBUG if settings.DEBUG else logging.INFO,
                         format="%(asctime)s %(levelname)s %(name)s: %(message)s")
-    log.info("⏱  Brief_ worker v%s — POS every %ss, payments every 60s",
+    log.info("⏱  Brief worker v%s — POS every %ss, payments every 60s",
              settings.VERSION, settings.POS_SYNC_INTERVAL)
     pos_task = asyncio.create_task(pos_sync.scheduler_loop(async_session, settings.POS_SYNC_INTERVAL))
     payments_task = asyncio.create_task(payment_worker.scheduler_loop(async_session))

@@ -16,7 +16,7 @@ This is a scope upgrade of the existing vendor network, not a second app:
                             as counts of named registrations — never as an
                             opaque officer score.
     managed_devices         a register of Android devices an organisation
-                            has enrolled for its people. Brief_ keeps the
+                            has enrolled for its people. Brief keeps the
                             register and the audit trail; Google's Android
                             Enterprise / the organisation's EMM does the
                             actual device management. `emm_device_id` is
@@ -80,7 +80,7 @@ class EnterpriseWorkspace(Base):
     region = Column(String(120), nullable=False, default="Kisumu", server_default="Kisumu")
     description = Column(Text, nullable=True)
     # Branding for the organisation's portal view (name/colour/logo only —
-    # the workspace renders inside Brief_, it is not a separate website).
+    # the workspace renders inside Brief, it is not a separate website).
     branding = Column(JSONB, nullable=False, default=dict)
     owner_vendor_id = Column(
         UUID(as_uuid=True), ForeignKey("vendors.id", ondelete="RESTRICT"), nullable=False
@@ -92,7 +92,7 @@ class EnterpriseWorkspace(Base):
     is_public = Column(Boolean, nullable=False, default=False, server_default="false")
     # Android Enterprise binding, copied from the organisation's Google
     # admin / EMM console when it enrols. Null until that external step
-    # happens — Brief_ cannot create it and never pretends to.
+    # happens — Brief cannot create it and never pretends to.
     android_enterprise_id = Column(String(200), nullable=True)
     emm_provider = Column(String(80), nullable=False, default="none", server_default="none")
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)

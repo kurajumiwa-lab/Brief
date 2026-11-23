@@ -12,11 +12,11 @@ export default function DealRail({ items = [], viewAllTo = "/discover?public_sal
     <section aria-labelledby="discover-deals-heading" className="space-y-3">
       <div className="flex items-end justify-between gap-3">
         <div>
-          <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-mk-orange">Don't miss out</p>
+          <p className="text-2xs font-extrabold uppercase tracking-[0.18em] text-mk-orange">Don't miss out</p>
           <h2 id="discover-deals-heading" className="mt-1 text-2xl font-black tracking-tight text-mk-ink">
             Items on sale
           </h2>
-          <p className="mt-0.5 text-[11px] text-mk-ink-soft">Priced offers and public sales around you.</p>
+          <p className="mt-0.5 text-2xs text-mk-ink-soft">Priced offers and public sales around you.</p>
         </div>
         <Link
           to={viewAllTo}
@@ -39,24 +39,24 @@ export default function DealRail({ items = [], viewAllTo = "/discover?public_sal
               key={`${item.feed_kind || item.kind}:${item.id}`}
               to={item.to || "#"}
               data-testid={`discover-deal-${item.id}`}
-              className="group relative block w-[142px] shrink-0 snap-start overflow-hidden rounded-2xl bg-[#171021] shadow-[0_16px_32px_-26px_rgba(15,10,24,0.55)]"
+              className="group relative block w-[142px] shrink-0 snap-start overflow-hidden rounded-2xl bg-ink-1 shadow-[0_16px_32px_-26px_rgba(15,10,24,0.55)]"
             >
               <div className="relative aspect-[3/4] overflow-hidden">
                 {item.image ? (
                   <img src={item.image} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover transition-transform duration-3 group-hover:scale-[1.04]" />
                 ) : (
-                  <span className="absolute inset-0 grid place-items-center bg-gradient-to-br from-[#7A2E0E] to-mk-orange text-white/80">
+                  <span className="absolute inset-0 grid place-items-center bg-gradient-to-br from-accent-700 to-mk-orange text-white/80">
                     <BadgePercent size={28} aria-hidden="true" />
                   </span>
                 )}
-                <span className="absolute inset-0 bg-gradient-to-t from-[#171021] via-[#171021]/55 to-transparent" aria-hidden="true" />
-                <span className="absolute left-2 top-2 rounded-md bg-mk-orange px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-white">
+                <span className="absolute inset-0 bg-gradient-to-t from-ink-1 via-ink-1/55 to-transparent" aria-hidden="true" />
+                <span className="absolute left-2 top-2 rounded-md bg-mk-orange px-1.5 py-0.5 text-2xs font-extrabold uppercase tracking-wide text-white">
                   {item.feed_kind === "SPOTTED_DEAL" ? "Spotted" : "Priced"}
                 </span>
                 <div className="absolute inset-x-0 bottom-0 p-2.5 text-white">
                   <p className="line-clamp-2 text-[12px] font-extrabold leading-snug">{item.title}</p>
                   <p className="mt-1 text-[13px] font-black text-[#FFD7A8]">{priceLabel(item.price_kes)}</p>
-                  <p className="mt-0.5 flex items-center gap-1 text-[10px] text-white/70">
+                  <p className="mt-0.5 flex items-center gap-1 text-2xs text-white/70">
                     <MapPin size={9} aria-hidden="true" />
                     <span className="truncate">{String(item.location || "Near you").split(",")[0]}</span>
                   </p>

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { dirname, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 
 /**
  * CONTRAST IS A TEST, NOT A TASTE.
@@ -129,5 +129,102 @@ describe("the avatar palette", () => {
     for (const banned of ["orchid", "indigo", "rose", "blue", "orange", "violet"]) {
       expect(palette, `avatar palette still contains ${banned}`).not.toContain(`-${banned}-`);
     }
+  });
+});
+
+/**
+ * Direction D (vibrant commerce) made orange a *second voice* — referrals,
+ * rewards, scan actions. The risk is that it slowly becomes a third action
+ * colour, so the rule is asserted rather than left in a comment: a filled
+ * primary button carries white, and white on the orange fill must still be
+ * legible if it is used that way. Green stays the action colour.
+ */
+describe("the orange accent", () => {
+  for (const [name, t] of Object.entries(themes)) {
+    it(`${name}: white on accent-600 is legible`, () => {
+      const r = ratio(t["accent-600"], WHITE);
+      expect(
+        r,
+        `${name}: white on accent-600 is ${r.toFixed(2)}:1 — orange may carry white only if it clears ${AA}:1`,
+      ).toBeGreaterThanOrEqual(AA);
+    });
+
+    // Orange carries two jobs with two values: 600 is a *fill* (white on it),
+    // 700 is *text* on the page. Asserting 600 here would demand one token be
+    // both a light fill and dark-readable text, which no single colour can do.
+    it(`${name}: accent-700 is readable as text on the page`, () => {
+      const r = ratio(t["accent-700"], t["surface-1"]);
+      expect(r, `${name}: accent-700 on surface-1 is ${r.toFixed(2)}:1`).toBeGreaterThanOrEqual(AA);
+    });
+  }
+});
+
+/**
+ * THE 12px FLOOR. The audience reads this in market daylight, so no screen may
+ * size text below 12px with an arbitrary value. Before direction D there were
+ * 82 uses of `text-[11px]` and 142 of `text-[10px]`, which is why the product
+ * read as faint. `text-2xs` (12px) and `text-micro` (11px, uppercase tags only)
+ * are the two sizes allowed at the bottom.
+ */
+describe("the type floor", () => {
+  it("no screen uses an arbitrary size below 12px", () => {
+    const offenders = [];
+    (function walk(d) {
+      for (const entry of readdirSync(d)) {
+        const p = join(d, entry);
+        if (statSync(p).isDirectory()) {
+          if (entry !== "test") walk(p);
+        } else if (/\.jsx?$/.test(p)) {
+          const src = readFileSync(p, "utf8");
+          src.split("\n").forEach((line, i) => {
+            const m = line.match(/text-\[(\d+)px\]/);
+            if (m && Number(m[1]) < 12) offenders.push(`${p.replace(here + "/", "")}:${i + 1} → ${m[0]}`);
+          });
+        }
+      }
+    })(resolve(here, ".."));
+    expect(offenders, `text below the 12px floor:\n  ${offenders.join("\n  ")}`).toEqual([]);
+  });
+});
+
+/**
+ * THE REDESIGN BRIEF'S PALETTE, ASSERTED.
+ *
+ * The brief specified hexes, and three of them cannot be used literally if the
+ * brief's own section 8 requirement ("ensure WCAG AA contrast") is to hold:
+ *
+ *   coral #F06443 with white text      3.18:1  → a filled control uses accent-600
+ *   amber #E9AE55 with white text      1.97:1  → amber is a surface, never a fill
+ *   slate #737B77 as body text on ivory 3.99:1 → body sits at ink-3/ink-4
+ *
+ * These assertions are the record of that: they fail if someone "restores" the
+ * literal hex where it is unreadable, and they document where each value is
+ * allowed to appear.
+ */
+describe("the brief's palette, where it can and cannot be used", () => {
+  for (const [name, t] of Object.entries(themes)) {
+    it(`${name}: teal brand-600 carries white (the identity fill)`, () => {
+      expect(ratio(t["brand-600"], WHITE)).toBeGreaterThanOrEqual(AA);
+    });
+
+    // The brief's own category colours, as label text on their own tint.
+    for (const cat of ["goods", "services", "rentals", "events"]) {
+      it(`${name}: category ${cat} text on its soft tint`, () => {
+        const r = ratio(t[`cat-${cat}-text`], t[`cat-${cat}-soft`]);
+        expect(r, `${name}: cat-${cat}-text on cat-${cat}-soft is ${r.toFixed(2)}:1`).toBeGreaterThanOrEqual(AA);
+      });
+    }
+  }
+
+  it("light: amber-400 is a surface, so it is never claimed to carry white", () => {
+    // Deliberately asserting the FAILURE mode, so a future change that starts
+    // using amber as a button fill is caught by a comment that says why not.
+    const r = ratio(light["amber-400"], WHITE);
+    expect(r, "amber-400 with white text must stay the reason it is surface-only").toBeLessThan(AA);
+  });
+
+  it("light: the brief's literal coral is not used as a fill under white", () => {
+    const r = ratio(light["accent-400"], WHITE);
+    expect(r, "accent-400 is #F06443; at 3.18:1 it may not carry white text").toBeLessThan(AA);
   });
 });

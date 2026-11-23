@@ -406,7 +406,7 @@ export function PostJobPage() {
           <div className={cn("rounded-lg p-3 text-xs leading-relaxed",
             form.poster_kind === "direct"
               ? "bg-brand-50 text-brand-900 dark:bg-brand-500/10 dark:text-brand-100"
-              : "bg-accent-50 text-accent-900 dark:bg-accent-500/10 dark:text-accent-100")}>
+              : "bg-accent-50 text-accent-900 dark:bg-accent-600/10 dark:text-accent-100")}>
             {form.poster_kind === "direct" ? (
               <>
                 <strong>Posting is free.</strong> If you hire through this, the fee is{" "}

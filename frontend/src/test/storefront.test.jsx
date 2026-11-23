@@ -308,3 +308,21 @@ describe("5 · the operator side is separate from the customer side", () => {
     expect(screen.queryByTestId("inbox-empty")).not.toBeInTheDocument();
   });
 });
+
+/**
+ * The retired name reached the browser here and nowhere else.
+ *
+ * `brand.test.js` scans rendered source for retired names, but it skips comment
+ * lines — and `Brief_` survived in `DeskShell` as `{BRAND.wordmark || "Brief"}_`,
+ * which no static scan catches because the underscore is *outside* the brand
+ * expression. It was found by reading the file, not by a failing test, which is
+ * the wrong way round. This asserts the rendered header instead.
+ */
+describe("the desk header", () => {
+  it("names the product Brief, with no stray underscore", async () => {
+    await renderDesk();
+    const header = await screen.findByRole("banner");
+    expect(header.textContent.startsWith("Brief Business Desk")).toBe(true);
+    expect(header.textContent).not.toContain("Brief_");
+  });
+});

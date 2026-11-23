@@ -130,7 +130,7 @@ export function VerifiedStrip({ headline, facts = [], onOpen, className }) {
         <div className="flex flex-wrap gap-1 mt-1.5">
           {verified.map((fact) => (
             <span key={fact.id}
-                  className="text-[10px] font-semibold rounded-full bg-brand-50 text-brand-800 dark:bg-brand-500/10 dark:text-brand-300 px-2 py-0.5">
+                  className="text-2xs font-semibold rounded-full bg-brand-50 text-brand-800 dark:bg-brand-500/10 dark:text-brand-300 px-2 py-0.5">
               {fact.label}
             </span>
           ))}

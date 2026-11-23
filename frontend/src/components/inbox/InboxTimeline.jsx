@@ -85,7 +85,7 @@ export default function InboxTimeline({
                     : "border-transparent bg-surface-0 text-ink-1 hover:border-edge-2",
                 )}
               >
-                <span className={cn("text-[10px] font-semibold", active ? "text-brand-100" : "text-ink-4")}>
+                <span className={cn("text-2xs font-semibold", active ? "text-brand-100" : "text-ink-4")}>
                   {day.dayName}
                 </span>
                 <span className="mt-0.5 text-sm font-extrabold tabular-nums">{day.dayNum}</span>
@@ -168,12 +168,12 @@ export default function InboxTimeline({
               >
                 <div className="min-w-0 flex-1">
                   <div className="mb-1 flex flex-wrap items-center gap-1.5">
-                    <span className="inline-flex items-center gap-1 rounded-md bg-surface-2 px-2 py-0.5 text-[11px] font-semibold text-ink-2">
+                    <span className="inline-flex items-center gap-1 rounded-md bg-surface-2 px-2 py-0.5 text-2xs font-semibold text-ink-2">
                       <CalendarDays size={11} aria-hidden="true" />
                       {agendaDatePill(item.starts_at)}
                     </span>
                     <span className={cn(
-                      "rounded-md border px-2 py-0.5 text-[11px] font-semibold",
+                      "rounded-md border px-2 py-0.5 text-2xs font-semibold",
                       AGENDA_TONES[item.state] || "border-edge-1 bg-surface-2 text-ink-3",
                     )}>
                       {item.status_label}
@@ -187,7 +187,7 @@ export default function InboxTimeline({
                   </Link>
                   <p className="mt-0.5 truncate text-micro text-ink-4">{agendaMeta(item)}</p>
                   {counter && (
-                    <p className="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold text-ink-3">
+                    <p className="mt-1 inline-flex items-center gap-1 text-2xs font-semibold text-ink-3">
                       <Users size={11} aria-hidden="true" />
                       {counter}
                     </p>

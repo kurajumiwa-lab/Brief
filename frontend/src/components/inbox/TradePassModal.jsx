@@ -39,13 +39,13 @@ export default function TradePassModal({ pass, memberHandle, onClose }) {
           <div className="flex items-center gap-2">
             <ShieldCheck size={18} className="text-brand-200" aria-hidden="true" />
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-brand-200">
+              <p className="text-2xs font-bold uppercase tracking-[0.14em] text-brand-200">
                 {pass.kind === "event" ? "Event pass" : "Trade pass"}
               </p>
               <p className="text-micro font-semibold text-brand-100">On record · {pass.status_label}</p>
             </div>
           </div>
-          <span className="rounded-full bg-white/15 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.08em]">
+          <span className="rounded-full bg-white/15 px-2 py-1 text-2xs font-bold uppercase tracking-[0.08em]">
             {pass.kind}
           </span>
         </div>
@@ -56,7 +56,7 @@ export default function TradePassModal({ pass, memberHandle, onClose }) {
             <p className="mt-1 text-micro text-ink-3">
               {agendaDatePill(pass.starts_at)} · {agendaMeta(pass)}
             </p>
-            {counter && <p className="mt-1 text-[11px] font-semibold text-ink-2">{counter}</p>}
+            {counter && <p className="mt-1 text-2xs font-semibold text-ink-2">{counter}</p>}
           </div>
 
           <div className="relative grid place-items-center bg-surface-0 px-4 py-5 text-center">
@@ -65,7 +65,7 @@ export default function TradePassModal({ pass, memberHandle, onClose }) {
             <div className="rounded-xl border border-edge-2 bg-white p-2">
               <QRCodeSVG value={passUrl} size={128} fgColor="#0F3D2E" bgColor="#FFFFFF" level="M" />
             </div>
-            <p className="mt-3 text-[10px] font-bold uppercase tracking-[0.16em] text-ink-4">
+            <p className="mt-3 text-2xs font-bold uppercase tracking-[0.16em] text-ink-4">
               Host / shop code
             </p>
             <p
@@ -74,7 +74,7 @@ export default function TradePassModal({ pass, memberHandle, onClose }) {
             >
               {code}
             </p>
-            <p className="mt-2 max-w-xs text-[10px] leading-relaxed text-ink-4">
+            <p className="mt-2 max-w-xs text-2xs leading-relaxed text-ink-4">
               Show this screen at the meeting point or counter. The code works
               without a signal; the host confirms it against your record.
             </p>
@@ -95,7 +95,7 @@ export default function TradePassModal({ pass, memberHandle, onClose }) {
             </div>
             <div className="flex justify-between gap-3">
               <dt className="text-ink-4">Reference</dt>
-              <dd className="font-mono text-[11px] text-ink-3">{pass.record_id}</dd>
+              <dd className="font-mono text-2xs text-ink-3">{pass.record_id}</dd>
             </div>
           </dl>
         </div>

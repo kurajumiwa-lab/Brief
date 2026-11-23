@@ -131,7 +131,7 @@ export default function GrowthPlannerPage() {
       <Breadcrumbs items={[{ label: "Business", to: "/me" }, { label: "Growth planner & pulse" }]} />
 
       {/* Header */}
-      <header className="rounded-3xl border border-edge-1 bg-surface-1 p-5 sm:p-7 space-y-4">
+      <header className="rounded-2xl border border-edge-1 bg-surface-1 p-5 sm:p-7 space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-1 max-w-2xl">
             <p className="text-micro font-bold uppercase tracking-[0.14em] text-brand-700 dark:text-brand-300">
@@ -168,7 +168,7 @@ export default function GrowthPlannerPage() {
       </header>
 
       {/* 1. Live Business Pulse */}
-      <section aria-labelledby="live-pulse-heading" className="rounded-3xl border border-edge-1 bg-surface-1 p-5 sm:p-6 space-y-4">
+      <section aria-labelledby="live-pulse-heading" className="rounded-2xl border border-edge-1 bg-surface-1 p-5 sm:p-6 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <p className="text-micro font-bold uppercase tracking-[0.14em] text-brand-700 dark:text-brand-300">
@@ -558,7 +558,7 @@ export default function GrowthPlannerPage() {
 
       {/* 6. Six-Month Rollout Plan & Hard-Coded Business Rules */}
       <div className="grid lg:grid-cols-2 gap-6">
-        <section aria-labelledby="rollout-heading" className="rounded-3xl border border-edge-1 bg-surface-1 p-5 space-y-4">
+        <section aria-labelledby="rollout-heading" className="rounded-2xl border border-edge-1 bg-surface-1 p-5 space-y-4">
           <div>
             <p className="text-micro font-bold uppercase tracking-[0.14em] text-brand-700 dark:text-brand-300">
               Six-Month Rollout Plan
@@ -592,7 +592,7 @@ export default function GrowthPlannerPage() {
           </p>
         </section>
 
-        <section aria-labelledby="rules-heading" className="rounded-3xl border border-edge-1 bg-surface-1 p-5 space-y-4">
+        <section aria-labelledby="rules-heading" className="rounded-2xl border border-edge-1 bg-surface-1 p-5 space-y-4">
           <div>
             <p className="text-micro font-bold uppercase tracking-[0.14em] text-brand-700 dark:text-brand-300">
               Centrally Enforced Guardrails
@@ -607,7 +607,7 @@ export default function GrowthPlannerPage() {
               <li key={r.id} className="rounded-xl border border-edge-1 bg-surface-0 p-3 space-y-1">
                 <p className="text-xs font-bold text-ink-1">{r.title}</p>
                 <p className="text-2xs text-ink-3 leading-relaxed">{r.rule}</p>
-                <p className="text-[10px] font-mono text-ink-4">{r.enforced_in}</p>
+                <p className="text-2xs font-mono text-ink-4">{r.enforced_in}</p>
               </li>
             ))}
           </ul>

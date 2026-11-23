@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Brief_ load-test harness (Directive v2.1 §6.2 — monitoring & load testing).
+Brief load-test harness (Directive v2.1 §6.2 — monitoring & load testing).
 
 Drives concurrent virtual vendors against a running API, measures the
 endpoints a real vendor touches, and exits non-zero when the SLOs are missed —
@@ -177,7 +177,7 @@ async def vendor_loop(
 
 
 async def main() -> int:
-    ap = argparse.ArgumentParser(description="Brief_ load-test harness")
+    ap = argparse.ArgumentParser(description="Brief load-test harness")
     ap.add_argument("--base-url", default="http://localhost:8000")
     ap.add_argument("--vendors", type=int, default=8, help="concurrent virtual vendors")
     ap.add_argument("--duration", type=float, default=15.0, help="seconds to keep each vendor busy")

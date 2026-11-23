@@ -45,7 +45,7 @@ export default function FallbackRail({ items = [], region = null, onShowEveryPag
               const level = ownerLevel(item.owner);
               return (
                 <div key={`${item.kind}:${item.id}`} className="w-[46%] min-w-[150px] shrink-0 snap-start sm:w-[220px]">
-                  <div className="mb-1 inline-flex items-center rounded-full bg-surface-2 px-2 py-0.5 text-[10px] font-bold text-ink-3">
+                  <div className="mb-1 inline-flex items-center rounded-full bg-surface-2 px-2 py-0.5 text-2xs font-bold text-ink-3">
                     {level > 0 ? `Lvl ${level}${level >= 3 ? "+" : ""}` : "New page"}
                   </div>
                   <MerchCard item={item} onSavedChanged={onSavedChanged} />

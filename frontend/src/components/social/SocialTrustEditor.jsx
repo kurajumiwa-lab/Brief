@@ -173,7 +173,7 @@ export default function SocialTrustEditor() {
           return (
             <div key={row.platform} className="rounded-xl border border-edge-1 bg-surface-0 p-2.5">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-ink-1">
+                <span className="inline-flex items-center gap-1 text-2xs font-bold text-ink-1">
                   {row.bio_verified ? <BadgeCheck size={12} className="text-brand-700 dark:text-brand-300" /> : <Circle size={12} className="text-ink-4" />}
                   {platform.label}
                 </span>
@@ -205,7 +205,7 @@ export default function SocialTrustEditor() {
                 />
               </div>
               <p className={cn(
-                "mt-1 text-[10px] leading-relaxed",
+                "mt-1 text-2xs leading-relaxed",
                 row.bio_verified ? "text-brand-700 dark:text-brand-300" : "text-ink-4",
               )}>
                 {row.bio_verified
@@ -242,15 +242,15 @@ export default function SocialTrustEditor() {
             Copy code
           </Button>
         </div>
-        <p className="text-[10px] leading-relaxed text-ink-4">{challenge.instructions}</p>
+        <p className="text-2xs leading-relaxed text-ink-4">{challenge.instructions}</p>
 
         {proof && (
           <div className="flex gap-2 rounded-xl border border-edge-1 bg-surface-0 p-2">
             <img src={mediaUrl(proof.image_url)} alt="" className="h-16 w-16 rounded-lg object-cover" />
             <div className="min-w-0">
-              <p className="truncate text-[11px] font-bold text-ink-1">{proof.item_title}</p>
-              <p className="text-[10px] text-ink-3">{proof.label}</p>
-              {proof.price_kes != null && <p className="text-[10px] text-ink-2">{formatKes(proof.price_kes)}</p>}
+              <p className="truncate text-2xs font-bold text-ink-1">{proof.item_title}</p>
+              <p className="text-2xs text-ink-3">{proof.label}</p>
+              {proof.price_kes != null && <p className="text-2xs text-ink-2">{formatKes(proof.price_kes)}</p>}
             </div>
           </div>
         )}
@@ -273,7 +273,7 @@ export default function SocialTrustEditor() {
             aria-label="Price in KSh"
           />
         </div>
-        <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-edge-2 px-2.5 py-2 text-[11px] font-semibold text-ink-2">
+        <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-edge-2 px-2.5 py-2 text-2xs font-semibold text-ink-2">
           {uploading ? <Loader2 size={13} className="animate-spin" /> : <Camera size={13} />}
           {photo ? "Photo attached" : "Snap the product beside the handwritten code"}
           <input type="file" accept="image/*" className="sr-only" onChange={(event) => upload(event.target.files?.[0])} />
@@ -287,7 +287,7 @@ export default function SocialTrustEditor() {
         >
           Publish for 48 hours
         </Button>
-        <p className="text-[10px] leading-relaxed text-ink-4">
+        <p className="text-2xs leading-relaxed text-ink-4">
           A photo proves a photograph was taken beside today&apos;s code. It does
           not prove ownership or quantity, and awards no standing credit.
         </p>
@@ -299,26 +299,26 @@ export default function SocialTrustEditor() {
           <ShieldAlert size={13} className={delivery.qualified_count >= 2 ? "text-amber-600" : "text-ink-4"} aria-hidden="true" />
           <h3 className="text-xs font-extrabold text-ink-1">Delivery reports</h3>
         </div>
-        <p className="text-[11px] leading-relaxed text-ink-3">
+        <p className="text-2xs leading-relaxed text-ink-3">
           {delivery.qualified_count >= 2
             ? delivery.warning_text
             : `${delivery.qualified_count || 0} open report${delivery.qualified_count === 1 ? "" : "s"} from Level 2+ buyers. Two unrelated buyers raise the warning on your page.`}
         </p>
-        <p className="text-[10px] leading-relaxed text-ink-4">
+        <p className="text-2xs leading-relaxed text-ink-4">
           {delivery.signal_note || "A report is an allegation from a buyer who traded with you, not a finding. Two unrelated Level 2+ buyers raise the warning; none of it changes your standing."}
         </p>
         {delivery.reports.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-edge-2 px-2.5 py-2 text-[11px] text-ink-4">
+          <p className="rounded-lg border border-dashed border-edge-2 px-2.5 py-2 text-2xs text-ink-4">
             No open reports. Buyers can only report a trade they actually made with you.
           </p>
         ) : (
           <ul className="space-y-2">
             {delivery.reports.map((report) => (
               <li key={report.id} className="rounded-lg border border-amber-200 bg-amber-50 p-2 dark:border-amber-500/30 dark:bg-amber-500/10">
-                <p className="text-[11px] leading-relaxed text-amber-950 dark:text-amber-100">{report.note}</p>
+                <p className="text-2xs leading-relaxed text-amber-950 dark:text-amber-100">{report.note}</p>
                 <div className="mt-1.5 flex gap-1.5">
                   <input
-                    className="min-w-0 flex-1 rounded-lg border border-amber-300 bg-surface-0 px-2 py-1 text-[11px] text-ink-1"
+                    className="min-w-0 flex-1 rounded-lg border border-amber-300 bg-surface-0 px-2 py-1 text-2xs text-ink-1"
                     placeholder="How was it resolved?"
                     value={resolveNotes[report.id] || ""}
                     onChange={(event) => setResolveNotes((notes) => ({ ...notes, [report.id]: event.target.value }))}
@@ -331,7 +331,7 @@ export default function SocialTrustEditor() {
         )}
       </div>
 
-      <p className="text-[10px] leading-relaxed text-ink-4">{state.signals_note}</p>
+      <p className="text-2xs leading-relaxed text-ink-4">{state.signals_note}</p>
     </section>
   );
 }
