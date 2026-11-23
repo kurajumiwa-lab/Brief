@@ -234,7 +234,7 @@ function LogsDrawer({ connection, onClose }) {
   useEffect(() => {
     if (connection) fetchLogs(connection.id).catch(() => {});
   }, [connection?.id, fetchLogs]); // eslint-disable-line react-hooks/exhaustive-deps
-  const icon = (s) => (s === "success" || s === "completed" ? <CheckCircle2 size={13} className="text-brand-600 dark:text-brand-400" /> : s === "failed" || s === "error" ? <XCircle size={13} className="text-red-600 dark:text-red-400" /> : <Clock size={13} className="text-accent-600 dark:text-accent-400" />);
+  const icon = (s) => (s === "success" || s === "completed" ? <CheckCircle2 size={13} className="text-brand-600 dark:text-brand-400" /> : s === "failed" || s === "error" ? <XCircle size={13} className="text-red-600 dark:text-red-400" /> : <Clock size={13} className="text-accent-700 dark:text-accent-300" />);
   return (
     <Drawer open={!!connection} onClose={onClose} title={connection ? `Sync log · ${connection.connection_name}` : ""} description="Most recent first">
       {!logs ? (

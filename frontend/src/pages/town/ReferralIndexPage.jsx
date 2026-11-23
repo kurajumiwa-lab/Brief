@@ -67,7 +67,7 @@ function ListingCard({ listing, onSelect, onShare, sharing }) {
         {hasBounty && (
           <div className="shrink-0 text-right">
             <p className="digital text-base font-extrabold text-brand-700 dark:text-brand-300">{formatKes(listing.bounty_kes)}</p>
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-ink-4">bounty, direct</p>
+            <p className="text-2xs font-semibold uppercase tracking-wide text-ink-4">bounty, direct</p>
           </div>
         )}
       </div>
@@ -245,7 +245,7 @@ export default function ReferralIndexPage() {
     <div className="mx-auto w-full max-w-2xl space-y-5">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="eyebrow">Referral index</p>
+          <p className="eyebrow">Referrals</p>
           <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-ink-1">Introductions, with proof</h1>
           <p className="mt-1.5 max-w-lg text-xs leading-relaxed text-ink-3">
             Codes and links for Uber, Ena Coach, betting platforms and local businesses.
@@ -285,9 +285,9 @@ export default function ReferralIndexPage() {
 
       {shareLink && (
         <div className="rounded-xl border border-brand-200 bg-brand-50/50 px-3 py-2 dark:border-brand-500/30 dark:bg-brand-500/10">
-          <p className="text-[10px] font-bold uppercase tracking-wide text-brand-700 dark:text-brand-300">Your share link</p>
+          <p className="text-2xs font-bold uppercase tracking-wide text-brand-700 dark:text-brand-300">Your share link</p>
           <p className="mt-0.5 break-all text-2xs text-ink-2">{shareLink}</p>
-          <p className="mt-1 text-[10px] text-ink-4">Code {shareCode}. The funder pays any bounty directly.</p>
+          <p className="mt-1 text-2xs text-ink-4">Code {shareCode}. The funder pays any bounty directly.</p>
         </div>
       )}
 
@@ -371,7 +371,7 @@ export default function ReferralIndexPage() {
           <div className="flex items-center justify-between gap-2">
             <h2 className="text-sm font-extrabold text-ink-1">Your listings</h2>
             <Link to="/merchant" className="inline-flex items-center gap-1 text-2xs font-semibold text-brand-700 dark:text-brand-300">
-              Merchant dashboard <ArrowRight size={12} />
+              For shop owners <ArrowRight size={12} />
             </Link>
           </div>
           <div className="divide-y divide-edge-1 overflow-hidden rounded-2xl border border-edge-1 bg-surface-1">

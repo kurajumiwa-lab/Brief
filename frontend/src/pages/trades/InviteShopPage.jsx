@@ -216,7 +216,7 @@ export default function InviteShopPage() {
         ← Brief
       </Link>
 
-      <section className="mt-4 overflow-hidden rounded-3xl border border-edge-1 bg-surface-1">
+      <section className="mt-4 overflow-hidden rounded-2xl border border-edge-1 bg-surface-1">
         <div className="bg-brand-700 px-5 py-4 text-white">
           <p className="flex items-center gap-2 text-micro font-bold uppercase tracking-[0.16em] text-brand-100">
             <Ticket size={14} aria-hidden="true" />

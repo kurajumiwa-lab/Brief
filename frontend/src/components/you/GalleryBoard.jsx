@@ -64,7 +64,7 @@ export default function GalleryBoard({
       id="gallery"
       data-testid="page-gallery"
       aria-labelledby="gallery-heading"
-      className="rounded-3xl border border-edge-1 bg-surface-1 p-4 sm:p-5"
+      className="rounded-2xl border border-edge-1 bg-surface-1 p-4 sm:p-5"
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
@@ -346,7 +346,7 @@ export function AddGalleryModal({ open, onClose, onAdd, remaining = MAX_GALLERY_
         aria-modal="true"
         aria-labelledby="add-gallery-heading"
         data-testid="add-gallery"
-        className="w-full max-w-lg max-h-[92vh] overflow-y-auto rounded-t-3xl border border-edge-1 bg-surface-1 p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] sm:rounded-3xl sm:p-5"
+        className="w-full max-w-lg max-h-[92vh] overflow-y-auto rounded-t-3xl border border-edge-1 bg-surface-1 p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] sm:rounded-2xl sm:p-5"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-3">

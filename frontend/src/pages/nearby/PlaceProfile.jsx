@@ -87,7 +87,7 @@ export default function PlaceProfile() {
         <span className="text-ink-2 truncate">{place.name}</span>
       </nav>
 
-      <div className="glass-strong rounded-3xl p-5 space-y-3">
+      <div className="glass-strong rounded-2xl p-5 space-y-3">
         <div className="flex items-start gap-3">
           <span className="w-12 h-12 rounded-2xl bg-surface-2 flex items-center justify-center shrink-0">
             <Building2 size={20} className="text-blue-600 dark:text-blue-400" />
@@ -143,7 +143,7 @@ export default function PlaceProfile() {
       </div>
 
       {/* What the source actually gave us */}
-      <div className="glass rounded-3xl divide-y divide-edge-1">
+      <div className="glass rounded-2xl divide-y divide-edge-1">
         {rows.length === 0 ? (
           <p className="p-4 text-xs text-ink-4">The source gave us a name and a location, and nothing else.</p>
         ) : (

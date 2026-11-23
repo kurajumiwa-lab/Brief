@@ -102,7 +102,7 @@ export default function MovementRow({ movement: m, actionable }) {
         <span
           className={cn(
             "w-10 h-10 rounded-xl grid place-items-center shrink-0",
-            incoming ? "bg-blue-50 text-blue-600 dark:bg-blue-500/15 dark:text-blue-400" : "bg-accent-50 text-accent-600 dark:bg-accent-500/15 dark:text-accent-400"
+            incoming ? "bg-blue-50 text-blue-600 dark:bg-blue-500/15 dark:text-blue-400" : "bg-accent-50 text-accent-700 dark:bg-accent-500/15 dark:text-accent-400"
           )}
           title={incoming ? "Incoming — you are sourcing" : "Outgoing — you are supplying"}
         >
@@ -147,7 +147,7 @@ export default function MovementRow({ movement: m, actionable }) {
           </div>
 
           {m.hold_expires_at && m.status === "pending" && (
-            <p className="mt-1.5 text-micro text-accent-600 dark:text-accent-400 font-semibold">
+            <p className="mt-1.5 text-micro text-accent-700 dark:text-accent-300 font-semibold">
               Reservation expires {relativeTime(m.hold_expires_at)}
             </p>
           )}

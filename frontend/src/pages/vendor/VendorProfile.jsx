@@ -326,7 +326,7 @@ export default function VendorProfile() {
       <Breadcrumbs items={[{ label: "Network", to: "/network" }, { label: `@${vendor.vendor_handle}` }]} />
 
       {/* ══ identity + public storefront header, above the fold ═════════ */}
-      <header className="overflow-hidden rounded-3xl border border-edge-1 bg-surface-0">
+      <header className="overflow-hidden rounded-2xl border border-edge-1 bg-surface-0">
         <div
           className="h-24 sm:h-32 w-full bg-cover bg-center"
           style={{
@@ -338,7 +338,7 @@ export default function VendorProfile() {
         />
         <div className="px-5 sm:px-7 pb-5 sm:pb-6">
           <div className="flex flex-col sm:flex-row sm:items-end gap-4 -mt-10 sm:-mt-12">
-            <div className="rounded-3xl ring-4 ring-surface-0 w-fit bg-surface-0">
+            <div className="rounded-2xl ring-4 ring-surface-0 w-fit bg-surface-0">
               <Avatar name={vendor.business_name} src={avatarSrc} size="xl" />
             </div>
             <div className="flex-1 min-w-0 sm:pb-1">
@@ -493,7 +493,7 @@ export default function VendorProfile() {
 
       {/* ══ Shop photo gallery (gallery photo addition, no URL links) ═══ */}
       {(galleryPhotos.length > 0 || own) && (
-        <section aria-labelledby="shop-gallery-heading" className="rounded-3xl border border-edge-1 bg-surface-0 p-5 space-y-3">
+        <section aria-labelledby="shop-gallery-heading" className="rounded-2xl border border-edge-1 bg-surface-0 p-5 space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 id="shop-gallery-heading" className="text-base font-bold text-ink-1">

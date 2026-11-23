@@ -53,7 +53,7 @@ export default function VendorCard({ vendor, compact = false, reasons, footer })
               {vendor.business_name}
             </Link>
             {vendor.is_verified && <ShieldCheck size={13} className="text-brand-600 dark:text-brand-400 shrink-0" title="Verified" />}
-            {vendor.is_patron && <Crown size={13} className="text-accent-600 dark:text-accent-400 shrink-0" title="Patron" />}
+            {vendor.is_patron && <Crown size={13} className="text-accent-700 dark:text-accent-300 shrink-0" title="Patron" />}
             {vendor.has_pos_connected && <Plug size={12} className="text-blue-600 dark:text-blue-400 shrink-0" title="POS connected" />}
           </div>
           <div className="flex items-center gap-2 mt-0.5 text-xs text-ink-4 min-w-0">

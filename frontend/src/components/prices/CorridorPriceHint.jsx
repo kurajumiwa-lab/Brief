@@ -39,14 +39,14 @@ export default function CorridorPriceHint({ hint, enteredPrice, onApplySuggested
             {hint.scope_label} Index
           </h2>
         </div>
-        <span className="shrink-0 text-[10px] font-semibold text-ink-4">
+        <span className="shrink-0 text-2xs font-semibold text-ink-4">
           {sample} local trade{sample === 1 ? "" : "s"}
         </span>
       </div>
 
       <div className="flex flex-col gap-2 rounded-xl border border-edge-1 bg-surface-0 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <span className="block text-[10px] uppercase tracking-wider text-ink-4">
+          <span className="block text-2xs uppercase tracking-wider text-ink-4">
             Typical range · last {hint.window_days || 45} days
           </span>
           <span className="text-sm font-extrabold tabular-nums text-ink-1" data-testid="price-hint-range">
@@ -56,14 +56,14 @@ export default function CorridorPriceHint({ hint, enteredPrice, onApplySuggested
         <button
           type="button"
           onClick={() => onApplySuggestedPrice?.(median)}
-          className="min-h-[44px] rounded-lg border border-brand-200 bg-brand-50 px-3 text-[11px] font-bold text-brand-800 transition-colors hover:bg-brand-100 dark:border-brand-500/30 dark:bg-brand-500/15 dark:text-brand-200"
+          className="min-h-[44px] rounded-lg border border-brand-200 bg-brand-50 px-3 text-2xs font-bold text-brand-800 transition-colors hover:bg-brand-100 dark:border-brand-500/30 dark:bg-brand-500/15 dark:text-brand-200"
         >
           Use median (KSh {median.toLocaleString()})
         </button>
       </div>
 
       {hasPrice && (
-        <div className="text-[11px] leading-relaxed" data-testid="price-hint-qualification">
+        <div className="text-2xs leading-relaxed" data-testid="price-hint-qualification">
           {qualifies ? (
             <span className="inline-flex items-center gap-1 font-semibold text-brand-800 dark:text-brand-200">
               <CheckCircle2 size={13} className="shrink-0" aria-hidden="true" />
@@ -83,7 +83,7 @@ export default function CorridorPriceHint({ hint, enteredPrice, onApplySuggested
         </div>
       )}
 
-      <p className="text-[10px] leading-relaxed text-ink-4">
+      <p className="text-2xs leading-relaxed text-ink-4">
         {hint.signal_note || "A guide from confirmed local trades. It is not a valuation and awards no standing credit."}
       </p>
     </section>

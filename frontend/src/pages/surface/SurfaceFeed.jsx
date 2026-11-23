@@ -19,14 +19,14 @@ import { cn } from "@/lib/utils";
 // ─────────────────────────────────────────────────────────────────────────────
 
 const KIND_META = {
-  product: { icon: Package, tint: "text-accent-600 dark:text-accent-400", label: "Price on the shelf" },
-  callup: { icon: Zap, tint: "text-accent-600 dark:text-accent-400", label: "Call-up near you" },
+  product: { icon: Package, tint: "text-accent-700 dark:text-accent-300", label: "Price on the shelf" },
+  callup: { icon: Zap, tint: "text-accent-700 dark:text-accent-300", label: "Call-up near you" },
   movement: { icon: ArrowLeftRight, tint: "text-blue-600 dark:text-blue-400", label: "Stock moved" },
   event: { icon: CalendarDays, tint: "text-brand-600 dark:text-brand-400", label: "Event coming up" },
   market: { icon: MapPin, tint: "text-purple-600 dark:text-purple-400", label: "Market heat" },
   place: { icon: Building2, tint: "text-blue-600 dark:text-blue-400", label: "Place near you" },
   vendor: { icon: Store, tint: "text-brand-600 dark:text-brand-400", label: "Business near you" },
-  index: { icon: Sigma, tint: "text-accent-600 dark:text-accent-400", label: "Price index" },
+  index: { icon: Sigma, tint: "text-accent-700 dark:text-accent-300", label: "Price index" },
 };
 
 const DOORS = [
@@ -167,7 +167,7 @@ function FeedCard({ c, onGo }) {
   const Icon = m.icon;
   return (
     <section className="h-full snap-start px-4 pt-6 pb-20">
-      <div className="glass-strong rounded-3xl p-5 h-full flex flex-col">
+      <div className="glass-strong rounded-2xl p-5 h-full flex flex-col">
         <div className="flex items-center gap-2">
           <span className={cn("inline-flex items-center gap-1.5 text-2xs font-bold uppercase tracking-[0.18em]", m.tint)}>
             <Icon size={13} /> {m.label}
@@ -197,7 +197,7 @@ function FeedCard({ c, onGo }) {
 function DoorsCard({ onGo }) {
   return (
     <section className="h-full snap-start px-4 pt-6 pb-20">
-      <div className="glass-strong rounded-3xl p-5 h-full flex flex-col">
+      <div className="glass-strong rounded-2xl p-5 h-full flex flex-col">
         <div className="flex items-center gap-2">
           <LayoutGrid size={14} className="text-ink-3" />
           <span className="text-2xs font-bold uppercase tracking-[0.18em] text-ink-3">The doors</span>

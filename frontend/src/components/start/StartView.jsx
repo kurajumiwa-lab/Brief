@@ -104,7 +104,7 @@ export default function StartView({
         ))}
       </div>
 
-      <div className="mt-5 rounded-3xl border border-edge-1 bg-surface-1 p-4 sm:p-5">
+      <div className="mt-5 rounded-2xl border border-edge-1 bg-surface-1 p-4 sm:p-5">
         {step === 0 && (
           <ul className="space-y-2">
             {INTENTS.map((option) => {
@@ -381,7 +381,7 @@ export default function StartView({
                 <p className="eyebrow">Institution claim</p>
                 <p className="mt-1 text-xs font-bold text-ink-1">{affiliation.name}</p>
                 <p className="mt-0.5 flex items-center gap-1.5 text-2xs text-ink-3">
-                  <Circle size={8} className="text-accent-500" aria-hidden="true" />
+                  <Circle size={8} className="text-accent-700" aria-hidden="true" />
                   Waiting for the institution to answer the connection test
                 </p>
               </div>

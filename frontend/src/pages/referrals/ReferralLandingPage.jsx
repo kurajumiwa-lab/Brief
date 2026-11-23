@@ -69,7 +69,7 @@ export default function ReferralLandingPage() {
           </section>
         ) : (
           <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
-            <section className="overflow-hidden rounded-3xl border border-edge-2 bg-surface-0 shadow-sm">
+            <section className="overflow-hidden rounded-2xl border border-edge-2 bg-surface-0 shadow-sm">
               <div className="bg-ink-1 px-5 py-6 text-surface-0">
                 <span className="inline-flex items-center rounded-full bg-white/15 px-2 py-0.5 text-micro font-semibold text-white">
                   A verified referral invitation

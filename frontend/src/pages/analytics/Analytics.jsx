@@ -262,7 +262,7 @@ export default function Analytics() {
                     <div key={h.period} className="flex items-center justify-between text-xs rounded-lg border border-edge-1 bg-surface-1 px-3 py-1.5">
                       <span className="text-ink-3 font-mono">{shortDate(h.period).replace(/^\d+ /, "")}</span>
                       <span className="font-mono text-ink-1">
-                        <span className="text-accent-600 dark:text-accent-400">+{currency(h.sold_value)}</span>
+                        <span className="text-accent-700 dark:text-accent-300">+{currency(h.sold_value)}</span>
                         <span className="text-ink-4"> / </span>
                         <span className="text-blue-600 dark:text-blue-400">-{currency(h.bought_value)}</span>
                       </span>

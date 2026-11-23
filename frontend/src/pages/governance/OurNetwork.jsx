@@ -128,7 +128,7 @@ function ProposalCard({ proposal, onVote }) {
                 {proposal.vendor_vote === value ? `Voted ${label}` : label}
               </Button>
             ))}
-            {!proposal.eligibility?.eligible && <span className="text-2xs text-accent-600 dark:text-accent-400">Ballot not available yet</span>}
+            {!proposal.eligibility?.eligible && <span className="text-2xs text-accent-700 dark:text-accent-300">Ballot not available yet</span>}
           </>
         )}
         {!isOpen && <Button size="xs" variant="outline" loading={loading} onClick={showResults}>{details ? "Hide results" : "View results"}</Button>}
@@ -211,7 +211,7 @@ function ConsentCard({ consent, onChange }) {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-lg border border-edge-1 bg-surface-0 p-3">
       <div className="min-w-0">
-        <div className="flex items-center gap-2"><h3 className="text-xs font-semibold text-ink-1">{copy.title || labelize(consent.purpose)}</h3>{consent.sensitive && <LockKeyhole size={12} className="text-accent-600 dark:text-accent-400" />}</div>
+        <div className="flex items-center gap-2"><h3 className="text-xs font-semibold text-ink-1">{copy.title || labelize(consent.purpose)}</h3>{consent.sensitive && <LockKeyhole size={12} className="text-accent-700 dark:text-accent-300" />}</div>
         <p className="mt-1 text-2xs text-ink-4">{copy.detail}</p>
         {consent.granted && <p className="mt-1 text-2xs text-ink-4">Granted until {asDate(consent.expires_at)}</p>}
       </div>
@@ -510,12 +510,12 @@ export default function OurNetwork() {
       <div className="grid sm:grid-cols-3 gap-3">
         <Card padding="p-3"><div className="flex items-center gap-2 text-brand-600 dark:text-brand-400"><Vote size={15} /><span className="text-xs font-semibold text-ink-1">One eligible vendor, one vote</span></div><p className="mt-1 text-2xs text-ink-4">Biashara Score does not determine ballot access or weight.</p></Card>
         <Card padding="p-3"><div className="flex items-center gap-2 text-blue-600 dark:text-blue-400"><ShieldCheck size={15} /><span className="text-xs font-semibold text-ink-1">Human decisions, recorded</span></div><p className="mt-1 text-2xs text-ink-4">Changes to ballots and sensitive admin actions leave an audit trail.</p></Card>
-        <Card padding="p-3"><div className="flex items-center gap-2 text-accent-600 dark:text-accent-400"><WalletCards size={15} /><span className="text-xs font-semibold text-ink-1">No cash movement</span></div><p className="mt-1 text-2xs text-ink-4">Benefit estimates are not spendable credits or guaranteed income.</p></Card>
+        <Card padding="p-3"><div className="flex items-center gap-2 text-accent-700 dark:text-accent-300"><WalletCards size={15} /><span className="text-xs font-semibold text-ink-1">No cash movement</span></div><p className="mt-1 text-2xs text-ink-4">Benefit estimates are not spendable credits or guaranteed income.</p></Card>
       </div>
 
       <section>
         <SectionHeading icon={Vote} title="Zone proposals & votes" detail="A proposal is a transparent record of a question, authority label, ballot and outcome. A passed vote does not automatically execute its proposed changes." />
-        {!vendorZone && <div className="mb-3 rounded-lg bg-accent-500/10 ring-2 ring-amber-500/15 p-3 text-xs text-accent-600 dark:text-accent-400">Choose an active market zone in <Link to="/locks" className="underline">Market Locks</Link> before opening or voting on zone proposals.</div>}
+        {!vendorZone && <div className="mb-3 rounded-lg bg-accent-500/10 ring-2 ring-amber-500/15 p-3 text-xs text-accent-700 dark:text-accent-300">Choose an active market zone in <Link to="/locks" className="underline">Market Locks</Link> before opening or voting on zone proposals.</div>}
         <Card className="mb-3" padding="p-4"><CardHeader><CardTitle sub="Zone proposals are advisory in this release">Open a proposal</CardTitle><Badge variant="outline" size="xs">No binding power enabled</Badge></CardHeader><ProposalForm disabled={!vendorZone} onCreated={() => load(false)} /></Card>
         <div className="space-y-3">{openProposals.map((proposal) => <ProposalCard key={proposal.id} proposal={proposal} onVote={vote} />)}</div>
         {openProposals.length === 0 && <EmptyState icon={Vote} title="No open proposals" description="When a zone proposal is opened, it will appear here for eligible vendor review." compact />}
@@ -540,7 +540,7 @@ export default function OurNetwork() {
           <SectionHeading icon={WalletCards} title="Your Network Benefit view" detail="This is private to you. Other vendors' individual estimates and credits are never shown here." />
           <div className="grid grid-cols-2 gap-3"><div className="rounded-lg border border-edge-1 bg-surface-0 p-3"><p className="text-2xs text-ink-4">Spendable credit</p><p className="mt-1 text-lg font-semibold text-ink-1">{money(benefits?.available_credit_ksh)}</p><p className="text-2xs text-ink-4">Not enabled</p></div><div className="rounded-lg border border-edge-1 bg-surface-0 p-3"><p className="text-2xs text-ink-4">Review-only estimate</p><p className="mt-1 text-lg font-semibold text-ink-1">{money(benefits?.pending_estimate_ksh)}</p><p className="text-2xs text-ink-4">{labelize(benefits?.pool_status || "not configured")}</p></div></div>
           {benefits?.components && <div className="mt-3 grid grid-cols-2 gap-2 text-2xs">{Object.entries(benefits.components).map(([key, value]) => <p key={key} className="rounded bg-surface-0 p-2 text-ink-4">{labelize(key)} <b className="block text-ink-2">{Number(value).toFixed(3)}</b></p>)}</div>}
-          <div className="mt-3 rounded-lg bg-accent-500/10 p-3 text-2xs leading-relaxed text-accent-600 dark:text-accent-400">{benefits?.disclaimer || "No credit is issued or spendable. There is no guaranteed benefit, ownership claim, or payment balance."}</div>
+          <div className="mt-3 rounded-lg bg-accent-500/10 p-3 text-2xs leading-relaxed text-accent-700 dark:text-accent-300">{benefits?.disclaimer || "No credit is issued or spendable. There is no guaranteed benefit, ownership claim, or payment balance."}</div>
           <div className="mt-3 rounded-lg border border-edge-1 bg-surface-0 p-3"><div className="flex items-center gap-2"><FileCheck2 size={14} className="text-brand-600 dark:text-brand-400" /><p className="text-xs font-semibold text-ink-2">Pool policy</p></div>{allocationPolicy?.active ? <p className="mt-1 text-2xs text-ink-4">Policy v{allocationPolicy.version}, effective {asDate(allocationPolicy.effective_from)} · vendor pool share {Number(allocationPolicy.rates.vendor_pool).toLocaleString("en-KE", { style: "percent", maximumFractionDigits: 2 })}</p> : <p className="mt-1 text-2xs text-ink-4">{allocationPolicy?.message || "No allocation policy is currently active."}</p>}</div>
         </Card>
       </section>

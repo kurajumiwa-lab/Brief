@@ -204,7 +204,7 @@ export default function AuthPage() {
             <span className="text-micro text-ink-4 border-l border-edge-2 pl-2.5">neighbourhood activity & trade</span>
           </div>
 
-          <div className="rounded-3xl border border-edge-1 bg-surface-0 shadow-sm p-6 sm:p-7">
+          <div className="rounded-2xl border border-edge-1 bg-surface-0 shadow-sm p-6 sm:p-7">
             <div className="flex items-center gap-1 p-1 rounded-xl bg-surface-2 w-fit mb-6" role="tablist">
               {["login", "register"].map((m) => (
                 <button

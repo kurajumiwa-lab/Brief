@@ -66,7 +66,7 @@ export default function ReferralShareLandingPage() {
         <Button as={Link} to={token ? target : `/auth?mode=register&next=${encodeURIComponent(target)}`} fullWidth>
           {token ? "Open and claim the provider's offer" : "Create an account to claim the offer"} <ArrowRight size={15} />
         </Button>
-        <p className="text-center text-[10px] leading-relaxed text-ink-4">
+        <p className="text-center text-2xs leading-relaxed text-ink-4">
           {payload.disclosure}
         </p>
       </Card>

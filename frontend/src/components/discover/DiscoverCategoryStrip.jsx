@@ -15,12 +15,12 @@ import { cn } from "@/lib/utils";
  * on this device and never become a public signal.
  */
 const CATEGORIES = [
-  { key: "all", label: "All", value: "", Icon: LayoutGrid, tone: "from-[#2A1F3D] to-[#4B3568]" },
-  { key: "goods", label: "Goods", value: "listing", Icon: Package, tone: "from-[#8A3B22] to-[#D06A3C]", match: (i) => i.kind === "listing" || i.meta?.primary_category === "goods" },
-  { key: "services", label: "Services", value: "service", Icon: Truck, tone: "from-[#1F5C4D] to-[#3D9C7C]", match: (i) => ["service", "provider"].includes(i.kind) || i.meta?.primary_category === "service" },
-  { key: "rentals", label: "Rentals", value: "rental", Icon: Wrench, tone: "from-[#3E4A57] to-[#75899B]", match: (i) => i.kind === "rental" || i.meta?.primary_category === "rental" },
-  { key: "rounds", label: "Rounds", value: "rounds", Icon: CalendarDays, tone: "from-[#6B4B18] to-[#B8862F]", match: (i) => ["scheduled", "event"].includes(i.kind) },
-  { key: "spotted", label: "Spotted", value: "spotted", Icon: BadgePercent, tone: "from-[#8A2E0D] to-[#E8552F]", match: (i) => i.feed_kind === "SPOTTED_DEAL" },
+  { key: "all", label: "All", value: "", Icon: LayoutGrid, tone: "from-ink-1 to-brand-800" },
+  { key: "goods", label: "Goods", value: "listing", Icon: Package, tone: "from-accent-700 to-accent-400", match: (i) => i.kind === "listing" || i.meta?.primary_category === "goods" },
+  { key: "services", label: "Services", value: "service", Icon: Truck, tone: "from-brand-800 to-brand-500", match: (i) => ["service", "provider"].includes(i.kind) || i.meta?.primary_category === "service" },
+  { key: "rentals", label: "Rentals", value: "rental", Icon: Wrench, tone: "from-ink-2 to-ink-4", match: (i) => i.kind === "rental" || i.meta?.primary_category === "rental" },
+  { key: "rounds", label: "Rounds", value: "rounds", Icon: CalendarDays, tone: "from-accent-800 to-accent-500", match: (i) => ["scheduled", "event"].includes(i.kind) },
+  { key: "spotted", label: "Spotted", value: "spotted", Icon: BadgePercent, tone: "from-brand-900 to-brand-600", match: (i) => i.feed_kind === "SPOTTED_DEAL" },
 ];
 
 function photoFor(match, items) {
@@ -53,7 +53,7 @@ export default function DiscoverCategoryStrip({ value, onSelect, savedCount = 0,
           <Heart size={17} strokeWidth={2} aria-hidden="true" />
         </span>
         {savedCount > 0 && (
-          <span className="absolute right-2.5 top-2.5 rounded-full bg-[#1F1632]/85 px-1.5 py-0.5 text-[10px] font-extrabold text-[#FAF7F2]">
+          <span className="absolute right-2.5 top-2.5 rounded-full bg-[#1F1632]/85 px-1.5 py-0.5 text-2xs font-extrabold text-[#FAF7F2]">
             {savedCount}
           </span>
         )}

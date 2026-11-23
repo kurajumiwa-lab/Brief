@@ -177,7 +177,7 @@ export default function MapSheet({ item, onClose, onFocus }) {
                 </Line>
                 {detail.stale && (
                   <Line icon={AlertTriangle}>
-                    <span className="text-accent-600 dark:text-accent-400">
+                    <span className="text-accent-700 dark:text-accent-300">
                       The source has not confirmed this place in {num(detail.checked_days_ago ?? "many")} days — treat it as outdated
                     </span>
                   </Line>
@@ -272,7 +272,7 @@ export default function MapSheet({ item, onClose, onFocus }) {
         </div>
 
         {kind === "places" && (
-          <p className="mt-2 text-[10px] text-ink-4/80">Data © OpenStreetMap contributors (ODbL)</p>
+          <p className="mt-2 text-2xs text-ink-4/80">Data © OpenStreetMap contributors (ODbL)</p>
         )}
       </div>
     </div>

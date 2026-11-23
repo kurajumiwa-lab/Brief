@@ -62,7 +62,7 @@ export default function DealProposalCard({ message, mine }) {
 
   return (
     <div className={cn("mt-1.5 rounded-lg border p-2.5 min-w-[15rem]", status === "accepted" ? "border-brand-200 dark:border-brand-800 bg-brand-50 dark:bg-brand-500/15" : status === "declined" ? "border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-500/15" : status === "countered" ? "border-edge-2 bg-surface-2/60" : "border-accent-200 dark:border-accent-800 bg-accent-50 dark:bg-accent-500/15")} data-testid="deal-card" data-status={status}>
-      <div className="flex items-center gap-2 text-accent-600 dark:text-accent-400">
+      <div className="flex items-center gap-2 text-accent-700 dark:text-accent-300">
         <HeartHandshake size={13} />
         <span className="text-xs font-semibold">{deal.round > 1 ? `Counter-offer · round ${deal.round}` : "Deal proposal"}</span>
         <Badge variant={DEAL_STATUS_BADGE[status] || "gray"} size="xs" className="ml-auto">
@@ -85,7 +85,7 @@ export default function DealProposalCard({ message, mine }) {
         {total != null && (
           <>
             <dt className="text-ink-4">Total</dt>
-            <dd className="font-mono text-accent-600 dark:text-accent-400 font-semibold">{currency(total)}</dd>
+            <dd className="font-mono text-accent-700 dark:text-accent-300 font-semibold">{currency(total)}</dd>
           </>
         )}
         <dt className="text-ink-4">Delivery</dt>

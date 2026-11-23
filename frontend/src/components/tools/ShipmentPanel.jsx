@@ -197,7 +197,7 @@ function ShipmentCard({ shipment: s, onChange }) {
       )}
 
       {s.rating != null ? (
-        <p className="text-2xs text-accent-600 dark:text-accent-400 inline-flex items-center gap-1">
+        <p className="text-2xs text-accent-700 dark:text-accent-300 inline-flex items-center gap-1">
           <Star size={11} /> {s.rating}/5{s.review ? <span className="text-ink-3"> — {s.review}</span> : null}
         </p>
       ) : (
@@ -205,7 +205,7 @@ function ShipmentCard({ shipment: s, onChange }) {
           <div className="rounded-lg border border-edge-1 bg-surface-2 p-2.5 space-y-2" aria-label="Rate this delivery">
             <div className="flex items-center gap-1">
               {[1, 2, 3, 4, 5].map((n) => (
-                <button key={n} type="button" onClick={() => setRating(n)} aria-label={`${n} star${n === 1 ? "" : "s"}`} className={cn("p-0.5", n <= rating ? "text-accent-600 dark:text-accent-400" : "text-ink-4 hover:text-accent-600 dark:hover:text-accent-400")}>
+                <button key={n} type="button" onClick={() => setRating(n)} aria-label={`${n} star${n === 1 ? "" : "s"}`} className={cn("p-0.5", n <= rating ? "text-accent-700 dark:text-accent-300" : "text-ink-4 hover:text-accent-700 dark:hover:text-accent-400")}>
                   <Star size={16} fill={n <= rating ? "currentColor" : "none"} />
                 </button>
               ))}

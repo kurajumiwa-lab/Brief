@@ -271,7 +271,7 @@ export default function MapPage() {
       )}
 
       {/* ── the map / the list ──────────────────────────────────────────── */}
-      <div className="relative mt-2 flex-1 min-h-0 rounded-3xl overflow-hidden glass-strong">
+      <div className="relative mt-2 flex-1 min-h-0 rounded-2xl overflow-hidden glass-strong">
         {mode === "map" ? (
           <>
             <MarketMap
@@ -296,7 +296,7 @@ export default function MapPage() {
                     : areaSummary(shownCounts, kind, { externalHidden: !showExternal })}
               </p>
               {offline && (
-                <p className="text-2xs px-2 py-1 rounded-full bg-accent-500/10 text-accent-600 dark:text-accent-400 inline-flex items-center gap-1">
+                <p className="text-2xs px-2 py-1 rounded-full bg-accent-500/10 text-accent-700 dark:text-accent-300 inline-flex items-center gap-1">
                   <CloudOff size={10} /> last loaded area
                 </p>
               )}
@@ -341,7 +341,7 @@ export default function MapPage() {
               onFocus={(it) => mapRef.current?.flyTo(it.lat, it.lng, 17)} />
 
             {attribution && (
-              <p className="absolute bottom-1 left-2 z-[400] text-[10px] text-white/45 bg-ink-1/50 rounded px-1.5 py-0.5"
+              <p className="absolute bottom-1 left-2 z-[400] text-2xs text-white/45 bg-ink-1/50 rounded px-1.5 py-0.5"
                 style={{ display: selected ? "none" : "block" }}
                 dangerouslySetInnerHTML={{ __html: attribution }} />
             )}
@@ -399,7 +399,7 @@ function NearbyList({ items, loading, selectedId, onSelect, onOpenMarkets }) {
               <span className={cn("block truncate", external ? "text-sm text-ink-3" : "text-sm font-medium text-ink-1")}>
                 {it.name}
                 {tag && (
-                  <span className={cn("ml-1.5 text-[10px] font-semibold rounded-full px-1.5 py-0.5 align-middle",
+                  <span className={cn("ml-1.5 text-2xs font-semibold rounded-full px-1.5 py-0.5 align-middle",
                     tag === "network" ? "text-brand-600 dark:text-brand-400 bg-brand-500/10" : "text-ink-4 bg-surface-2")}>
                     {tag}
                   </span>

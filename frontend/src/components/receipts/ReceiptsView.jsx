@@ -234,7 +234,7 @@ export default function ReceiptsView({ receipts = [], points = 0, region = null,
                 Fund a verified referral campaign
               </Button>
               <Button as={Link} to="/merchant" variant="secondary" size="sm" icon={Store}>
-                Merchant dashboard
+                For shop owners
               </Button>
               <Button as={Link} to="/receipt-rewards" variant="secondary" size="sm" icon={QrCode}>
                 Priority receipt scan

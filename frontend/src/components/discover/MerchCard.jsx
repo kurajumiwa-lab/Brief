@@ -92,7 +92,7 @@ export default function MerchCard({ item, featured = false, onSavedChanged }) {
       data-testid={`content-card-${item.kind}`}
       data-merch-card="true"
       className={cn(
-        "shelf-card group relative flex min-w-0 flex-col bg-[#171021] text-white",
+        "shelf-card group relative flex min-w-0 flex-col bg-ink-1 text-white",
         "min-h-[292px] transition-transform duration-2 hover:-translate-y-0.5",
         featured && "sm:col-span-2 sm:min-h-[340px]",
       )}
@@ -115,7 +115,7 @@ export default function MerchCard({ item, featured = false, onSavedChanged }) {
             </span>
           )}
         </Link>
-        <span className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#171021]/45 via-transparent to-[#171021]" aria-hidden="true" />
+        <span className="pointer-events-none absolute inset-0 bg-gradient-to-b from-ink-1/45 via-transparent to-ink-1" aria-hidden="true" />
       </div>
 
       <div className="relative z-20 flex items-start justify-between gap-2 p-2">
@@ -151,7 +151,7 @@ export default function MerchCard({ item, featured = false, onSavedChanged }) {
       </div>
 
       {shared && (
-        <span className="absolute left-2 top-14 z-20 rounded-md bg-black/70 px-2 py-1 text-[10px] font-bold text-white backdrop-blur">
+        <span className="absolute left-2 top-14 z-20 rounded-md bg-black/70 px-2 py-1 text-2xs font-bold text-white backdrop-blur">
           Link copied
         </span>
       )}
@@ -163,7 +163,7 @@ export default function MerchCard({ item, featured = false, onSavedChanged }) {
           </h3>
         </Link>
 
-        <div className="mt-1 flex min-w-0 items-center gap-1.5 text-[10px] font-bold text-white/70">
+        <div className="mt-1 flex min-w-0 items-center gap-1.5 text-2xs font-bold text-white/70">
           <span className="inline-flex items-center gap-0.5 rounded-full bg-white/15 px-1.5 py-0.5 text-white backdrop-blur">
             Lvl {rank.level}{rank.level >= 3 ? "+" : ""}
           </span>
@@ -173,7 +173,7 @@ export default function MerchCard({ item, featured = false, onSavedChanged }) {
         </div>
 
         {serviceCount > 0 && (
-          <span data-testid="region-card-service-count" className="mt-1 inline-flex w-fit items-center rounded-full bg-white/15 px-1.5 py-0.5 text-[10px] font-bold text-white/80 backdrop-blur">
+          <span data-testid="region-card-service-count" className="mt-1 inline-flex w-fit items-center rounded-full bg-white/15 px-1.5 py-0.5 text-2xs font-bold text-white/80 backdrop-blur">
             {serviceCount} service{serviceCount === 1 ? "" : "s"}
           </span>
         )}
@@ -182,14 +182,14 @@ export default function MerchCard({ item, featured = false, onSavedChanged }) {
           <span
             data-testid="region-card-fair-price"
             title={`At or below the ${item.corridor_scope_label || item.location || "corridor"} median of KSh ${Number(item.corridor_median_kes || 0).toLocaleString()}`}
-            className="mt-1 inline-flex w-fit items-center gap-1 rounded-md bg-[#FFD7A8]/20 px-1.5 py-0.5 text-[10px] font-bold text-[#FFD7A8] backdrop-blur"
+            className="mt-1 inline-flex w-fit items-center gap-1 rounded-md bg-[#FFD7A8]/20 px-1.5 py-0.5 text-2xs font-bold text-[#FFD7A8] backdrop-blur"
           >
             <TrendingDown size={11} aria-hidden="true" /> Fair corridor price
           </span>
         )}
 
         <div className="mt-2 rounded-xl bg-black/35 p-2 backdrop-blur-sm">
-          <div className="flex items-center justify-between gap-2 text-[10px] font-bold uppercase tracking-[0.06em] text-white/60">
+          <div className="flex items-center justify-between gap-2 text-2xs font-bold uppercase tracking-[0.06em] text-white/60">
             <span className="truncate">{unitLabel(item)}</span>
             {item.distance_km != null && (
               <span data-testid="region-card-distance" className="inline-flex shrink-0 items-center gap-0.5 normal-case tracking-normal">
@@ -203,7 +203,7 @@ export default function MerchCard({ item, featured = false, onSavedChanged }) {
             <span
               data-testid="region-card-level"
               title={`${rank.label} · Lvl ${rank.level}`}
-              className="shrink-0 rounded-md bg-white/20 px-1.5 py-0.5 text-[10px] font-extrabold"
+              className="shrink-0 rounded-md bg-white/20 px-1.5 py-0.5 text-2xs font-extrabold"
             >
               Lvl {rank.level}{rank.level >= 3 ? "+" : ""}
             </span>
@@ -213,7 +213,7 @@ export default function MerchCard({ item, featured = false, onSavedChanged }) {
         <div className="mt-auto pt-2.5">
           {momentum?.capacity > 0 ? (
             <>
-              <div className="flex items-center justify-between gap-2 text-[10px] font-bold text-white/70">
+              <div className="flex items-center justify-between gap-2 text-2xs font-bold text-white/70">
                 <span data-testid="region-card-momentum">{momentum.text}</span>
                 <span>{Math.max(momentum.capacity - momentum.joined, 0)} left</span>
               </div>
@@ -229,13 +229,13 @@ export default function MerchCard({ item, featured = false, onSavedChanged }) {
 
           <Link
             to={item.to || "#"}
-            className="mt-2 flex h-10 w-full items-center justify-center gap-1 rounded-lg bg-mk-orange text-[11px] font-extrabold uppercase tracking-[0.06em] text-white transition-colors hover:bg-mk-orange/90"
+            className="mt-2 flex h-10 w-full items-center justify-center gap-1 rounded-lg bg-mk-orange text-2xs font-extrabold uppercase tracking-[0.06em] text-white transition-colors hover:bg-mk-orange/90"
           >
             {cta} <ArrowRight size={11} aria-hidden="true" />
           </Link>
 
           {!momentum?.capacity && item.owner?.handle && (
-            <span className="mt-1.5 block truncate text-center text-[10px] text-white/55">/p/{item.owner.handle}</span>
+            <span className="mt-1.5 block truncate text-center text-2xs text-white/55">/p/{item.owner.handle}</span>
           )}
         </div>
       </div>

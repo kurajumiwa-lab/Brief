@@ -219,7 +219,7 @@ export default function StreetPage() {
   if (!data) {
     return error ? (
       <main className="mx-auto max-w-2xl px-4 py-10">
-        <div className="soft-card rounded-3xl bg-surface-0 p-6">
+        <div className="soft-card rounded-2xl bg-surface-0 p-6">
           <p className="text-sm font-semibold text-ink-1">{error}</p>
           <Button className="mt-4" size="sm" onClick={load}>Try again</Button>
         </div>
@@ -274,20 +274,20 @@ export default function StreetPage() {
 
       <section
         data-testid="street-season"
-        className="shelf-card relative mt-5 overflow-hidden rounded-3xl p-5 text-white sm:p-6"
-        style={{ background: `linear-gradient(135deg, ${season.accent}, #171021 78%)` }}
+        className="shelf-card relative mt-5 overflow-hidden rounded-2xl p-5 text-white sm:p-6"
+        style={{ background: `linear-gradient(135deg, ${season.accent}, rgb(var(--ink-1)) 78%)` }}
       >
         <div className="pointer-events-none absolute -right-12 -top-16 h-52 w-52 rounded-full bg-white/15 blur-3xl" aria-hidden="true" />
         <div className="relative">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.14em] backdrop-blur">
+            <span className="rounded-full bg-white/15 px-2.5 py-1 text-2xs font-extrabold uppercase tracking-[0.14em] backdrop-blur">
               {season.chapter} · {season.week} of 13
             </span>
-            <span className="rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-bold backdrop-blur">
+            <span className="rounded-full bg-white/15 px-2.5 py-1 text-2xs font-bold backdrop-blur">
               {season.days_left} days left
             </span>
             {pulseActive && (
-              <span className="rounded-full bg-[#E65100] px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.1em]">
+              <span className="rounded-full bg-accent-600 px-2.5 py-1 text-2xs font-extrabold uppercase tracking-[0.1em]">
                 {pulseActive.label} rail
               </span>
             )}
@@ -302,13 +302,13 @@ export default function StreetPage() {
       </section>
 
       <div className="mt-5 grid gap-3 sm:grid-cols-2">
-        <section className="soft-card rounded-3xl bg-surface-0 p-4" data-testid="street-today">
+        <section className="soft-card rounded-2xl bg-surface-0 p-4" data-testid="street-today">
           <div className="flex items-center gap-2">
             <span className="grid h-8 w-8 place-items-center rounded-xl bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300">
               <Radio size={15} aria-hidden="true" />
             </span>
             <div className="min-w-0">
-              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-ink-4">Today&apos;s script</p>
+              <p className="text-2xs font-bold uppercase tracking-[0.14em] text-ink-4">Today&apos;s script</p>
               <p className="text-xs font-extrabold text-ink-1">{today ? today.zone_label : "No script today"}</p>
             </div>
             {today && (
@@ -332,24 +332,24 @@ export default function StreetPage() {
           )}
         </section>
 
-        <section className="soft-card rounded-3xl bg-surface-0 p-4" data-testid="street-guide">
-          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-ink-4">
+        <section className="soft-card rounded-2xl bg-surface-0 p-4" data-testid="street-guide">
+          <p className="text-2xs font-bold uppercase tracking-[0.14em] text-ink-4">
             {guide.persona?.name || "Mtaa"} · {guide.persona?.role || "your street guide"} · level {guide.level}
           </p>
           <div className="mt-2 flex items-end justify-between gap-2">
             <h3 className="text-sm font-extrabold text-ink-1">{guide.completed} of {guide.total} chapters</h3>
-            <span className="text-[11px] font-bold tabular-nums text-ink-4">{guide.season_points} pts</span>
+            <span className="text-2xs font-bold tabular-nums text-ink-4">{guide.season_points} pts</span>
           </div>
           <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-surface-2">
             <div className="h-full rounded-full bg-brand-600" style={{ width: `${guide.progress_pct}%` }} />
           </div>
           {guide.persona?.line && (
-            <p className="mt-2 text-[11px] italic leading-relaxed text-ink-3">{guide.persona.line}</p>
+            <p className="mt-2 text-2xs italic leading-relaxed text-ink-3">{guide.persona.line}</p>
           )}
           {guide.next_chapter ? (
             <div className="mt-3">
               <p className="text-xs font-extrabold text-ink-1">{guide.next_chapter.title}</p>
-              <p className="mt-0.5 text-[11px] leading-relaxed text-ink-3">{guide.next_chapter.body}</p>
+              <p className="mt-0.5 text-2xs leading-relaxed text-ink-3">{guide.next_chapter.body}</p>
               <Link to={guide.next_chapter.href} className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-brand-700 hover:underline dark:text-brand-300">
                 {guide.next_chapter.cta} <ArrowRight size={12} aria-hidden="true" />
               </Link>
@@ -370,7 +370,7 @@ export default function StreetPage() {
               Open tables <span className="text-ink-4">({visible.length})</span>
             </h2>
           </div>
-          <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-ink-4">Expires by itself</span>
+          <span className="text-2xs font-bold uppercase tracking-[0.12em] text-ink-4">Expires by itself</span>
         </div>
 
         <div className="mt-3 flex gap-1.5 overflow-x-auto pb-1 no-scrollbar" role="group" aria-label="Filter tables by intent">
@@ -378,7 +378,7 @@ export default function StreetPage() {
             type="button"
             onClick={() => setIntent("")}
             className={cn(
-              "shrink-0 rounded-full px-3 py-1.5 text-[11px] font-bold transition-colors",
+              "shrink-0 rounded-full px-3 py-1.5 text-2xs font-bold transition-colors",
               !intent ? "bg-ink-1 text-surface-0" : "bg-surface-2 text-ink-3 hover:bg-surface-3",
             )}
           >
@@ -391,7 +391,7 @@ export default function StreetPage() {
               aria-pressed={intent === item.value}
               onClick={() => setIntent(intent === item.value ? "" : item.value)}
               className={cn(
-                "shrink-0 rounded-full px-3 py-1.5 text-[11px] font-bold transition-colors",
+                "shrink-0 rounded-full px-3 py-1.5 text-2xs font-bold transition-colors",
                 intent === item.value ? "bg-ink-1 text-surface-0" : "bg-surface-2 text-ink-3 hover:bg-surface-3",
               )}
             >
@@ -401,7 +401,7 @@ export default function StreetPage() {
         </div>
 
         {visible.length === 0 ? (
-          <div className="soft-card mt-3 rounded-3xl bg-surface-0 px-5 py-8 text-center">
+          <div className="soft-card mt-3 rounded-2xl bg-surface-0 px-5 py-8 text-center">
             <Users size={22} className="mx-auto text-ink-4" aria-hidden="true" />
             <p className="mt-2 text-sm font-extrabold text-ink-1">No open table matches that yet</p>
             <p className="mx-auto mt-1 max-w-sm text-xs leading-relaxed text-ink-3">
@@ -427,7 +427,7 @@ export default function StreetPage() {
             ))}
           </ul>
         )}
-        <p className="mt-2 text-[10px] leading-relaxed text-ink-4">{data.lobbies?.note}</p>
+        <p className="mt-2 text-2xs leading-relaxed text-ink-4">{data.lobbies?.note}</p>
       </section>
 
       <section aria-labelledby="week-heading" className="mt-7">
@@ -446,9 +446,9 @@ export default function StreetPage() {
               </span>
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-extrabold text-ink-1">{script.title}</p>
-                <p className="text-[10px] text-ink-4">{script.zone_label} · {script.label}</p>
+                <p className="text-2xs text-ink-4">{script.zone_label} · {script.label}</p>
               </div>
-              <Link to={script.href} className="shrink-0 text-[11px] font-bold text-brand-700 hover:underline dark:text-brand-300">
+              <Link to={script.href} className="shrink-0 text-2xs font-bold text-brand-700 hover:underline dark:text-brand-300">
                 {script.cta}
               </Link>
             </li>
@@ -456,11 +456,11 @@ export default function StreetPage() {
         </ol>
         {data.calendar.timetable.length > 0 && (
           <div className="mt-3">
-            <h3 className="text-[10px] font-bold uppercase tracking-[0.14em] text-ink-4">Your recurring slots</h3>
+            <h3 className="text-2xs font-bold uppercase tracking-[0.14em] text-ink-4">Your recurring slots</h3>
             <ul className="mt-1.5 flex flex-wrap gap-1.5">
               {data.calendar.timetable.map((routine) => (
                 <li key={routine.id}>
-                  <Link to="/routines" className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2.5 py-1 text-[11px] font-bold text-brand-700 dark:bg-brand-500/15 dark:text-brand-300">
+                  <Link to="/routines" className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2.5 py-1 text-2xs font-bold text-brand-700 dark:bg-brand-500/15 dark:text-brand-300">
                     {routine.title} · {routine.next_label}
                   </Link>
                 </li>
@@ -481,10 +481,10 @@ export default function StreetPage() {
                 to={action.href}
                 className="soft-card group rounded-2xl bg-surface-0 p-3.5 transition-colors hover:bg-surface-1"
               >
-                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-ink-4">{action.eyebrow}</p>
+                <p className="text-2xs font-bold uppercase tracking-[0.12em] text-ink-4">{action.eyebrow}</p>
                 <p className="mt-1 text-xs font-extrabold leading-snug text-ink-1">{action.title}</p>
-                <p className="mt-1 text-[11px] leading-relaxed text-ink-3">{action.detail}</p>
-                <span className="mt-2 inline-flex items-center gap-1 text-[11px] font-bold text-brand-700 dark:text-brand-300">
+                <p className="mt-1 text-2xs leading-relaxed text-ink-3">{action.detail}</p>
+                <span className="mt-2 inline-flex items-center gap-1 text-2xs font-bold text-brand-700 dark:text-brand-300">
                   {action.cta} <ArrowRight size={11} className="transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
                 </span>
               </Link>
@@ -493,7 +493,7 @@ export default function StreetPage() {
         </section>
       )}
 
-      <p className="mt-7 flex items-start gap-2 rounded-2xl bg-surface-2 px-3 py-2.5 text-[10px] leading-relaxed text-ink-3">
+      <p className="mt-7 flex items-start gap-2 rounded-2xl bg-surface-2 px-3 py-2.5 text-2xs leading-relaxed text-ink-3">
         <HeartHandshake size={13} className="mt-0.5 shrink-0" aria-hidden="true" />
         <span>
           Brief introduces and records nothing about the agreement itself. Contact is
@@ -507,14 +507,14 @@ export default function StreetPage() {
 
 function BlockContext({ block, status, onRefresh }) {
   return (
-    <section className="soft-card mt-5 rounded-3xl bg-surface-0 p-4" data-testid="street-context">
+    <section className="soft-card mt-5 rounded-2xl bg-surface-0 p-4" data-testid="street-context">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="eyebrow">Around your pin · OpenStreetMap</p>
           <h2 className="mt-1 text-base font-extrabold text-ink-1">
             {block?.available ? block.label : "Trace the nearest stage, market or school"}
           </h2>
-          <p className="mt-1 max-w-xl text-[11px] leading-relaxed text-ink-3">
+          <p className="mt-1 max-w-xl text-2xs leading-relaxed text-ink-3">
             {block?.available
               ? `${block.counts.transit} stages · ${block.counts.commerce} trade points · ${block.counts.community} community anchors within ${block.radius_m} m.`
               : "Set a pin above and we will trace the named places already on your block — no map tiles, no Places API bill."}
@@ -539,7 +539,7 @@ function BlockContext({ block, status, onRefresh }) {
       </div>
 
       {!block && status === "loading" && (
-        <p className="mt-3 text-[11px] text-ink-4">Tracing the block…</p>
+        <p className="mt-3 text-2xs text-ink-4">Tracing the block…</p>
       )}
 
       {block?.available && block.fixtures.length > 0 && (
@@ -551,8 +551,8 @@ function BlockContext({ block, status, onRefresh }) {
                   <MapPin size={12} aria-hidden="true" />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[11px] font-extrabold text-ink-1">{fixture.name}</span>
-                  <span className="block text-[10px] text-ink-4">
+                  <span className="block truncate text-2xs font-extrabold text-ink-1">{fixture.name}</span>
+                  <span className="block text-2xs text-ink-4">
                     {fixture.kind_label} · {fixture.distance_m < 1000 ? `${fixture.distance_m} m` : `${(fixture.distance_m / 1000).toFixed(1)} km`}
                   </span>
                 </span>
@@ -563,13 +563,13 @@ function BlockContext({ block, status, onRefresh }) {
             <div className="mt-3 grid gap-2 sm:grid-cols-2">
               {block.prompts.slice(0, 2).map((prompt) => (
                 <div key={`${prompt.eyebrow}:${prompt.title}`} className="rounded-2xl bg-brand-50 px-3 py-2.5 dark:bg-brand-500/10">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-brand-700 dark:text-brand-300">
+                  <p className="text-2xs font-bold uppercase tracking-[0.12em] text-brand-700 dark:text-brand-300">
                     {prompt.eyebrow}
                   </p>
                   <p className="mt-0.5 text-xs font-extrabold text-ink-1">{prompt.title}</p>
-                  <p className="mt-0.5 text-[11px] leading-relaxed text-ink-3">{prompt.body}</p>
+                  <p className="mt-0.5 text-2xs leading-relaxed text-ink-3">{prompt.body}</p>
                   {prompt.href && (
-                    <Link to={prompt.href} className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-bold text-brand-700 hover:underline dark:text-brand-300">
+                    <Link to={prompt.href} className="mt-1.5 inline-flex items-center gap-1 text-2xs font-bold text-brand-700 hover:underline dark:text-brand-300">
                       {prompt.cta || "Open a table"} <ArrowRight size={10} aria-hidden="true" />
                     </Link>
                   )}
@@ -585,14 +585,14 @@ function BlockContext({ block, status, onRefresh }) {
           <p className="text-xs font-extrabold text-ink-1">
             {block.prompts?.[0]?.title || "No mapped anchor in this block yet"}
           </p>
-          <p className="mt-0.5 text-[11px] leading-relaxed text-ink-3">
+          <p className="mt-0.5 text-2xs leading-relaxed text-ink-3">
             {block.prompts?.[0]?.body || "Your pin is still the anchor. Name the stage or shop in the table title."}
           </p>
         </div>
       )}
 
       {block?.available && (
-        <p className="mt-2 text-[10px] text-ink-4">
+        <p className="mt-2 text-2xs text-ink-4">
           {block.attribution} · {block.cache?.cached ? "cached snapshot, not a live census" : "fetched for this block"}
         </p>
       )}
@@ -611,21 +611,21 @@ function LobbyCard({ lobby, handoff, busy, copied, onJoin, onLeave, onClose, onC
       data-intent={lobby.intent}
     >
       <div className="flex items-start justify-between gap-2">
-        <span className={cn("rounded-full px-2 py-1 text-[10px] font-extrabold uppercase tracking-[0.1em]", INTENT_TONE[lobby.intent])}>
+        <span className={cn("rounded-full px-2 py-1 text-2xs font-extrabold uppercase tracking-[0.1em]", INTENT_TONE[lobby.intent])}>
           {meta.label}
         </span>
-        <span className={cn("inline-flex items-center gap-1 text-[10px] font-bold", full ? "text-ink-4" : "text-accent-700 dark:text-accent-300")}>
+        <span className={cn("inline-flex items-center gap-1 text-2xs font-bold", full ? "text-ink-4" : "text-accent-700 dark:text-accent-300")}>
           <Clock3 size={10} aria-hidden="true" />
           {lobby.status === "open" ? minutesLabel(lobby.minutes_left) : lobby.status}
         </span>
       </div>
 
       <h3 className="mt-2 text-sm font-extrabold leading-snug text-ink-1">{lobby.title}</h3>
-      <p className="mt-1 flex items-center gap-1 text-[11px] text-ink-4">
+      <p className="mt-1 flex items-center gap-1 text-2xs text-ink-4">
         <MapPin size={10} aria-hidden="true" />
         <span className="truncate">{lobby.zone}</span>
       </p>
-      {lobby.details && <p className="mt-1.5 line-clamp-2 text-[11px] leading-relaxed text-ink-3">{lobby.details}</p>}
+      {lobby.details && <p className="mt-1.5 line-clamp-2 text-2xs leading-relaxed text-ink-3">{lobby.details}</p>}
 
       <div className="mt-2 flex flex-wrap items-center gap-1.5">
         <Badge variant="gray">{lobby.joined_count}/{lobby.seats} at the table</Badge>
@@ -637,29 +637,29 @@ function LobbyCard({ lobby, handoff, busy, copied, onJoin, onLeave, onClose, onC
         ))}
       </div>
 
-      <p className="mt-2 text-[10px] font-semibold text-ink-4">
+      <p className="mt-2 text-2xs font-semibold text-ink-4">
         Hosted by {lobby.host?.business || lobby.host?.handle}
         {lobby.is_mine ? " · your table" : ""}
       </p>
 
       {handoff ? (
         <div className="mt-3 rounded-2xl bg-brand-50 p-3 dark:bg-brand-500/10" data-testid="street-handoff">
-          <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-brand-700 dark:text-brand-300">
+          <p className="text-2xs font-bold uppercase tracking-[0.12em] text-brand-700 dark:text-brand-300">
             Verification code
           </p>
           <p className="mt-0.5 text-lg font-black tracking-[0.18em] text-brand-800 dark:text-brand-200">{handoff.code}</p>
-          <p className="mt-1 text-[10px] leading-relaxed text-brand-800/75 dark:text-brand-200/75">{handoff.note}</p>
+          <p className="mt-1 text-2xs leading-relaxed text-brand-800/75 dark:text-brand-200/75">{handoff.note}</p>
           <div className="mt-2 flex flex-wrap gap-1.5">
             <a
               href={handoff.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-brand-600 px-3 text-[11px] font-bold text-white hover:bg-brand-700"
+              className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-brand-600 px-3 text-2xs font-bold text-white hover:bg-brand-700"
             >
               {handoff.channel === "whatsapp" ? <MessageCircle size={12} aria-hidden="true" /> : <Send size={12} aria-hidden="true" />}
               {handoff.label}
             </a>
-            <button type="button" onClick={onCopy} className="inline-flex h-8 items-center gap-1 rounded-lg bg-white px-2.5 text-[11px] font-bold text-brand-800 hover:bg-brand-50 dark:bg-surface-2 dark:text-brand-200">
+            <button type="button" onClick={onCopy} className="inline-flex h-8 items-center gap-1 rounded-lg bg-white px-2.5 text-2xs font-bold text-brand-800 hover:bg-brand-50 dark:bg-surface-2 dark:text-brand-200">
               {copied ? <Check size={12} aria-hidden="true" /> : null}
               {copied ? "Copied" : "Copy code"}
             </button>
@@ -667,7 +667,7 @@ function LobbyCard({ lobby, handoff, busy, copied, onJoin, onLeave, onClose, onC
         </div>
       ) : lobby.is_mine ? (
         <div className="mt-3 flex items-center gap-2">
-          <span className="rounded-lg bg-surface-2 px-2 py-1 text-[10px] font-bold text-ink-3">
+          <span className="rounded-lg bg-surface-2 px-2 py-1 text-2xs font-bold text-ink-3">
             Code {lobby.verification_code || "in your handoff"}
           </span>
           <Button size="xs" variant="ghost" loading={isBusy} onClick={onClose}>Close</Button>
@@ -682,7 +682,7 @@ function LobbyCard({ lobby, handoff, busy, copied, onJoin, onLeave, onClose, onC
           <Button size="sm" loading={isBusy} disabled={!lobby.can_join} onClick={onJoin}>
             {full ? "Table full" : "Take a seat"}
           </Button>
-          <span className="text-[10px] text-ink-4">No payment</span>
+          <span className="text-2xs text-ink-4">No payment</span>
         </div>
       )}
     </li>
@@ -692,7 +692,7 @@ function LobbyCard({ lobby, handoff, busy, copied, onJoin, onLeave, onClose, onC
 function LobbyForm({ form, setForm, zoneDefault, busy, onSubmit, onCancel }) {
   const set = (key) => (event) => setForm((current) => ({ ...current, [key]: event.target.value }));
   return (
-    <form onSubmit={onSubmit} className="soft-card mt-4 rounded-3xl bg-surface-0 p-4 sm:p-5" data-testid="street-lobby-form">
+    <form onSubmit={onSubmit} className="soft-card mt-4 rounded-2xl bg-surface-0 p-4 sm:p-5" data-testid="street-lobby-form">
       <div className="flex items-start justify-between gap-2">
         <div>
           <p className="eyebrow">Two-hour window</p>
@@ -705,53 +705,53 @@ function LobbyForm({ form, setForm, zoneDefault, busy, onSubmit, onCancel }) {
 
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         <label className="space-y-1 sm:col-span-2">
-          <span className="text-[11px] font-bold text-ink-2">What is the table for?</span>
+          <span className="text-2xs font-bold text-ink-2">What is the table for?</span>
           <input value={form.title} onChange={set("title")} maxLength={140} required placeholder="Two bags of maize flour before noon" className="h-10 w-full rounded-xl bg-surface-2 px-3 text-sm text-ink-1 outline-none ring-brand-500/30 placeholder:text-ink-4 focus:ring-2" />
         </label>
         <label className="space-y-1">
-          <span className="text-[11px] font-bold text-ink-2">Kind</span>
+          <span className="text-2xs font-bold text-ink-2">Kind</span>
           <select value={form.intent} onChange={set("intent")} className="h-10 w-full rounded-xl bg-surface-2 px-3 text-sm font-semibold text-ink-1 outline-none focus:ring-2 focus:ring-brand-500/30">
             {INTENTS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
           </select>
         </label>
         <label className="space-y-1">
-          <span className="text-[11px] font-bold text-ink-2">Zone or street</span>
+          <span className="text-2xs font-bold text-ink-2">Zone or street</span>
           <input value={form.zone} onChange={set("zone")} maxLength={80} required placeholder={zoneDefault || "Kondele, Kisumu"} className="h-10 w-full rounded-xl bg-surface-2 px-3 text-sm text-ink-1 outline-none ring-brand-500/30 placeholder:text-ink-4 focus:ring-2" />
         </label>
         <label className="space-y-1 sm:col-span-2">
-          <span className="text-[11px] font-bold text-ink-2">The useful detail</span>
+          <span className="text-2xs font-bold text-ink-2">The useful detail</span>
           <textarea value={form.details} onChange={set("details")} maxLength={1200} rows={2} placeholder="What you are splitting, carrying or looking for. Say what “done” looks like." className="w-full rounded-xl bg-surface-2 px-3 py-2 text-sm text-ink-1 outline-none ring-brand-500/30 placeholder:text-ink-4 focus:ring-2" />
         </label>
         <label className="space-y-1">
-          <span className="text-[11px] font-bold text-ink-2">Seats, including you</span>
+          <span className="text-2xs font-bold text-ink-2">Seats, including you</span>
           <select value={form.seats} onChange={set("seats")} className="h-10 w-full rounded-xl bg-surface-2 px-3 text-sm font-semibold text-ink-1 outline-none focus:ring-2 focus:ring-brand-500/30">
             {[2, 3, 4, 5, 8, 12].map((value) => <option key={value} value={value}>{value}</option>)}
           </select>
         </label>
         <label className="space-y-1">
-          <span className="text-[11px] font-bold text-ink-2">Stays open for</span>
+          <span className="text-2xs font-bold text-ink-2">Stays open for</span>
           <select value={form.duration_minutes} onChange={set("duration_minutes")} className="h-10 w-full rounded-xl bg-surface-2 px-3 text-sm font-semibold text-ink-1 outline-none focus:ring-2 focus:ring-brand-500/30">
             {[30, 60, 120, 240, 480].map((value) => <option key={value} value={value}>{value < 60 ? `${value} minutes` : `${value / 60} hour${value === 60 ? "" : "s"}`}</option>)}
           </select>
         </label>
         <label className="space-y-1 sm:col-span-2">
-          <span className="text-[11px] font-bold text-ink-2">Tags <span className="font-normal text-ink-4">(comma separated, optional)</span></span>
+          <span className="text-2xs font-bold text-ink-2">Tags <span className="font-normal text-ink-4">(comma separated, optional)</span></span>
           <input value={form.tags} onChange={set("tags")} placeholder="food, bulk, transport" className="h-10 w-full rounded-xl bg-surface-2 px-3 text-sm text-ink-1 outline-none ring-brand-500/30 placeholder:text-ink-4 focus:ring-2" />
         </label>
         <label className="space-y-1">
-          <span className="text-[11px] font-bold text-ink-2">Handoff</span>
+          <span className="text-2xs font-bold text-ink-2">Handoff</span>
           <select value={form.handoff_channel} onChange={set("handoff_channel")} className="h-10 w-full rounded-xl bg-surface-2 px-3 text-sm font-semibold text-ink-1 outline-none focus:ring-2 focus:ring-brand-500/30">
             <option value="whatsapp">WhatsApp</option>
             <option value="telegram">Telegram</option>
           </select>
         </label>
         <label className="space-y-1">
-          <span className="text-[11px] font-bold text-ink-2">{form.handoff_channel === "whatsapp" ? "WhatsApp number" : "Telegram username"}</span>
+          <span className="text-2xs font-bold text-ink-2">{form.handoff_channel === "whatsapp" ? "WhatsApp number" : "Telegram username"}</span>
           <input value={form.handoff_target} onChange={set("handoff_target")} required placeholder={form.handoff_channel === "whatsapp" ? "0712 345 678" : "@street_rider"} className="h-10 w-full rounded-xl bg-surface-2 px-3 text-sm text-ink-1 outline-none ring-brand-500/30 placeholder:text-ink-4 focus:ring-2" />
         </label>
       </div>
 
-      <p className="mt-3 text-[10px] leading-relaxed text-ink-4">
+      <p className="mt-3 text-2xs leading-relaxed text-ink-4">
         Your contact is not shown in the public list. It is released only to a person
         who joins, with the verification code in the handoff. Brief sends no message.
       </p>

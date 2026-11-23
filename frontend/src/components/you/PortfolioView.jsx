@@ -175,7 +175,7 @@ export default function PortfolioView({
       {/* ── hero ─────────────────────────────────────────────────────────── */}
       <header
         id="top"
-        className="overflow-hidden rounded-3xl border border-edge-1 bg-surface-1 shadow-sm"
+        className="overflow-hidden rounded-2xl border border-edge-1 bg-surface-1 shadow-sm"
       >
         <div
           className={cn(
@@ -227,7 +227,7 @@ export default function PortfolioView({
               name={name}
               src={profile.avatar_url || vendor?.avatar_url || vendor?.logo_url}
               size="2xl"
-              className="rounded-3xl ring-4 ring-surface-1"
+              className="rounded-2xl ring-4 ring-surface-1"
             />
             <div className="mb-1 flex flex-wrap items-center justify-end gap-1.5">
               <RankChip rank={rank} />
@@ -704,7 +704,7 @@ export default function PortfolioView({
       </div>
 
       {/* ── a footer, because this is a page and not a card ─────────────── */}
-      <footer className="mt-4 rounded-3xl bg-ink-1 px-5 py-6 text-surface-0 sm:px-8">
+      <footer className="mt-4 rounded-2xl bg-ink-1 px-5 py-6 text-surface-0 sm:px-8">
         <div className="flex flex-wrap items-start justify-between gap-5">
           <div className="min-w-0">
             <p className="text-sm font-extrabold tracking-tight">{name}</p>

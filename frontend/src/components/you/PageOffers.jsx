@@ -33,7 +33,7 @@ export default function PageOffers({ items = [], own = false, createHref = "/you
   if (!offers.length) {
     if (!own) return null;
     return (
-      <section id="offers" data-testid="page-offers-empty" className="rounded-3xl border border-dashed border-edge-2 bg-surface-0 p-4 sm:p-5">
+      <section id="offers" data-testid="page-offers-empty" className="rounded-2xl border border-dashed border-edge-2 bg-surface-0 p-4 sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0">
             <h2 className="text-sm font-extrabold text-ink-1">What you offer</h2>
@@ -54,7 +54,7 @@ export default function PageOffers({ items = [], own = false, createHref = "/you
   }
 
   return (
-    <section id="offers" data-testid="page-offers" aria-labelledby="offers-heading" className="rounded-3xl border border-edge-1 bg-surface-1 p-4 sm:p-5">
+    <section id="offers" data-testid="page-offers" aria-labelledby="offers-heading" className="rounded-2xl border border-edge-1 bg-surface-1 p-4 sm:p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <h2 id="offers-heading" className="text-base font-extrabold tracking-tight text-ink-1">

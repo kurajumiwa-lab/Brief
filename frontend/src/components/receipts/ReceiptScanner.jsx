@@ -348,7 +348,7 @@ export default function ReceiptScanner({ open, onClose }) {
 
         {step === "done" && result && (
           <div className="space-y-3 text-center" data-testid="receipt-success">
-            <span className="mx-auto grid h-14 w-14 place-items-center rounded-3xl bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300">
+            <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300">
               <Check size={26} aria-hidden="true" />
             </span>
             <div>

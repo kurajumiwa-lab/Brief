@@ -45,7 +45,7 @@ export default function RoutineSharePrompt({ prompts = [], onShared }) {
     <section className="mt-3 space-y-2" aria-labelledby="share-round-heading" data-testid="routine-share-prompt">
       <div className="flex items-center gap-1.5 px-1">
         <CalendarClock size={12} className="text-brand-700 dark:text-brand-300" aria-hidden="true" />
-        <h2 id="share-round-heading" className="text-[11px] font-extrabold text-ink-1">
+        <h2 id="share-round-heading" className="text-2xs font-extrabold text-ink-1">
           Share this week&apos;s round
         </h2>
       </div>
@@ -54,7 +54,7 @@ export default function RoutineSharePrompt({ prompts = [], onShared }) {
           <li key={prompt.instance_id} className="flex items-center gap-2 rounded-xl border border-brand-200 bg-brand-50 p-2.5 dark:border-brand-500/30 dark:bg-brand-500/10">
             <div className="min-w-0 flex-1">
               <p className="truncate text-xs font-bold text-brand-900 dark:text-brand-100">{prompt.title}</p>
-              <p className="text-[10px] text-brand-800/70 dark:text-brand-200/70">
+              <p className="text-2xs text-brand-800/70 dark:text-brand-200/70">
                 {new Date(`${prompt.occurrence_date}T12:00:00`).toLocaleDateString(undefined, {
                   weekday: "long", day: "numeric", month: "short",
                 })}
@@ -73,7 +73,7 @@ export default function RoutineSharePrompt({ prompts = [], onShared }) {
           </li>
         ))}
       </ul>
-      <p className="px-1 text-[10px] text-ink-4">
+      <p className="px-1 text-2xs text-ink-4">
         Organic link only — no WhatsApp Business API. A weekly badge is a
         schedule, not a reliability guarantee, and awards no standing credit.
       </p>

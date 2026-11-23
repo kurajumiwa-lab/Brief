@@ -147,7 +147,7 @@ export function getJobCallState(call = {}, { hasActiveContract = false, energyCa
 export function TemporaryJobsHero({ onBrowseJobs, onPostJob, openCount = 0, activeContract = null }) {
   return (
     <section
-      className="rounded-3xl border border-edge-1 bg-surface-0 shadow-sm overflow-hidden"
+      className="rounded-2xl border border-edge-1 bg-surface-0 shadow-sm overflow-hidden"
       data-testid="temp-jobs-hero"
     >
       <div className="grid lg:grid-cols-[1.2fr_0.8fr] items-stretch">

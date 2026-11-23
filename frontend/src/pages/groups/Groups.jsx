@@ -148,7 +148,7 @@ export default function Groups() {
                       <Button size="xs" variant="ghost" icon={LogOut} onClick={() => onLeave(g)} aria-label="Leave group" />
                     </>
                   ) : g.my_role === "pending" ? (
-                    <span className="text-2xs text-accent-600 dark:text-accent-400">Awaiting approval</span>
+                    <span className="text-2xs text-accent-700 dark:text-accent-300">Awaiting approval</span>
                   ) : (
                     <Button size="xs" onClick={() => onJoin(g)}>
                       {g.requires_approval ? "Request to join" : "Join"}

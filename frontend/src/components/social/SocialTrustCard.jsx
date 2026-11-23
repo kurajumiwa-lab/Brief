@@ -79,7 +79,7 @@ export default function SocialTrustCard({ card, className }) {
           <ShieldAlert size={15} className="mt-0.5 shrink-0" aria-hidden="true" />
           <div>
             <p className="text-xs font-extrabold leading-snug">{card.dispute.warning_text}</p>
-            <p className="mt-0.5 text-[10px] leading-relaxed opacity-80">{card.dispute.signal_note}</p>
+            <p className="mt-0.5 text-2xs leading-relaxed opacity-80">{card.dispute.signal_note}</p>
           </div>
         </div>
       )}
@@ -99,11 +99,11 @@ export default function SocialTrustCard({ card, className }) {
 
         <div className="grid grid-cols-2 gap-2" role="list">
           <div role="listitem" className="rounded-xl border border-emerald-200 bg-emerald-50 px-2.5 py-2 dark:border-emerald-500/30 dark:bg-emerald-500/10">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Completed deliveries</p>
+            <p className="text-2xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Completed deliveries</p>
             <p className="mt-0.5 text-lg font-extrabold tabular-nums text-emerald-900 dark:text-emerald-100" data-testid="trust-deliveries">
               {card.verified_deliveries}
             </p>
-            <p className="text-[10px] leading-tight text-emerald-800/70 dark:text-emerald-200/70">{card.delivery_note}</p>
+            <p className="text-2xs leading-tight text-emerald-800/70 dark:text-emerald-200/70">{card.delivery_note}</p>
           </div>
           <div
             role="listitem"
@@ -114,11 +114,11 @@ export default function SocialTrustCard({ card, className }) {
                 : "border-emerald-200 bg-emerald-50 dark:border-emerald-500/30 dark:bg-emerald-500/10",
             )}
           >
-            <p className={cn("text-[10px] font-semibold uppercase tracking-wide", disputed ? "text-amber-700 dark:text-amber-300" : "text-emerald-700 dark:text-emerald-300")}>Delivery reports</p>
+            <p className={cn("text-2xs font-semibold uppercase tracking-wide", disputed ? "text-amber-700 dark:text-amber-300" : "text-emerald-700 dark:text-emerald-300")}>Delivery reports</p>
             <p className={cn("mt-0.5 text-lg font-extrabold tabular-nums", disputed ? "text-amber-900 dark:text-amber-100" : "text-emerald-900 dark:text-emerald-100")} data-testid="trust-dispute-ratio">
               {card.dispute?.ratio_label || "0 unresolved"}
             </p>
-            <p className={cn("text-[10px] leading-tight", disputed ? "text-amber-800/70 dark:text-amber-200/70" : "text-emerald-800/70 dark:text-emerald-200/70")}>
+            <p className={cn("text-2xs leading-tight", disputed ? "text-amber-800/70 dark:text-amber-200/70" : "text-emerald-800/70 dark:text-emerald-200/70")}>
               {card.dispute?.signal_note}
             </p>
           </div>
@@ -126,7 +126,7 @@ export default function SocialTrustCard({ card, className }) {
 
         {card.stock_proof ? (
           <article className="overflow-hidden rounded-xl border border-edge-1 bg-surface-0" data-testid="stock-in-hand">
-            <div className="flex items-center gap-1.5 border-b border-edge-1 px-2.5 py-1.5 text-[10px] font-bold text-ink-2">
+            <div className="flex items-center gap-1.5 border-b border-edge-1 px-2.5 py-1.5 text-2xs font-bold text-ink-2">
               <ImageIcon size={11} aria-hidden="true" />
               {card.stock_proof.label}
             </div>
@@ -139,15 +139,15 @@ export default function SocialTrustCard({ card, className }) {
             <div className="space-y-0.5 px-2.5 py-2">
               <p className="text-xs font-bold text-ink-1">{card.stock_proof.item_title}</p>
               {card.stock_proof.price_kes != null && (
-                <p className="text-[11px] font-semibold text-ink-2">{formatKes(card.stock_proof.price_kes)}</p>
+                <p className="text-2xs font-semibold text-ink-2">{formatKes(card.stock_proof.price_kes)}</p>
               )}
-              <p className="text-[10px] leading-relaxed text-ink-4">{card.stock_proof.signal_note}</p>
+              <p className="text-2xs leading-relaxed text-ink-4">{card.stock_proof.signal_note}</p>
             </div>
           </article>
         ) : (
           <div className="rounded-xl border border-dashed border-edge-2 bg-surface-0 px-3 py-3 text-center">
-            <p className="text-[11px] font-semibold text-ink-2">No current stock-in-hand photo</p>
-            <p className="mt-0.5 text-[10px] leading-relaxed text-ink-4">
+            <p className="text-2xs font-semibold text-ink-2">No current stock-in-hand photo</p>
+            <p className="mt-0.5 text-2xs leading-relaxed text-ink-4">
               A photo is valid for 48 hours. Ask the seller for one before paying.
             </p>
           </div>
@@ -162,7 +162,7 @@ export default function SocialTrustCard({ card, className }) {
                 target="_blank"
                 rel="noreferrer noopener"
                 className={cn(
-                  "inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[10px] font-bold",
+                  "inline-flex items-center gap-1 rounded-full border px-2 py-1 text-2xs font-bold",
                   link.bio_verified
                     ? "border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-200"
                     : "border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/15 dark:text-amber-200",
@@ -176,7 +176,7 @@ export default function SocialTrustCard({ card, className }) {
           </div>
         )}
         {card.bio_links.length > 0 && (
-          <p className="text-[10px] leading-relaxed text-ink-4">{card.bio_links[0].signal_note}</p>
+          <p className="text-2xs leading-relaxed text-ink-4">{card.bio_links[0].signal_note}</p>
         )}
 
         {card.routines?.length > 0 && (
@@ -184,7 +184,7 @@ export default function SocialTrustCard({ card, className }) {
             {card.routines.map((routine) => (
               <span
                 key={`${routine.title}-${routine.day_of_week}`}
-                className="inline-flex items-center gap-1 rounded-full border border-edge-2 bg-surface-2 px-2 py-1 text-[10px] font-bold text-ink-2"
+                className="inline-flex items-center gap-1 rounded-full border border-edge-2 bg-surface-2 px-2 py-1 text-2xs font-bold text-ink-2"
                 title={routine.title}
               >
                 <RefreshCw size={10} aria-hidden="true" />
@@ -197,12 +197,12 @@ export default function SocialTrustCard({ card, className }) {
         {canReport && (
           <div className="border-t border-edge-1 pt-2">
             {reported ? (
-              <p className="text-[10px] font-semibold text-amber-800 dark:text-amber-200">
+              <p className="text-2xs font-semibold text-amber-800 dark:text-amber-200">
                 Report recorded. It stays visible until the seller resolves it.
               </p>
             ) : reportOpen ? (
               <div className="space-y-1.5">
-                <label className="block text-[10px] font-semibold text-ink-2">
+                <label className="block text-2xs font-semibold text-ink-2">
                   What happened?
                   <textarea
                     rows={2}
@@ -212,7 +212,7 @@ export default function SocialTrustCard({ card, className }) {
                     className="mt-1 w-full rounded-lg border border-edge-2 bg-surface-0 px-2 py-1.5 text-xs text-ink-1"
                   />
                 </label>
-                <p className="text-[10px] leading-relaxed text-ink-4">
+                <p className="text-2xs leading-relaxed text-ink-4">
                   Only Level 2+ buyers with a trade with this seller can report.
                   A report is an allegation, not a finding, and changes no standing.
                 </p>
@@ -225,7 +225,7 @@ export default function SocialTrustCard({ card, className }) {
               <button
                 type="button"
                 onClick={() => setReportOpen(true)}
-                className="text-[10px] font-semibold text-amber-800 underline underline-offset-2 hover:text-amber-900 dark:text-amber-200"
+                className="text-2xs font-semibold text-amber-800 underline underline-offset-2 hover:text-amber-900 dark:text-amber-200"
               >
                 Report a delivery problem
               </button>
@@ -233,7 +233,7 @@ export default function SocialTrustCard({ card, className }) {
           </div>
         )}
 
-        <p className="border-t border-edge-1 pt-2 text-[10px] leading-relaxed text-ink-4">
+        <p className="border-t border-edge-1 pt-2 text-2xs leading-relaxed text-ink-4">
           {card.signals_note} Nobody can buy standing on this network.
         </p>
       </div>

@@ -268,7 +268,7 @@ export default function MarketRunsSection({ currentHandle }) {
                         {o.delivery_area && ` · ${o.delivery_area}`}
                         {o.repack_required && " · repacked"}
                       </span>
-                      {o.deposit_recommended && <span className="block text-2xs text-accent-600">Deposit recommended for this large on-delivery order — your choice, not a requirement.</span>}
+                      {o.deposit_recommended && <span className="block text-2xs text-accent-700">Deposit recommended for this large on-delivery order — your choice, not a requirement.</span>}
                     </span>
                     <span className="text-right">
                       <span className="block font-semibold text-ink-1">{currency(o.final_amount_kes)}</span>

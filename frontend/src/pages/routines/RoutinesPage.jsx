@@ -206,7 +206,7 @@ export default function RoutinesPage() {
             <div key={prompt.instance_id} className="flex items-center gap-3 rounded-xl border border-edge-1 bg-surface-0 p-3">
               <div className="min-w-0 flex-1">
                 <p className="truncate text-xs font-bold text-ink-1">{prompt.title}</p>
-                <p className="mt-0.5 text-[11px] text-ink-4">
+                <p className="mt-0.5 text-2xs text-ink-4">
                   {new Date(`${prompt.occurrence_date}T12:00:00`).toLocaleDateString(undefined, {
                     weekday: "long", day: "numeric", month: "short",
                   })}
@@ -239,18 +239,18 @@ export default function RoutinesPage() {
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="rounded-full border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/15 dark:text-emerald-200">
+                      <span className="rounded-full border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-2xs font-bold text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/15 dark:text-emerald-200">
                         {routine.recurrence_label}
                       </span>
                       {!routine.is_active && <Badge variant="amber">Paused</Badge>}
                     </div>
                     <p className="mt-1 truncate text-sm font-bold text-ink-1">{routine.title}</p>
-                    <p className="mt-0.5 text-[11px] text-ink-4">
+                    <p className="mt-0.5 text-2xs text-ink-4">
                       {routine.start_time_local} EAT · {routine.town} · {routine.duration_hours}h
                       {routine.template?.price_kes != null ? ` · KSh ${num(routine.template.price_kes)}` : ""}
                       {routine.template?.capacity ? ` · ${routine.template.capacity} places` : ""}
                     </p>
-                    <p className="mt-1 text-[10px] text-ink-4">
+                    <p className="mt-1 text-2xs text-ink-4">
                       {routine.last_generated_for_date
                         ? `Last published for ${routine.last_generated_for_date}`
                         : `Publishes ${routine.publish_lead_hours}h before it starts`}
@@ -270,7 +270,7 @@ export default function RoutinesPage() {
         )}
       </section>
 
-      <p className="text-center text-[10px] leading-relaxed text-ink-4">
+      <p className="text-center text-2xs leading-relaxed text-ink-4">
         A weekly badge says the seller publishes on a schedule. It is not a
         reliability guarantee and awards no standing credit.{" "}
         <Link to="/inbox" className="font-semibold underline">Back to the Inbox</Link>
@@ -289,7 +289,7 @@ function RoutineForm({ form, setForm, saving, onSave, onCancel }) {
       <label className="flex items-start justify-between gap-3">
         <span>
           <span className="block text-xs font-bold text-ink-1">Repeat weekly (market day / routine)</span>
-          <span className="mt-0.5 block text-[11px] leading-relaxed text-ink-4">
+          <span className="mt-0.5 block text-2xs leading-relaxed text-ink-4">
             Publishes automatically before the day you choose. Off means a one-off post.
           </span>
         </span>
@@ -304,7 +304,7 @@ function RoutineForm({ form, setForm, saving, onSave, onCancel }) {
       </label>
 
       {!form.repeat && (
-        <p className="rounded-xl border border-amber-200 bg-amber-50 p-2.5 text-[11px] text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+        <p className="rounded-xl border border-amber-200 bg-amber-50 p-2.5 text-2xs text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
           A one-off is posted from <Link to="/create" className="font-bold underline">Create</Link>.
           This page only keeps schedules that repeat.
         </p>
@@ -350,7 +350,7 @@ function RoutineForm({ form, setForm, saving, onSave, onCancel }) {
                   aria-pressed={active}
                   onClick={() => setForm((f) => ({ ...f, day_of_week: day.value }))}
                   className={cn(
-                    "rounded-lg border py-2 text-[11px] font-bold transition-colors",
+                    "rounded-lg border py-2 text-2xs font-bold transition-colors",
                     active
                       ? "border-brand-700 bg-brand-700 text-white"
                       : "border-edge-2 bg-surface-1 text-ink-2 hover:border-edge-3",
@@ -395,7 +395,7 @@ function RoutineForm({ form, setForm, saving, onSave, onCancel }) {
 
       <details className="rounded-xl border border-edge-1 bg-surface-1 p-3">
         <summary className="cursor-pointer text-xs font-bold text-ink-2">Payment tag (kept private)</summary>
-        <p className="mt-1 text-[11px] leading-relaxed text-ink-4">
+        <p className="mt-1 text-2xs leading-relaxed text-ink-4">
           This is shared in your WhatsApp text and on your own page. It is not
           published on the public activity card.
         </p>

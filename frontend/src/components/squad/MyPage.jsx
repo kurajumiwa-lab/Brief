@@ -41,7 +41,7 @@ export default function MyPage() {
   return (
     <div className="space-y-3">
       {/* The card others open by handle */}
-      <div className="glass-strong rounded-3xl p-5">
+      <div className="glass-strong rounded-2xl p-5">
         <div className="flex items-center gap-3">
           <span className="w-14 h-14 rounded-2xl bg-brand-500/15 text-brand-600 dark:text-brand-400 flex items-center justify-center text-2xl font-bold shrink-0">
             {(page.name || "?").charAt(0).toUpperCase()}

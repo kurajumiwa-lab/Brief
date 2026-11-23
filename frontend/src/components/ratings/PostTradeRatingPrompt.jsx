@@ -77,7 +77,7 @@ export default function PostTradeRatingPrompt({ kind, subjectId }) {
               onClick={() => setStars(n)}
               className="p-1"
             >
-              <Star size={18} aria-hidden="true" className={n <= stars ? "fill-current text-accent-600" : "text-ink-4"} />
+              <Star size={18} aria-hidden="true" className={n <= stars ? "fill-current text-accent-700" : "text-ink-4"} />
             </button>
           ))}
         </div>

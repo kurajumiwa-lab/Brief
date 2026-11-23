@@ -68,7 +68,7 @@ export function SelectedWork({ items = [], own = false, onAdd, onRemove }) {
   return (
     <section
       aria-labelledby="selected-work-heading"
-      className="rounded-3xl border border-edge-1 bg-surface-0 p-5 space-y-3"
+      className="rounded-2xl border border-edge-1 bg-surface-0 p-5 space-y-3"
       data-testid="selected-work"
     >
       <div className="flex flex-wrap items-center justify-between gap-3">

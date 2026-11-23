@@ -26,7 +26,7 @@ export default function DiscoverFavoritesPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-s4 bg-mk-cream p-4 text-mk-ink sm:p-6" data-testid="discover-favorites">
       <header>
-        <p className="flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-[0.18em] text-mk-orange"><Heart size={11} aria-hidden="true" /> Saved on this device</p>
+        <p className="flex items-center gap-1.5 text-2xs font-extrabold uppercase tracking-[0.18em] text-mk-orange"><Heart size={11} aria-hidden="true" /> Saved on this device</p>
         <h1 className="mt-1 text-3xl font-black tracking-tight text-mk-ink">Saved</h1>
         <p className="mt-1 max-w-xl text-sm text-mk-ink-soft">
           Cards you saved while browsing. They stay on this phone or browser; the owner is not

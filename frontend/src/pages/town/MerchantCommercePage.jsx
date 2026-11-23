@@ -138,7 +138,7 @@ export default function MerchantCommercePage() {
     <div className="mx-auto w-full max-w-3xl space-y-5">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="eyebrow">Merchant dashboard</p>
+          <p className="eyebrow">For shop owners</p>
           <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-ink-1">{data.merchant.name}</h1>
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
             <Badge variant={data.merchant.claim_status === "verified" ? "brand" : "outline"}>
@@ -162,7 +162,7 @@ export default function MerchantCommercePage() {
           ["Expired credit", formatKes(credits.expired_kes || 0)],
         ].map(([label, value]) => (
           <div key={label} className="rounded-2xl border border-edge-1 bg-surface-1 px-3 py-2.5">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-ink-4">{label}</p>
+            <p className="text-2xs font-bold uppercase tracking-wide text-ink-4">{label}</p>
             <p className="digital mt-0.5 text-sm font-extrabold text-ink-1">{value}</p>
           </div>
         ))}
@@ -193,7 +193,7 @@ export default function MerchantCommercePage() {
 
         <Card className="space-y-3 p-4">
           <div className="flex items-center gap-2">
-            <Coins size={16} className="text-accent-600 dark:text-accent-400" />
+            <Coins size={16} className="text-accent-700 dark:text-accent-300" />
             <p className="text-sm font-extrabold text-ink-1">Your reward rate</p>
           </div>
           <p className="text-2xs leading-relaxed text-ink-3">{data.policy.explanation}</p>
@@ -214,7 +214,7 @@ export default function MerchantCommercePage() {
           ["Vouchers used", data.redemptions.redemptions],
         ].map(([label, value]) => (
           <div key={label} className="rounded-2xl border border-edge-1 bg-surface-1 px-3 py-2.5">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-ink-4">{label}</p>
+            <p className="text-2xs font-bold uppercase tracking-wide text-ink-4">{label}</p>
             <p className="digital mt-0.5 text-sm font-extrabold text-ink-1">{value}</p>
           </div>
         ))}

@@ -45,7 +45,7 @@ export function RegionCard({ item }) {
   return (
     <Link
       to={item.to || "#"}
-      className="shelf-card group relative flex min-h-[300px] flex-col bg-[#171021] text-white transition-transform duration-2 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-brand-500"
+      className="shelf-card group relative flex min-h-[300px] flex-col bg-ink-1 text-white transition-transform duration-2 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-brand-500"
       data-testid={`content-card-${item.kind}`}
       data-region-card="true"
     >
@@ -71,16 +71,16 @@ export function RegionCard({ item }) {
             <Icon size={42} strokeWidth={1.4} style={{ color: palette.ink }} />
           </div>
         )}
-        <span className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#171021]/45 via-transparent to-[#171021]" aria-hidden="true" />
+        <span className="pointer-events-none absolute inset-0 bg-gradient-to-b from-ink-1/45 via-transparent to-ink-1" aria-hidden="true" />
       </div>
 
       <div className="relative z-20 flex items-start justify-between gap-2 p-2">
-        <span className="rounded-full bg-black/50 px-2 py-1 text-[10px] font-extrabold text-white backdrop-blur">
+        <span className="rounded-full bg-black/50 px-2 py-1 text-2xs font-extrabold text-white backdrop-blur">
           {kindLabel(item.kind)}
         </span>
         <span
           className={cn(
-            "inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-extrabold",
+            "inline-flex items-center gap-1 rounded-full px-2 py-1 text-2xs font-extrabold",
             rank.level >= 3
               ? "bg-mk-orange text-white"
               : "bg-black/50 text-white backdrop-blur",
@@ -98,7 +98,7 @@ export function RegionCard({ item }) {
           <span
             data-testid="region-card-claim-status"
             className={cn(
-              "mb-1 inline-flex w-fit items-center rounded-full px-2 py-0.5 text-[10px] font-bold backdrop-blur",
+              "mb-1 inline-flex w-fit items-center rounded-full px-2 py-0.5 text-2xs font-bold backdrop-blur",
               claimStatus === "verified"
                 ? "bg-brand-700/90 text-white"
                 : "bg-amber-500/30 text-amber-100",
@@ -115,7 +115,7 @@ export function RegionCard({ item }) {
         {(item.meta?.recurring_label || item.recurring_label) && (
           <span
             data-testid="region-card-recurring"
-            className="mt-1 inline-flex w-fit items-center gap-1 rounded-full bg-emerald-500/25 px-1.5 py-0.5 text-[10px] font-bold text-emerald-100 backdrop-blur"
+            className="mt-1 inline-flex w-fit items-center gap-1 rounded-full bg-emerald-500/25 px-1.5 py-0.5 text-2xs font-bold text-emerald-100 backdrop-blur"
           >
             {item.meta?.recurring_label || item.recurring_label}
           </span>
@@ -124,20 +124,20 @@ export function RegionCard({ item }) {
         {item.kind === "provider" && item.meta?.service_count > 0 && (
           <span
             data-testid="region-card-service-count"
-            className="mt-1 inline-flex w-fit items-center gap-1 rounded-full bg-white/15 px-1.5 py-0.5 text-[10px] font-bold text-white/85 backdrop-blur"
+            className="mt-1 inline-flex w-fit items-center gap-1 rounded-full bg-white/15 px-1.5 py-0.5 text-2xs font-bold text-white/85 backdrop-blur"
           >
             {item.meta.service_count} service{item.meta.service_count === 1 ? "" : "s"}
           </span>
         )}
 
         <div className="mt-2 rounded-xl bg-black/35 p-2 backdrop-blur-sm">
-          <p className="flex min-w-0 items-center gap-1 text-[10px] font-bold uppercase tracking-[0.06em] text-white/60">
+          <p className="flex min-w-0 items-center gap-1 text-2xs font-bold uppercase tracking-[0.06em] text-white/60">
             <MapPin size={9} className="shrink-0" aria-hidden="true" />
             <span className="truncate normal-case tracking-normal">{place}</span>
           </p>
           <div className="mt-1.5 flex items-center justify-between gap-2 rounded-lg bg-mk-orange px-2 py-1.5 text-white">
             <span className="truncate text-sm font-black tabular-nums">{price}</span>
-            <span className="shrink-0 rounded-md bg-white/20 px-1.5 py-0.5 text-[10px] font-extrabold">Lvl {rank.level}</span>
+            <span className="shrink-0 rounded-md bg-white/20 px-1.5 py-0.5 text-2xs font-extrabold">Lvl {rank.level}</span>
           </div>
         </div>
 
@@ -147,7 +147,7 @@ export function RegionCard({ item }) {
             title={`At or below the ${
               item.corridor_scope_label || item.location || "corridor"
             } median of KSh ${Number(item.corridor_median_kes || 0).toLocaleString()}`}
-            className="mt-1 inline-flex w-fit items-center gap-1 rounded-md bg-[#FFD7A8]/20 px-1.5 py-0.5 text-[10px] font-bold text-[#FFD7A8] backdrop-blur"
+            className="mt-1 inline-flex w-fit items-center gap-1 rounded-md bg-[#FFD7A8]/20 px-1.5 py-0.5 text-2xs font-bold text-[#FFD7A8] backdrop-blur"
           >
             <TrendingDown size={11} aria-hidden="true" />
             Fair Corridor Price
@@ -157,7 +157,7 @@ export function RegionCard({ item }) {
         <div className="mt-auto pt-3">
           {momentum?.capacity > 0 ? (
             <>
-              <div className="flex items-center justify-between gap-2 text-[10px] font-bold text-white/70">
+              <div className="flex items-center justify-between gap-2 text-2xs font-bold text-white/70">
                 <span data-testid="region-card-momentum">{momentum.text}</span>
                 <span>{Math.max(momentum.capacity - momentum.joined, 0)} left</span>
               </div>
@@ -170,7 +170,7 @@ export function RegionCard({ item }) {
               </div>
             </>
           ) : (
-            <div className="flex items-center justify-between gap-1 text-[10px] text-white/60">
+            <div className="flex items-center justify-between gap-1 text-2xs text-white/60">
               <span className="truncate">
                 {item.owner?.handle ? `/p/${item.owner.handle}` : "Page not published"}
               </span>

@@ -168,7 +168,7 @@ export default function CommerceOpsPage() {
               ["Fee revenue paid", formatKes(overview.fees.recognized_fee_revenue_kes)],
             ].map(([label, value]) => (
               <div key={label} className="rounded-2xl border border-edge-1 bg-surface-1 px-3 py-2.5">
-                <p className="text-[10px] font-bold uppercase tracking-wide text-ink-4">{label}</p>
+                <p className="text-2xs font-bold uppercase tracking-wide text-ink-4">{label}</p>
                 <p className="digital mt-0.5 text-sm font-extrabold text-ink-1">{value}</p>
               </div>
             ))}

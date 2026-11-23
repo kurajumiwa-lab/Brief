@@ -135,7 +135,7 @@ function EmptyIllustration({ kind, Icon, tone }) {
         <span
           className={cn(
             "absolute -bottom-1.5 -right-1.5 w-8 h-8 rounded-xl border border-edge-1 bg-surface-0 shadow-sm flex items-center justify-center",
-            isDanger ? "text-red-600 dark:text-red-400" : isAmber ? "text-accent-600 dark:text-accent-400" : "text-brand-700 dark:text-brand-300"
+            isDanger ? "text-red-600 dark:text-red-400" : isAmber ? "text-accent-700 dark:text-accent-300" : "text-brand-700 dark:text-brand-300"
           )}
         >
           <Icon size={16} aria-hidden="true" />

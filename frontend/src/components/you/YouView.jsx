@@ -52,7 +52,7 @@ export default function YouView({
   return (
     <div className="mx-auto w-full max-w-2xl space-y-5">
       {/* Identity header */}
-      <header className="overflow-hidden rounded-3xl border border-edge-1 bg-surface-1">
+      <header className="overflow-hidden rounded-2xl border border-edge-1 bg-surface-1">
         <div className="h-20 w-full bg-gradient-to-r from-brand-700 via-brand-600 to-brand-500" />
         <div className="px-5 pb-4 sm:px-6">
           <div className="-mt-8 flex items-end justify-between gap-3">

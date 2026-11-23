@@ -75,10 +75,10 @@ function ShelfCard({ item }) {
               <Icon size={42} strokeWidth={1.4} style={{ color: palette.ink }} />
             </div>
           )}
-          <span className="absolute left-2.5 top-2.5 rounded-full bg-white/95 px-2 py-1 text-[10px] font-extrabold tracking-[0.06em] text-ink-1 shadow-sm backdrop-blur">
+          <span className="absolute left-2.5 top-2.5 rounded-full bg-white/95 px-2 py-1 text-2xs font-extrabold tracking-[0.06em] text-ink-1 shadow-sm backdrop-blur">
             {dateLabel(item.starts_at)}
           </span>
-          <span className="absolute right-2.5 top-2.5 rounded-full bg-black/45 px-2 py-1 text-[10px] font-bold text-white backdrop-blur">
+          <span className="absolute right-2.5 top-2.5 rounded-full bg-black/45 px-2 py-1 text-2xs font-bold text-white backdrop-blur">
             {item.kind === "event" ? "Event" : "Round"}
           </span>
         </div>
@@ -91,7 +91,7 @@ function ShelfCard({ item }) {
           </p>
 
           <div className="mt-auto pt-3">
-            <div className="flex items-center justify-between gap-2 text-[10px] font-bold text-ink-3">
+            <div className="flex items-center justify-between gap-2 text-2xs font-bold text-ink-3">
               <span data-testid="happening-joined">{group.text}</span>
               {group.capacity > 0 && <span className="text-ink-4">{Math.max(group.capacity - group.joined, 0)} left</span>}
             </div>

@@ -360,7 +360,7 @@ export default function MePage() {
       <section
         aria-label="Business control centre"
         data-testid="business-identity"
-        className="relative isolate overflow-hidden rounded-[1.5rem] bg-[#102C24] px-4 py-4 text-white sm:px-6 sm:py-5"
+        className="relative isolate overflow-hidden rounded-[1.5rem] bg-brand-900 px-4 py-4 text-white sm:px-6 sm:py-5"
       >
         <div
           className="absolute inset-0 -z-10"
@@ -435,7 +435,7 @@ export default function MePage() {
         <div className="mt-3 grid gap-2 sm:grid-cols-[1.6fr_1fr]">
           <Link
             to="/stock?new=1"
-            className="group flex items-center gap-2.5 rounded-xl bg-[#DDF5E7] px-3 py-2.5 text-[#145A40] transition-colors hover:bg-[#CBEED9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            className="group flex items-center gap-2.5 rounded-xl bg-brand-50 px-3 py-2.5 text-brand-800 transition-colors hover:bg-brand-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
           >
             <PlusCircle size={18} className="shrink-0" aria-hidden="true" />
             <span className="min-w-0 flex-1">

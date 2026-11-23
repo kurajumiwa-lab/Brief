@@ -379,22 +379,22 @@ export default function ReceiptRewardsPage() {
           </div>
           <dl className="grid grid-cols-3 gap-2">
             <div className="rounded-xl border border-edge-1 bg-surface-0 px-3 py-2">
-              <dt className="text-[10px] font-bold uppercase tracking-wide text-ink-4">Calculated</dt>
+              <dt className="text-2xs font-bold uppercase tracking-wide text-ink-4">Calculated</dt>
               <dd className="digital text-sm font-extrabold text-ink-1">{result.calculated_points}</dd>
             </div>
             <div className="rounded-xl border border-edge-1 bg-surface-0 px-3 py-2">
-              <dt className="text-[10px] font-bold uppercase tracking-wide text-ink-4">Funded</dt>
+              <dt className="text-2xs font-bold uppercase tracking-wide text-ink-4">Funded</dt>
               <dd className="digital text-sm font-extrabold text-brand-700 dark:text-brand-300">{result.funded_points}</dd>
             </div>
             <div className="rounded-xl border border-edge-1 bg-surface-0 px-3 py-2">
-              <dt className="text-[10px] font-bold uppercase tracking-wide text-ink-4">Window</dt>
+              <dt className="text-2xs font-bold uppercase tracking-wide text-ink-4">Window</dt>
               <dd className="text-sm font-extrabold text-ink-1">{result.priority ? "15 min" : result.freshness}</dd>
             </div>
           </dl>
           {result.fraud_flags?.length > 0 && (
             <ul className="flex flex-wrap gap-1.5">
               {result.fraud_flags.map((flag) => (
-                <li key={flag} className="rounded-full border border-edge-2 bg-surface-0 px-2 py-1 text-[10px] font-semibold text-ink-3">
+                <li key={flag} className="rounded-full border border-edge-2 bg-surface-0 px-2 py-1 text-2xs font-semibold text-ink-3">
                   {FLAG_COPY[flag] || flag.replaceAll("_", " ")}
                 </li>
               ))}

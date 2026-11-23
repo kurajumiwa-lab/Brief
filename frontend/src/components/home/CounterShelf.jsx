@@ -79,7 +79,11 @@ export default function CounterShelf({ progress }) {
         ) : null}
       </div>
 
-      <div className="overflow-hidden rounded-3xl bg-gradient-to-br from-brand-800 via-brand-900 to-ink-900 text-white shadow-xl shadow-brand-900/20">
+      {/* Solid green, not a three-stop gradient. The gradient was the "dark
+          green glassmorphism" a design review named as making the product look
+          generated; a flat brand-600 slab with a white hairline reads as a
+          physical counter instead. */}
+      <div className="overflow-hidden rounded-2xl border border-brand-700 bg-brand-600 text-white shadow-sm">
         <div className="flex items-start justify-between gap-4 px-5 pb-4 pt-5">
           <div className="min-w-0">
             <p className="text-micro font-bold uppercase tracking-[0.16em] text-white/75">

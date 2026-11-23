@@ -185,7 +185,7 @@ function RouteTable({ rows, highlight }) {
               <td className="py-1.5 text-right text-ink-3">{r.requests ?? r.count}</td>
               <td className="py-1.5 text-right text-ink-3">{r.avg_ms}</td>
               <td className="py-1.5 text-right text-ink-3">{r.p50_ms}</td>
-              <td className={cn("py-1.5 text-right", highlight ? "text-accent-600 dark:text-accent-400" : "text-ink-3")}>
+              <td className={cn("py-1.5 text-right", highlight ? "text-accent-700 dark:text-accent-300" : "text-ink-3")}>
                 {r.p95_ms}
               </td>
               <td className="py-1.5 text-right text-ink-3">{r.max_ms}</td>
@@ -521,7 +521,7 @@ export default function Ops() {
   return (
     <div className="space-y-6">
       {/* ── PRIMARY OPERATIONS CENTER PANEL (Dark Emerald Theme) ─────────── */}
-      <section className="rounded-3xl bg-[#151B19] text-[#F1F5F3] border border-[#35413A] p-5 md:p-6 shadow-xl space-y-6">
+      <section className="rounded-2xl bg-[#151B19] text-[#F1F5F3] border border-[#35413A] p-5 md:p-6 shadow-xl space-y-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full bg-emerald-500/15 border border-emerald-500/30 px-3 py-1 text-xs font-semibold text-emerald-300 mb-2">
@@ -634,7 +634,7 @@ export default function Ops() {
                     {stat.label}
                   </span>
                   {active && (
-                    <span className="text-[10px] font-semibold text-emerald-300">Filtered</span>
+                    <span className="text-2xs font-semibold text-emerald-300">Filtered</span>
                   )}
                 </div>
                 <div className={`text-2xl md:text-3xl font-bold mt-1.5 ${stat.accent}`}>
@@ -668,7 +668,7 @@ export default function Ops() {
                 <div>
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-xs font-semibold text-emerald-300">{wf.category}</span>
-                    <span className="font-mono text-[10px] text-[#9FB0A7]">{wf.endpoint}</span>
+                    <span className="font-mono text-2xs text-[#9FB0A7]">{wf.endpoint}</span>
                   </div>
                   <div className="text-sm font-semibold text-white mt-0.5">{wf.label}</div>
                   <p className="text-xs text-[#9FB0A7] mt-1 line-clamp-2">{wf.description}</p>
@@ -742,7 +742,7 @@ export default function Ops() {
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="font-semibold text-sm text-white">{job.name}</span>
-                          <span className="font-mono text-[11px] text-[#9FB0A7]">
+                          <span className="font-mono text-2xs text-[#9FB0A7]">
                             #{String(job.id).slice(0, 8)}
                           </span>
                         </div>
@@ -840,7 +840,7 @@ export default function Ops() {
 
       {/* ── MEASUREMENT (v2.15) — numbers with their definitions attached ─── */}
       {measurement && (
-        <section className="rounded-3xl border border-edge-1 bg-surface-1 p-5 md:p-6 space-y-5">
+        <section className="rounded-2xl border border-edge-1 bg-surface-1 p-5 md:p-6 space-y-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h2 className="text-lg font-bold text-ink-1">Activation &amp; usage</h2>
@@ -950,7 +950,7 @@ export default function Ops() {
           aria-modal="true"
           aria-labelledby="create-job-title"
         >
-          <div className="w-full max-w-xl rounded-3xl bg-[#151B19] text-[#F1F5F3] border border-[#35413A] p-6 shadow-2xl space-y-5">
+          <div className="w-full max-w-xl rounded-2xl bg-[#151B19] text-[#F1F5F3] border border-[#35413A] p-6 shadow-2xl space-y-5">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <span className="text-xs font-semibold uppercase tracking-wider text-emerald-300">
@@ -1083,7 +1083,7 @@ export default function Ops() {
                   <CheckCircle2 className="h-4 w-4" />
                   <span>Pre-flight Validation Passed · Ready to Run</span>
                 </div>
-                <div className="font-mono text-[11px] text-emerald-200/90">
+                <div className="font-mono text-2xs text-emerald-200/90">
                   Target: {reviewResult.endpoint || selectedWorkflow?.endpoint}
                 </div>
                 {(reviewResult.warnings || []).map((w, i) => (

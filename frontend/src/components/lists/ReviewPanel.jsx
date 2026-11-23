@@ -26,7 +26,7 @@ export function Stars({ value = 0, size = 12, className }) {
   return (
     <span className={cn("inline-flex items-center gap-0.5", className)} title={`${Number(value || 0).toFixed(1)} / 5`}>
       {[1, 2, 3, 4, 5].map((n) => (
-        <Star key={n} size={size} className={n <= filled ? "text-accent-600 dark:text-accent-400 fill-amber-400" : "text-ink-4/50"} />
+        <Star key={n} size={size} className={n <= filled ? "text-accent-700 dark:text-accent-300 fill-amber-400" : "text-ink-4/50"} />
       ))}
     </span>
   );
@@ -185,7 +185,7 @@ export default function ReviewsDrawer({ list, onClose }) {
                       onClick={() => setForm({ ...form, rating: n })}
                       className="p-0.5"
                     >
-                      <Star size={20} className={n <= form.rating ? "text-accent-600 dark:text-accent-400 fill-amber-400" : "text-ink-4/50"} />
+                      <Star size={20} className={n <= form.rating ? "text-accent-700 dark:text-accent-300 fill-amber-400" : "text-ink-4/50"} />
                     </button>
                   ))}
                 </div>
