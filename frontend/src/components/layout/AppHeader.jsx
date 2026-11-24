@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { NavLink, useLocation } from "react-router-dom";
-import { Menu, Search, X } from "lucide-react";
+import { Link, NavLink, useLocation } from "react-router-dom";
+import { Bell, Menu, Search, X } from "lucide-react";
 import Logo from "./Logo";
 import GlobalSearch from "./GlobalSearch";
 import AccountMenu from "./AccountMenu";
@@ -11,17 +11,24 @@ import { useUIStore } from "@/stores/uiStore";
 import { cn } from "@/lib/utils";
 
 /**
- * One header: the menu, the name, the five destinations and the account.
+ * THE HEADER — logo, search, bell, profile. One row, every screen.
  *
- * Two things are deliberately gone:
+ * The brief asks for a compact bar and this is it. What changed:
  *
- *   · the browse rail under the header. It repeated five of the drawer's links
- *     on every discovery screen, and it made the header two storeys tall on a
- *     phone. Regions is one tab and one page; it does not need a second
- *     navigation of its own.
- *   · the create button beside the search. Create is the middle tab on the bar
- *     and a filled item in the desktop row, so a third copy in the header was
- *     the same action three times.
+ *   · **Search is always present.** It used to appear only off Home, on the
+ *     theory that Home was the place you browsed. That was wrong: Home is where
+ *     a person most often knows exactly what they want. A search box that hides
+ *     on the busiest screen is a search box that is not there.
+ *   · **A bell, not a menu item.** Anything waiting on a reply is an action, so
+ *     it gets an icon with a count and a route to the Inbox, rather than being
+ *     one line inside an account dropdown.
+ *   · **The mark is compact.** On a phone it is the glyph alone; the wordmark
+ *     returns at `sm`. The brief's row is logo · search · actions, and the
+ *     wordmark was costing the search field a third of its width.
+ *
+ * The desktop tab row is unchanged. It duplicates the bottom bar on purpose:
+ * one bar is for thumbs, the other for a mouse, and they are never both the
+ * primary navigation at the same time.
  */
 export default function AppHeader() {
   const [mobileSearch, setMobileSearch] = useState(false);
@@ -36,13 +43,18 @@ export default function AppHeader() {
     if (!activity) loadActivity();
   }, [activity, loadActivity]);
 
+  // Close the phone search row when the route changes, or it follows the
+  // person to a screen they opened by searching.
+  useEffect(() => {
+    setMobileSearch(false);
+  }, [pathname]);
+
   const unread =
     (activity?.groups || []).reduce(
       (total, group) => total + group.items.filter((item) => !item.is_read).length,
       0,
     ) + (activity?.counts?.rooms_active_today || 0);
 
-  const isHome = pathname === "/";
   // The shopfront keeps one warm chrome across its header, so the catalogue
   // does not open under a cool grey bar that belongs to the trade screens.
   const isDiscovery = pathname === "/regions" || pathname.startsWith("/regions/") || pathname.startsWith("/discover");
@@ -64,15 +76,16 @@ export default function AppHeader() {
             aria-label="More"
             aria-expanded={sectionsOpen}
             aria-controls="secondary-sections"
-            className="-ml-2 rounded-xl p-2 text-ink-3 transition-colors hover:bg-surface-2 hover:text-ink-1 focus-visible:ring-2 focus-visible:ring-brand-500"
+            className="-ml-2 shrink-0 rounded-xl p-2 text-ink-3 transition-colors hover:bg-surface-2 hover:text-ink-1 focus-visible:ring-2 focus-visible:ring-brand-500"
           >
             <Menu size={19} aria-hidden="true" />
           </button>
 
-          <Logo />
+          <Logo className="shrink-0" />
 
-          {!isHome && <GlobalSearch className="ml-1 hidden max-w-[17rem] flex-1 md:flex xl:max-w-[20rem]" />}
-          <div className="flex-1 md:hidden" />
+          {/* The field is the widest thing in the row on every screen, which is
+              what "compact logo + search + bell + profile" asks for. */}
+          <GlobalSearch className="ml-0.5 hidden min-w-0 flex-1 md:flex md:max-w-[22rem] lg:max-w-[26rem]" />
 
           <nav aria-label="Primary" className="ml-auto hidden items-center gap-0.5 lg:flex">
             {PRIMARY_TABS.map((item) => {
@@ -104,25 +117,43 @@ export default function AppHeader() {
             })}
           </nav>
 
-          <div className="ml-auto flex items-center gap-1 lg:ml-2">
-            {!isHome && (
-              <button
-                type="button"
-                onClick={() => setMobileSearch((value) => !value)}
-                aria-label={mobileSearch ? "Close search" : "Search"}
-                aria-expanded={mobileSearch}
-                className="rounded-xl p-2 text-ink-3 transition-colors hover:bg-surface-2 hover:text-ink-1 md:hidden"
-              >
-                {mobileSearch ? <X size={19} /> : <Search size={19} />}
-              </button>
-            )}
+          <div className="ml-auto flex items-center gap-0.5 lg:ml-2">
+            <button
+              type="button"
+              onClick={() => setMobileSearch((value) => !value)}
+              aria-label={mobileSearch ? "Close search" : "Search"}
+              aria-expanded={mobileSearch}
+              aria-controls="mobile-search"
+              className="rounded-xl p-2 text-ink-3 transition-colors hover:bg-surface-2 hover:text-ink-1 focus-visible:ring-2 focus-visible:ring-brand-500 md:hidden"
+            >
+              {mobileSearch ? <X size={19} aria-hidden="true" /> : <Search size={19} aria-hidden="true" />}
+            </button>
+
+            {/* Anything waiting on a reply is an action, so it is an icon with a
+                count and its own route — not a line inside a menu. */}
+            <Link
+              to="/inbox"
+              aria-label={unread > 0 ? `Inbox, ${unread} waiting` : "Inbox"}
+              className="relative rounded-xl p-2 text-ink-3 transition-colors hover:bg-surface-2 hover:text-ink-1 focus-visible:ring-2 focus-visible:ring-brand-500"
+            >
+              <Bell size={19} aria-hidden="true" />
+              {unread > 0 && (
+                <span
+                  aria-hidden="true"
+                  className="absolute right-1 top-1 grid h-4 min-w-4 place-items-center rounded-full bg-accent-600 px-1 text-[0.625rem] font-bold leading-none tabular-nums text-white"
+                >
+                  {unread > 9 ? "9+" : unread}
+                </span>
+              )}
+            </Link>
+
             <AccountMenu />
           </div>
         </div>
       </div>
 
-      {mobileSearch && !isHome && (
-        <div className="animate-slide-down border-t border-edge-1 bg-surface-0 px-4 py-3 md:hidden">
+      {mobileSearch && (
+        <div id="mobile-search" className="animate-slide-down border-t border-edge-1 bg-surface-0 px-4 py-3 md:hidden">
           <GlobalSearch autoFocus onSubmitted={() => setMobileSearch(false)} />
         </div>
       )}
