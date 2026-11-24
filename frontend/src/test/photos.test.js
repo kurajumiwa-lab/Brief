@@ -8,7 +8,8 @@
  * not reveal.
  */
 import { describe, it, expect } from "vitest";
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, readdirSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { photoFor, photoUrl } from "@/lib/photos";
@@ -23,10 +24,10 @@ describe("the photo library", () => {
     // is a broken <img> in production, and tests are the only place it shows.
     const subjects = [
       "city-skyline", "city-cbd", "city-street", "city-hero",
-      "commerce-street", "commerce-traffic", "commerce-city",
+      "commerce-goods", "commerce-street", "commerce-traffic", "rental-tools",
       "work-technician", "people-street",
       "culture-conference",
-      "banner-street", "banner-produce", "banner-community", "banner-people",
+      "banner-street", "banner-produce", "banner-people",
       "banner-skyline", "hero-market",
     ];
     for (const subject of subjects) {
@@ -39,6 +40,19 @@ describe("the photo library", () => {
   it("returns null rather than a guessed path for an unknown subject", () => {
     expect(photoUrl("no-such-subject")).toBeNull();
     expect(photoUrl(undefined)).toBeNull();
+  });
+
+  it("ships no two byte-identical files, so variety is not an illusion", () => {
+    // Four crops were once generated from two sources, so two pairs of files
+    // were identical. The grid showed "variety" that did not exist, and no
+    // dimension or filename check could see it.
+    const dir = join(PUBLIC, "photos", "kenya");
+    const seen = new Map();
+    for (const file of readdirSync(dir).filter((f) => f.endsWith(".jpg"))) {
+      const digest = createHash("sha256").update(readFileSync(join(dir, file))).digest("hex");
+      expect(seen.has(digest), `${file} is identical to ${seen.get(digest)}`).toBe(false);
+      seen.set(digest, file);
+    }
   });
 
   it("credits every file it ships, because a licence we cannot show is a risk", () => {
@@ -76,7 +90,7 @@ describe("photoFor", () => {
   it("reads an Available offer's sub-category before its umbrella kind", () => {
     const offer = { id: "o", kind: "available", meta: { primary_category: "service" } };
     const url = photoFor(offer);
-    expect(url).toMatch(/work-|people-|commerce-/);
+    expect(url).toMatch(/work-|people-|commerce-|rental-/);
   });
 
   it("survives junk without throwing", () => {
