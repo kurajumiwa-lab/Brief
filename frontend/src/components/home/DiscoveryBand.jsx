@@ -17,9 +17,9 @@ import { photoUrl } from "@/lib/photos";
  */
 
 const CATEGORIES = [
-  { to: "/discover?kind=listing", label: "Goods", hint: "Produce, stock, wares", Icon: Package, tone: "goods", subject: "commerce-street" },
+  { to: "/discover?kind=listing", label: "Goods", hint: "Produce, stock, wares", Icon: Package, tone: "goods", subject: "commerce-goods" },
   { to: "/discover?kind=service", label: "Services", hint: "Fundis and trades", Icon: Truck, tone: "services", subject: "work-technician" },
-  { to: "/discover?kind=rental", label: "Rentals", hint: "Tools, rooms, vans", Icon: Wrench, tone: "rentals", subject: "commerce-city" },
+  { to: "/discover?kind=rental", label: "Rentals", hint: "Tools, rooms, vans", Icon: Wrench, tone: "rentals", subject: "rental-tools" },
   { to: "/discover?kind=event", label: "Events", hint: "Rounds and meetups", Icon: CalendarDays, tone: "events", subject: "culture-conference" },
 ];
 

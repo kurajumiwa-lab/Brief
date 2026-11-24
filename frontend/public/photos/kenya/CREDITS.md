@@ -49,10 +49,10 @@ locally to fixed aspect ratios.
 | `banner-street.jpg` | 1400×600 | Nairobi CBD street, matatus and pedestrians, wide |
 | `banner-people.jpg` | 1400×600 | Nairobi CBD crossing, wide |
 | `banner-produce.jpg` | 1400×600 | Nairobi towers, wide crop |
-| `banner-community.jpg` | 1400×600 | Nairobi CBD, wide crop |
 | `city-cbd.jpg` | 900×675 | Nairobi towers at street level |
 | `city-street.jpg` | 800×600 | Nairobi CBD roofline |
-| `commerce-city.jpg` | 800×600 | Nairobi CBD with traffic |
+| `commerce-goods.jpg` | 900×675 | African wax-print fabric, retail display |
+| `rental-tools.jpg` | 800×600 | Tool wall: spanners, drills, vice |
 | `commerce-street.jpg` | 800×600 | Kenyan commercial street with shops |
 | `commerce-traffic.jpg` | 800×600 | Matatu-filled Nairobi junction |
 | `culture-conference.jpg` | 900×675 | Conference stage and audience |

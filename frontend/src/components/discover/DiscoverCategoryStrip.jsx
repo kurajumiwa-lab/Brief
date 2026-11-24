@@ -17,9 +17,9 @@ import { photoUrl } from "@/lib/photos";
  */
 const CATEGORIES = [
   { key: "all", label: "All", value: "", Icon: LayoutGrid, tone: "from-brand-700 to-brand-500", subject: "banner-street" },
-  { key: "goods", label: "Goods", value: "listing", Icon: Package, tone: "from-cat-goods-text to-cat-goods", match: (i) => i.kind === "listing" || i.meta?.primary_category === "goods" , subject: "commerce-street" },
+  { key: "goods", label: "Goods", value: "listing", Icon: Package, tone: "from-cat-goods-text to-cat-goods", match: (i) => i.kind === "listing" || i.meta?.primary_category === "goods" , subject: "commerce-goods" },
   { key: "services", label: "Services", value: "service", Icon: Truck, tone: "from-cat-services-text to-cat-services", match: (i) => ["service", "provider"].includes(i.kind) || i.meta?.primary_category === "service" , subject: "work-technician" },
-  { key: "rentals", label: "Rentals", value: "rental", Icon: Wrench, tone: "from-cat-rentals-text to-cat-rentals", match: (i) => i.kind === "rental" || i.meta?.primary_category === "rental" , subject: "commerce-city" },
+  { key: "rentals", label: "Rentals", value: "rental", Icon: Wrench, tone: "from-cat-rentals-text to-cat-rentals", match: (i) => i.kind === "rental" || i.meta?.primary_category === "rental" , subject: "rental-tools" },
   { key: "rounds", label: "Rounds", value: "rounds", Icon: CalendarDays, tone: "from-cat-events-text to-cat-events", match: (i) => ["scheduled", "event"].includes(i.kind) , subject: "culture-conference" },
   { key: "spotted", label: "Spotted", value: "spotted", Icon: BadgePercent, tone: "from-accent-700 to-accent-400", match: (i) => i.feed_kind === "SPOTTED_DEAL" , subject: "commerce-traffic" },
 ];

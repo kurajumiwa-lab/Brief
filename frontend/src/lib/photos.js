@@ -49,7 +49,8 @@ const LIBRARY = {
   // Commerce: streets where trade actually happens.
   "commerce-street": "commerce-street.jpg",
   "commerce-traffic": "commerce-traffic.jpg",
-  "commerce-city": "commerce-city.jpg",
+  "commerce-goods": "commerce-goods.jpg",
+  "rental-tools": "rental-tools.jpg",
 
   // People at work in modern settings.
   "work-technician": "work-technician.jpg",
@@ -61,7 +62,6 @@ const LIBRARY = {
   // Wide crops for banners and the hero.
   "banner-street": "banner-street.jpg",
   "banner-produce": "banner-produce.jpg",
-  "banner-community": "banner-community.jpg",
   "banner-people": "banner-people.jpg",
   "banner-skyline": "banner-skyline.jpg",
   "hero-market": "hero-market.jpg",
@@ -91,12 +91,12 @@ function pick(pool, seed) {
 }
 
 const POOLS = {
-  goods: ["commerce-street", "commerce-traffic", "commerce-city", "city-cbd"],
+  goods: ["commerce-goods", "commerce-street", "commerce-traffic", "city-cbd"],
   service: ["work-technician", "people-street", "commerce-street"],
-  rental: ["commerce-city", "city-cbd", "commerce-street"],
+  rental: ["rental-tools", "city-cbd", "commerce-street"],
   event: ["culture-conference", "city-street", "people-street"],
   person: ["people-street", "work-technician"],
-  community: ["city-street", "banner-community", "culture-conference"],
+  community: ["city-street", "commerce-street", "culture-conference"],
   post: ["commerce-street", "city-cbd", "banner-street"],
 };
 
