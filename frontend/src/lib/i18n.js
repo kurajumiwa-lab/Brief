@@ -2,7 +2,7 @@
  * Kiswahili for the public trust surfaces and the Home trust card.
  *
  * Scope is deliberate. Only the screens customers and shop owners see first are
- * translated here: the Brief Trust browse and shop pages, the free-listing note,
+ * translated here: the Wasta Trust browse and shop pages, the free-listing note,
  * and the Home trust card. Everywhere else the app stays in English until it has
  * its own translation pass.
  *
@@ -27,8 +27,8 @@ export const STRINGS = {
     sw: "Maduka unayoweza kuamini",
   },
   "browse.intro": {
-    en: "Real shops in Kenya, Ethiopia and Uganda. Brief checks each one before it appears here.",
-    sw: "Maduka halisi Kenya, Ethiopia na Uganda. Brief inaangalia kila duka kabla halijaonekana hapa.",
+    en: "Real shops in Kenya, Ethiopia and Uganda. Wasta checks each one before it appears here.",
+    sw: "Maduka halisi Kenya, Ethiopia na Uganda. Wasta inaangalia kila duka kabla halijaonekana hapa.",
   },
   "browse.listLink": {
     en: "List your shop free, or see your points",
@@ -51,8 +51,8 @@ export const STRINGS = {
     sw: "Maduka yote yaliyokaguliwa",
   },
   "shop.checked": {
-    en: "Checked by Brief",
-    sw: "Imekaguliwa na Brief",
+    en: "Checked by Wasta",
+    sw: "Imekaguliwa na Wasta",
   },
   "shop.rateTitle": {
     en: "Rate this shop",
@@ -87,32 +87,32 @@ export const STRINGS = {
     sw: "Chapisha ukaguzi wangu",
   },
   "shop.checkedByPhoto": {
-    en: "Checked by Brief staff: storefront photo or in-person visit.",
-    sw: "Wafanyakazi wa Brief wameliangalia: picha ya duka au ziara ya ana kwa ana.",
+    en: "Checked by Wasta staff: storefront photo or in-person visit.",
+    sw: "Wafanyakazi wa Wasta wameliangalia: picha ya duka au ziara ya ana kwa ana.",
   },
   "shop.checkedByPapers": {
-    en: "Checked by Brief staff: business papers or confirmation from other businesses.",
-    sw: "Wafanyakazi wa Brief wameliangalia: karatasi za biashara au uthibitisho kutoka biashara nyingine.",
+    en: "Checked by Wasta staff: business papers or confirmation from other businesses.",
+    sw: "Wafanyakazi wa Wasta wameliangalia: karatasi za biashara au uthibitisho kutoka biashara nyingine.",
   },
   "shop.checkedByDefault": {
-    en: "Checked by Brief staff.",
-    sw: "Wafanyakazi wa Brief wameliangalia.",
+    en: "Checked by Wasta staff.",
+    sw: "Wafanyakazi wa Wasta wameliangalia.",
   },
   "listing.free": {
-    en: "Listing your shop on MarketTrust is free. Brief checks it before it appears to customers.",
-    sw: "Kuweka duka lako MarketTrust ni bure. Brief inaliangalia kabla halijaonekana kwa wateja.",
+    en: "Listing your shop on MarketTrust is free. Wasta checks it before it appears to customers.",
+    sw: "Kuweka duka lako MarketTrust ni bure. Wasta inaliangalia kabla halijaonekana kwa wateja.",
   },
   "home.trustTitle": {
     en: "Shops you can check before you buy",
     sw: "Duka ni poa? Cheki kabla hujanunua",
   },
   "home.trustBody": {
-    en: "Approved by Brief staff in Kenya, Ethiopia and Uganda. Reviews come from real till codes.",
-    sw: "Brief imeidhinisha maduka Kenya, Ethiopia na Uganda. Ukaguzi unatoka kwa misimbo halisi ya till.",
+    en: "Approved by Wasta staff in Kenya, Ethiopia and Uganda. Reviews come from real till codes.",
+    sw: "Wasta imeidhinisha maduka Kenya, Ethiopia na Uganda. Ukaguzi unatoka kwa misimbo halisi ya till.",
   },
   "home.trustCta": {
-    en: "Open Brief Trust",
-    sw: "Fungua Brief Trust",
+    en: "Open Wasta Trust",
+    sw: "Fungua Wasta Trust",
   },
   "home.trustChip": {
     en: "Checked shops",
@@ -147,12 +147,12 @@ export const STRINGS = {
     sw: "Namba ya simu ya rider",
   },
   "delivery.feeNote": {
-    en: "The rider and the buyer agree the fee between them. Brief does not set or hold any money.",
-    sw: "Rider na mteja wanakubaliana bei yao wenyewe. Brief haiweki wala kushika pesa yoyote.",
+    en: "The rider and the buyer agree the fee between them. Wasta does not set or hold any money.",
+    sw: "Rider na mteja wanakubaliana bei yao wenyewe. Wasta haiweki wala kushika pesa yoyote.",
   },
   "delivery.notChecked": {
-    en: "Brief has not checked this rider.",
-    sw: "Brief haijamhakiki rider huyu.",
+    en: "Wasta has not checked this rider.",
+    sw: "Wasta haijamhakiki rider huyu.",
   },
   "delivery.save": {
     en: "Save delivery",

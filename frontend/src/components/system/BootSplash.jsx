@@ -81,7 +81,10 @@ export default function BootSplash({ onDone, enabled = !DISABLED }) {
         </div>
 
         <p className="text-lg font-extrabold tracking-tight text-ink-1">{BRAND.name}</p>
-        <p className="mt-0.5 text-2xs text-ink-4">{BRAND.tagline}</p>
+        {/* `shortLine`, not `tagline`: the full tagline wraps inside max-w-xs
+            and truncates the promise on the one screen where it is the only
+            thing to read. */}
+        <p className="mt-0.5 text-2xs text-ink-4">{BRAND.shortLine}</p>
 
         <div className="mx-auto mt-6 h-1 w-40 overflow-hidden rounded-full bg-surface-2">
           <div

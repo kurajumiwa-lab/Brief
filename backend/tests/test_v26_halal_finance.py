@@ -26,6 +26,18 @@ from tests.test_v25_payments_chamas import (
 
 pytestmark = pytest.mark.asyncio
 
+# ── Containment (P0-B) ───────────────────────────────────────────────────
+# These suites exercise the real money paths, so they opt in explicitly. The
+# production default is OFF; tests must never rely on the shipped default, or a
+# containment regression would silently look like a test failure.
+@pytest.fixture(autouse=True)
+def _enable_financial_features(monkeypatch):
+    from app.config import settings
+    for flag in ("CHAMA_ENABLED", "MURABAHA_ENABLED",):
+        monkeypatch.setattr(settings, flag, True)
+    yield
+
+
 
 async def _halal_chama(client, members: int, model_type: str):
     """Open-scope Halal pool with `members` vendors, active."""

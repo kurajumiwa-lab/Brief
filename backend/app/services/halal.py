@@ -29,6 +29,9 @@ from app.models.notification import NotificationType
 from app.models.payments import SACCO_ADVANCES
 from app.models.vendor import Vendor
 from app.services import biashara, psp_client
+from app.services.financial_gates import (
+    require_murabaha_eligible, require_murabaha_enabled,
+)
 from app.services.governance import add_audit_event
 from app.services.notification_service import create_notification
 from app.services.payments import create_collection_intent, start_collection
@@ -59,6 +62,11 @@ async def request_murabaha(
     cost_price_ksh: int, markup_ksh: int, payment_due_days: int,
     supplier_vendor_id: uuid.UUID | None = None, note: str | None = None,
 ) -> MurabahaContract:
+    # Containment first, then eligibility: a deployment that has not enabled
+    # murabaha must not reveal anything about who would qualify.
+    require_murabaha_enabled()
+    require_murabaha_eligible(vendor)
+
     product = (product or "").strip()
     if len(product) < 3:
         raise HTTPException(400, "Describe the stock (product)")
@@ -123,6 +131,12 @@ async def request_murabaha(
 async def decide_murabaha(
     db: AsyncSession, contract: MurabahaContract, staff: Vendor, approve: bool,
 ) -> MurabahaContract:
+    # Approval turns a request into a binding obligation to pay, which is new
+    # financial activity and must be contained. A decline only releases
+    # exposure, so it stays available: staff must be able to clear a pending
+    # request without waiting for the feature to be switched back on.
+    if approve:
+        require_murabaha_enabled()
     if contract.status != "pending_approval":
         raise HTTPException(400, f"This contract is {contract.status}; only pending ones can be decided")
     contract.status = "active" if approve else "declined"
@@ -154,6 +168,10 @@ async def pay_murabaha(db: AsyncSession, contract: MurabahaContract, vendor: Ven
         raise HTTPException(400, "This advance is already settled")
     if contract.status != "active":
         raise HTTPException(400, f"Only an approved (active) advance can be paid (it is {contract.status})")
+    # Deliberately NOT gated: this is servicing of an already-approved advance.
+    # "active" is only reachable through `decide_murabaha(approve=True)`, which
+    # is gated, so no new commitment can appear while the feature is off.
+    # Blocking payment would leave a vendor unable to settle a debt they owe.
     intent = await create_collection_intent(
         db, vendor,
         entity_type="murabaha_repayment",
