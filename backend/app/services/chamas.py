@@ -34,6 +34,7 @@ from app.models.vendor import Vendor
 from app.services import biashara, custody, psp_client
 from app.services.custody import chama_wallet_for
 from app.services.disbursements import DisbursementError, request_disbursement
+from app.services.financial_gates import require_chama_enabled
 from app.services.governance import add_audit_event
 from app.services.notification_service import create_notification, notify_many
 from app.services.payments import PaymentError, create_collection_intent, start_collection
@@ -145,6 +146,7 @@ async def create_chama(db: AsyncSession, vendor: Vendor, *, name: str, descripti
                        min_deposit_ksh: int, max_loan_ksh: int, interest_rate: float,
                        cycle_days: int, approval_rate: float,
                        min_members: int, max_members: int) -> Chama:
+    require_chama_enabled()
     name = (name or "").strip()
     if len(name) < 3:
         raise HTTPException(400, "Chama name is too short")
@@ -301,6 +303,7 @@ async def dissolve_chama(db: AsyncSession, chama: Chama, actor: Vendor) -> None:
 
 async def deposit(db: AsyncSession, chama: Chama, vendor: Vendor, amount_ksh: int,
                   provider: Optional[str] = None) -> dict:
+    require_chama_enabled()
     await require_membership(db, chama, vendor)
     if chama.status != "active":
         raise HTTPException(400, "The pool is not open yet (chama still forming)")
@@ -353,6 +356,7 @@ async def on_deposit_completed(db: AsyncSession, intent) -> None:
 
 async def apply_for_loan(db: AsyncSession, chama: Chama, vendor: Vendor, amount_ksh: int,
                          purpose: str) -> ChamaLoan:
+    require_chama_enabled()
     await require_membership(db, chama, vendor)
     if chama.status != "active":
         raise HTTPException(400, "The pool is not open yet")
@@ -423,6 +427,11 @@ async def apply_for_loan(db: AsyncSession, chama: Chama, vendor: Vendor, amount_
 
 async def vote_on_loan(db: AsyncSession, chama: Chama, loan: ChamaLoan, voter: Vendor,
                        vote: str) -> dict:
+    # A loan vote exists only to decide whether principal leaves the pool, so it
+    # authorises new exposure even though it writes no money itself. Gated for
+    # the same reason as `apply_for_loan`: with votes allowed but payouts
+    # blocked, a member's yes would be recorded and then silently dropped.
+    require_chama_enabled()
     if vote not in ("approve", "decline"):
         raise HTTPException(400, "Vote must be 'approve' or 'decline'")
     membership = await require_membership(db, chama, voter)
@@ -482,6 +491,12 @@ async def vote_on_loan(db: AsyncSession, chama: Chama, loan: ChamaLoan, voter: V
 
 async def _disburse_approved_loan(db: AsyncSession, chama: Chama, loan: ChamaLoan) -> None:
     """Move the principal out of the pool (dual approval above the line)."""
+    # Containment chokepoint. This is the only place a chama payout is
+    # initiated, and it has a second caller besides `apply_for_loan`: a vote
+    # that reaches quorum (vote_on_loan). Gating the callers alone would leave
+    # that route open, so the gate sits here and therefore also covers any
+    # future caller.
+    require_chama_enabled()
     balance = await pool_balance(db, chama)
     if balance < loan.amount_ksh:
         # Two loans approved in the same window outran the pool.
@@ -543,6 +558,7 @@ async def _disburse_approved_loan(db: AsyncSession, chama: Chama, loan: ChamaLoa
 
 
 async def retry_loan_disbursement(db: AsyncSession, chama: Chama, loan: ChamaLoan, actor: Vendor) -> None:
+    require_chama_enabled()
     membership = await require_membership(db, chama, actor)
     if membership.role not in ("chair", "treasurer"):
         raise HTTPException(403, "Only the chair or treasurer can retry a payout")
@@ -600,6 +616,11 @@ async def on_loan_disbursement_failed(db: AsyncSession, disbursement) -> None:
 
 
 async def repay_loan(db: AsyncSession, chama: Chama, loan: ChamaLoan, vendor: Vendor) -> dict:
+    # Deliberately NOT gated: this settles a loan that already exists (`status`
+    # must be "disbursed", and that state is only reachable through the gated
+    # disbursement path). Repayment reduces exposure rather than creating it.
+    # Refusing it would trap a borrower who is trying to pay — turning
+    # containment into a default and a dispute.
     await require_membership(db, chama, vendor)
     if loan.chama_id != chama.id or loan.borrower_id != vendor.id:
         raise HTTPException(404, "Loan not found")
@@ -745,6 +766,7 @@ def largest_remainder(total: int, weights: list[tuple[uuid.UUID, int]]) -> dict[
 
 
 async def distribute_dividends(db: AsyncSession, chama: Chama, actor: Vendor) -> dict:
+    require_chama_enabled()
     membership = await require_membership(db, chama, actor)
     if membership.role != "chair":
         raise HTTPException(403, "Only the chair can distribute dividends")
@@ -826,6 +848,7 @@ async def distribute_dividends(db: AsyncSession, chama: Chama, actor: Vendor) ->
 
 
 async def retry_dividend(db: AsyncSession, chama: Chama, dividend: ChamaDividend, actor: Vendor) -> None:
+    require_chama_enabled()
     membership = await require_membership(db, chama, actor)
     if membership.role not in ("chair", "treasurer"):
         raise HTTPException(403, "Only the chair or treasurer can retry a dividend")
@@ -881,6 +904,7 @@ async def contribute_profit(db: AsyncSession, chama: Chama, vendor: Vendor, amou
     """A member remits realised joint-venture (musharakah) profit to the pool
     via PSP collection. The money is real — the ledger stays reconcilable —
     and it becomes part of the distributable surplus for Halal pools."""
+    require_chama_enabled()
     await require_membership(db, chama, vendor)
     if chama.status != "active":
         raise HTTPException(400, "The pool is not open yet")

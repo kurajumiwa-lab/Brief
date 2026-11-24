@@ -288,6 +288,18 @@ class Settings(BaseSettings):
     COLLECT_DAILY_PER_VENDOR_LIMIT_KSH: int = 500_000
     # Per-transaction disbursement cap (KSh).
     DISBURSE_PER_TRANSACTION_LIMIT_KSH: int = 250_000
+    # ── Financial containment (P0-B) ──────────────────────────────────────
+    # Brief's product boundary is no lending and no custody of client capital.
+    # The chama and murabaha engines were built and mounted before that
+    # boundary was settled, so both default OFF and must be turned on
+    # deliberately, per deployment.
+    #
+    # These gate *new financial activity only*. Historical reads, staff
+    # investigation, reconciliation and PSP webhooks for payments that
+    # already existed stay available — containment must never strand a record
+    # or blind an operator. See `services/financial_gates.py`.
+    CHAMA_ENABLED: bool = False
+    MURABAHA_ENABLED: bool = False
     # Digital chamas (Layer 2, table banking).
     CHAMA_MIN_MEMBERS: int = 5          # members required before a chama activates
     CHAMA_MAX_MEMBERS: int = 30
