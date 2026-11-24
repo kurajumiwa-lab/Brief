@@ -10,6 +10,13 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 DEFAULT_SECRET_KEY = "vendor-network-secret-change-in-production"
 DEFAULT_PSP_WEBHOOK_SECRET = "psp-webhook-secret-dev"
 
+# Spellings accepted for the financial containment flags (P0-B). Anything
+# outside these two sets is a configuration error, not a silent "off": an
+# operator who wrote `CHAMA_ENABLED=enabled` should be told, not left to
+# wonder why the feature they turned on is not there.
+_TRUTHY = frozenset({"1", "true", "yes", "on"})
+_FALSY = frozenset({"0", "false", "no", "off", ""})
+
 
 def _rename_query_option(url: str, old: str, new: str) -> str:
     """Rename one `?key=value` option, leaving every other byte of the URL alone.
@@ -298,8 +305,41 @@ class Settings(BaseSettings):
     # investigation, reconciliation and PSP webhooks for payments that
     # already existed stay available — containment must never strand a record
     # or blind an operator. See `services/financial_gates.py`.
+    #
+    # Values are matched explicitly rather than parsed by pydantic's permissive
+    # bool caster, so that a malformed value stops the process at startup with
+    # a message naming the variable. "Fail closed" and "refuse to boot" are
+    # different guarantees, and a containment flag should give both: the
+    # default is off, and a value nobody can interpret never becomes on.
     CHAMA_ENABLED: bool = False
     MURABAHA_ENABLED: bool = False
+
+    @field_validator("CHAMA_ENABLED", "MURABAHA_ENABLED", mode="before")
+    @classmethod
+    def _strict_containment_flag(cls, v, info):
+        """Accept only enumerated spellings; reject everything else loudly.
+
+        pydantic's own bool parsing accepts ``"yes"``, ``"on"`` and ``"1"`` but
+        also raises an opaque ValidationError on ``""`` and ``"maybe"``. This
+        validator makes the accepted set explicit and the error actionable, so
+        an operator who mistypes a containment flag learns why the app will
+        not start instead of debugging a stack trace.
+        """
+        if isinstance(v, bool):
+            return v
+        if v is None:
+            return False
+        token = str(v).strip().lower()
+        if token in _TRUTHY:
+            return True
+        if token in _FALSY:
+            return False
+        raise ValueError(
+            f"{info.field_name} must be one of {sorted(_TRUTHY | _FALSY)} "
+            f"(or unset for false); got {v!r}. "
+            "Financial containment flags are never enabled by an unreadable value."
+        )
+
     # Digital chamas (Layer 2, table banking).
     CHAMA_MIN_MEMBERS: int = 5          # members required before a chama activates
     CHAMA_MAX_MEMBERS: int = 30

@@ -52,6 +52,19 @@ from fastapi import HTTPException
 
 from app.config import settings
 
+
+def halal_structures() -> tuple[str, ...]:
+    """This repository's zero-interest pool structures, from `services.chamas`.
+
+    Imported inside the function because `services.chamas` imports this module
+    at import time; a module-level import here would be circular. The tuple is
+    read only, and the taxonomy keeps exactly one definition in the codebase —
+    this function is a pointer to it, not a second copy.
+    """
+    from app.services.chamas import HALAL_POOL_MODELS
+    return tuple(HALAL_POOL_MODELS)
+
+
 #: The one response a disabled operation returns. Clients branch on this shape,
 #: so it is a constant rather than a message repeated at six call sites.
 UNAVAILABLE_DETAIL = (
@@ -65,16 +78,16 @@ def _on(value) -> bool:
 
     This is the second of two layers, and the layers do different jobs.
 
-    The first is the ``bool`` field on ``Settings``. It parses the environment
-    with pydantic, exactly like the other 28 boolean flags in this app: unset
-    means ``False``, and a malformed value (``"junk"``, an empty string) raises
-    at import so the process never starts. Refusing to boot is the safe failure
-    here — it cannot silently enable a lending service.
+    The first is the validator on ``Settings`` (see ``config._strict_containment_flag``).
+    It accepts a fixed set of spellings, treats unset and empty as false, and
+    raises a configuration error naming the variable for anything else — so a
+    malformed value stops the process instead of being guessed at.
 
-    This helper covers what pydantic does not: values assigned at runtime, in
-    tests or by a future caller, where the type contract is no longer enforced.
-    Anything not explicitly truthy reads as off, because the cost of guessing
-    wrong is starting new financial activity nobody approved.
+    This helper covers what the validator cannot: values assigned at runtime, in
+    tests or by a future caller, where no parse has happened and the type
+    contract is no longer enforced. Anything not explicitly truthy reads as off,
+    because the cost of guessing wrong is starting financial activity nobody
+    approved.
     """
     if isinstance(value, bool):
         return value
@@ -107,36 +120,66 @@ def require_murabaha_enabled() -> None:
         _refuse("Murabaha")
 
 
+#: The `vendors.finance_mode` values the product supports. Enforced by a CHECK
+#: constraint in migration 0007 (`ck_vendor_finance_mode`) and by the profile
+#: validator in `routes/vendors.py`. Repeated here so the service layer fails
+#: closed on its own rather than trusting that every caller went through HTTP.
+FINANCE_MODES = frozenset({"conventional", "halal_sharia"})
+
+
 def require_murabaha_eligible(vendor) -> None:
     """F-13: enforce murabaha eligibility independently of the feature gate.
 
-    A murabaha advance is a cost-plus sale: the Sacco buys the stock and resells
-    it at a fixed, disclosed markup with no interest. That is a *Halal* pool
-    structure, and `services.chamas.HALAL_POOL_MODELS` already names the three
-    models the product treats as such — ``qard_hasan``, ``musharakah_trade`` and
-    ``murabaha_credit``.
+    Two checks, in order, and the order matters:
 
-    The rule mirrors the riba block the repo already enforces in both
-    ``join_chama`` and ``apply_for_loan``: a vendor on ``finance_mode ==
-    'halal_sharia'`` is restricted to the Halal pool models, and a vendor on
-    ``conventional`` may use any structure because a zero-interest, fixed-markup
-    trade is permissible to everyone.
+    1. **The account's ``finance_mode`` must be supported.** Unknown, empty or
+       misspelled values are refused rather than defaulted. Migration 0007
+       constrains the column, so a bad value means the row did not come through
+       a validated path — writing a contract against it would bind an
+       obligation to an account whose terms nobody can state.
 
-    Murabaha is a Halal pool model, so this check restricts Halal accounts no
-    further — an interest-bearing structure is what would violate them, and a
-    murabaha is not one. The check exists so the *principle* is enforced in code
-    at the service boundary rather than left implicit: eligibility is derived
-    from the pool-model taxonomy that already exists, not invented here.
+    2. **A Halal account must receive a Halal structure.** A murabaha is a
+       cost-plus sale: stock is bought and resold at a fixed, disclosed markup,
+       with no interest and no compounding. `HALAL_POOL_MODELS` in
+       `services/chamas.py` is this repository's list of zero-interest pool
+       structures and it includes ``murabaha_credit``, so a murabaha satisfies
+       the rule and no account is excluded from one today.
 
-    This runs even when ``MURABAHA_ENABLED`` is true, so enabling the flag can
-    never enable a structure the product's own taxonomy calls ineligible.
+    This mirrors the riba block the repo already enforces in `join_chama` and
+    `apply_for_loan`: ``halal_sharia`` is restricted to Halal pool models, and a
+    conventional account may use any structure because a fixed-markup,
+    interest-free trade is permissible to everyone.
+
+    **Scope of this check.** It encodes a product rule taken from this
+    repository's own taxonomy and its own brief. It is not a religious ruling
+    and not legal advice, and it must not be cited as certification that any
+    product is Sharia-compliant. A substantive change to what counts as Halal
+    is a decision for the owner and their scholars, not a refactor.
+
+    Runs even when ``MURABAHA_ENABLED`` is true: enabling a feature must never
+    enable an unsupported account. It does not replace the gate — callers must
+    still call ``require_murabaha_enabled()`` so that a disabled deployment
+    reveals nothing about who would qualify.
     """
-    mode = str(getattr(vendor, "finance_mode", "") or "conventional").strip().lower()
-    if mode == "halal_sharia":
-        # qard_hasan / musharakah_trade / murabaha_credit are all permissible;
-        # there is no interest in a cost-plus sale, so nothing to block. The
-        # branch is kept explicit so a future non-Halal murabaha variant has an
-        # obvious place to be refused.
-        return
-    # Conventional accounts may take a murabaha: the structure is interest-free.
-    return
+    mode = getattr(vendor, "finance_mode", None)
+    if mode is None:
+        # The column is NOT NULL with server_default 'conventional'; a model
+        # read without it is older code, not an unset preference.
+        mode = "conventional"
+    normalised = str(mode).strip().lower()
+    if normalised not in FINANCE_MODES:
+        raise HTTPException(
+            403,
+            f"Your account's finance mode ({mode!r}) is not supported, so a "
+            "murabaha cannot be opened against it. Supported modes are "
+            "'conventional' and 'halal_sharia'.",
+        )
+    if normalised == "halal_sharia" and "murabaha_credit" not in halal_structures():
+        # Not reachable with the current taxonomy; kept so that removing
+        # murabaha from the Halal list fails closed instead of silently
+        # allowing a Halal account into a structure the product does not treat
+        # as permissible.
+        raise HTTPException(
+            403,
+            "Murabaha is not an available structure for your Halal finance mode.",
+        )
