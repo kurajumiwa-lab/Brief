@@ -27,31 +27,44 @@ import BRAND, { pageTitle } from "@/config/brand";
  *   · **`label="Brief"`** on the event form (EventDeskPage) — a short
  *     description of a post. That is the everyday English noun.
  *
- * So the check is scoped two ways:
+ * ── Two defects this test was rebuilt to catch ──────────────────────────────
  *
- *   1. **Brand-core files must be clean.** The files that carry the product
- *      name — the config, the title, the bilingual copy, the splash and the
- *      error copy — may not mention the old name at all outside a comment.
- *   2. **The wider sweep may not grow.** Phase 1 converted the brand core; the
- *      remaining user-facing strings are Phase 2 work, itemised in
- *      `PHASE_2_BACKLOG` below. That ledger may shrink, never grow. When
- *      Phase 2 lands, delete the rows; the test keeps the promise honest in
- *      the meantime instead of blocking the build on work not yet approved.
+ * 1. **Case.** The old check compared `"Home Office"` against source that says
+ *    `"Home office"`. A case-sensitive substring test never matched anything, so
+ *    the guard passed while thirteen files printed the retired name. Every
+ *    retired name is now matched case-insensitively.
+ *
+ * 2. **Artwork.** The old check only walked `.js/.jsx/.html`. `logo.svg` carried
+ *    `<text><tspan>HOME</tspan> OFFICE</text>` — the largest word on the splash
+ *    screen — and no test ever looked at it. SVG files are now scanned, with
+ *    XML comments stripped first so a comment may still explain the history.
  */
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, "..");
 
+/**
+ * Names that must not reach a user, in any casing.
+ * `deferred` means the case is recorded and owned elsewhere — see the note.
+ */
 const RETIRED_NAMES = [
-  { name: "Home Office", why: "renamed, and the rename is deferred" },
-  { name: "My Shop App", why: "never a product name; a repository title" },
-  { name: "Byway", why: "a codename from an earlier implementation" },
-  { name: "Brief_", why: "a stray underscore from an old mark" },
+  {
+    name: "Home Office",
+    why: "renamed, but the nav label rename is deferred pending a decision",
+    // The label is live on /office and in the drawer. It is deliberately still
+    // there (owner decision: defer). So it is banned in artwork and in the
+    // brand core, which is where it was a *defect*, not where it is a pending
+    // design decision.
+    scold: "artwork-or-core",
+  },
+  { name: "My Shop App", why: "never a product name; a repository title", scold: "everywhere" },
+  { name: "Byway", why: "a codename from an earlier implementation", scold: "everywhere" },
+  { name: "Brief_", why: "a stray underscore from an old mark", scold: "everywhere" },
 ];
 
 /**
  * Files that carry the product name and were converted in Phase 1.
- * These must not contain the retired product name at all, outside comments.
+ * These must not contain a retired product name at all, outside comments.
  */
 const BRAND_CORE = [
   "config/brand.js",
@@ -61,11 +74,13 @@ const BRAND_CORE = [
   "pages/storefront/BusinessDeskPage.jsx",
 ];
 
+/** Images that ship as part of the identity. Their *accessible* text counts. */
+const ARTWORK = ["logo.svg", "favicon.svg"];
+
 /**
  * Legitimate, load-bearing uses of "Brief" that a rebrand must NOT touch.
  * Matched against the trimmed line, so these are exact exceptions, not fuzzy
- * ones. If one of these disappears, the test does not fail — it simply stops
- * applying. If a *new* use appears elsewhere, the check below fails.
+ * ones.
  */
 const LEGITIMATE_BRIEF = [
   /^\{\/\*.*\*\/\}$/, // a JSX comment explaining history or a route
@@ -76,7 +91,7 @@ const LEGITIMATE_BRIEF = [
 ];
 
 /**
- * Phase 2 backlog: user-facing product strings still carrying the old name.
+ * Phase 2 backlog: user-facing product strings still carrying "Brief".
  * Recorded by file and count so the rebrand cannot silently regress. This is a
  * ceiling, not a target — Phase 2 removes these rows.
  */
@@ -127,14 +142,14 @@ const PHASE_2_BACKLOG = {
   "pages/work/PriceWorkPage.jsx": 1,
 };
 
-function sourceFiles(dir) {
+function walk(dir, exts, skipTests) {
   const out = [];
-  (function walk(d) {
+  (function inner(d) {
     for (const entry of readdirSync(d)) {
       const p = join(d, entry);
       if (statSync(p).isDirectory()) {
-        if (entry !== "test") walk(p);
-      } else if (/\.(jsx?|html)$/.test(p)) {
+        if (!(skipTests && entry === "test")) inner(p);
+      } else if (exts.test(p)) {
         out.push(p);
       }
     }
@@ -142,20 +157,34 @@ function sourceFiles(dir) {
   return out;
 }
 
+const sourceFiles = (dir) => walk(dir, /\.(jsx?|html)$/, true);
+
+/** XML/JS block comments may explain the history; only rendered text counts. */
+const stripSvgComments = (src) => src.replace(/<!--[\s\S]*?-->/g, "");
+
 const isComment = (line) => /^\s*(\/\/|\*|\/\*|\{\/\*)/.test(line);
 const isLegitimate = (line) => LEGITIMATE_BRIEF.some((re) => re.test(line.trim()));
 
-/** Lines mentioning the old product name that are neither a comment nor a known exception. */
+/** Lines mentioning "Brief" that are neither a comment nor a known exception. */
 function brandHits(file) {
   const rel = file.replace(root + "/", "");
-  const lines = readFileSync(file, "utf8").split("\n");
   const hits = [];
-  lines.forEach((line, i) => {
-    if (!/\bBrief\b/.test(line)) return;
-    if (isComment(line) || isLegitimate(line)) return;
-    hits.push(`${rel}:${i + 1}`);
-  });
+  readFileSync(file, "utf8")
+    .split("\n")
+    .forEach((line, i) => {
+      if (!/\bBrief\b/.test(line)) return;
+      if (isComment(line) || isLegitimate(line)) return;
+      hits.push(`${rel}:${i + 1}`);
+    });
   return hits;
+}
+
+/** Retired names present in a file's rendered content, in any casing. */
+function retiredHits(body) {
+  const haystack = body.toLowerCase();
+  return RETIRED_NAMES.filter(({ name }) => haystack.includes(name.toLowerCase())).map(
+    ({ name }) => name,
+  );
 }
 
 describe("product identity", () => {
@@ -175,7 +204,6 @@ describe("product identity", () => {
 
   it("has a splash line that fits its own container", () => {
     // The splash renders `shortLine` at text-2xs inside max-w-xs with px-8.
-    // Anything much past ~24 characters wraps there.
     expect(BRAND.shortLine).toBe("The right connections.");
     expect(BRAND.shortLine.length).toBeLessThanOrEqual(24);
     expect(BRAND.tagline.length).toBeGreaterThan(BRAND.shortLine.length);
@@ -192,7 +220,7 @@ describe("product identity", () => {
     const title = html.match(/<title>([^<]*)<\/title>/)[1];
     expect(title).toBe(pageTitle());
     expect(html).not.toMatch(/\bBrief\b/);
-    expect(html).not.toContain("Home Office");
+    expect(html.toLowerCase()).not.toContain("home office");
     const ogTitle = html.match(/property="og:title" content="([^"]*)"/)[1];
     expect(ogTitle).toBe(pageTitle());
   });
@@ -200,15 +228,18 @@ describe("product identity", () => {
   it("does not use a retired name in any rendered source file", () => {
     const offenders = [];
     for (const file of sourceFiles(root)) {
-      const lines = readFileSync(file, "utf8").split("\n");
-      lines.forEach((line, i) => {
-        for (const { name } of RETIRED_NAMES) {
+      readFileSync(file, "utf8")
+        .split("\n")
+        .forEach((line, i) => {
           // A comment may explain the history; rendered code may not repeat it.
-          if (line.includes(name) && !isComment(line)) {
-            offenders.push(`${file.replace(root + "/", "")}:${i + 1} → ${name}`);
+          if (isComment(line)) return;
+          for (const { name, scold } of RETIRED_NAMES) {
+            if (scold !== "everywhere") continue;
+            if (line.toLowerCase().includes(name.toLowerCase())) {
+              offenders.push(`${file.replace(root + "/", "")}:${i + 1} → ${name}`);
+            }
           }
-        }
-      });
+        });
     }
     expect(
       offenders,
@@ -217,10 +248,33 @@ describe("product identity", () => {
   });
 
   it("leaves no old product name in the brand-core files", () => {
-    const offenders = BRAND_CORE.flatMap((rel) => brandHits(join(root, rel)));
+    const offenders = [];
+    for (const rel of BRAND_CORE) {
+      const body = readFileSync(join(root, rel), "utf8");
+      for (const name of retiredHits(body)) {
+        offenders.push(`${rel} → ${name}`);
+      }
+    }
     expect(
       offenders,
-      `the old product name survived in a brand-core file:\n  ${offenders.join("\n  ")}`,
+      `a retired product name survived in a brand-core file:\n  ${offenders.join("\n  ")}`,
+    ).toEqual([]);
+  });
+
+  it("carries no retired product name in the artwork", () => {
+    // The defect this exists for: `logo.svg` drew `HOME OFFICE` as <text> and
+    // <tspan>, which no JSX scan could see, so the splash announced a retired
+    // name on the first screen a person ever sees.
+    const offenders = [];
+    for (const name of ARTWORK) {
+      const file = resolve(root, "../public", name);
+      const body = stripSvgComments(readFileSync(file, "utf8"));
+      for (const hit of retiredHits(body)) offenders.push(`public/${name} → ${hit}`);
+      if (/\bBrief\b/i.test(body)) offenders.push(`public/${name} → Brief`);
+    }
+    expect(
+      offenders,
+      `retired product branding is still drawn into the artwork:\n  ${offenders.join("\n  ")}`,
     ).toEqual([]);
   });
 

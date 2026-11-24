@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="430 80 540 600" role="img" aria-label="Home Office">
-  <title>Home Office</title>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="447 80 513 505" role="img" aria-label="Wasta">
+  <title>Wasta</title>
   <defs>
     <linearGradient id="win" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#0d3443"/>
@@ -71,6 +71,21 @@
   <rect x="568" y="505" width="32" height="25" rx="3" fill="#3a2a1a"/>
   <path d="M846 465 C838 448 836 438 844 428 C850 440 852 452 850 465 Z" fill="#57b877"/>
   <rect x="834" y="465" width="22" height="12" rx="2" fill="#3a2a1a"/>
-  <!-- Wordmark -->
-  <text x="703" y="652" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="66" fill="#0f1f38" letter-spacing="1"><tspan font-weight="700">HOME</tspan><tspan font-weight="400"> OFFICE</tspan></text>
+  <!--
+    The house, and nothing else.
+
+    A `HOME OFFICE` wordmark used to sit here at y=652, drawn as SVG <text>
+    rather than as JSX — so it survived the Wasta rebrand and still printed a
+    name retired two rebrands ago on the very first screen. The splash prints
+    the product name itself; the artwork should not also try to.
+
+    The wordmark was the only content below y=565 (the base line), so the
+    viewBox is now `447 80 513 505`: tightly `x 447–960`, `y 80–585`. The
+    previous `430 80 540 600` would have left dead space under the house and
+    rendered it smaller than before. Width, height and all artwork are
+    unchanged, so the splash <img> gains no empty padding.
+
+    `aria-label` and `<title>` said "Home Office" too. They are the accessible
+    name of this image, so they had to follow.
+  -->
 </svg>
