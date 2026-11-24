@@ -1,9 +1,10 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import TodayView from "@/components/home/TodayView";
 import { useAuthStore } from "@/stores/authStore";
 import { useIdentityStore } from "@/stores/identityStore";
 import { useOutsideStore } from "@/stores/outsideStore";
 import { useStockStore } from "@/stores/stockStore";
+import { spottedDealAPI } from "@/lib/api";
 import { useOffice } from "@/hooks/useOffice";
 import { rankFor } from "@/config/identity";
 import { regionFromPlace } from "@/config/regions";
@@ -41,6 +42,7 @@ export default function TodayPage() {
   const fetchMovements = useStockStore((s) => s.fetchMovements);
 
   const { office } = useOffice();
+  const [deals, setDeals] = useState([]);
 
   useEffect(() => {
     loadIdentity();
@@ -48,8 +50,10 @@ export default function TodayPage() {
 
   useEffect(() => {
     if (!location) loadLocation();
-    // Home only needs dated rounds and events. The full feed belongs to Regions.
-    loadFeed({ kinds: ["scheduled", "event"] });
+    // Home shows three shelves, so it reads the local feed once and slices it
+    // three ways. Regions still owns deep browsing; this is a page of the feed,
+    // not a second copy of it.
+    loadFeed();
     loadActivity();
     fetchMine().catch(() => {});
     fetchMovements().catch(() => {});
@@ -59,6 +63,36 @@ export default function TodayPage() {
     () => regionFromPlace(vendor?.physical_location || location?.label),
     [vendor?.physical_location, location?.label],
   );
+
+  // Deals arrive from their own endpoint, so a failed deals call must not take
+  // the whole Home page down with it. It degrades to no rail.
+  useEffect(() => {
+    if (!region?.slug) { setDeals([]); return; }
+    let live = true;
+    spottedDealAPI
+      .list(region.slug)
+      .then(({ data }) => { if (live) setDeals(Array.isArray(data) ? data : data?.items || []); })
+      .catch(() => { if (live) setDeals([]); });
+    return () => { live = false; };
+  }, [region?.slug]);
+
+  // Step 6: goods, services and rentals within reach, nearest first. Dated
+  // rounds belong to their own shelf, so they are excluded here rather than
+  // appearing twice on one screen.
+  const nearby = useMemo(() => {
+    const TRADE = new Set(["listing", "available", "service", "provider", "rental"]);
+    const seen = new Set();
+    return items
+      .filter((item) => TRADE.has(item.kind))
+      .filter((item) => {
+        const key = `${item.kind}:${item.id}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .sort((a, b) => (a.distance_km ?? 1e9) - (b.distance_km ?? 1e9))
+      .slice(0, 6);
+  }, [items]);
 
   const happening = useMemo(() => {
     if (!region) return [];
@@ -99,6 +133,8 @@ export default function TodayPage() {
       rank={rank}
       region={region}
       happening={happening}
+      nearby={nearby}
+      deals={deals}
       unread={unread}
       institution={
         office

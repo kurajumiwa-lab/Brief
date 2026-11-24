@@ -7,6 +7,8 @@ import ReceiptScanCard from "@/components/receipts/ReceiptScanCard";
 import TownDoors from "@/components/home/TownDoors";
 import StreetDoor from "@/components/home/StreetDoor";
 import HappeningShelf from "@/components/home/HappeningShelf";
+import NearbyShelf from "@/components/home/NearbyShelf";
+import FeaturedDealsShelf from "@/components/home/FeaturedDealsShelf";
 import IdentityStrip from "@/components/home/IdentityStrip";
 import CounterShelf from "@/components/home/CounterShelf";
 import DiscoveryBand from "@/components/home/DiscoveryBand";
@@ -46,6 +48,8 @@ export default function TodayView({
   rank,
   region,
   happening = [],
+  nearby = [],
+  deals = [],
   page = {},
   institution = null,
   unread = 0,
@@ -79,6 +83,19 @@ export default function TodayView({
           It is the only saturated block this high on the page — everything
           around it is white — which is what makes it read as an offer. */}
       <PromoBanner plate="city" />
+
+      {/* The brief's step 6. Goods, services and rentals within reach, priced
+          by their sellers. Renders nothing when the shelf is empty. */}
+      <NearbyShelf items={nearby} region={region} />
+
+      {/* The brief's step 7. Real Spotted deals, expiring on their own dates,
+          with the merchant's own discount wording. */}
+      <FeaturedDealsShelf deals={deals} />
+
+      {/* The brief's step 8. Dated rounds and events, this week, nearest first.
+          The full region feed still lives in Regions; this is what can be
+          joined, not everything that is listed. */}
+      <HappeningShelf items={happening} region={region} />
 
       {/* Identity sits under the discovery band: one box, one share
           action, and the office the person belongs to. */}
@@ -159,10 +176,6 @@ export default function TodayView({
           <ChevronRight size={15} className="shrink-0 text-ink-4" aria-hidden="true" />
         </Link>
       )}
-
-      {/* Dated rounds only. The full region feed lives in Regions; Home shows
-          what can be joined this week and nothing else. */}
-      <HappeningShelf items={happening} region={region} />
 
       <p className="flex items-center justify-center gap-1.5 pt-1 text-center text-micro text-ink-4">
         <MapPin size={11} aria-hidden="true" />
