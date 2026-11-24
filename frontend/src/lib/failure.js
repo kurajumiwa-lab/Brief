@@ -111,7 +111,7 @@ export function describeFailure(err, { subject = "that page" } = {}) {
       kind: FAILURE_KIND.OFFLINE,
       status: 0,
       title: "You're not connected",
-      description: `Brief couldn't reach the network to load ${subject}. Your saved data is untouched; try again when you're back online.`,
+      description: `Wasta couldn't reach the network to load ${subject}. Your saved data is untouched; try again when you're back online.`,
       technical,
       retryable: true,
     };
@@ -135,7 +135,7 @@ export function describeFailure(err, { subject = "that page" } = {}) {
       kind: FAILURE_KIND.SERVER,
       status,
       title: "The server hit a problem",
-      description: `Brief answered, but couldn't build ${subject} (${status}). Nothing was changed — retrying is safe.`,
+      description: `Wasta answered, but couldn't build ${subject} (${status}). Nothing was changed — retrying is safe.`,
       technical,
       retryable: true,
     };
@@ -177,7 +177,7 @@ export function describeFailure(err, { subject = "that page" } = {}) {
       kind: FAILURE_KIND.RATE_LIMITED,
       status,
       title: STATUS_TITLE[429],
-      description: "Brief is pacing requests to keep the network up for everyone. Give it a moment, then retry.",
+      description: "Wasta is pacing requests to keep the network up for everyone. Give it a moment, then retry.",
       technical,
       retryable: true,
     };
@@ -196,7 +196,7 @@ export function describeFailure(err, { subject = "that page" } = {}) {
   return {
     kind: FAILURE_KIND.UNKNOWN,
     status,
-    title: `Brief answered ${status}`,
+    title: `Wasta answered ${status}`,
     description: `Couldn't load ${subject}. Nothing was changed — retrying is safe.`,
     technical,
     retryable: true,
