@@ -25,7 +25,7 @@ import {
 } from "@/stores/createStore";
 import { useOutsideStore, locationLabel } from "@/stores/outsideStore";
 import { fileAPI, outsideAPI, corridorAPI } from "@/lib/api";
-import { regionFromPlace } from "@/config/regions";
+import { REGION_BY_SLUG, regionFromPlace } from "@/config/regions";
 import {
   YOUTH_AGE_BANDS, YOUTH_SAFE_DOMAINS, inferActivityTemplate,
 } from "@/lib/inference";
@@ -130,6 +130,15 @@ export default function CreatePage() {
       draft.primary_category !== primary
     ) {
       setField("primary_category", primary);
+    }
+    // WHERE. A regional action ("Post in Nyanza") or a region's own page
+    // ("Publish in Kisumu") arrives with the place it means. The field is only
+    // prefilled when the person has not typed one of their own — an existing
+    // answer is never overwritten by a link.
+    const regionSlug = params.get("region") || "";
+    const place = params.get("place") || (regionSlug ? REGION_BY_SLUG[regionSlug]?.hub : "") || "";
+    if (place && !String(draft.location || "").trim()) {
+      setField("location", place);
     }
     if (!location) loadLocation();
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import {
   Store, MapPin, Building2, Crosshair, Plus, Minus, List, X, ChevronRight,
   CloudOff, ZoomIn, Eye, EyeOff, 
@@ -82,9 +82,25 @@ export default function MapPage() {
   const [view, setView] = useState(null);
   const [kind, setKind] = useState("all");
   const [filter, setFilter] = useState("");
-  const [search, setSearch] = useState("");     // already debounced by SearchInput
+  const [search, setSearch] = useState(() => searchParams.get("q") || ""); // already debounced by SearchInput
   const [selected, setSelected] = useState(null);
   const [mode, setMode] = useState("map");        // map | list
+
+  // Arriving from the region shelf's LIST / MAP switch. The words travel with
+  // the search so the map shows the same thing the list did; the region name
+  // travels as context, because the map filters by position and text — not by
+  // region — and the screen says so instead of implying it filtered the
+  // corridor.
+  const fromRegions = searchParams.get("from") === "regions";
+  const regionSlug = searchParams.get("region") || "";
+  const backToRegions = useMemo(() => {
+    const back = new URLSearchParams();
+    if (regionSlug) back.set("region", regionSlug);
+    const term = searchParams.get("q");
+    if (term) back.set("q", term);
+    const suffix = back.toString();
+    return `/regions${suffix ? `?${suffix}` : ""}`;
+  }, [regionSlug, searchParams]);
   // The clean-map default: external (unclaimed public-data) places are off.
   // One toggle brings them back, muted — their absence never pretends the
   // directory is empty, because the counts keep reporting it.
@@ -190,6 +206,27 @@ export default function MapPage() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-7rem)] min-h-[26rem]">
+      {/* ── the way back to the list this map came from ──────────────────── */}
+      {fromRegions && (
+        <div
+          data-testid="map-from-regions"
+          className="mb-2 flex flex-wrap items-center gap-2 rounded-xl border border-edge-1 bg-surface-1 px-3 py-2"
+        >
+          <p className="min-w-0 flex-1 text-2xs text-ink-3">
+            Map view of the same search
+            {searchParams.get("q") ? ` for “${searchParams.get("q")}”` : ""}
+            {regionSlug ? " · the whole network, not one region" : ""}.
+          </p>
+          <Link
+            to={backToRegions}
+            data-testid="map-back-to-regions"
+            className="inline-flex h-9 items-center gap-1 rounded-lg bg-brand-600 px-3 text-2xs font-bold text-white"
+          >
+            Back to the list
+          </Link>
+        </div>
+      )}
+
       {/* ── search + list toggle ─────────────────────────────────────────── */}
       <div className="flex items-center gap-2">
         <SearchInput

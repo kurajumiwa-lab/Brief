@@ -59,6 +59,14 @@ export default function AppHeader() {
   // does not open under a cool grey bar that belongs to the trade screens.
   const isDiscovery = pathname === "/regions" || pathname.startsWith("/regions/") || pathname.startsWith("/discover");
 
+  // ONE SEARCH, NOT TWO. On the discovery routes the page owns a persistent
+  // search of its own — the region shelf's own field, which filters the
+  // results in place. The header field routes the same words to the same
+  // screen, so keeping both on screen meant two search boxes answering the
+  // same question, and the review was right to call that repeated search
+  // areas. On the discovery routes the page's field is the one.
+  const showHeaderSearch = !isDiscovery;
+
   return (
     <header
       className={cn(
@@ -85,7 +93,9 @@ export default function AppHeader() {
 
           {/* The field is the widest thing in the row on every screen, which is
               what "compact logo + search + bell + profile" asks for. */}
-          <GlobalSearch className="ml-0.5 hidden min-w-0 flex-1 md:flex md:max-w-[22rem] lg:max-w-[26rem]" />
+          {showHeaderSearch && (
+            <GlobalSearch className="ml-0.5 hidden min-w-0 flex-1 md:flex md:max-w-[22rem] lg:max-w-[26rem]" />
+          )}
 
           <nav aria-label="Primary" className="ml-auto hidden items-center gap-0.5 lg:flex">
             {PRIMARY_TABS.map((item) => {
@@ -124,7 +134,10 @@ export default function AppHeader() {
               aria-label={mobileSearch ? "Close search" : "Search"}
               aria-expanded={mobileSearch}
               aria-controls="mobile-search"
-              className="rounded-xl p-2 text-ink-3 transition-colors hover:bg-surface-2 hover:text-ink-1 focus-visible:ring-2 focus-visible:ring-brand-500 md:hidden"
+              className={cn(
+                "rounded-xl p-2 text-ink-3 transition-colors hover:bg-surface-2 hover:text-ink-1 focus-visible:ring-2 focus-visible:ring-brand-500 md:hidden",
+                showHeaderSearch ? "" : "hidden",
+              )}
             >
               {mobileSearch ? <X size={19} aria-hidden="true" /> : <Search size={19} aria-hidden="true" />}
             </button>
@@ -152,7 +165,7 @@ export default function AppHeader() {
         </div>
       </div>
 
-      {mobileSearch && (
+      {showHeaderSearch && mobileSearch && (
         <div id="mobile-search" className="animate-slide-down border-t border-edge-1 bg-surface-0 px-4 py-3 md:hidden">
           <GlobalSearch autoFocus onSubmitted={() => setMobileSearch(false)} />
         </div>

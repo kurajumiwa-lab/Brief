@@ -103,6 +103,8 @@ describe("Regions intent and standing filters", () => {
       </MemoryRouter>,
     );
 
+    // The standing filter lives in the one consolidated filters door.
+    fireEvent.click(screen.getByTestId("explore-more-filters"));
     fireEvent.click(screen.getByTestId("regions-trust"));
     const grid = screen.getByTestId("regions-grid");
     expect(within(grid).getByText("School uniform tailoring")).toBeInTheDocument();
@@ -124,6 +126,7 @@ describe("Regions intent and standing filters", () => {
       </MemoryRouter>,
     );
 
+    fireEvent.click(screen.getByTestId("explore-more-filters"));
     fireEvent.click(screen.getByTestId("regions-trust"));
     expect(screen.getByTestId("explore-filtered-empty")).toBeInTheDocument();
     expect(screen.getByText("No Level 3+ traders here yet")).toBeInTheDocument();

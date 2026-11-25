@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import {
-  BadgePercent, ChevronDown, Compass, MapPin, RefreshCw, ShieldCheck, SlidersHorizontal, X,
+  ChevronDown, Compass, HelpCircle, MapPin, RefreshCw, ShieldCheck, X,
 } from "lucide-react";
 import Button from "@/components/ui/Button";
 import Chip from "@/components/ui/Chip";
@@ -13,42 +13,54 @@ import MarketStrip from "@/components/explore/MarketStrip";
 import CategoryTiles from "@/components/explore/CategoryTiles";
 import RegionPicker from "@/components/regions/RegionPicker";
 import RegionsGrid from "@/components/regions/RegionsGrid";
+import RegionSpotlight from "@/components/regions/RegionSpotlight";
+import ScopeBar from "@/components/regions/ScopeBar";
 import { SpotDealModal } from "@/components/spotted/SpottedDealUI";
-import DiscoverCategoryStrip from "@/components/discover/DiscoverCategoryStrip";
-import MarketplaceHero from "@/components/discover/MarketplaceHero";
+import CategoryNav from "@/components/discover/CategoryNav";
 import HowWastaWorks from "@/components/discover/HowWastaWorks";
 import DealRail from "@/components/discover/DealRail";
-import ShopToolbar from "@/components/discover/ShopToolbar";
+import ResultDeck from "@/components/discover/ResultDeck";
 import MarketplaceBand from "@/components/discover/MarketplaceBand";
-import SpotlightRail from "@/components/discover/SpotlightRail";
 import FeaturedGrid from "@/components/discover/FeaturedGrid";
 import FallbackRail, { ColdStartRail } from "@/components/discover/FallbackRail";
 import { MerchGrid } from "@/components/discover/MerchCard";
 import { favoritesEvent, loadFavorites } from "@/lib/discoverFavorites";
 import { outsideAPI, serviceProviderAPI, spottedDealAPI } from "@/lib/api";
 import {
-  DEFAULT_REGION, REGION_BY_SLUG, regionFromPlace, regionLabel, regionPath,
+  DEFAULT_REGION, REGION_BY_SLUG, REGION_SCOPE_RADIUS_KM, regionAnchor, regionFromPlace,
+  regionLabel,
 } from "@/config/regions";
+import { regionMetrics } from "@/lib/regionMetrics";
 import { RADII, locationLabel, useOutsideStore } from "@/stores/outsideStore";
 import { ownerLevel } from "@/lib/standing";
 import { cn } from "@/lib/utils";
 
 /**
- * DISCOVER (and its older /explore skin).
+ * EXPLORE — the region's shelf of what is on offer.
  *
- * The region-aware screen is a merchandising feed: a region masthead, one
- * sticky search with quick filters, a spotlight carousel, an icon category
- * strip, an asymmetric Featured & Trending block, then a dense grid.
- * Filters did not disappear — time, price and intent moved behind one counted
- * control, and the category tiles became shareable destinations.
+ * The screen used to open like a catalogue with three overlapping control
+ * surfaces: a sticky search with a chip row under it, a category strip further
+ * down, and a toolbar with a category select, a sort select and a filters
+ * door. The hero above them said "Great finds. Better deals." and the spotlight
+ * below it said "Around you", so the region — the thing the whole screen is
+ * named after — appeared in one small line under a folding knob.
  *
- * `/explore` keeps the original, quieter layout for callers that are not
- * region-scoped: the same feed, the same cards, but no region knob and no
- * merchandising rails.
+ * What it is now, in the order a person meets it:
+ *
+ *   1. THE REGION, named. A knob that picks a corridor, and a card that says
+ *      which one, what is in it, and how far "it" reaches.
+ *   2. ONE SEARCH. One field, always on screen, and nothing else on the page
+ *      that also searches.
+ *   3. ONE CATEGORY GRID. Uniform cards, a wrapping grid, and a count on each
+ *      one that is true or absent.
+ *   4. ONE CONTROL DECK. The count, the filters, the sort, and the switch
+ *      between the list and the map.
+ *   5. THE RESULTS, with honest states: loading, failed (with the real
+ *      reason and a retry), empty (with a way to change that), and full.
  *
  * Search state still lives in the URL (`?q=`, `?kind=`, `?when=`, `?price=`,
- * `?trust=`, `?intent=`, `?public_sale=`), so Back and deep links restore the
- * results.
+ * `?trust=`, `?intent=`, `?public_sale=`, `?region=`), so Back and deep links
+ * restore the results.
  */
 
 const TYPE_FILTERS = [
@@ -74,15 +86,6 @@ const REGION_CATEGORIES = [
   { value: "rental", label: "Rentals", kinds: ["rental"] },
   { value: "rounds", label: "Rounds & Events", kinds: ["scheduled", "event"] },
   { value: "spotted", label: "Spotted Sales", kinds: [] },
-];
-
-/** The chips under the sticky search; each one is a real feed category. */
-const QUICK_FILTERS = [
-  { value: "rounds", label: "Events" },
-  { value: "listing", label: "Goods" },
-  { value: "service", label: "Services" },
-  { value: "rental", label: "Rentals" },
-  { value: "spotted", label: "Spotted sales" },
 ];
 
 const WHEN_FILTERS = [
@@ -160,7 +163,7 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
   const liveItems = useOutsideStore((s) => s.items);
   const liveStatus = useOutsideStore((s) => s.status);
   const liveCursor = useOutsideStore((s) => s.cursor);
-  const liveError = useOutsideStore((s) => s.error);
+  const liveFailure = useOutsideStore((s) => s.failure);
   const loadFeed = useOutsideStore((s) => s.loadFeed);
   const loadMore = useOutsideStore((s) => s.loadMore);
   const toggleReaction = useOutsideStore((s) => s.toggleReaction);
@@ -171,7 +174,7 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
   const items = demo ? demo.items : liveItems;
   const status = demo || (regionAware && kind === "spotted") ? "ready" : liveStatus;
   const cursor = demo ? null : liveCursor;
-  const error = demo ? null : liveError;
+  const failure = demo ? null : liveFailure;
   const location = demo ? demo.location : liveLocation;
 
   const sentinel = useRef(null);
@@ -235,11 +238,39 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
     navigate({ pathname: target, search: next.toString() ? `?${next.toString()}` : "" });
   }, [navigate, params, pathname]);
 
+  // ── the region, and the point the feed is centred on ──────────────────────
+  // Precedence: the URL (shareable) → the last region this device chose → the
+  // region the saved location belongs to → the largest corridor we serve. A
+  // market name is never the answer.
+  const region = useMemo(() => {
+    if (!regionAware) return null;
+    const slug = params.get("region") || savedRegion;
+    return REGION_BY_SLUG[slug] || demo?.region || regionFromPlace(location?.label) || DEFAULT_REGION;
+  }, [regionAware, params, savedRegion, demo?.region, location?.label]);
+
+  // A region that was *chosen* — in the URL or remembered on this device —
+  // becomes the point the feed looks from. A region that was merely inferred
+  // from where the person already is does NOT: it would move the search away
+  // from them, which is the opposite of "around you".
+  const regionChosen = useMemo(
+    () => Boolean(regionAware && (params.get("region") || savedRegion)),
+    [regionAware, params, savedRegion],
+  );
+  const anchor = useMemo(() => (regionChosen ? regionAnchor(region) : null), [regionChosen, region]);
+  const feedScope = useMemo(
+    () => (anchor
+      ? { lat: anchor.lat, lng: anchor.lng, radius_km: REGION_SCOPE_RADIUS_KM }
+      : null),
+    [anchor],
+  );
+
   // Reload whenever the URL state changes — which is also what makes the back
   // button restore the previous results.
   useEffect(() => {
-    if (!demo && !isServices && (!kinds || kinds.length)) loadFeed({ kinds, query: q || null });
-  }, [demo, isServices, kinds, q, loadFeed, location?.radius_km]);
+    if (!demo && !isServices && (!kinds || kinds.length)) {
+      loadFeed({ kinds, query: q || null, scope: feedScope });
+    }
+  }, [demo, isServices, kinds, q, loadFeed, feedScope]);
 
   // COLD-START BACKFILL: nothing at the chosen radius is not the same as
   // nothing nearby. We ask for 50 km only when the clean feed is empty, and we
@@ -277,15 +308,6 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
   const onSearch = useCallback((value) => {
     patchParams({ q: (value || "").trim() });
   }, [patchParams]);
-
-  // The knob is a region, not a market. Precedence: the URL (shareable) →
-  // the last region this device chose → the region the GPS label belongs to →
-  // the largest corridor we serve. A market name is never the answer.
-  const region = useMemo(() => {
-    if (!regionAware) return null;
-    const slug = params.get("region") || savedRegion;
-    return REGION_BY_SLUG[slug] || demo?.region || regionFromPlace(location?.label) || DEFAULT_REGION;
-  }, [regionAware, params, savedRegion, demo?.region, location?.label]);
 
   const loadSpotted = useCallback(async () => {
     if (!regionAware || demo || !region?.slug) return;
@@ -332,10 +354,22 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
     patchParams({ region: next.slug, country: "" });
   }, [patchParams]);
 
+  // "Around me" — the person puts the search back where they are. The region
+  // stops being a scope and the feed returns to their own point.
+  const centreOnMe = useCallback(() => {
+    try { localStorage.removeItem(REGION_KEY); } catch { /* private mode */ }
+    setSavedRegion(null);
+    patchParams({ region: "" });
+  }, [patchParams]);
+
   const radius = Math.round(location?.radius_km ?? 15);
   const activeWhen = when ? WHEN_FILTERS.find((o) => o.value === when) : null;
   const activePrice = price === "free" ? "No price" : price === "priced" ? "Priced" : null;
-  const hiddenFilterCount = (when ? 1 : 0) + (price ? 1 : 0) + (intent ? 1 : 0);
+  // A filter that the screen cannot express is not counted: the legacy
+  // /explore skin has no standing door, so trust is only counted where it
+  // can actually be turned off.
+  const hiddenFilterCount = (when ? 1 : 0) + (price ? 1 : 0) + (intent ? 1 : 0)
+    + (regionAware && trust ? 1 : 0);
 
   const visibleItems = useMemo(() => {
     // People live on the Home feed now. Discover is about what is on offer,
@@ -394,6 +428,13 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
     [resultItems],
   );
 
+  // The counts on the region card. They describe the records the screen holds,
+  // and the screen says so — they are never a regional total.
+  const metrics = useMemo(
+    () => regionMetrics(items, { status, failed: status === "error" }),
+    [items, status],
+  );
+
   // Reset also clears the sticky search and the sale/trending doors. Leaving
   // any of them in the URL made "Reset" look like it had done nothing.
   const clearAll = () => {
@@ -403,10 +444,71 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
       public_sale: "", q: "", search: "", feed: "",
     });
   };
-  const scrollToShop = () => {
-    if (typeof document === "undefined") return;
-    document.getElementById("shop-all-heading")?.scrollIntoView?.({ behavior: "smooth", block: "start" });
-  };
+
+  const retryFeed = useCallback(() => {
+    loadFeed({ kinds, query: q || null, scope: feedScope, force: true });
+  }, [loadFeed, kinds, q, feedScope]);
+
+  // The count on the deck is the count of what is on the screen. It is never
+  // presented as the size of the region.
+  const countText = useMemo(() => {
+    const where = region ? region.name : "this region";
+    if (status === "error") return "Results couldn’t load — try again.";
+    if (status === "loading" || status === "idle") return "Loading results…";
+    const n = resultItems.length;
+    if (!n) return `No results in ${where}.`;
+    const bits = [`${n} result${n === 1 ? "" : "s"} loaded`];
+    if (q) bits.push(`matching “${q}”`);
+    bits.push(where);
+    if (cursor) bits.push("more to load");
+    return bits.join(" · ");
+  }, [status, resultItems.length, region, q, cursor]);
+
+  // Where the results are looking from, said in one line.
+  const scopeLabel = useMemo(() => {
+    if (anchor) return `Centred on ${anchor.hub}`;
+    if (location?.label) return locationLabel(location);
+    return "No area set";
+  }, [anchor, location]);
+
+  const scopeDetail = useMemo(() => {
+    if (anchor) return `Within ${REGION_SCOPE_RADIUS_KM} km of ${anchor.hub}`;
+    if (location?.source === "unset" || !location) {
+      return "Showing everything the network has — set an area to narrow it.";
+    }
+    return `Within ${radius} km of you`;
+  }, [anchor, location, radius]);
+
+  const scopeNote = anchor
+    ? `Results are centred on ${anchor.hub} and reach ${REGION_SCOPE_RADIUS_KM} km.`
+    : null;
+
+  // What the scope bar shows: the radius in force, and whether the region
+  // owns it (in which case the person's own radius cannot change it).
+  const scopeBar = useMemo(() => ({
+    label: scopeLabel,
+    detail: scopeDetail,
+    radiusKm: anchor ? REGION_SCOPE_RADIUS_KM : radius,
+    locked: Boolean(anchor),
+  }), [scopeLabel, scopeDetail, anchor, radius]);
+
+  // The map is a second way to see the same search. It takes the search text;
+  // the region itself is not a map filter, and the screen says so rather than
+  // letting a pin stand in for a region.
+  const openMap = useCallback(() => {
+    const next = new URLSearchParams();
+    if (q) next.set("q", q);
+    if (region?.slug) next.set("region", region.slug);
+    next.set("from", "regions");
+    navigate(`/map?${next.toString()}`);
+  }, [navigate, q, region?.slug]);
+
+  const postHere = useCallback(() => {
+    const next = new URLSearchParams();
+    if (region?.hub) next.set("place", region.hub);
+    if (region?.slug) next.set("region", region.slug);
+    navigate(`/create?${next.toString()}`);
+  }, [navigate, region]);
 
   // Shared by the shopfront Filters door and the quieter /explore panel, so the
   // two screens never drift into different filter sets.
@@ -450,6 +552,27 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
           Priced
         </Chip>
       </div>
+      {regionAware && (
+        <div className="flex flex-wrap items-center gap-1">
+          <span className="mr-1 w-12 shrink-0 text-micro text-mk-ink-soft">Standing</span>
+          <button
+            type="button"
+            aria-pressed={trust === "3"}
+            aria-label="Only Level 3 or higher traders"
+            title="Only pages with a completed trade record (Level 3+)"
+            onClick={() => patchParams({ trust: trust === "3" ? "" : "3" })}
+            data-testid="regions-trust"
+            className={cn(
+              "inline-flex h-7 items-center gap-1 rounded-full border px-2.5 text-2xs font-extrabold transition-colors",
+              trust === "3"
+                ? "border-mk-ink bg-mk-ink text-mk-cream"
+                : "border-mk-line bg-mk-cream text-mk-ink-soft hover:border-mk-ink/40 hover:text-mk-ink",
+            )}
+          >
+            <ShieldCheck size={11} aria-hidden="true" /> Lvl 3+ only
+          </button>
+        </div>
+      )}
       {(hiddenFilterCount > 0 || trust) && (
         <button
           type="button"
@@ -469,32 +592,45 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
         <>
           {/* ── the region masthead scrolls; the search bar below sticks ───── */}
           <div data-testid="discover-masthead" className="flex items-center justify-between gap-2">
-            <p className="text-2xs font-extrabold uppercase tracking-[0.18em] text-mk-orange">Wasta marketplace</p>
+            <p className="text-2xs font-extrabold uppercase tracking-[0.18em] text-mk-orange">Wasta · Explore</p>
             {/* The list must open *below* the sticky search bar, never over
                 it — search stays permanent and usable while choosing. */}
-            <RegionPicker
-              region={region}
-              onSelect={chooseRegion}
-              avoidSelector='[data-testid="discover-toolbar"]'
-              className="relative max-w-[68%]"
-            />
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setWorksOpen(true)}
+                aria-haspopup="dialog"
+                aria-label="How Wasta works"
+                data-testid="discover-how-it-works-button"
+                className="grid h-8 w-8 place-items-center rounded-full border border-mk-line bg-mk-card text-mk-ink-soft transition-colors hover:border-mk-orange hover:text-mk-orange focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mk-orange"
+              >
+                <HelpCircle size={13} aria-hidden="true" />
+              </button>
+              <RegionPicker
+                region={region}
+                onSelect={chooseRegion}
+                avoidSelector='[data-testid="discover-toolbar"]'
+                className="relative max-w-[62%]"
+              />
+            </div>
           </div>
           {region && (
+            /* The identity line. It names the region and what it is known for;
+               the region card below owns the links, so no destination is
+               offered twice on the same screen. */
             <div data-testid="region-context" className="flex min-w-0 items-center gap-1.5 text-2xs text-mk-ink-soft">
               <MapPin size={11} className="shrink-0 text-mk-orange" aria-hidden="true" />
               <span className="truncate font-extrabold text-mk-ink">{regionLabel(region)}</span>
               <span className="hidden truncate sm:inline">· {region.knownFor.slice(0, 3).join(" · ")}</span>
-              <Link to={regionPath(region)} className="ml-auto shrink-0 font-extrabold text-mk-ink hover:text-mk-orange">
-                Open region
-              </Link>
             </div>
           )}
 
+          {/* ── ONE search, and it never leaves ─────────────────────────────── */}
           <header
             data-testid="discover-toolbar"
             className="sticky top-[var(--header-h)] z-30 border-y border-mk-line/70 bg-mk-cream/80 px-1 py-2 shadow-[0_10px_24px_-22px_rgba(31,22,50,0.7)] backdrop-blur-md supports-[backdrop-filter]:bg-mk-cream/65"
           >
-            <h1 className="sr-only">Discover</h1>
+            <h1 className="sr-only">Explore</h1>
             <SearchInput
               value={q}
               onChange={onSearch}
@@ -504,95 +640,56 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
               className="[&_svg]:text-mk-ink-soft"
               inputClassName="rounded-xl border-mk-line bg-mk-card text-mk-ink shadow-sm placeholder:text-mk-ink-soft/80 focus:border-mk-orange"
             />
-            <div
-              role="group"
-              aria-label="Quick filters"
-              data-testid="discover-quick-filters"
-              className="no-scrollbar mt-2 flex items-center gap-1.5 overflow-x-auto pb-0.5"
-            >
-              <span className="shrink-0 pr-0.5 text-2xs font-extrabold uppercase tracking-[0.1em] text-mk-ink-soft">
-                Try
-              </span>
-              {QUICK_FILTERS.map(({ value, label }) => {
-                const active = kind === value || (value === "rounds" && kind === "event");
-                return (
-                  <button
-                    key={value}
-                    type="button"
-                    aria-pressed={active}
-                    data-testid={`discover-quick-${value}`}
-                    onClick={() => selectCategory(active ? "" : value)}
-                    className={cn(
-                      "inline-flex h-8 shrink-0 items-center rounded-full border px-3 text-2xs font-extrabold transition-colors",
-                      active
-                        ? "border-mk-ink bg-mk-ink text-mk-cream"
-                        : "border-mk-line bg-mk-card text-mk-ink hover:border-mk-orange hover:text-mk-orange",
-                    )}
-                  >
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
           </header>
 
-          <MarketplaceHero
-            region={region}
-            onShopSale={() => {
-              patchParams({ kind: "listing", intent: "offers", public_sale: "true" });
-              window.setTimeout(scrollToShop, 0);
-            }}
-            onBrowseAll={() => {
-              clearAll();
-              window.setTimeout(scrollToShop, 0);
-            }}
-            onHowItWorks={() => setWorksOpen(true)}
-          />
           <HowWastaWorks open={worksOpen} onClose={() => setWorksOpen(false)} />
 
-          <SpotlightRail
-            items={isServices ? providerItems : items}
-            spotted={isServices ? [] : spotted}
+          {/* ── the region itself: identity, truth, and one clear action ───── */}
+          <RegionSpotlight
             region={region}
-            onSpotSale={isServices ? null : () => setSpottedOpen(true)}
+            metrics={metrics}
+            scopeNote={scopeNote}
+            onPost={postHere}
           />
 
+          <ScopeBar scope={scopeBar} onCentreOnMe={centreOnMe} />
+
+          {/* ── one category grid ───────────────────────────────────────────── */}
           <section aria-labelledby="discover-departments-heading" className="space-y-3">
             <div className="flex items-end justify-between gap-3">
               <div>
                 <p className="text-2xs font-extrabold uppercase tracking-[0.18em] text-mk-orange">Shop by department</p>
                 <h2 id="discover-departments-heading" className="mt-1 text-2xl font-black tracking-tight text-mk-ink">
-                  Popular categories
+                  Categories
                 </h2>
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 <Link to="/regions/all" className="text-2xs font-extrabold text-mk-ink hover:text-mk-orange">
-                  View all
+                  All regions
                 </Link>
-                {!isServices && (
-                  <button
-                    type="button"
-                    onClick={() => setSpottedOpen(true)}
-                    className="inline-flex h-9 items-center gap-1 rounded-full border border-mk-line bg-mk-card px-3 text-2xs font-extrabold text-mk-ink hover:border-mk-orange hover:text-mk-orange"
-                  >
-                    <BadgePercent size={12} aria-hidden="true" /> Spot a sale
-                  </button>
-                )}
               </div>
             </div>
-            <DiscoverCategoryStrip
+            <CategoryNav
               value={kind}
               onSelect={selectCategory}
               savedCount={savedCount}
               savedActive={pathname.startsWith("/discover/favorites")}
               items={items}
+              countsKnown={status === "ready"}
             />
+            <p className="text-2xs text-mk-ink-soft" data-testid="explore-category-note">
+              {status === "ready"
+                ? "Counts are from the results loaded below."
+                : "Counts appear once the results load."}
+            </p>
           </section>
 
           {!isServices && (
             <DealRail
               items={saleItems}
               viewAllTo={`${pathname.startsWith("/regions") ? "/regions" : "/discover"}?kind=listing&public_sale=true${region?.slug ? `&region=${region.slug}` : ""}`}
+              onPublish={postHere}
+              onSpotSale={() => setSpottedOpen(true)}
             />
           )}
         </>
@@ -636,7 +733,7 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
       {/* ── radius and the standing filter share one line ──────────────────
           Neither applies to the Services directory: it is filtered by the
           provider's Page area, and standing is not a provider ranking. Showing
-          a control that changes nothing is worse than not showing it. */}
+          a control that changes nothing is worse than not showing it. ───── */}
       {!isServices && !regionAware && <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <span className="text-micro text-ink-4">Within</span>
@@ -667,7 +764,7 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
       </div>}
 
       {/* ── what you are doing: kept inside More filters on the region
-          screen, because the category strip already answers "what". Non-region
+          screen, because the category grid already answers "what". Non-region
           Explore keeps its own quiet type row. ───────────────────────────── */}
       {!regionAware && (
         <div role="group" aria-label="Discovery type" className="-mt-1 flex flex-wrap items-center gap-1 overflow-visible">
@@ -709,7 +806,8 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
       </section>}
 
       {/* ── /explore keeps its quiet, counted filter panel. The shopfront uses
-          the same controls inside ShopToolbar, so there is one filter set. ── */}
+          the same controls inside the result deck, so there is one filter
+          set. ──────────────────────────────────────────────────────────── */}
       {!regionAware && !isServices && (
         <div className="rounded-xl border border-edge-1 bg-surface-1">
           <button
@@ -719,12 +817,10 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
             data-testid="explore-more-filters"
             className="flex w-full items-center gap-2 px-3 py-2 text-left text-2xs font-semibold text-ink-2"
           >
-            <SlidersHorizontal size={13} className="text-ink-4" aria-hidden="true" />
+            <ShieldCheck size={13} className="text-ink-4" aria-hidden="true" />
             More filters
             {hiddenFilterCount > 0 && (
-              <span className="rounded-full bg-brand-600 px-1.5 text-micro font-bold text-white dark:bg-brand-500">
-                {hiddenFilterCount}
-              </span>
+              <span className="rounded-full bg-brand-600 px-1.5 text-micro font-bold text-white dark:bg-brand-500">{hiddenFilterCount}</span>
             )}
             {hiddenFilterCount > 0 && (
               <span className="truncate font-normal text-ink-4">
@@ -764,40 +860,23 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
           {spottedError && <p role="alert" className="text-xs text-rose-700">{spottedError}</p>}
         </>
       )}
+
       {regionAware && !isServices && (
-        <ShopToolbar
-          query={q}
-          categories={REGION_CATEGORIES.map(({ value, label }) => ({ value, label }))}
-          category={kind}
-          onCategory={selectCategory}
+        <ResultDeck
+          countText={countText}
+          countState={status === "error" ? "error" : "ready"}
           sort={sort}
           onSort={setSort}
+          dirty={Boolean(q || kind || hiddenFilterCount || sort !== "popular")}
           onReset={clearAll}
           filtersOpen={filtersOpen}
           onToggleFilters={() => setFiltersOpen((v) => !v)}
           hiddenFilterCount={hiddenFilterCount}
-          countText={`${resultItems.length} ${resultItems.length === 1 ? "product" : "products"}${q ? ` matching “${q}”` : ""}${location?.radius_km ? ` · within ${radius} km` : ""}${region ? ` · ${regionLabel(region)}` : ""}`}
-          trustControl={(
-            <button
-              type="button"
-              aria-pressed={trust === "3"}
-              aria-label="Only Level 3 or higher traders"
-              title="Only pages with a completed trade record (Level 3+)"
-              onClick={() => patchParams({ trust: trust === "3" ? "" : "3" })}
-              data-testid="regions-trust"
-              className={cn(
-                "inline-flex h-7 items-center gap-1 rounded-full border px-2.5 text-2xs font-extrabold transition-colors",
-                trust === "3"
-                  ? "border-mk-ink bg-mk-ink text-mk-cream"
-                  : "border-mk-line bg-mk-cream text-mk-ink-soft hover:border-mk-ink/40 hover:text-mk-ink",
-              )}
-            >
-              <ShieldCheck size={11} aria-hidden="true" /> Lvl 3+ only
-            </button>
-          )}
+          view="list"
+          onViewChange={(next) => { if (next === "map") openMap(); }}
         >
           {filterControls}
-        </ShopToolbar>
+        </ResultDeck>
       )}
 
       {/* ── results ───────────────────────────────────────────────────────── */}
@@ -814,8 +893,8 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
         <section aria-live="polite" aria-busy={status === "loading"} className="space-y-3">
           {status === "loading" && !items.length ? (
             <FeedSkeleton regionAware={regionAware} />
-          ) : status === "error" ? (
-            <ErrorPanel onRetry={() => loadFeed({ kinds, query: q || null, force: true })} message={error} />
+          ) : status === "error" && !items.length ? (
+            <FeedErrorPanel failure={failure} onRetry={retryFeed} region={region} onPublish={postHere} />
           ) : visibleItems.length === 0 && nearby.length > 0 ? (
             <ColdStartRail
               items={nearby}
@@ -824,7 +903,7 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
               onSavedChanged={() => setSavedCount(loadFavorites().length)}
             />
           ) : visibleItems.length === 0 && (!items.length || (regionAware && kinds?.length === 0)) ? (
-            <EmptyPanel query={q} />
+            <EmptyPanel query={q} region={region} onPublish={postHere} onClear={clearAll} />
           ) : visibleItems.length === 0 ? (
             regionAware && trust === "3" ? (
               <FallbackRail
@@ -842,6 +921,10 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
             )
           ) : (
             <>
+              {status === "error" && (
+                <FeedErrorStrip failure={failure} onRetry={retryFeed} />
+              )}
+
               {!regionAware && (
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-2xs text-ink-4" data-testid="explore-count">
@@ -894,7 +977,7 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
               <div ref={sentinel} className="h-4" aria-hidden="true" />
               {status === "loading_more" && <p className="py-3 text-center text-2xs text-ink-4">Loading more…</p>}
               {!cursor && resultItems.length > 4 && (
-                <p className="py-3 text-center text-2xs text-ink-4">That's everything in this radius.</p>
+                <p className="py-3 text-center text-2xs text-ink-4">That&apos;s everything in this scope.</p>
               )}
             </>
           )}
@@ -998,6 +1081,80 @@ function FeedSkeleton({ regionAware = false }) {
   );
 }
 
+/**
+ * THE FAILED LIST — the real reason, and a way forward.
+ *
+ * This panel used to print one sentence for every possible failure: offline,
+ * timed out, signed out, a broken deployment. Now it names the cause it can
+ * name, says whether trying again could help, and always leaves two doors
+ * open: try again, or publish the thing yourself.
+ */
+function FeedErrorPanel({ failure, onRetry, region, onPublish }) {
+  const retryable = failure ? failure.retryable !== false : true;
+  return (
+    <div
+      data-testid="explore-error"
+      role="alert"
+      className="soft-card rounded-2xl bg-mk-card p-6 text-center"
+    >
+      <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-mk-warm text-mk-orange">
+        <RefreshCw size={22} aria-hidden="true" />
+      </span>
+      <h2 className="mt-3 text-title-section font-semibold text-ink-1">
+        {failure?.title || "That didn’t load."}
+      </h2>
+      <p className="mx-auto mt-1.5 max-w-sm text-xs leading-relaxed text-ink-3">
+        {failure?.description || "The rest of the app is fine — this is just this list."}
+      </p>
+      {failure?.technical && (
+        <details className="mx-auto mt-3 max-w-sm text-left">
+          <summary className="cursor-pointer text-2xs font-bold text-ink-4">Technical note</summary>
+          <p className="mt-1 break-words text-2xs text-ink-4">{failure.technical}</p>
+        </details>
+      )}
+      <div className="mt-4 flex flex-wrap justify-center gap-2">
+        {retryable && (
+          <Button variant="secondary" icon={RefreshCw} onClick={onRetry} data-testid="explore-retry">
+            Try again
+          </Button>
+        )}
+        <Button onClick={onPublish} data-testid="explore-error-publish">
+          Publish in {region?.hub || "your area"}
+        </Button>
+      </div>
+      <p className="mt-3 text-2xs text-ink-4">
+        You can still browse {region?.name || "the region"} by category while the list is down.
+      </p>
+    </div>
+  );
+}
+
+/** The same failure, but above results that are already on screen. */
+function FeedErrorStrip({ failure, onRetry }) {
+  const retryable = failure ? failure.retryable !== false : true;
+  return (
+    <div
+      data-testid="explore-error-strip"
+      role="status"
+      className="flex flex-wrap items-center gap-2 rounded-2xl border border-mk-line bg-mk-warm px-3 py-2.5"
+    >
+      <p className="min-w-0 flex-1 text-2xs font-semibold text-mk-ink">
+        {failure?.title || "The next page didn’t load."} {failure?.description || ""}
+      </p>
+      {retryable && (
+        <button
+          type="button"
+          onClick={onRetry}
+          data-testid="explore-retry-strip"
+          className="inline-flex h-9 items-center gap-1 rounded-lg bg-mk-ink px-3 text-2xs font-extrabold text-mk-cream"
+        >
+          <RefreshCw size={12} aria-hidden="true" /> Try again
+        </button>
+      )}
+    </div>
+  );
+}
+
 function ErrorPanel({ onRetry, message }) {
   return (
     <div
@@ -1045,10 +1202,10 @@ function FilteredEmpty({ onClear, hasMore = false, onMore }) {
 
 /**
  * An empty result is an invitation, not a dead end. The two doors that
- * actually help are widen the radius and publish something — because on a
- * discovery network the fix for "nothing here" is usually you.
+ * actually help are clearing the search and publishing something — because on
+ * a discovery network the fix for "nothing here" is usually you.
  */
-function EmptyPanel({ query }) {
+function EmptyPanel({ query, region, onPublish, onClear }) {
   return (
     <div
       data-testid="explore-empty"
@@ -1060,22 +1217,31 @@ function EmptyPanel({ query }) {
         <Compass size={22} aria-hidden="true" />
       </span>
       <h2 className="mt-3 text-title-section font-semibold text-ink-1">
-        {query ? `Nothing matches “${query}” yet` : "Nothing here yet"}
+        {query ? `Nothing matches “${query}” yet` : `Nothing in ${region?.name || "this region"} yet`}
       </h2>
       <p className="mx-auto mt-1.5 max-w-sm text-xs leading-relaxed text-ink-3">
         {query
-          ? "Try a shorter word, or widen your radius — a specialist might serve the whole town."
-          : "This area is quiet right now. Widen the radius, or be the first to post something."}
+          ? "Try a shorter word, or clear the search — a specialist might serve the whole town."
+          : "This area is quiet right now. Be the first to post something here, or look in another region."}
       </p>
       <div className="mt-4 flex flex-wrap justify-center gap-2">
-        <Link to="/create">
-          <Button>Post something</Button>
-        </Link>
-        <Link to="/explore">
-          <Button variant="secondary" icon={MapPin}>
-            Widen the area
+        {query && onClear && (
+          <Button variant="secondary" onClick={onClear} data-testid="explore-empty-clear">
+            Clear the search
           </Button>
-        </Link>
+        )}
+        {onPublish && (
+          <Button onClick={onPublish} data-testid="explore-empty-publish">
+            Post something
+          </Button>
+        )}
+        {!query && (
+          <Link to="/regions/all">
+            <Button variant="secondary" icon={MapPin} data-testid="explore-empty-regions">
+              See other regions
+            </Button>
+          </Link>
+        )}
       </div>
     </div>
   );
