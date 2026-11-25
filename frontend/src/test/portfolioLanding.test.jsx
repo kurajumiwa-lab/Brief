@@ -67,7 +67,9 @@ describe("a landing page, not a card", () => {
     mount();
     expect(screen.getByRole("heading", { level: 1, name: "Ogallo" })).toBeInTheDocument();
     expect(screen.getByTestId("page-address")).toHaveTextContent(pageAddress("ogallo"));
-    expect(screen.getByTestId("page-address")).toHaveTextContent(/\./);
+    // No dot: with no owned domain, the address is the /p/ route that answers
+    // rather than a subdomain of a host that does not exist.
+    expect(screen.getByTestId("page-address")).toHaveTextContent("/p/ogallo");
     expect(screen.getByRole("heading", { name: "About" })).toBeInTheDocument();
     expect(screen.getByTestId("selected-work")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Selected work" })).toBeInTheDocument();

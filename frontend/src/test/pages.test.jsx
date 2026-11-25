@@ -425,7 +425,9 @@ describe("Business Control Centre, Stock Visibility, Shop Front & Gallery Photos
     expect(await screen.findByRole("heading", { name: "Mama Mboga Fresh" })).toBeInTheDocument();
     // A handle is an address. The page shows it as a subdomain a person can
     // say out loud, and never makes the handle the identity.
-    expect(screen.getByTestId("page-address")).toHaveTextContent("mama_mboga.vendorworld.ke");
+    // `BRAND.domain` is empty (vendorworld.ke was never registered), so
+    // `pageAddress()` falls back to the /p/ route — an address that answers.
+    expect(screen.getByTestId("page-address")).toHaveTextContent("/p/mama_mboga");
     // The owner's own Till is published on the canonical /p/ Page too, not
     // only on the legacy /page/ route.
     expect(screen.getByTestId("page-payment-tag")).toBeInTheDocument();

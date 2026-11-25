@@ -270,8 +270,8 @@ describe("check desk (staff)", () => {
 
 describe("trust signals and free listing", () => {
   it("describes how a shop was checked from its level", () => {
-    expect(checkedByText(3)).toBe("Checked by Brief staff: storefront photo or in-person visit.");
-    expect(checkedByText(2)).toBe("Checked by Brief staff: business papers or confirmation from other businesses.");
+    expect(checkedByText(3)).toBe("Checked by Wasta staff: storefront photo or in-person visit.");
+    expect(checkedByText(2)).toBe("Checked by Wasta staff: business papers or confirmation from other businesses.");
   });
 
   it("shows the check on the shop page", async () => {
@@ -283,7 +283,7 @@ describe("trust signals and free listing", () => {
       </MemoryRouter>,
     );
     expect(await screen.findByTestId("checked-by-text")).toHaveTextContent(
-      "Checked by Brief staff: storefront photo or in-person visit.",
+      "Checked by Wasta staff: storefront photo or in-person visit.",
     );
   });
 
@@ -323,8 +323,8 @@ describe("Kiswahili on the public trust pages", () => {
   });
 
   it("gives the shop check wording in Kiswahili", () => {
-    expect(checkedByText(3, "sw")).toBe("Wafanyakazi wa Brief wameliangalia: picha ya duka au ziara ya ana kwa ana.");
-    expect(checkedByText(3, "en")).toBe("Checked by Brief staff: storefront photo or in-person visit.");
+    expect(checkedByText(3, "sw")).toBe("Wafanyakazi wa Wasta wameliangalia: picha ya duka au ziara ya ana kwa ana.");
+    expect(checkedByText(3, "en")).toBe("Checked by Wasta staff: storefront photo or in-person visit.");
   });
 });
 
@@ -336,7 +336,7 @@ describe("how a shop delivers", () => {
     trustAPI.services.mockResolvedValue({ data: { approved: false, services: [] } });
     trustAPI.mine.mockResolvedValue({ data: { branches: [shop({ status: "pending", verification_level: 0,
       delivery: { options: ["pickup"], rider: null } })] } });
-    trustAPI.setDelivery.mockResolvedValue({ data: { detail: "Delivery saved. Brief has not checked the rider." } });
+    trustAPI.setDelivery.mockResolvedValue({ data: { detail: "Delivery saved. Wasta has not checked the rider." } });
     render(<MemoryRouter><TrustMePage /></MemoryRouter>);
     const pickup = await screen.findByRole("checkbox", { name: /Buyer collects at the shop/ });
     expect(pickup).toBeChecked();
@@ -350,7 +350,7 @@ describe("how a shop delivers", () => {
     expect(trustAPI.setDelivery).toHaveBeenCalledWith("b1", {
       options: ["pickup", "known_rider"], area: "Kisii town", rider_name: "Otieno", rider_phone: "0712 345 678",
     });
-    expect(await screen.findByText(/Brief has not checked the rider/)).toBeInTheDocument();
+    expect(await screen.findByText(/Wasta has not checked the rider/)).toBeInTheDocument();
   });
 
   it("owner: pick-up only sends pick-up and no rider details", async () => {
@@ -366,7 +366,7 @@ describe("how a shop delivers", () => {
     await waitFor(() => expect(trustAPI.setDelivery).toHaveBeenCalledWith("b1", { options: ["pickup"] }));
   });
 
-  it("buyer: a shop with a known rider shows the rider, says Brief has not checked them, and says where the fee sits", async () => {
+  it("buyer: a shop with a known rider shows the rider, says Wasta has not checked them, and says where the fee sits", async () => {
     trustAPI.branch.mockResolvedValue({ data: { branch: shop({ delivery: { options: ["pickup", "known_rider"], rider,
       fee_note: "", rider_checked_by_brief: false } }), reputation: noRep } });
     trustAPI.reviews.mockResolvedValue({ data: { reviews: [] } });
@@ -375,7 +375,7 @@ describe("how a shop delivers", () => {
     const line = await screen.findByTestId("delivery-line");
     expect(line).toHaveTextContent("Delivery: Collect at the shop · Rider you know, in Kisii town: Otieno");
     expect(line.textContent).not.toMatch(/254712345678/);
-    expect(line).toHaveTextContent("Brief has not checked this rider.");
+    expect(line).toHaveTextContent("Wasta has not checked this rider.");
     expect(line).toHaveTextContent("The rider and the buyer agree the fee between them.");
   });
 
@@ -386,7 +386,7 @@ describe("how a shop delivers", () => {
       <Route path="/trust/branches/:id" element={<TrustBranchPage />} /></Routes></MemoryRouter>);
     const line = await screen.findByTestId("delivery-line");
     expect(line).toHaveTextContent("Delivery: Collect at the shop");
-    expect(line).not.toHaveTextContent("Brief has not checked");
+    expect(line).not.toHaveTextContent("Wasta has not checked");
   });
 
   it("in Kiswahili the buyer line is in Kiswahili", async () => {

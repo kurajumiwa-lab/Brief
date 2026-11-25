@@ -59,7 +59,16 @@ const RETIRED_NAMES = [
   },
   { name: "My Shop App", why: "never a product name; a repository title", scold: "everywhere" },
   { name: "Byway", why: "a codename from an earlier implementation", scold: "everywhere" },
-  { name: "Brief_", why: "a stray underscore from an old mark", scold: "everywhere" },
+  {
+    name: "Brief_",
+    why: "a stray underscore from an old mark",
+    // Case-SENSITIVE on purpose. Lowercased it matches two internal identifiers
+    // this rebrand must preserve: BRIEF_LANDING_ENABLED (a feature flag) and
+    // brief_stock_template.csv (a download filename). The rule is about the
+    // rendered mark, not the SCREAMING_SNAKE constant.
+    caseSensitive: true,
+    scold: "everywhere",
+  },
 ];
 
 /**
@@ -113,13 +122,11 @@ const PHASE_2_BACKLOG = {
   "components/receipts/VoucherWallet.jsx": 1,
   "components/start/StartView.jsx": 1,
   "components/trust/TrustSignals.jsx": 1,
-  "components/you/PortfolioView.jsx": 4,
   "config/constants.js": 1,
   "lib/tradeRecordsCsv.js": 1,
   "pages/billing/SubscriptionPage.jsx": 1,
   "pages/create/CreatePage.jsx": 1,
   "pages/enterprise/EnterprisePage.jsx": 3,
-  "pages/events/PublicRateCardPage.jsx": 1,
   "pages/explore/ExplorePage.jsx": 1,
   "pages/growth/GrowthPlannerPage.jsx": 1,
   "pages/jobs/JobsPages.jsx": 1,
@@ -138,7 +145,6 @@ const PHASE_2_BACKLOG = {
   "pages/trades/TradeProofsPage.jsx": 4,
   "pages/trust/TrustMePage.jsx": 5,
   "pages/trust/TrustStaffPage.jsx": 1,
-  "pages/trust/trustCore.js": 2,
   "pages/work/PriceWorkPage.jsx": 1,
 };
 
@@ -181,10 +187,9 @@ function brandHits(file) {
 
 /** Retired names present in a file's rendered content, in any casing. */
 function retiredHits(body) {
-  const haystack = body.toLowerCase();
-  return RETIRED_NAMES.filter(({ name }) => haystack.includes(name.toLowerCase())).map(
-    ({ name }) => name,
-  );
+  return RETIRED_NAMES.filter(({ name, caseSensitive }) =>
+    caseSensitive ? body.includes(name) : body.toLowerCase().includes(name.toLowerCase()),
+  ).map(({ name }) => name);
 }
 
 describe("product identity", () => {
@@ -233,9 +238,12 @@ describe("product identity", () => {
         .forEach((line, i) => {
           // A comment may explain the history; rendered code may not repeat it.
           if (isComment(line)) return;
-          for (const { name, scold } of RETIRED_NAMES) {
+          for (const { name, scold, caseSensitive } of RETIRED_NAMES) {
             if (scold !== "everywhere") continue;
-            if (line.toLowerCase().includes(name.toLowerCase())) {
+            const hit = caseSensitive
+              ? line.includes(name)
+              : line.toLowerCase().includes(name.toLowerCase());
+            if (hit) {
               offenders.push(`${file.replace(root + "/", "")}:${i + 1} → ${name}`);
             }
           }
@@ -250,7 +258,10 @@ describe("product identity", () => {
   it("leaves no old product name in the brand-core files", () => {
     const offenders = [];
     for (const rel of BRAND_CORE) {
-      const body = readFileSync(join(root, rel), "utf8");
+      // Comments may explain the history; only code that runs counts.
+      const body = readFileSync(join(root, rel), "utf8")
+        .replace(/\/\*[\s\S]*?\*\//g, "")
+        .replace(/^\s*\/\/.*$/gm, "");
       for (const name of retiredHits(body)) {
         offenders.push(`${rel} → ${name}`);
       }
