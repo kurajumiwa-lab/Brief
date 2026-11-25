@@ -71,7 +71,7 @@ export default function MeritPage() {
       a.download = `brief-pattern-report-${data.subject.handle}-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       URL.revokeObjectURL(url);
-      toast.success("Saved to your device. Brief sent it nowhere.");
+      toast.success("Saved to your device. Wasta sent it nowhere.");
     } catch (err) {
       toast.error(apiError(err, "Couldn't build the report."));
     } finally {
@@ -187,7 +187,7 @@ export default function MeritPage() {
           })}
         </div>
         <p className="text-micro leading-relaxed text-ink-4">
-          Every perk here costs Brief nothing to give: position, introductions, and a
+          Every perk here costs Wasta nothing to give: position, introductions, and a
           document. None of them is money, credit, or a discount we fund.
         </p>
       </Card>
@@ -218,7 +218,7 @@ export default function MeritPage() {
             <p className="text-sm font-semibold text-ink-1">The Pattern Report</p>
             <p className="text-xs leading-relaxed text-ink-3">
               A document about your own history, in your own hands. Take it to a bank, a
-              SACCO or anyone else you choose. Brief speaks to no lender on your behalf and
+              SACCO or anyone else you choose. Wasta speaks to no lender on your behalf and
               makes no decision about you — that is what keeps this a record and not a
               loan application.
             </p>
@@ -253,7 +253,7 @@ export default function MeritPage() {
         <span>
           <span className="font-bold text-ink-2">What this is not.</span> A Trust Score is
           not a credit score, not collateral, and not a promise that anyone will be repaid.
-          Brief holds no funds and lends none. A bank that reads the report makes its own
+          Wasta holds no funds and lends none. A bank that reads the report makes its own
           decision, under its own licence, with its own money.
         </span>
       </p>

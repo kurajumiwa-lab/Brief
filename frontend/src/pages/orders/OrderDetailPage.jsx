@@ -778,7 +778,7 @@ function ReceiptCard({
   pendingReceipt, receiptError, discardPendingReceipt, busy,
 }) {
   const expired = receiptExpires && parseApiDate(receiptExpires)?.getTime() <= receiptNow;
-  const smsBody = `Brief order ${order.id}: receipt code ${receiptCode}. Only use after the goods arrive.`;
+  const smsBody = `Wasta order ${order.id}: receipt code ${receiptCode}. Only use after the goods arrive.`;
   return (
     <section className="rounded-2xl border border-edge-1 bg-surface-0 p-4 sm:p-5" aria-labelledby="receipt-heading">
       <div className="flex items-start gap-3">

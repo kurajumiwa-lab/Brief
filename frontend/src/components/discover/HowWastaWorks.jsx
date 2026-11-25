@@ -2,7 +2,7 @@ import { BadgeCheck, Banknote, ShieldCheck, Truck } from "lucide-react";
 import Modal from "@/components/ui/Modal";
 
 /**
- * HOW BRIEF WORKS — the four promises, kept off the critical path.
+ * HOW WASTA WORKS — the four promises, kept off the critical path.
  *
  * They used to sit in a 2×2 grid above the first result, where they pushed the
  * top picks below the fold. The facts still matter, so they live one tap away
@@ -11,16 +11,16 @@ import Modal from "@/components/ui/Modal";
 const PROMISES = [
   { Icon: Truck, title: "Nearby first", note: "Distance is printed on every card, not inferred from a market name." },
   { Icon: ShieldCheck, title: "Trade on record", note: "The level shows completed trades and confirmed proofs, never a bought badge." },
-  { Icon: Banknote, title: "Seller-set prices", note: "A price is the seller's quote or stated amount. Brief does not invent a discount." },
+  { Icon: Banknote, title: "Seller-set prices", note: "A price is the seller's quote or stated amount. Wasta does not invent a discount." },
   { Icon: BadgeCheck, title: "No paid placement", note: "Ranking uses proximity, timing, recency and real activity. No slot is for sale." },
 ];
 
-export default function HowBriefWorks({ open, onClose }) {
+export default function HowWastaWorks({ open, onClose }) {
   return (
     <Modal
       open={open}
       onClose={onClose}
-      title="How Brief works"
+      title="How Wasta works"
       description="The promises behind every result — no badges to buy, no ratings we cannot prove."
       className="border-mk-line bg-mk-cream"
     >

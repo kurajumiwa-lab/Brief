@@ -14,7 +14,7 @@ import { BRAND } from "@/config/brand";
 export const NAV = SECTION_GROUPS.flatMap((group) => group.items);
 // Retained as a non-rendered compatibility inventory; these now live in You.
 export const NAV_BRIEF = [
-  { to: "/tasks", label: "Tasks & Brief", icon: ListChecks },
+  { to: "/tasks", label: "Tasks & Workspace", icon: ListChecks },
   { to: "/analytics", label: "Analytics", icon: BarChart3 },
   { to: "/pos", label: "POS Bridge", icon: Terminal },
 ];

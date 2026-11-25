@@ -173,7 +173,7 @@ function PublicShell({ children }) {
     <div className="min-h-screen bg-surface-2">
       <header className="border-b border-edge-1 bg-surface-1">
         <div className="mx-auto max-w-4xl px-4 h-14 flex items-center justify-between">
-          <Link to="/" className="text-sm font-bold tracking-tight text-ink-1">Brief<span className="text-brand-600">.</span></Link>
+          <Link to="/" className="text-sm font-bold tracking-tight text-ink-1">Wasta<span className="text-brand-600">.</span></Link>
           <Link to="/events" className="text-xs text-ink-3 hover:text-ink-1">Events</Link>
         </div>
       </header>

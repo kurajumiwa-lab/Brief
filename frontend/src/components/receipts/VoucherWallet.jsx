@@ -224,7 +224,7 @@ export default function VoucherWallet({ region = null }) {
                     )}
                     <p className="mt-2 flex items-start gap-1.5 text-micro leading-relaxed text-ink-4">
                       <WifiOff size={12} className="mt-0.5 shrink-0" aria-hidden="true" />
-                      The shop types these six characters into Brief. If their phone
+                      The shop types these six characters into Wasta. If their phone
                       is offline, the code is still here on yours.
                     </p>
                   </div>

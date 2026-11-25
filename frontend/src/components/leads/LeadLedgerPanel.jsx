@@ -108,7 +108,7 @@ export default function LeadLedgerPanel() {
           <p className="flex items-center gap-1.5 text-xs font-semibold text-ink-1">
             <Sparkles size={13} className="text-amber-600" /> You also scout: {formatKes(scout.earned_kes)} from {scout.leads} referral{scout.leads === 1 ? "" : "s"}
           </p>
-          <p className="mt-0.5 text-2xs text-ink-3">The business pays you directly; Brief records the credit.</p>
+          <p className="mt-0.5 text-2xs text-ink-3">The business pays you directly; Wasta records the credit.</p>
         </div>
       )}
 

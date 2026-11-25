@@ -15,7 +15,7 @@ const ENTRY_LABEL = (reason) => (reason === "accepted_review" ? "Rating publishe
 
 /**
  * MY SHOPS & POINTS — for a signed-in business.
- * Add a shop (it waits for a Brief check), get a till code for a checked shop,
+ * Add a shop (it waits for a Wasta check), get a till code for a checked shop,
  * see points, and exchange them for listed help. Points are never money.
  */
 const EMPTY_FORM = { branch_name: "", country: "KE", address_text: "" };
@@ -56,7 +56,7 @@ export default function TrustMePage() {
     try {
       await trustAPI.addBranch(form);
       setForm(EMPTY_FORM);
-      setNotice("Shop submitted. It will show to customers once Brief has checked it.");
+      setNotice("Shop submitted. It will show to customers once Wasta has checked it.");
       load();
     } catch (err) {
       setFormError(errorText(err, "The shop could not be added."));
@@ -92,7 +92,7 @@ export default function TrustMePage() {
       const { data } = await trustAPI.redeem({ service_key: service.service_key, country: "KE" }, key);
       setNotice(data.status === "already_redeemed"
         ? "You already exchanged points for this."
-        : "Done. The Brief team will be in touch to set this up.");
+        : "Done. The Wasta team will be in touch to set this up.");
       load();
     } catch (err) {
       setNotice(errorText(err, "The exchange could not be made."));
@@ -146,7 +146,7 @@ export default function TrustMePage() {
       {!approved && (
         <Card padding="p-3" className="bg-surface-2">
           <p className="text-sm text-ink-2">
-            Points can be exchanged for help once the Brief team has approved the list of services.
+            Points can be exchanged for help once the Wasta team has approved the list of services.
             Nothing can be exchanged yet.
           </p>
         </Card>
@@ -208,7 +208,7 @@ export default function TrustMePage() {
               )}
             </Card>
           ))}
-          {checked.length === 0 && <p className="text-xs text-ink-3">A shop appears on Brief once it is checked.</p>}
+          {checked.length === 0 && <p className="text-xs text-ink-3">A shop appears on Wasta once it is checked.</p>}
         </section>
       )}
 
@@ -240,7 +240,7 @@ export default function TrustMePage() {
       </Card>
 
       <p className="text-center text-xs text-ink-3">
-        Brief staff? <Link to="/trust/staff" className="font-medium text-brand-700 underline">Open the check desk</Link>
+        Wasta staff? <Link to="/trust/staff" className="font-medium text-brand-700 underline">Open the check desk</Link>
       </p>
     </div>
   );

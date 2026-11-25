@@ -10,7 +10,7 @@ import { trustAPI, apiError } from "@/lib/api";
 import { CHECK_METHODS, countryName, errorText } from "./trustCore";
 
 /**
- * CHECK DESK — Brief staff only. Two queues:
+ * CHECK DESK — Wasta staff only. Two queues:
  *   1. shops waiting for a check (approve makes a shop public; reject needs a reason the owner can read);
  *   2. reviews held for a check (publish or remove; always needs a reason).
  * The server refuses anyone who is not staff, and refuses anyone checking their own business.
@@ -36,7 +36,7 @@ export default function TrustStaffPage() {
     return (
       <div className="mx-auto max-w-3xl space-y-3 p-4 pb-16">
         <h1 className="text-xl font-semibold text-ink-1">Check desk</h1>
-        <p className="text-sm text-ink-2">This page is for Brief staff only.</p>
+        <p className="text-sm text-ink-2">This page is for Wasta staff only.</p>
         <Link to="/trust" className="text-sm font-medium text-brand-700 underline">See checked shops</Link>
       </div>
     );

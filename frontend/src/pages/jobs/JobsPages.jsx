@@ -519,7 +519,7 @@ export function MyJobsPage() {
                         type="button" size="sm"
                         onClick={() =>
                           hiringAPI.settle(c.id, (refs[c.id] || "").trim())
-                            .then(() => { toast.success("Recorded. Brief moved no money."); load(); })
+                            .then(() => { toast.success("Recorded. Wasta moved no money."); load(); })
                             .catch((e) => toast.error(apiError(e, "Couldn't record that payment.")))
                         }
                       >

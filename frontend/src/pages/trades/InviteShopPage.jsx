@@ -213,7 +213,7 @@ export default function InviteShopPage() {
   return (
     <main className="mx-auto min-h-screen w-full max-w-xl px-4 py-8">
       <Link to="/" className="text-micro font-bold text-ink-3 hover:text-ink-1">
-        ← Brief
+        ← Wasta
       </Link>
 
       <section className="mt-4 overflow-hidden rounded-2xl border border-edge-1 bg-surface-1">
@@ -242,7 +242,7 @@ export default function InviteShopPage() {
 
           {verified ? (
             <div className="mt-5 rounded-2xl border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-brand-900 dark:border-brand-500/25 dark:bg-brand-500/10 dark:text-brand-100" data-testid="invite-verified">
-              This shop already has a verified Brief page. Ask the owner for its link,
+              This shop already has a verified Wasta page. Ask the owner for its link,
               or search the name in Regions.
             </div>
           ) : probationary ? (
@@ -304,7 +304,7 @@ export default function InviteShopPage() {
                 <p className="mt-1 text-xs leading-relaxed text-amber-800 dark:text-amber-200">
                   {owned
                     ? "Ring one test sale to start trading today on probation, or wait for review before the page can publish as verified."
-                    : "Brief has this claim. The owner can answer a test sale before the page can publish, or a person can review it."}
+                    : "Wasta has this claim. The owner can answer a test sale before the page can publish, or a person can review it."}
                 </p>
               </div>
 

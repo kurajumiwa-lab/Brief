@@ -85,7 +85,7 @@ export default function MerchCard({ item, featured = false, onSavedChanged }) {
     event.stopPropagation();
     const href = item.to ? `${window.location.origin}${item.to}` : window.location.href;
     try {
-      if (navigator.share) await navigator.share({ title: item.title || "Brief", url: href });
+      if (navigator.share) await navigator.share({ title: item.title || "Wasta", url: href });
       else if (navigator.clipboard) await navigator.clipboard.writeText(href);
       setShared(true);
       window.setTimeout(() => setShared(false), 1600);

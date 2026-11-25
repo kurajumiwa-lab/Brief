@@ -496,9 +496,9 @@ export default function StreetPage() {
       <p className="mt-7 flex items-start gap-2 rounded-2xl bg-surface-2 px-3 py-2.5 text-2xs leading-relaxed text-ink-3">
         <HeartHandshake size={13} className="mt-0.5 shrink-0" aria-hidden="true" />
         <span>
-          Brief introduces and records nothing about the agreement itself. Contact is
+          Wasta introduces and records nothing about the agreement itself. Contact is
           shared only after you join; the code confirms you are at the same table.
-          No money passes through Brief, and no message is sent on your behalf.
+          No money passes through Wasta, and no message is sent on your behalf.
         </span>
       </p>
     </main>
@@ -753,7 +753,7 @@ function LobbyForm({ form, setForm, zoneDefault, busy, onSubmit, onCancel }) {
 
       <p className="mt-3 text-2xs leading-relaxed text-ink-4">
         Your contact is not shown in the public list. It is released only to a person
-        who joins, with the verification code in the handoff. Brief sends no message.
+        who joins, with the verification code in the handoff. Wasta sends no message.
       </p>
       <div className="mt-3 flex items-center gap-2">
         <Button type="submit" loading={busy} icon={Sparkles}>Open the table</Button>

@@ -319,10 +319,10 @@ describe("5 · the operator side is separate from the customer side", () => {
  * the wrong way round. This asserts the rendered header instead.
  */
 describe("the desk header", () => {
-  it("names the product Brief, with no stray underscore", async () => {
+  it("names the product Wasta, with no stray underscore", async () => {
     await renderDesk();
     const header = await screen.findByRole("banner");
-    expect(header.textContent.startsWith("Brief Business Desk")).toBe(true);
+    expect(header.textContent.startsWith("Wasta Business Desk")).toBe(true);
     expect(header.textContent).not.toContain("Brief_");
   });
 });

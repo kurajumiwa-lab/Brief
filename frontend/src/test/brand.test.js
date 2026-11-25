@@ -59,7 +59,16 @@ const RETIRED_NAMES = [
   },
   { name: "My Shop App", why: "never a product name; a repository title", scold: "everywhere" },
   { name: "Byway", why: "a codename from an earlier implementation", scold: "everywhere" },
-  { name: "Brief_", why: "a stray underscore from an old mark", scold: "everywhere" },
+  {
+    name: "Brief_",
+    why: "a stray underscore from an old mark",
+    // Case-SENSITIVE on purpose. Lowercased it matches two internal identifiers
+    // this rebrand must preserve: BRIEF_LANDING_ENABLED (a feature flag) and
+    // brief_stock_template.csv (a download filename). The rule is about the
+    // rendered mark, not the SCREAMING_SNAKE constant.
+    caseSensitive: true,
+    scold: "everywhere",
+  },
 ];
 
 /**
@@ -95,52 +104,19 @@ const LEGITIMATE_BRIEF = [
  * Recorded by file and count so the rebrand cannot silently regress. This is a
  * ceiling, not a target — Phase 2 removes these rows.
  */
-const PHASE_2_BACKLOG = {
-  "components/desk/OfferingForm.jsx": 1,
-  "components/discover/HowBriefWorks.jsx": 2,
-  "components/discover/MarketplaceHero.jsx": 2,
-  "components/discover/MerchCard.jsx": 1,
-  "components/discover/ShopToolbar.jsx": 1,
-  "components/events/EventPaymentCard.jsx": 1,
-  "components/forms/EventForm.jsx": 1,
-  "components/home/CounterShelf.jsx": 1,
-  "components/inbox/TradePassModal.jsx": 1,
-  "components/layout/Sidebar.jsx": 1,
-  "components/leads/LeadLedgerPanel.jsx": 1,
-  "components/page/PaymentTag.jsx": 1,
-  "components/receipts/ReceiptScanner.jsx": 1,
-  "components/receipts/VoucherConfirmationCard.jsx": 3,
-  "components/receipts/VoucherWallet.jsx": 1,
-  "components/start/StartView.jsx": 1,
-  "components/trust/TrustSignals.jsx": 1,
-  "components/you/PortfolioView.jsx": 4,
-  "config/constants.js": 1,
-  "lib/tradeRecordsCsv.js": 1,
-  "pages/billing/SubscriptionPage.jsx": 1,
-  "pages/create/CreatePage.jsx": 1,
-  "pages/enterprise/EnterprisePage.jsx": 3,
-  "pages/events/PublicRateCardPage.jsx": 1,
-  "pages/explore/ExplorePage.jsx": 1,
-  "pages/growth/GrowthPlannerPage.jsx": 1,
-  "pages/jobs/JobsPages.jsx": 1,
-  "pages/merit/MeritPage.jsx": 4,
-  "pages/offers/OffersBrowsePage.jsx": 1,
-  "pages/orders/OrderDetailPage.jsx": 1,
-  "pages/orders/TradeRecordsPage.jsx": 1,
-  "pages/page/PageEditor.jsx": 1,
-  "pages/pos/POSBridge.jsx": 1,
-  "pages/referrals/ReferralLandingPage.jsx": 4,
-  "pages/referrals/ReferralsPage.jsx": 3,
-  "pages/street/StreetPage.jsx": 3,
-  "pages/tasks/TasksPortal.jsx": 1,
-  "pages/templates/TemplatePacksPage.jsx": 1,
-  "pages/trades/InviteShopPage.jsx": 3,
-  "pages/trades/TradeProofsPage.jsx": 4,
-  "pages/trust/TrustMePage.jsx": 5,
-  "pages/trust/TrustStaffPage.jsx": 1,
-  "pages/trust/trustCore.js": 2,
-  "pages/work/PriceWorkPage.jsx": 1,
-};
+const PHASE_2_BACKLOG = {};
+
+/**
+ * Phase 2 is complete. The backlog above is now empty, and that is a claim the
+ * test below proves rather than assumes: it compares this map against a live
+ * scan of every rendered source file and fails on any file that is not listed
+ * at a high enough count. An empty backlog therefore means "zero product
+ * references remain", and a single regression re-opens the failure immediately.
+ *
+ * The map stays here — with its ceiling semantics intact — so the next stray
+ * reference is caught by the same rule, not by a new test written after the
+ * fact.
+ */
 
 function walk(dir, exts, skipTests) {
   const out = [];
@@ -181,10 +157,9 @@ function brandHits(file) {
 
 /** Retired names present in a file's rendered content, in any casing. */
 function retiredHits(body) {
-  const haystack = body.toLowerCase();
-  return RETIRED_NAMES.filter(({ name }) => haystack.includes(name.toLowerCase())).map(
-    ({ name }) => name,
-  );
+  return RETIRED_NAMES.filter(({ name, caseSensitive }) =>
+    caseSensitive ? body.includes(name) : body.toLowerCase().includes(name.toLowerCase()),
+  ).map(({ name }) => name);
 }
 
 describe("product identity", () => {
@@ -233,9 +208,12 @@ describe("product identity", () => {
         .forEach((line, i) => {
           // A comment may explain the history; rendered code may not repeat it.
           if (isComment(line)) return;
-          for (const { name, scold } of RETIRED_NAMES) {
+          for (const { name, scold, caseSensitive } of RETIRED_NAMES) {
             if (scold !== "everywhere") continue;
-            if (line.toLowerCase().includes(name.toLowerCase())) {
+            const hit = caseSensitive
+              ? line.includes(name)
+              : line.toLowerCase().includes(name.toLowerCase());
+            if (hit) {
               offenders.push(`${file.replace(root + "/", "")}:${i + 1} → ${name}`);
             }
           }
@@ -250,7 +228,10 @@ describe("product identity", () => {
   it("leaves no old product name in the brand-core files", () => {
     const offenders = [];
     for (const rel of BRAND_CORE) {
-      const body = readFileSync(join(root, rel), "utf8");
+      // Comments may explain the history; only code that runs counts.
+      const body = readFileSync(join(root, rel), "utf8")
+        .replace(/\/\*[\s\S]*?\*\//g, "")
+        .replace(/^\s*\/\/.*$/gm, "");
       for (const name of retiredHits(body)) {
         offenders.push(`${rel} → ${name}`);
       }

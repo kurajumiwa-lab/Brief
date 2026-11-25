@@ -164,7 +164,7 @@ export default function OfferingForm({ offering, onSaved, onCancel, initialKind 
             hint={`0 to ${MAX_CUTBACK_PCT}%. The buyer keeps it; this is what can lift the offer.`}
           />
           <Input
-            label="Brief's share (%)"
+            label="Wasta's share (%)"
             type="number" min="0" max={MAX_PLATFORM_FEE_PCT} step="0.5" inputMode="decimal"
             value={form.platform_fee_pct}
             onChange={set("platform_fee_pct")}

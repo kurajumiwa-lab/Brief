@@ -23,7 +23,7 @@ export default function TradePassModal({ pass, memberHandle, onClose }) {
 
   const share = () => {
     const text = [
-      `Brief pass • ${pass.title}`,
+      `Wasta pass • ${pass.title}`,
       `Code: ${code}`,
       `When: ${agendaDatePill(pass.starts_at)}`,
       agendaMeta(pass),

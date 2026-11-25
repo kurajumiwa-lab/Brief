@@ -424,7 +424,7 @@ export default function TasksPortal() {
           className="rounded-2xl border border-edge-1 bg-surface-0 p-4 text-left shadow-xs glass-hover cursor-pointer"
         >
           <Briefcase size={16} className="text-accent-700 dark:text-accent-300" />
-          <p className="text-sm font-semibold text-ink-1 mt-2">Brief</p>
+          <p className="text-sm font-semibold text-ink-1 mt-2">Workspace</p>
           <p className="text-2xs text-ink-4 mt-0.5">Your workspace — numbers, feed &amp; suggestions</p>
         </button>
       </div>
