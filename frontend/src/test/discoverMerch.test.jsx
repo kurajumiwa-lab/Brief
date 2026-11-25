@@ -144,7 +144,7 @@ describe("1 · spotlight and featured merchandising", () => {
     // The old 2×2 trust wall is gone; the four facts live behind the ? button.
     expect(screen.queryByLabelText("How this marketplace works")).not.toBeInTheDocument();
     fireEvent.click(within(hero).getByTestId("discover-how-it-works-button"));
-    const works = await screen.findByRole("dialog", { name: /how brief works/i });
+    const works = await screen.findByRole("dialog", { name: /how wasta works/i });
     expect(within(works).getByText("No paid placement")).toBeInTheDocument();
     expect(within(works).getByText("Trade on record")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Popular categories" })).toBeInTheDocument();

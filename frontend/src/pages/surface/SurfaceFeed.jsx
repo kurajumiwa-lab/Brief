@@ -41,7 +41,7 @@ const DOORS = [
   { to: "/tools", label: "Rentals", icon: Building2 },
   { to: "/groups", label: "Groups", icon: Store },
   { to: "/events", label: "Events", icon: CalendarDays },
-  { to: "/brief", label: "Brief", icon: LayoutGrid },
+  { to: "/brief", label: "Workspace", icon: LayoutGrid },
 ];
 
 function SearchIcon({ size = 14 }) {

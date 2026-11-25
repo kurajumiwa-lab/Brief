@@ -106,15 +106,11 @@ const LEGITIMATE_BRIEF = [
  */
 const PHASE_2_BACKLOG = {
   "components/desk/OfferingForm.jsx": 1,
-  "components/discover/HowBriefWorks.jsx": 2,
-  "components/discover/MarketplaceHero.jsx": 2,
   "components/discover/MerchCard.jsx": 1,
-  "components/discover/ShopToolbar.jsx": 1,
   "components/events/EventPaymentCard.jsx": 1,
   "components/forms/EventForm.jsx": 1,
   "components/home/CounterShelf.jsx": 1,
   "components/inbox/TradePassModal.jsx": 1,
-  "components/layout/Sidebar.jsx": 1,
   "components/leads/LeadLedgerPanel.jsx": 1,
   "components/page/PaymentTag.jsx": 1,
   "components/receipts/ReceiptScanner.jsx": 1,
@@ -143,8 +139,6 @@ const PHASE_2_BACKLOG = {
   "pages/templates/TemplatePacksPage.jsx": 1,
   "pages/trades/InviteShopPage.jsx": 3,
   "pages/trades/TradeProofsPage.jsx": 4,
-  "pages/trust/TrustMePage.jsx": 5,
-  "pages/trust/TrustStaffPage.jsx": 1,
   "pages/work/PriceWorkPage.jsx": 1,
 };
 

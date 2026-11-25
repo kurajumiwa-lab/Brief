@@ -234,7 +234,7 @@ describe("check desk (staff)", () => {
   it("says plainly when the visitor is not staff", async () => {
     trustAPI.pendingBranches.mockRejectedValue({ response: { status: 403 } });
     render(<MemoryRouter><TrustStaffPage /></MemoryRouter>);
-    expect(await screen.findByText("This page is for Brief staff only.")).toBeInTheDocument();
+    expect(await screen.findByText("This page is for Wasta staff only.")).toBeInTheDocument();
   });
 
   it("approves a shop with the chosen check method", async () => {

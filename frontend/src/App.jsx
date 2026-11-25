@@ -448,7 +448,7 @@ function AppRoutes() {
           <Route path="/lists" element={<VendorLists />} />
           <Route path="/locks" element={<MarketLocks />} />
 
-          {/* ── Tasks (Squad league + Brief workspace) ─────────────────── */}
+          {/* ── Tasks (Squad league + Workspace) ──────────────────────── */}
           <Route path="/squad" element={<Navigate to="/tasks/squad" replace />} />
           <Route path="/tasks" element={<TasksPortal />} />
           <Route path="/tasks/:track" element={<TaskTrack />} />
@@ -457,9 +457,9 @@ function AppRoutes() {
           <Route path="/me" element={<Navigate to="/you" replace />} />
           {/* MarketTrust, signed in: my shops, till codes and points. Linked from /trust. */}
           <Route path="/trust/me" element={<TrustMePage />} />
-          {/* MarketTrust check desk: Brief staff approve or reject shops. The API refuses everyone else. */}
+          {/* MarketTrust check desk: Wasta staff approve or reject shops. The API refuses everyone else. */}
           <Route path="/trust/staff" element={<TrustStaffPage />} />
-          {/* Brief is the legacy name for the Me workspace; keep old links alive. */}
+          {/* Brief is the legacy name for the Me workspace; /brief still redirects. */}
           <Route path="/brief" element={<Navigate to="/me" replace />} />
           <Route path="/profile" element={<Navigate to="/me" replace />} />
           <Route path="/analytics" element={<Analytics />} />

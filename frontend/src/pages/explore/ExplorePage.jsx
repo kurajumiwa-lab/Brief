@@ -16,7 +16,7 @@ import RegionsGrid from "@/components/regions/RegionsGrid";
 import { SpotDealModal } from "@/components/spotted/SpottedDealUI";
 import DiscoverCategoryStrip from "@/components/discover/DiscoverCategoryStrip";
 import MarketplaceHero from "@/components/discover/MarketplaceHero";
-import HowBriefWorks from "@/components/discover/HowBriefWorks";
+import HowWastaWorks from "@/components/discover/HowWastaWorks";
 import DealRail from "@/components/discover/DealRail";
 import ShopToolbar from "@/components/discover/ShopToolbar";
 import MarketplaceBand from "@/components/discover/MarketplaceBand";
@@ -469,7 +469,7 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
         <>
           {/* ── the region masthead scrolls; the search bar below sticks ───── */}
           <div data-testid="discover-masthead" className="flex items-center justify-between gap-2">
-            <p className="text-2xs font-extrabold uppercase tracking-[0.18em] text-mk-orange">Brief marketplace</p>
+            <p className="text-2xs font-extrabold uppercase tracking-[0.18em] text-mk-orange">Wasta marketplace</p>
             {/* The list must open *below* the sticky search bar, never over
                 it — search stays permanent and usable while choosing. */}
             <RegionPicker
@@ -548,7 +548,7 @@ export default function ExplorePage({ regionAware = false, demo = null }) {
             }}
             onHowItWorks={() => setWorksOpen(true)}
           />
-          <HowBriefWorks open={worksOpen} onClose={() => setWorksOpen(false)} />
+          <HowWastaWorks open={worksOpen} onClose={() => setWorksOpen(false)} />
 
           <SpotlightRail
             items={isServices ? providerItems : items}

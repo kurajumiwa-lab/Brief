@@ -18,7 +18,7 @@ export const SORT_OPTIONS = [
  */
 export default function ShopToolbar({
   title = "Shop all products",
-  eyebrow = "Brief marketplace",
+  eyebrow = "Wasta marketplace",
   query,
   categories = [],
   category,

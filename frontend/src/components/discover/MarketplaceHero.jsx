@@ -26,7 +26,7 @@ export default function MarketplaceHero({ region, onShopSale, onBrowseAll, onHow
 
       <p className="relative inline-flex items-center gap-1.5 text-2xs font-extrabold uppercase tracking-[0.18em] text-mk-orange">
         <Sparkles size={12} aria-hidden="true" />
-        Brief marketplace · {place}
+        Wasta marketplace · {place}
       </p>
       <h2 className="relative mt-3 text-[2.4rem] font-black leading-[0.98] tracking-[-0.045em] text-mk-ink sm:text-5xl">
         Great finds.
@@ -65,7 +65,7 @@ export default function MarketplaceHero({ region, onShopSale, onBrowseAll, onHow
           type="button"
           onClick={onHowItWorks}
           aria-haspopup="dialog"
-          aria-label="How Brief works"
+          aria-label="How Wasta works"
           data-testid="discover-how-it-works-button"
           className="relative grid h-6 w-6 place-items-center rounded-full border border-mk-line bg-mk-card text-mk-ink-soft transition-colors after:absolute after:-inset-2.5 hover:border-mk-orange hover:text-mk-orange focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mk-orange"
         >
