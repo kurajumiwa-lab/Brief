@@ -158,6 +158,7 @@ export default function BootSplash({
   const settleStepRef = useRef(0);
   const historyRef = useRef([]);
   const replayRef = useRef(null);
+  const generationRef = useRef(0);
   const exitTimer = useRef(null);
 
   useEffect(() => {
@@ -249,6 +250,10 @@ export default function BootSplash({
   const replay = useCallback(() => {
     window.clearTimeout(exitTimer.current);
     exitTimer.current = null;
+
+    // Every run has a number. A completion belonging to an earlier run is
+    // refused at the door, whatever else has happened since.
+    generationRef.current += 1;
 
     startedAt.current = Date.now();
     lineAt.current = Date.now();
@@ -351,12 +356,12 @@ export default function BootSplash({
       phaseRef.current = "leaving";
       setPhase("leaving");
 
-      const generation = replayRef.current;
+      const generation = generationRef.current;
       exitTimer.current = window.setTimeout(() => {
         // A completion from a run that has been superseded must not land in
         // this one.
+        if (generation !== generationRef.current) return;
         if (phaseRef.current !== "leaving") return;
-        if (generation && generation !== replayRef.current) return;
         onDoneRef.current?.();
       }, reducedRef.current ? 0 : SPLASH_EXIT_MS);
     };
