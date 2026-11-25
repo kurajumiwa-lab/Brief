@@ -490,7 +490,7 @@ export default function ReferralsPage() {
               <Input label="Cash bounty (KSh)" type="number" min="0" max="100000" prefix="KSh"
                 value={form.reward_kes}
                 onChange={(e) => setForm((f) => ({ ...f, reward_kes: e.target.value }))}
-                hint="You pay this directly. Brief never holds it." />
+                hint="You pay this directly. Wasta never holds it." />
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <Input label="Invitation places" type="number" min="1" max="500"
@@ -511,7 +511,7 @@ export default function ReferralsPage() {
         open={Boolean(payTarget)}
         onClose={() => setPayTarget(null)}
         title="Mark bounty paid"
-        description="This is a note on a direct payment between you and the person. It does not move money through Brief."
+        description="This is a note on a direct payment between you and the person. It does not move money through Wasta."
         footer={(
           <>
             <Button variant="secondary" onClick={() => setPayTarget(null)}>Cancel</Button>
@@ -528,7 +528,7 @@ export default function ReferralsPage() {
             </div>
             <Input label="M-Pesa reference or note" value={payNote}
               onChange={(e) => setPayNote(e.target.value)} maxLength={255} required
-              hint="Required. Brief did not see the payment; this is your record of it."
+              hint="Required. Wasta did not see the payment; this is your record of it."
               placeholder="e.g. Send Money QK72…" />
           </div>
         )}

@@ -99,7 +99,7 @@ export default function EventForm({ onDone, onCancel, groups = [], lists = [] })
       <section className="rounded-xl border border-edge-1 bg-surface-1 p-4" aria-labelledby="event-payment-heading">
         <h3 id="event-payment-heading" className="text-sm font-semibold text-ink-1">Tickets &amp; payment</h3>
         <p className="mt-0.5 text-micro leading-relaxed text-ink-4">
-          Money goes directly to you. Brief never collects or holds it, and a
+          Money goes directly to you. Wasta never collects or holds it, and a
           guest's pass only unlocks when you confirm the payment (or the cash).
         </p>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">

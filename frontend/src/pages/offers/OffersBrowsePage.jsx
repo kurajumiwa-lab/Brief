@@ -39,7 +39,7 @@ export default function OffersBrowsePage() {
       <header className="space-y-1">
         <h1 className="text-xl font-semibold text-ink-1">Open offers</h1>
         <p className="text-sm text-ink-3">
-          Goods and services that businesses on Brief share. Look freely. Each one shows how far it has been tested on the network.
+          Goods and services that businesses on Wasta share. Look freely. Each one shows how far it has been tested on the network.
         </p>
         <p className="text-xs text-ink-3">
           <Link to="/auth" className="font-medium text-brand-700 underline">Sign in</Link> to buy or source from a business.

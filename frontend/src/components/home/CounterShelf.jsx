@@ -134,7 +134,7 @@ export default function CounterShelf({ progress }) {
         </ul>
 
         <p className="border-t border-white/10 px-5 py-3 text-micro leading-relaxed text-white/75">
-          Records only. Brief holds no money for you and lends you none — a receipt here is a
+          Records only. Wasta holds no money for you and lends you none — a receipt here is a
           receipt, not an account.
         </p>
       </div>

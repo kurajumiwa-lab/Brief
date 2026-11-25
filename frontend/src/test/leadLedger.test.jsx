@@ -14,7 +14,7 @@ describe("Lead ledger panel", () => {
       data: {
         month: "2026-11", verified_leads: 2, unique_people: 2, due_kes: 10,
         scout_bounty_kes: 1, scouts_credited: 1, by_target_kind: { vendor: 2 },
-        note: "A verified handshake is 5 KES. Brief never holds either amount.",
+        note: "A verified handshake is 5 KES. Wasta never holds either amount.",
         recent: [
           {
             id: "l1", target_label: "Kondele Gas", action: "call", fee_kes: 5,

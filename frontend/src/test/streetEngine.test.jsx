@@ -98,7 +98,7 @@ beforeEach(() => {
         channel: "whatsapp", label: "Open WhatsApp", code: "A1B2C3",
         url: "https://wa.me/254712345678?text=A1B2C3",
         share_text: "Brief table A1B2C3",
-        note: "Brief does not send this message or hold any payment.",
+        note: "Wasta does not send this message or hold any payment.",
       },
     },
   });

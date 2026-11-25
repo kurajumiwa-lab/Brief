@@ -173,7 +173,7 @@ export default function SubscriptionPage() {
         <Card>
           <p className="text-sm font-bold text-ink-1">Everything is free for now</p>
           <p className="text-2xs text-ink-3 mt-1 leading-relaxed">
-            Every feature in Brief is open to every account, including advanced analytics,
+            Every feature in Wasta is open to every account, including advanced analytics,
             broadcasts, staff accounts and group orders. No card is needed and nothing is charged.
             {freeForNow && paidPlans.length ? " Paid plans are not open to new accounts yet." : ""}
           </p>

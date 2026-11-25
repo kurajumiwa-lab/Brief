@@ -236,7 +236,7 @@ export function TemplatePackDetailPage() {
       <section className="rounded-card border border-brand-200 bg-brand-50 p-3 dark:border-brand-500/30 dark:bg-brand-500/10">
         <p className="text-xs font-bold text-brand-900 dark:text-brand-100">Suggested partner terms</p>
         <p className="mt-1 text-micro leading-relaxed text-brand-900/80 dark:text-brand-100/80">
-          Give the buyer {pack.suggested_terms.buyer_cutback_pct}% back and Brief{" "}
+          Give the buyer {pack.suggested_terms.buyer_cutback_pct}% back and Wasta{" "}
           {pack.suggested_terms.platform_fee_pct}%. {pack.suggested_terms.reason}
         </p>
       </section>

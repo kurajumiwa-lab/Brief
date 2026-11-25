@@ -31,7 +31,7 @@ const FILTERS = [
   { value: "mine", label: "For you" },
   { value: "waiting", label: "Waiting" },
   { value: "confirmed", label: "Confirmed" },
-  { value: "unmatched", label: "Not on Brief" },
+  { value: "unmatched", label: "Not on Wasta" },
 ];
 
 function statusTone(status) {
@@ -44,14 +44,14 @@ function statusTone(status) {
 function statusLabel(status) {
   if (status === "confirmed") return "Confirmed";
   if (status === "disputed") return "Questioned";
-  if (status === "unmatched") return "Not on Brief";
+  if (status === "unmatched") return "Not on Wasta";
   return "Waiting";
 }
 
 function inviteLink(merchant, pin) {
   const name = merchant || "your shop";
   const text =
-    `I have a receipt from ${name} on Brief. ` +
+    `I have a receipt from ${name} on Wasta. ` +
     "Claim the shop page free so the trade counts for both of us.";
   const slug = merchantSlug(name) || pin || "";
   const origin = typeof window !== "undefined" && window.location?.origin
@@ -300,7 +300,7 @@ export default function TradeProofsPage() {
                   {proof.status === "unmatched" && (
                     <div className="mt-2">
                       <p className="text-micro leading-relaxed text-ink-4">
-                        This shop is not on Brief yet, so nobody can confirm the
+                        This shop is not on Wasta yet, so nobody can confirm the
                         other side. Invite them — the link is the whole growth budget.
                       </p>
                       <Button

@@ -54,7 +54,7 @@ export default function ReferralLandingPage() {
     <div className="min-h-dvh bg-surface-1">
       <header className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4">
         <Logo />
-        <Link to="/" className="text-2xs font-semibold text-ink-3 hover:text-ink-1">Browse Brief</Link>
+        <Link to="/" className="text-2xs font-semibold text-ink-3 hover:text-ink-1">Browse Wasta</Link>
       </header>
 
       <main className="mx-auto max-w-3xl px-4 pb-10 pt-2">
@@ -65,7 +65,7 @@ export default function ReferralLandingPage() {
             </div>
             <h1 className="mt-3 text-lg font-bold text-ink-1">This invitation is not active</h1>
             <p className="mt-1 text-2xs text-ink-3">{error}</p>
-            <Button className="mt-4" variant="secondary" as={Link} to="/">Go to Brief</Button>
+            <Button className="mt-4" variant="secondary" as={Link} to="/">Go to Wasta</Button>
           </section>
         ) : (
           <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
@@ -108,7 +108,7 @@ export default function ReferralLandingPage() {
                   Continue with this invitation
                 </Button>
                 <p className="text-center text-micro text-ink-4">
-                  Already on Brief? <button type="button" onClick={signIn} className="font-semibold text-brand-700 underline dark:text-brand-300">Sign in</button>
+                  Already on Wasta? <button type="button" onClick={signIn} className="font-semibold text-brand-700 underline dark:text-brand-300">Sign in</button>
                 </p>
               </div>
             </section>
@@ -122,7 +122,7 @@ export default function ReferralLandingPage() {
                 <ol className="mt-2 space-y-2 text-2xs text-ink-2">
                   <li className="flex gap-2"><span className="font-bold text-brand-700 dark:text-brand-300">1</span> Join or sign in before you shop.</li>
                   <li className="flex gap-2"><span className="font-bold text-brand-700 dark:text-brand-300">2</span> Buy something at {invite.merchant.name}.</li>
-                  <li className="flex gap-2"><span className="font-bold text-brand-700 dark:text-brand-300">3</span> Submit the receipt in Brief.</li>
+                  <li className="flex gap-2"><span className="font-bold text-brand-700 dark:text-brand-300">3</span> Submit the receipt in Wasta.</li>
                   <li className="flex gap-2"><span className="font-bold text-brand-700 dark:text-brand-300">4</span> The receipt engine verifies it and releases the reward.</li>
                 </ol>
                 <p className="mt-3 rounded-xl bg-surface-2 p-2 text-micro text-ink-3">

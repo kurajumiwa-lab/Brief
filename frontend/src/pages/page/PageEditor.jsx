@@ -195,7 +195,7 @@ export default function PageEditor() {
             Optional. Publish your own Till or Paybill on the Page for shops and
             services. An event asks for its own payment method when you publish it,
             because each event has its own price. The money goes straight to you;
-            Brief never collects or holds it, so a client should still check
+            Wasta never collects or holds it, so a client should still check
             the recipient before paying.
           </p>
           <label className="block text-sm mt-3">

@@ -6,7 +6,7 @@ import { num } from "@/lib/formatters";
 /* ═══════════════════════════════════════════════════════════════════════════
    TRUST SIGNALS
    ---------------------------------------------------------------------------
-   Brief already computes everything a buyer needs to judge a supplier —
+   Wasta already computes everything a buyer needs to judge a supplier —
    fulfilment rate, completed movements, reliability score, patron tier,
    verification, POS liveness. It just never added up to a single judgement.
 

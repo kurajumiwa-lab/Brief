@@ -162,7 +162,7 @@ export default function PriceWorkPage() {
           </div>
           <p className="text-micro text-ink-4">
             Accrued means the number exists and the payer has not yet recorded a reference.
-            Nobody is paid from Brief, and a reward is never a salary.
+            Nobody is paid from Wasta, and a reward is never a salary.
           </p>
           {mine.items.length === 0 ? (
             <p className="text-xs text-ink-3">No days recorded yet.</p>

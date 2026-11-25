@@ -14,7 +14,7 @@ import { preciseCurrency, num, relativeTime, shortDate } from "@/lib/formatters"
 import { tradeRecordsCsv } from "@/lib/tradeRecordsCsv";
 
 const PAGE_SIZE = 30;
-const FALLBACK_NOTICE = "This is your record of trades on Brief. It is not a receipt, an invoice, or a tax document.";
+const FALLBACK_NOTICE = "This is your record of trades on Wasta. It is not a receipt, an invoice, or a tax document.";
 const stateLabel = (value) => value?.replaceAll("_", " ") || "not recorded";
 
 /** Search and CSV share a cursor + filter, so export means exactly this page. */

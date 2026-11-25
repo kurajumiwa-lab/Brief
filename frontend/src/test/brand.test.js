@@ -104,43 +104,19 @@ const LEGITIMATE_BRIEF = [
  * Recorded by file and count so the rebrand cannot silently regress. This is a
  * ceiling, not a target — Phase 2 removes these rows.
  */
-const PHASE_2_BACKLOG = {
-  "components/desk/OfferingForm.jsx": 1,
-  "components/discover/MerchCard.jsx": 1,
-  "components/events/EventPaymentCard.jsx": 1,
-  "components/forms/EventForm.jsx": 1,
-  "components/home/CounterShelf.jsx": 1,
-  "components/inbox/TradePassModal.jsx": 1,
-  "components/leads/LeadLedgerPanel.jsx": 1,
-  "components/page/PaymentTag.jsx": 1,
-  "components/receipts/ReceiptScanner.jsx": 1,
-  "components/receipts/VoucherConfirmationCard.jsx": 3,
-  "components/receipts/VoucherWallet.jsx": 1,
-  "components/start/StartView.jsx": 1,
-  "components/trust/TrustSignals.jsx": 1,
-  "config/constants.js": 1,
-  "lib/tradeRecordsCsv.js": 1,
-  "pages/billing/SubscriptionPage.jsx": 1,
-  "pages/create/CreatePage.jsx": 1,
-  "pages/enterprise/EnterprisePage.jsx": 3,
-  "pages/explore/ExplorePage.jsx": 1,
-  "pages/growth/GrowthPlannerPage.jsx": 1,
-  "pages/jobs/JobsPages.jsx": 1,
-  "pages/merit/MeritPage.jsx": 4,
-  "pages/offers/OffersBrowsePage.jsx": 1,
-  "pages/orders/OrderDetailPage.jsx": 1,
-  "pages/orders/TradeRecordsPage.jsx": 1,
-  "pages/page/PageEditor.jsx": 1,
-  "pages/pos/POSBridge.jsx": 1,
-  "pages/referrals/ReferralLandingPage.jsx": 4,
-  "pages/referrals/ReferralsPage.jsx": 3,
-  "pages/street/StreetPage.jsx": 3,
-  "pages/tasks/TasksPortal.jsx": 1,
-  "pages/templates/TemplatePacksPage.jsx": 1,
-  "pages/trades/InviteShopPage.jsx": 3,
-  "pages/trades/TradeProofsPage.jsx": 4,
-  "pages/work/PriceWorkPage.jsx": 1,
-};
+const PHASE_2_BACKLOG = {};
+
+/**
+ * Phase 2 is complete. The backlog above is now empty, and that is a claim the
+ * test below proves rather than assumes: it compares this map against a live
+ * scan of every rendered source file and fails on any file that is not listed
+ * at a high enough count. An empty backlog therefore means "zero product
+ * references remain", and a single regression re-opens the failure immediately.
+ *
+ * The map stays here — with its ceiling semantics intact — so the next stray
+ * reference is caught by the same rule, not by a new test written after the
+ * fact.
+ */
 
 function walk(dir, exts, skipTests) {
   const out = [];

@@ -128,7 +128,7 @@ export default function EnterprisePage() {
       <header>
         <h1 className="text-2xl font-bold text-ink-1 tracking-tight">Enterprise workspaces</h1>
         <p className="text-sm text-ink-3 mt-1 max-w-2xl">
-          The paid, private side of Brief — for associations, cooperatives, employers and county
+          The paid, private side of Wasta — for associations, cooperatives, employers and county
           programmes. Members stay discoverable on the public marketplace; the workspace adds the
           member register, field officers and managed Android phones. No separate app.
         </p>
@@ -284,7 +284,7 @@ export default function EnterprisePage() {
                 <h3 className="text-sm font-bold text-ink-1 flex items-center gap-2"><ShieldCheck size={15} /> Android Enterprise & command audit</h3>
                 <p className="text-2xs text-ink-3 max-w-3xl">{detail.android.note} Remote lock and company-data
                   removal depend on the enrolment mode: a work-profile phone can lose only its company
-                  data — the officer's personal data is untouchable, and Brief refuses that command.</p>
+                  data — the officer's personal data is untouchable, and Wasta refuses that command.</p>
                 <div className="flex flex-wrap gap-2">
                   <Badge variant={detail.android.enterprise_bound ? "brand" : "amber"} size="xs">
                     {detail.android.enterprise_bound ? `EMM bound: ${detail.android.emm_provider}` : "No EMM bound — commands are audit-only"}
@@ -360,7 +360,7 @@ export default function EnterprisePage() {
           <p className="text-2xs text-ink-3">
             The organisation buys the workspace once; members keep their own vendor plans on the
             marketplace side. Android Enterprise provides enrolment, policy and remote actions
-            through your EMM — it does not provide the marketplace or job matching, which stay in Brief.
+            through your EMM — it does not provide the marketplace or job matching, which stay in Wasta.
           </p>
         </section>
       )}
