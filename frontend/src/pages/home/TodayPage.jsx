@@ -112,6 +112,29 @@ export default function TodayPage() {
       .slice(0, 8);
   }, [items, region]);
 
+  // Community activity: what the neighbourhood is saying and asking, as
+  // opposed to what it is selling or when it meets. These kinds are the ones
+  // no other Home shelf claims, so the same feed read serves four sections
+  // without a second request.
+  const community = useMemo(() => {
+    const TALK = new Set(["post", "community", "wanted", "opportunity"]);
+    const seen = new Set();
+    return items
+      .filter((item) => TALK.has(item.kind))
+      .filter((item) => {
+        const key = `${item.kind}:${item.id}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .sort((a, b) => {
+        const at = parseApiDate(a.created_at)?.getTime() || 0;
+        const bt = parseApiDate(b.created_at)?.getTime() || 0;
+        return bt - at;
+      })
+      .slice(0, 4);
+  }, [items]);
+
   const rank = rankFor({ vendor, identity });
 
   const unreadNotifications = (activity?.groups || []).reduce(
@@ -135,6 +158,7 @@ export default function TodayPage() {
       happening={happening}
       nearby={nearby}
       deals={deals}
+      community={community}
       unread={unread}
       institution={
         office

@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
-  ArrowLeft, ArrowUpRight, CalendarDays, Check, Eye, ImageIcon, Lock, MapPin, Save,
-  ScanLine, Send, ShieldCheck, Sparkles, Store, Trash2, X,
+  ArrowLeft, ArrowRight, ArrowUpRight, CalendarDays, Check, ChevronDown, Eye,
+  ImageIcon, Lock, MapPin, Save, ScanLine, Send, ShieldCheck, Sparkles, Store,
+  Trash2, X,
 } from "lucide-react";
 import Media from "@/components/ui/Media";
 import Button from "@/components/ui/Button";
@@ -15,7 +16,9 @@ import ReceiptScanner from "@/components/receipts/ReceiptScanner";
 import { toast } from "@/components/ui/Toast";
 import RepeatWeeklyCard from "@/components/routines/RepeatWeeklyCard";
 import CorridorPriceHint from "@/components/prices/CorridorPriceHint";
+import CreateIntentSheet from "@/components/create/CreateIntentSheet";
 import { CREATE_TYPES, PRIMARY_POSTING_TYPES } from "@/config/navigation";
+import { INTENT_CONFIRMATIONS, intentForDraft } from "@/config/createIntents";
 import {
   FIELD_OPTIONS, LEDGER_PRIMARY_TYPES, TYPE_FIELDS, fieldsFor, hasContent,
   missingFields, useCreateStore,
@@ -60,6 +63,7 @@ export default function CreatePage() {
   const [showAllFields, setShowAllFields] = useState(false);
   const [priceHint, setPriceHint] = useState(null);
   const fileRef = useRef(null);
+  const detailsRef = useRef(null);
 
   const isLedgerMode = LEDGER_PRIMARY_TYPES.has(draft.content_type) || Boolean(draft.use_ledger);
   const type = TYPE_FIELDS[draft.content_type] || TYPE_FIELDS.post;
@@ -109,10 +113,23 @@ export default function CreatePage() {
   useEffect(() => {
     const wanted = params.get("type");
     const ledgerFlag = params.get("ledger") === "1";
+    const wantsAvailable = wanted === "available";
     if (wanted && TYPE_FIELDS[wanted] && (wanted !== draft.content_type || (ledgerFlag && !draft.use_ledger))) {
       setType(wanted, {
         use_ledger: LEDGER_PRIMARY_TYPES.has(wanted) || ledgerFlag,
       });
+    }
+    // A purpose may carry the anchor an offer hangs off — goods, service or
+    // rental. It arrives in the URL so a purpose can be shared and opened
+    // cold, and it is applied whenever the record on screen is an offer.
+    const primary = params.get("primary");
+    if (
+      primary &&
+      ["goods", "service", "rental"].includes(primary) &&
+      (wantsAvailable || draft.content_type === "available") &&
+      draft.primary_category !== primary
+    ) {
+      setField("primary_category", primary);
     }
     if (!location) loadLocation();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -143,8 +160,56 @@ export default function CreatePage() {
     const next = new URLSearchParams(params);
     next.set("type", value);
     next.delete("ledger");
+    // A purpose's anchor belongs to that purpose. Picking a raw type retires
+    // it, so the URL never says "sell goods" over an event form.
+    next.delete("primary");
     setParams(next, { replace: true });
   }, [params, setParams, setType]);
+
+  /**
+   * A purpose was chosen. It decides the record type, whether the record is
+   * a Local Activity Ledger one, and — for the three trade purposes — the
+   * anchor the offer hangs off. The URL is kept true to the form, so the
+   * address always describes what is on screen.
+   */
+  const onPickIntent = useCallback((intent) => {
+    setType(intent.content_type, { use_ledger: intent.use_ledger });
+    if (intent.primary_category) setField("primary_category", intent.primary_category);
+    const next = new URLSearchParams(params);
+    next.set("type", intent.content_type);
+    if (intent.use_ledger) next.set("ledger", "1");
+    else next.delete("ledger");
+    if (intent.primary_category) next.set("primary", intent.primary_category);
+    else next.delete("primary");
+    setParams(next, { replace: true });
+  }, [params, setParams, setType, setField]);
+
+  /**
+   * Move the person to the fields. The purpose sheet is a decision; the form
+   * is the work. Scrolling honours `prefers-reduced-motion`: a person who
+   * asked for stillness gets a jump, not a glide.
+   */
+  const goToDetails = useCallback(() => {
+    const el = detailsRef.current;
+    if (!el) return;
+    const reduce =
+      typeof window !== "undefined" &&
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (typeof el.scrollIntoView === "function") {
+      el.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+    }
+    const title = el.querySelector('[data-testid="create-title"]');
+    if (title) window.setTimeout(() => title.focus(), reduce ? 0 : 350);
+  }, []);
+
+  /** Keep the address true to the anchor the form is showing. */
+  const onPrimaryChange = useCallback((value) => {
+    const next = new URLSearchParams(params);
+    if (value) next.set("primary", value);
+    else next.delete("primary");
+    setParams(next, { replace: true });
+  }, [params, setParams]);
 
   const onFiles = useCallback(async (files) => {
     const list = Array.from(files || []).slice(0, 4);
@@ -211,15 +276,17 @@ export default function CreatePage() {
 
   const visiblePrimary = dedupe(fields.primary);
   const visibleSecondary = dedupe(fields.secondary);
+  const intent = intentForDraft(draft);
 
   return (
     <div className="mx-auto max-w-2xl space-y-s5">
       <header className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-micro font-bold uppercase tracking-[0.14em] text-ink-4">Create</p>
-          <h1 className="mt-1 text-title-page font-bold text-ink-1">What are you posting?</h1>
-          <p className="mt-1.5 text-sm text-ink-3">
-            Start with one of the four neighbourhood activity types — or pick a classic format below. No business profile or price required.
+          <p className="ds-eyebrow">Create</p>
+          <h1 className="ds-display mt-1">Publish something</h1>
+          <p className="mt-1.5 ds-lede">
+            Say what you are doing and the form sets itself up. No business
+            profile and no price are required.
           </p>
         </div>
         {hasDraft() && (
@@ -229,170 +296,209 @@ export default function CreatePage() {
         )}
       </header>
 
-      {/* ── 0. The fifth action: make a receipt a two-sided trade ────────── */}
-      <section
-        aria-labelledby="verify-trade-heading"
-        data-testid="create-verify-trade"
-        className="rounded-card border border-brand-200 bg-brand-50/70 p-4 dark:border-brand-500/30 dark:bg-brand-500/10"
-      >
-        <div className="flex items-start gap-3">
-          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-brand-700 text-white">
-            <ScanLine size={19} aria-hidden="true" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <h2 id="verify-trade-heading" className="text-sm font-extrabold text-ink-1">
-              Verify a trade
-            </h2>
-            <p className="mt-1 max-w-md text-2xs leading-relaxed text-ink-3">
-              Scan the eTIMS QR on a shop receipt. If the shop is on Wasta,
-              it gets one tap to confirm; then the trade counts for both of you.
-              This is the fifth action — not another listing.
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <Button
-                size="sm"
-                icon={ScanLine}
-                onClick={() => setVerifyOpen(true)}
-                data-testid="create-verify-scan"
-              >
-                Scan a receipt
-              </Button>
-              <Button as={Link} to="/trades/proofs" size="sm" variant="ghost">
-                Trade proofs
-              </Button>
+      {/* ── 1. The purpose sheet ────────────────────────────────────────── */}
+      <CreateIntentSheet value={intent?.id || null} onSelect={onPickIntent} />
+
+      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-edge-1 bg-surface-1 px-3 py-2.5">
+        <p
+          data-testid="create-intent-confirmation"
+          className="min-w-0 flex-1 text-2xs leading-relaxed text-ink-3"
+        >
+          {intent
+            ? INTENT_CONFIRMATIONS[intent.id]
+            : "No purpose picked yet, so the form below is a general post. Choose one above and the fields change to match it."}
+        </p>
+        {intent && (
+          <button
+            type="button"
+            className="ds-cta"
+            onClick={goToDetails}
+            data-testid="create-go-to-details"
+          >
+            Go to the details
+            <ArrowRight size={14} aria-hidden="true" />
+          </button>
+        )}
+      </div>
+
+      {/* ── 0. The other ways to publish ────────────────────────────────
+          The purpose sheet above is the front door. These are the older
+          doors — a raw type picker, a trade proof, and the offer editor
+          on your page — and they stay reachable, because a person who
+          already knows the vocabulary should not have to learn ours. */}
+      <details data-testid="create-more-formats" className="group rounded-card border border-edge-1 bg-surface-1">
+        <summary className="ds-focus flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 text-xs font-bold text-ink-2 marker:content-none">
+          <span>Other ways to publish</span>
+          <ChevronDown size={15} className="shrink-0 text-ink-4 transition-transform group-open:rotate-180" aria-hidden="true" />
+        </summary>
+        <div className="space-y-5 border-t border-edge-1 p-4">
+        {/* ── 0. The fifth action: make a receipt a two-sided trade ────────── */}
+        <section
+          aria-labelledby="verify-trade-heading"
+          data-testid="create-verify-trade"
+          className="rounded-card border border-brand-200 bg-brand-50/70 p-4 dark:border-brand-500/30 dark:bg-brand-500/10"
+        >
+          <div className="flex items-start gap-3">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-brand-700 text-white">
+              <ScanLine size={19} aria-hidden="true" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <h2 id="verify-trade-heading" className="text-sm font-extrabold text-ink-1">
+                Verify a trade
+              </h2>
+              <p className="mt-1 max-w-md text-2xs leading-relaxed text-ink-3">
+                Scan the eTIMS QR on a shop receipt. If the shop is on Wasta,
+                it gets one tap to confirm; then the trade counts for both of you.
+                This is the fifth action — not another listing.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  icon={ScanLine}
+                  onClick={() => setVerifyOpen(true)}
+                  data-testid="create-verify-scan"
+                >
+                  Scan a receipt
+                </Button>
+                <Button as={Link} to="/trades/proofs" size="sm" variant="ghost">
+                  Trade proofs
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* ── 0B. What I sell: the offer editor, not a post ─────────────────
-          A post is an activity that expires; an offer is a durable line with a
-          price, a duration and a quantity that a buyer can actually book. These
-          were reachable only through an off-by-default flag, which is why a new
-          business could not find where to set a service or a price. */}
-      <section
-        aria-labelledby="sell-heading"
-        data-testid="create-sell-door"
-        className="rounded-card border border-edge-1 bg-surface-1 p-4"
-      >
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <h2 id="sell-heading" className="text-title-section font-semibold text-ink-1">
-              Something you sell
-            </h2>
-            <p className="mt-1 text-xs leading-relaxed text-ink-3">
-              A service with a duration and a price, goods with a quantity, or a tool
-              with a day rate. This is what appears on your page and on the shelf — it
-              does not expire like a post.
-            </p>
+        {/* ── 0B. What I sell: the offer editor, not a post ─────────────────
+            A post is an activity that expires; an offer is a durable line with a
+            price, a duration and a quantity that a buyer can actually book. These
+            were reachable only through an off-by-default flag, which is why a new
+            business could not find where to set a service or a price. */}
+        <section
+          aria-labelledby="sell-heading"
+          data-testid="create-sell-door"
+          className="rounded-card border border-edge-1 bg-surface-1 p-4"
+        >
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <h2 id="sell-heading" className="text-title-section font-semibold text-ink-1">
+                Something you sell
+              </h2>
+              <p className="mt-1 text-xs leading-relaxed text-ink-3">
+                A service with a duration and a price, goods with a quantity, or a tool
+                with a day rate. This is what appears on your page and on the shelf — it
+                does not expire like a post.
+              </p>
+            </div>
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-700 dark:bg-brand-500/10 dark:text-brand-300">
+              <Store size={16} aria-hidden="true" />
+            </span>
           </div>
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-700 dark:bg-brand-500/10 dark:text-brand-300">
-            <Store size={16} aria-hidden="true" />
-          </span>
-        </div>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <Link
-            to="/desk?new=service"
-            className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-brand-700 px-3 text-xs font-bold text-white hover:bg-brand-800"
-          >
-            Add a service <ArrowUpRight size={13} aria-hidden="true" />
-          </Link>
-          <Link
-            to="/desk?new=goods"
-            className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-edge-2 bg-surface-0 px-3 text-xs font-bold text-ink-2 hover:border-edge-3"
-          >
-            Add goods
-          </Link>
-          <Link
-            to="/desk?new=tool"
-            className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-edge-2 bg-surface-0 px-3 text-xs font-bold text-ink-2 hover:border-edge-3"
-          >
-            Rent something out
-          </Link>
-        </div>
-      </section>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Link
+              to="/desk?new=service"
+              className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-brand-700 px-3 text-xs font-bold text-white hover:bg-brand-800"
+            >
+              Add a service <ArrowUpRight size={13} aria-hidden="true" />
+            </Link>
+            <Link
+              to="/desk?new=goods"
+              className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-edge-2 bg-surface-0 px-3 text-xs font-bold text-ink-2 hover:border-edge-3"
+            >
+              Add goods
+            </Link>
+            <Link
+              to="/desk?new=tool"
+              className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-edge-2 bg-surface-0 px-3 text-xs font-bold text-ink-2 hover:border-edge-3"
+            >
+              Rent something out
+            </Link>
+          </div>
+        </section>
 
-      {/* ── 1A. Primary 4 Local Activity Ledger posting types ───────────── */}
-      <section aria-labelledby="primary-posting-heading" className="space-y-3">
-        <div className="flex items-center justify-between gap-2">
-          <h2 id="primary-posting-heading" className="text-title-section font-semibold text-ink-1">
-            Primary neighbourhood activities
-          </h2>
-          <Badge variant="brand" size="sm">Local Activity Ledger</Badge>
-        </div>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4" role="radiogroup" aria-label="Primary posting type">
-          {PRIMARY_POSTING_TYPES.map((option) => {
-            const Icon = option.icon;
-            const active =
-              draft.content_type === option.value &&
-              (option.value !== "opportunity" || Boolean(draft.use_ledger));
-            return (
-              <button
-                key={option.value}
-                type="button"
-                role="radio"
-                aria-checked={active}
-                onClick={() => onPickPrimaryPostingType(option.value)}
-                data-testid={`posting-type-${option.value}`}
-                className={cn(
-                  "flex min-h-tap flex-col items-start gap-1.5 rounded-card border p-3 text-left transition-colors",
-                  active
-                    ? "border-brand-500 bg-brand-50 dark:bg-brand-500/15"
-                    : "border-edge-1 bg-surface-1 hover:border-edge-2 hover:bg-surface-2",
-                )}
-              >
-                <span
+        {/* ── 1A. Primary 4 Local Activity Ledger posting types ───────────── */}
+        <section aria-labelledby="primary-posting-heading" className="space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <h2 id="primary-posting-heading" className="text-title-section font-semibold text-ink-1">
+              Primary neighbourhood activities
+            </h2>
+            <Badge variant="brand" size="sm">Local Activity Ledger</Badge>
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4" role="radiogroup" aria-label="Primary posting type">
+            {PRIMARY_POSTING_TYPES.map((option) => {
+              const Icon = option.icon;
+              const active =
+                draft.content_type === option.value &&
+                (option.value !== "opportunity" || Boolean(draft.use_ledger));
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={active}
+                  onClick={() => onPickPrimaryPostingType(option.value)}
+                  data-testid={`posting-type-${option.value}`}
                   className={cn(
-                    "grid h-8 w-8 place-items-center rounded-xl",
-                    active ? "bg-brand-600 text-white" : "bg-surface-2 text-ink-3",
+                    "flex min-h-tap flex-col items-start gap-1.5 rounded-card border p-3 text-left transition-colors",
+                    active
+                      ? "border-brand-500 bg-brand-50 dark:bg-brand-500/15"
+                      : "border-edge-1 bg-surface-1 hover:border-edge-2 hover:bg-surface-2",
                   )}
                 >
-                  <Icon size={16} aria-hidden="true" />
-                </span>
-                <span className="text-sm font-semibold text-ink-1">{option.label}</span>
-                <span className="text-2xs leading-snug text-ink-4">{option.shortHint || option.hint}</span>
-              </button>
-            );
-          })}
-        </div>
-      </section>
+                  <span
+                    className={cn(
+                      "grid h-8 w-8 place-items-center rounded-xl",
+                      active ? "bg-brand-600 text-white" : "bg-surface-2 text-ink-3",
+                    )}
+                  >
+                    <Icon size={16} aria-hidden="true" />
+                  </span>
+                  <span className="text-sm font-semibold text-ink-1">{option.label}</span>
+                  <span className="text-2xs leading-snug text-ink-4">{option.shortHint || option.hint}</span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
 
-      {/* ── 1B. Classic content types (backward compatibility) ──────────── */}
-      <section aria-labelledby="create-type-heading" className="space-y-2">
-        <h2 id="create-type-heading" className="text-xs font-semibold uppercase tracking-[0.08em] text-ink-4">
-          Content type · Classic formats
-        </h2>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3" role="radiogroup" aria-label="Content type">
-          {CREATE_TYPES.map((option) => {
-            const Icon = option.icon;
-            const active =
-              draft.content_type === option.value &&
-              !(option.value === "opportunity" && draft.use_ledger);
-            return (
-              <button
-                key={option.value}
-                type="button"
-                role="radio"
-                aria-checked={active}
-                onClick={() => onPickClassicType(option.value)}
-                data-testid={`create-type-${option.value}`}
-                className={cn(
-                  "flex items-center gap-2 rounded-xl border px-3 py-2 text-left transition-colors",
-                  active
-                    ? "border-brand-500 bg-brand-50 dark:bg-brand-500/10"
-                    : "border-edge-1 bg-surface-1 hover:border-edge-2 hover:bg-surface-2",
-                )}
-              >
-                <Icon size={14} className={active ? "text-brand-600 dark:text-brand-300" : "text-ink-4"} aria-hidden="true" />
-                <span className="min-w-0">
-                  <span className="block text-xs font-semibold text-ink-1">{option.label}</span>
-                  <span className="block truncate text-micro text-ink-4">{option.hint}</span>
-                </span>
-              </button>
-            );
-          })}
+        {/* ── 1B. Classic content types (backward compatibility) ──────────── */}
+        <section aria-labelledby="create-type-heading" className="space-y-2">
+          <h2 id="create-type-heading" className="text-xs font-semibold uppercase tracking-[0.08em] text-ink-4">
+            Content type · Classic formats
+          </h2>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3" role="radiogroup" aria-label="Content type">
+            {CREATE_TYPES.map((option) => {
+              const Icon = option.icon;
+              const active =
+                draft.content_type === option.value &&
+                !(option.value === "opportunity" && draft.use_ledger);
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={active}
+                  onClick={() => onPickClassicType(option.value)}
+                  data-testid={`create-type-${option.value}`}
+                  className={cn(
+                    "flex items-center gap-2 rounded-xl border px-3 py-2 text-left transition-colors",
+                    active
+                      ? "border-brand-500 bg-brand-50 dark:bg-brand-500/10"
+                      : "border-edge-1 bg-surface-1 hover:border-edge-2 hover:bg-surface-2",
+                  )}
+                >
+                  <Icon size={14} className={active ? "text-brand-600 dark:text-brand-300" : "text-ink-4"} aria-hidden="true" />
+                  <span className="min-w-0">
+                    <span className="block text-xs font-semibold text-ink-1">{option.label}</span>
+                    <span className="block truncate text-micro text-ink-4">{option.hint}</span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+
         </div>
-      </section>
+      </details>
 
       {/* ── 2. Live category inference banner for Ledger activities ─────── */}
       {isLedgerMode && (
@@ -416,7 +522,12 @@ export default function CreatePage() {
       )}
 
       {/* ── 3. Details & progressive category fields ────────────────────── */}
-      <section aria-labelledby="create-fields-heading" className="space-y-4 rounded-card-lg border border-edge-1 bg-surface-1 p-4 shadow-xs sm:p-5">
+      <section
+        ref={detailsRef}
+        id="create-details"
+        aria-labelledby="create-fields-heading"
+        className="space-y-4 rounded-card-lg border border-edge-1 bg-surface-1 p-4 shadow-xs sm:p-5"
+      >
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 id="create-fields-heading" className="text-title-section font-semibold text-ink-1">
@@ -438,6 +549,7 @@ export default function CreatePage() {
             draft={draft}
             isLedgerMode={isLedgerMode}
             setField={setField}
+            onPrimaryChange={onPrimaryChange}
             bodyLabel={type.bodyLabel}
             bodyPlaceholder={type.bodyPlaceholder}
             locationLabel={locationLabel(location)}
@@ -476,6 +588,7 @@ export default function CreatePage() {
                 draft={draft}
                 isLedgerMode={isLedgerMode}
                 setField={setField}
+                onPrimaryChange={onPrimaryChange}
                 bodyLabel={type.bodyLabel}
                 bodyPlaceholder={type.bodyPlaceholder}
                 locationLabel={locationLabel(location)}
@@ -811,6 +924,7 @@ function Field({
   draft,
   isLedgerMode,
   setField,
+  onPrimaryChange,
   bodyLabel,
   bodyPlaceholder,
   locationLabel: locLabel,
@@ -831,7 +945,12 @@ function Field({
           options={options || []}
           placeholder="Choose Goods, Services or Rentals"
           value={draft.primary_category || ""}
-          onChange={(e) => setField("primary_category", e.target.value)}
+          onChange={(e) => {
+            const value = e.target.value;
+            setField("primary_category", value);
+            // The address keeps telling the truth about the form.
+            onPrimaryChange?.(value);
+          }}
           hint="An offer is not a standalone category. Choosing the thing it belongs to puts it under Goods, Services or Rentals in Discover."
           data-testid="create-primary-category"
         />

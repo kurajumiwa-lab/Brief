@@ -12,11 +12,11 @@ function renderBar(path) {
 }
 
 describe("mobile tab bar", () => {
-  it("shows Home, Regions, Create, Inbox and You — and nothing retired", () => {
+  it("shows Home, Explore, Create, Inbox and Profile — and nothing retired", () => {
     renderBar("/regions");
     const nav = screen.getByRole("navigation", { name: "Primary mobile" });
     const links = within(nav).getAllByRole("link").map((a) => a.textContent.trim());
-    expect(links).toEqual(["Home", "Regions", "Create", "Inbox", "You"]);
+    expect(links).toEqual(["Home", "Explore", "Create", "Inbox", "Profile"]);
     expect(screen.queryByTestId("tab-mall")).not.toBeInTheDocument();
     expect(screen.queryByTestId("tab-explore")).not.toBeInTheDocument();
   });
@@ -25,7 +25,7 @@ describe("mobile tab bar", () => {
     renderBar("/regions/nyanza");
     const nav = screen.getByRole("navigation", { name: "Primary mobile" });
     const current = within(nav).getAllByRole("link").filter((a) => a.getAttribute("aria-current") === "page");
-    expect(current.map((a) => a.textContent.trim())).toEqual(["Regions"]);
+    expect(current.map((a) => a.textContent.trim())).toEqual(["Explore"]);
   });
 
   it("keeps Create as the one prominent action, in the middle", () => {

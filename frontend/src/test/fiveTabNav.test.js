@@ -21,7 +21,7 @@ describe("five destinations, one shape", () => {
   it("is the same five whether or not old flags are set", async () => {
     const off = await load();
     const on = await load({ VITE_FIVE_TAB_NAV_ENABLED: "true", VITE_DESK_ENABLED: "true" });
-    expect(off.PRIMARY_TABS.map((t) => t.label)).toEqual(["Home", "Regions", "Create", "Inbox", "You"]);
+    expect(off.PRIMARY_TABS.map((t) => t.label)).toEqual(["Home", "Explore", "Create", "Inbox", "Profile"]);
     expect(on.PRIMARY_TABS.map((t) => t.label)).toEqual(off.PRIMARY_TABS.map((t) => t.label));
     expect(on.PRIMARY_TABS.map((t) => t.to)).toEqual(off.PRIMARY_TABS.map((t) => t.to));
   });
@@ -37,17 +37,17 @@ describe("five destinations, one shape", () => {
 
     expect(active("/")).toEqual(["Home"]);
     expect(active("/home")).toEqual(["Home"]);
-    expect(active("/regions")).toEqual(["Regions"]);
-    expect(active("/regions/nyanza")).toEqual(["Regions"]);
-    expect(active("/markets")).toEqual(["Regions"]);
-    expect(active("/mall")).toEqual(["Regions"]);
+    expect(active("/regions")).toEqual(["Explore"]);
+    expect(active("/regions/nyanza")).toEqual(["Explore"]);
+    expect(active("/markets")).toEqual(["Explore"]);
+    expect(active("/mall")).toEqual(["Explore"]);
     expect(active("/create")).toEqual(["Create"]);
     expect(active("/inbox")).toEqual(["Inbox"]);
     expect(active("/orders/123")).toEqual(["Inbox"]);
     expect(active("/chat")).toEqual(["Inbox"]);
-    expect(active("/you")).toEqual(["You"]);
-    expect(active("/@someone")).toEqual(["You"]);
-    expect(active("/more")).toEqual(["You"]);
+    expect(active("/you")).toEqual(["Profile"]);
+    expect(active("/@someone")).toEqual(["Profile"]);
+    expect(active("/more")).toEqual(["Profile"]);
   });
 
   it("every tab target has a real route in App.jsx (no dead tabs)", async () => {

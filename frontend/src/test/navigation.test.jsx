@@ -13,10 +13,10 @@ import { NAV_BRIEF } from "@/components/layout/Sidebar";
  * The contract these tests pin is smaller than the old one on purpose:
  *
  *   · exactly five tabs, one of which is Create;
- *   · Regions is the only discovery tab, and it absorbs Local network, Mall,
- *     Explore, Markets, Map and Browse;
+ *   · Explore is the only discovery tab, and it absorbs Local network, Mall,
+ *     Markets, Map and Browse;
  *   · Inbox absorbs everything waiting on a person;
- *   · You absorbs the workspace, the page and the settings;
+ *   · Profile absorbs the workspace, the page and the settings;
  *   · the drawer is a short list, never a second copy of the tabs, and Home
  *     office is in it;
  *   · no path ever highlights two tabs.
@@ -28,7 +28,7 @@ describe("v5 navigation map", () => {
 
   it("defines five destinations, with Create as the one prominent action", () => {
     expect(PRIMARY_NAV.map(({ label }) => label)).toEqual([
-      "Home", "Regions", "Create", "Inbox", "You",
+      "Home", "Explore", "Create", "Inbox", "Profile",
     ]);
     expect(PRIMARY_NAV.map(({ to }) => to)).toEqual([
       "/", "/regions", "/create", "/inbox", "/you",

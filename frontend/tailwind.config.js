@@ -13,6 +13,29 @@ const RAMP = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950];
 export default {
   darkMode: "class",
   content: ["./index.html", "./src/**/*.{js,jsx}"],
+  /**
+   * The design system's own primitives always ship.
+   *
+   * Tailwind removes a `@layer components` rule that nothing happens to use
+   * yet, which is right for a one-off utility and wrong for a kit: a screen
+   * that adopts `.ds-cta` next week must not have to wait for someone else
+   * to use it first. These names are the documented kit, so they are pinned.
+   *
+   * `src/test/designSystem.test.js` reads this list back out of the config
+   * and fails if the stylesheet and the safelist drift apart.
+   */
+  safelist: [
+    // Type
+    "ds-display", "ds-title", "ds-lede", "ds-meta", "ds-eyebrow",
+    // Surfaces
+    "ds-card", "ds-card-interactive", "ds-panel",
+    // Actions
+    "ds-cta", "ds-cta-secondary", "ds-action",
+    // Touch targets
+    "ds-tap", "ds-tap-icon", "ds-tap-row",
+    // Focus and rhythm
+    "ds-focus", "ds-stack", "ds-shelf",
+  ],
   theme: {
     extend: {
       colors: {

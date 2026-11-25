@@ -84,6 +84,14 @@ export default function YouPage() {
       />
 
       <p className="text-center text-micro text-ink-4">
+        Running a business?{" "}
+        <Link to="/workspace" className="font-semibold text-ink-3 hover:underline">
+          The business workspace
+        </Link>{" "}
+        says where you stand and what is waiting on you.
+      </p>
+
+      <p className="text-center text-micro text-ink-4">
         Need the long tail?{" "}
         <Link to="/more" className="font-semibold text-ink-3 hover:underline">
           Settings & records

@@ -1,7 +1,7 @@
 import {
   Home, Compass, ClipboardList, Store, Map, Newspaper, Package,
   Truck, MapPin, Users, Wrench, CalendarDays, UserRound, Building2,
-  Plus, MessagesSquare, ShieldCheck, Layers3, BarChart3, FileCheck,
+  Plus, MessagesSquare, ShieldCheck, Layers3, BarChart3, FileCheck, LayoutDashboard,
   Sparkles, Receipt, ShoppingBag, ShoppingCart, List, ListChecks, Inbox,
   ScanLine, Mail, Search, ClipboardCheck, Settings, BookOpen, HeartHandshake,
   Ruler, KeyRound, SlidersHorizontal, FolderOpen,
@@ -21,10 +21,10 @@ import { BRIEF_LANDING_ENABLED, DESK_ENABLED, MAIL_ENABLED } from "@/config/flag
  * This map collapses them into what a person is actually doing:
  *
  *   Home      what is happening for *me* today
- *   Regions   what is happening *here* (the old network + mall + markets + map)
+ *   Explore   what is happening *here* (the old network + mall + markets + map)
  *   Create    publish one thing
  *   Inbox     what is waiting on me (notifications + messages + trades)
- *   You       my page, my rank, my identity (the old My World + desk + settings)
+ *   Profile   my page, my rank, my identity (the old My World + desk + settings)
  *
  * Everything else is a row inside one of those five. The drawer keeps only the
  * things a person opens from a standing start, and the long tail lives in one
@@ -33,16 +33,24 @@ import { BRIEF_LANDING_ENABLED, DESK_ENABLED, MAIL_ENABLED } from "@/config/flag
  * Routes did not vanish. Old URLs still resolve — see App.jsx — because a link
  * in a WhatsApp thread must keep working. What changed is that only five are
  * *navigation*.
+ *
+ * THE LABELS. "Regions" and "You" were working names, not words a person
+ * would say. A town is not a *region* and a person is not a *you-tab*: they
+ * said "Explore" and "Profile", and both names describe what the tab does
+ * rather than naming the machinery behind it. The ROUTES are unchanged — the
+ * tab is still `/regions` and `/you` — because a link in a WhatsApp thread
+ * must keep working, and because renaming a URL is a cost with no product
+ * benefit. Only the label moved.
  */
 
 export const PRIMARY_NAV = [
   // "/" is Today. BRIEF_LANDING_ENABLED used to swap this for the Morning Brief;
   // the Brief is now the first block of Today, so the flag no longer moves the tab.
   { to: "/", label: "Home", icon: Home, end: true, area: "home" },
-  { to: "/regions", label: "Regions", icon: MapPin, area: "regions" },
+  { to: "/regions", label: "Explore", icon: Compass, area: "regions" },
   { to: "/create", label: "Create", icon: Plus, action: true, area: "create" },
   { to: "/inbox", label: "Inbox", icon: Inbox, area: "inbox", badge: "activity" },
-  { to: "/you", label: "You", icon: UserRound, area: "you" },
+  { to: "/you", label: "Profile", icon: UserRound, area: "you" },
 ];
 
 /** Kept as an alias for older imports. There is only one tab shape now. */
@@ -112,7 +120,7 @@ const INBOX_ROOTS = [
 
 /** You is the workspace: page, identity, rank, records and the long tail. */
 const YOU_ROOTS = [
-  "/you", "/me", "/stock", "/analytics", "/pos", "/brief", "/passport", "/growth",
+  "/you", "/me", "/workspace", "/stock", "/analytics", "/pos", "/brief", "/passport", "/growth",
   "/billing", "/enterprise", "/governance", "/ops", "/membership", "/office",
   "/referrals", "/referral-index", "/merchant", "/receipt-rewards",
   "/more", "/settings", "/legal", "/storefront", "/desk", "/today",
@@ -234,6 +242,7 @@ export const SETTINGS_GROUPS = [
   {
     title: "Your records",
     items: [
+      { to: "/workspace", label: "Business workspace", icon: LayoutDashboard },
       { to: "/orders", label: "Orders & trades", icon: ShoppingBag },
       { to: "/orders/records", label: "Trade record", icon: ClipboardCheck },
       { to: "/payments", label: "Receipts", icon: Receipt },

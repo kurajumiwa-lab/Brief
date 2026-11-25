@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import {
   ArrowRight, ChevronRight, Inbox, MapPin, Sparkles,
 } from "lucide-react";
-import { RankChip, RankMark } from "@/components/identity/Rank";
+import { RankMark } from "@/components/identity/Rank";
 import ReceiptScanCard from "@/components/receipts/ReceiptScanCard";
 import TownDoors from "@/components/home/TownDoors";
 import StreetDoor from "@/components/home/StreetDoor";
@@ -12,35 +12,38 @@ import FeaturedDealsShelf from "@/components/home/FeaturedDealsShelf";
 import IdentityStrip from "@/components/home/IdentityStrip";
 import CounterShelf from "@/components/home/CounterShelf";
 import DiscoveryBand from "@/components/home/DiscoveryBand";
+import MapDiscovery from "@/components/home/MapDiscovery";
+import CommunityShelf from "@/components/home/CommunityShelf";
+import HomeHero from "@/components/home/HomeHero";
 import PromoBanner from "@/components/home/PromoBanner";
 
 /**
- * TODAY — the command centre, not a second discovery feed.
+ * HOME — discovery first, ownership second.
  *
- * Four questions, in the order a returning person asks them:
+ * The redesign asked for a Home that answers "what can I do here?" in the
+ * first two seconds, and for the marketplace to feel like ONE product rather
+ * than a dozen competing features. That is a change of ORDER, not of
+ * inventory: everything that was here is still here, but the page now opens on
+ * what a person came for.
  *
- *   1. Who am I here, and what do I send?   → the identity strip
- *   2. What is my next step?                → the ladder card
- *   3. Are my own books in order?           → the counter (page, offers,
- *                                             receipts, every record)
- *   4. What can I claim or join now?        → receipt wallet + happening shelf
- *   5. Is anything waiting on a reply?      → the inbox line
+ *   1. WHERE AM I, AND WHAT DO I WANT?   → the hero (location + search)
+ *   2. WHAT KIND OF THING IS IT?         → four category doors
+ *   3. WHERE IS IT?                      → the map door
+ *   4. WHAT CAN I BUY OR JOIN?           → nearby trade, live deals, dated rounds
+ *   5. WHAT IS THE NEIGHBOURHOOD SAYING? → community activity
+ *   6. WHAT IS MINE?                     → identity, next step, the counter,
+ *                                           receipts
+ *   7. AND THE SECONDARY THINGS          → rewards, referrals, the plate
  *
- * The counter sits above the market deliberately. A business that has not
- * written down what it sells and what it charges cannot be matched by anything
- * below it; seeding its own record comes first, and the shelf says so.
+ * Rewards and referral doors sit LAST on purpose. They are real and they are
+ * worth money, but a marketplace that leads with points is a points app that
+ * happens to sell things. The same rule applies to the business's own books:
+ * they are still on Home, one screen further down than they used to be.
  *
- * The full region feed lives in Regions. Home carries only dated rounds and
- * events, because "what can I join this week?" is an action, while "what is
- * listed?" is browsing. No setup meter, no duplicate listing rows, no second
- * copy of the tab bar.
+ * The full region feed lives in Explore. Home carries only what can be acted
+ * on — a search, four doors, the map, and dated rounds — because "what is
+ * listed?" is browsing and "what can I join today?" is an action.
  */
-
-function greetingFor(hour) {
-  if (hour < 12) return "Good morning";
-  if (hour < 17) return "Good afternoon";
-  return "Good evening";
-}
 
 export default function TodayView({
   name = "there",
@@ -50,58 +53,48 @@ export default function TodayView({
   happening = [],
   nearby = [],
   deals = [],
+  community = [],
   page = {},
   institution = null,
   unread = 0,
   now = new Date(),
 }) {
-  const hour = now instanceof Date ? now.getHours() : new Date(now).getHours();
-  const dateLabel = now instanceof Date
-    ? now.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })
-    : "";
-  const displayName = firstName || name;
+  const place = region?.name || region?.hub || null;
 
   return (
-    <div className="mx-auto w-full max-w-2xl space-y-7 sm:space-y-9">
-      {/* ── 1. Who and how today is going ─────────────────────────────────── */}
-      <header>
-        <p className="eyebrow">{dateLabel}</p>
-        <h1 className="mt-1.5 text-2xl font-extrabold tracking-tight text-ink-1 sm:text-3xl">
-          {greetingFor(hour)}, {displayName}
-        </h1>
-        <div className="mt-2.5 flex flex-wrap items-center gap-2">
-          <RankChip rank={rank} />
-        </div>
-      </header>
+    <div className="ds-stack mx-auto w-full max-w-2xl">
+      {/* ── 1. Where you are, and what you are looking for ──────────────── */}
+      <HomeHero
+        name={name}
+        firstName={firstName}
+        rank={rank}
+        place={place}
+        placeTo="/regions"
+        now={now}
+      />
 
-      {/* Discovery before ownership. The brief's journey opens with where you
-          are and what is for sale; the business's own books come after. Both
-          orderings are defensible, and this one is a marketplace's. */}
-      <DiscoveryBand place={region?.name || region?.hub || null} />
+      {/* ── 2. Four ways in ──────────────────────────────────────────────── */}
+      <DiscoveryBand />
 
-      {/* The brief's step 4: one promotional plate, directly under the doors.
-          It is the only saturated block this high on the page — everything
-          around it is white — which is what makes it read as an offer. */}
-      <PromoBanner plate="city" />
+      {/* ── 3. The map, as a door ────────────────────────────────────────── */}
+      <MapDiscovery items={nearby} place={place} />
 
-      {/* The brief's step 6. Goods, services and rentals within reach, priced
-          by their sellers. Renders nothing when the shelf is empty. */}
+      {/* ── 4. What can be bought or joined ─────────────────────────────── */}
       <NearbyShelf items={nearby} region={region} />
 
-      {/* The brief's step 7. Real Spotted deals, expiring on their own dates,
-          with the merchant's own discount wording. */}
       <FeaturedDealsShelf deals={deals} />
 
-      {/* The brief's step 8. Dated rounds and events, this week, nearest first.
-          The full region feed still lives in Regions; this is what can be
-          joined, not everything that is listed. */}
       <HappeningShelf items={happening} region={region} />
 
-      {/* Identity sits under the discovery band: one box, one share
-          action, and the office the person belongs to. */}
+      {/* ── 5. The neighbourhood talking ─────────────────────────────────── */}
+      <CommunityShelf items={community} />
+
+      {/* ── 6. What is mine ──────────────────────────────────────────────── */}
+      {/* Identity sits under discovery: one box, one share action, and the
+          office the person belongs to. */}
       <IdentityStrip name={name} page={page} institution={institution} />
 
-      {/* ── The one thing to do next ─────────────────────────────────────── */}
+      {/* The one thing to do next */}
       {rank && rank.level < 5 ? (
         <section
           // The card is a *filled* surface: solid brand-600, not a gradient and
@@ -150,13 +143,19 @@ export default function TodayView({
         </section>
       )}
 
-      {/* Your own books, before the market. Settings & records used to be a
-          small text link at the foot of another screen. */}
+      {/* Your own books. Settings & records used to be a small text link at
+          the foot of another screen. */}
       <CounterShelf />
 
       {/* Receipts live in the feed, not behind a settings door: the value of a
           receipt is highest while the person is still in the shop. */}
       <ReceiptScanCard />
+
+      {/* ── 7. The secondary things ──────────────────────────────────────── */}
+      {/* One promotional plate, and it is deliberately last: it is the only
+          saturated block on the page, which is what makes it read as an offer
+          rather than as wallpaper. */}
+      <PromoBanner plate="city" />
 
       <TownDoors />
 
