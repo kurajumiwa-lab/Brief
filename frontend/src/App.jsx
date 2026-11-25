@@ -80,6 +80,7 @@ const RegionsIndexPage = lazy(() => import("@/pages/regions/RegionsIndexPage"));
 const RegionPage = lazy(() => import("@/pages/regions/RegionPage"));
 const PortfolioPage = lazy(() => import("@/pages/you/PortfolioPage"));
 const YouPage = lazy(() => import("@/pages/you/YouPage"));
+const WorkspacePage = lazy(() => import("@/pages/workspace/WorkspacePage"));
 const IdentityPage = lazy(() => import("@/pages/you/IdentityPage"));
 const RankPage = lazy(() => import("@/pages/you/RankPage"));
 const StartPage = lazy(() => import("@/pages/start/StartPage"));
@@ -412,6 +413,10 @@ function AppRoutes() {
           <Route path="/live" element={<Navigate to="/street" replace />} />
           <Route path="/e/:slug" element={<EventShareRedirect />} />
           <Route path="/you" element={<YouPage />} />
+          {/* The business workspace: where a business stands, what is waiting
+              on it, and what is on the record. It records trades; it holds no
+              money, and it says so. */}
+          <Route path="/workspace" element={<WorkspacePage />} />
           <Route path="/you/page" element={<PageEditor />} />
           <Route path="/you/identity" element={<IdentityPage />} />
           <Route path="/you/rank" element={<RankPage />} />

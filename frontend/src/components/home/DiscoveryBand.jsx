@@ -1,15 +1,15 @@
 import { Link } from "react-router-dom";
-import { MapPin, Package, Truck, Wrench, CalendarDays, ChevronRight } from "lucide-react";
+import { Package, Truck, Wrench, CalendarDays, ChevronRight } from "lucide-react";
 import Media from "@/components/ui/Media";
 import { photoUrl } from "@/lib/photos";
 
 /**
- * THE DISCOVERY BAND — the brief's steps 2, 3 and 5.
+ * THE DISCOVERY BAND — four ways in.
  *
  * The Home screen used to open on "who am I": a greeting, a rank chip and an
  * identity strip. That answers a returning business's question and answers
  * nothing for a person who came to see what is for sale. A marketplace opens
- * on *where you are* and *what is here*, then shows you your own books.
+ * on *what are you after*, and the hero above already said where they are.
  *
  * Four category doors, each with the brief's own colour, so Goods, Services,
  * Rentals and Events are told apart at a glance rather than by reading the
@@ -30,37 +30,25 @@ const TONE = {
   events: "bg-cat-events-soft text-cat-events-text",
 };
 
-export default function DiscoveryBand({ place }) {
+export default function DiscoveryBand() {
   return (
-    <section aria-labelledby="discovery-heading" className="space-y-3">
+    <section aria-labelledby="discovery-heading" data-testid="discovery-band" className="space-y-3">
       <div className="flex items-baseline justify-between gap-2">
-        <h2 id="discovery-heading" className="text-section font-extrabold tracking-tight text-ink-1">
-          What is near you
+        <h2 id="discovery-heading" className="ds-title">
+          What are you after?
         </h2>
-        <Link
-          to="/discover"
-          className="inline-flex items-center gap-0.5 text-xs font-bold text-brand-600 hover:text-brand-700 dark:text-brand-300"
-        >
+        <Link to="/discover" className="ds-action">
           Browse all
           <ChevronRight size={13} aria-hidden="true" />
         </Link>
       </div>
-
-      {/* Where the person is. Hidden when the region is unknown rather than
-          claiming a town they have not set. */}
-      {place && (
-        <p className="flex items-center gap-1.5 text-xs font-semibold text-ink-3">
-          <MapPin size={13} className="shrink-0 text-brand-600 dark:text-brand-300" aria-hidden="true" />
-          {place}
-        </p>
-      )}
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {CATEGORIES.map(({ to, label, hint, Icon, tone, subject }) => (
           <Link
             key={label}
             to={to}
-            className="group overflow-hidden rounded-2xl border border-edge-1 bg-surface-1 transition-colors hover:border-edge-2"
+            className="ds-focus group overflow-hidden rounded-2xl border border-edge-1 bg-surface-1 transition-colors hover:border-edge-2"
           >
             {/* A real photograph of the category, so the door looks like the
                 thing behind it. Purely decorative: the label below carries the

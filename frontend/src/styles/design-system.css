@@ -1,0 +1,134 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   THE EDITORIAL FOUNDATION
+   ---------------------------------------------------------------------------
+   One place where the product's shape is written down, so a new screen stops
+   inventing its own. The palette lives in `tokens.css` (forest brand, warm
+   ivory canvas, coral action); this file is the *rule set* that turns that
+   palette into pages.
+
+   Five rules, and every screen obeys them:
+
+     1. THREE TEXT LEVELS. A title, a sentence under it, and a quiet note.
+        `.ds-display` / `.ds-title` / `.ds-lede` / `.ds-meta` exist so a page
+        picks a level rather than a number. The old screens already had this
+        contract in the tailwind ramp (`title-page`, `title-section`,
+        `text-2xs`); these classes are the same contract with one name.
+
+     2. CARDS SEPARATE BY LINE FIRST. One radius, one padding, one hairline.
+        Elevation is the *second* signal, not the first — which is what stops
+        the product looking like a pile of floating boxes.
+
+     3. ONE PRIMARY ACTION PER VIEW. `.ds-cta` is that action. It is filled
+        forest; `.ds-cta-secondary` is the quiet sibling with a real hairline.
+        Nothing else on a screen may claim the filled treatment.
+
+     4. TOUCH TARGETS ARE 44px. `.ds-tap` guarantees it on anything a thumb
+        presses. Icon buttons get `.ds-tap-icon` (44x44) so the *target* is
+        the size, not the glyph.
+
+     5. FOCUS IS VISIBLE AND NEVER REMOVED. `.ds-focus` is the ring; it is
+        used on anything that takes focus in a custom control.
+
+   Contrast: every colour used here is a token, and the tokens are measured in
+   `src/test/contrast.test.js` — ink-4 is 4.91:1 on mint and 5.27:1 on ivory,
+   white on brand-600 is 12.04:1. Nothing in this file may introduce a raw
+   hex.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@layer components {
+  /* ── 1. Type: three levels, named ─────────────────────────────────────── */
+  .ds-display {
+    @apply text-title-page font-extrabold leading-tight tracking-tight text-ink-1 sm:text-[1.875rem];
+  }
+
+  .ds-title {
+    @apply text-title-section font-extrabold leading-snug tracking-tight text-ink-1;
+  }
+
+  .ds-lede {
+    @apply text-sm leading-relaxed text-ink-2;
+  }
+
+  .ds-meta {
+    @apply text-2xs leading-snug text-ink-4;
+  }
+
+  /* A short uppercase label above a title. One spelling, so a screen never
+     invents a second eyebrow that reads at a different size. */
+  .ds-eyebrow {
+    @apply text-micro font-bold uppercase tracking-[0.14em] text-ink-4;
+  }
+
+  /* ── 2. Cards ─────────────────────────────────────────────────────────── */
+  .ds-card {
+    @apply rounded-2xl border border-edge-1 bg-surface-1 shadow-xs;
+  }
+
+  /* The interactive sibling: it lifts on hover, never on its own. */
+  .ds-card-interactive {
+    @apply transition-[box-shadow,border-color,transform] duration-2 ease-out;
+  }
+  .ds-card-interactive:hover {
+    @apply border-edge-2 shadow-md;
+  }
+  .ds-card-interactive:active {
+    @apply translate-y-px;
+  }
+
+  /* A recessed panel — a quiet field, not a card. Used behind a form or a
+     list that should read as one surface rather than many. */
+  .ds-panel {
+    @apply rounded-2xl border border-edge-1 bg-surface-2;
+  }
+
+  /* ── 3. Actions ───────────────────────────────────────────────────────── */
+  .ds-cta {
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-brand-600 px-5 text-sm font-bold text-white shadow-xs transition-colors duration-1 hover:bg-brand-700 active:bg-brand-800 dark:bg-brand-600 dark:hover:bg-brand-700;
+  }
+
+  .ds-cta-secondary {
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-edge-2 bg-surface-1 px-5 text-sm font-bold text-ink-1 transition-colors duration-1 hover:bg-surface-2 hover:border-edge-3 active:bg-surface-3;
+  }
+
+  /* A text action inside a card. Still a 44px target when it is the only
+     way forward, which is why the padding is not zero. */
+  .ds-action {
+    @apply inline-flex min-h-11 items-center gap-1.5 rounded-lg px-1 text-xs font-bold text-brand-700 transition-colors hover:text-brand-800 dark:text-brand-300 dark:hover:text-brand-200;
+  }
+
+  /* ── 4. Touch targets ─────────────────────────────────────────────────── */
+  .ds-tap {
+    @apply min-h-11 min-w-11;
+  }
+
+  .ds-tap-icon {
+    @apply grid h-11 w-11 place-items-center rounded-xl;
+  }
+
+  /* A full-width row a thumb presses: the whole row is the target, so the
+     label inside it may be as small as the metadata level. */
+  .ds-tap-row {
+    @apply flex min-h-11 w-full items-center gap-3 rounded-xl px-2 text-left transition-colors duration-1 hover:bg-surface-2;
+  }
+
+  /* ── 5. Focus ─────────────────────────────────────────────────────────── */
+  .ds-focus {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-0;
+  }
+
+  /* ── Section rhythm ───────────────────────────────────────────────────── */
+  /* Every shelf on a page is separated by the same space, so a page reads as
+     sections rather than as a stack of unrelated blocks. */
+  .ds-stack {
+    @apply space-y-7 sm:space-y-9;
+  }
+
+  /* A shelf's own vertical rhythm. */
+  .ds-shelf {
+    @apply space-y-3;
+  }
+}
+
+/* Reduced motion is handled once, globally, in `index.css`: every transition
+   and animation collapses to a single frame there. Nothing in this file may
+   reintroduce motion, and nothing here needs a second copy of that rule. */

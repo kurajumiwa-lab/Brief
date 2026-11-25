@@ -1,5 +1,7 @@
 import { Link } from "react-router-dom";
-import { ArrowUpRight, Banknote, CalendarDays, FileText, Receipt, ShieldCheck } from "lucide-react";
+import {
+  ArrowUpRight, Banknote, CalendarDays, FileText, LayoutDashboard, Receipt, ShieldCheck,
+} from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import { useSetupProgress } from "@/components/onboarding/useSetupProgress";
 
@@ -22,6 +24,13 @@ import { useSetupProgress } from "@/components/onboarding/useSetupProgress";
  */
 
 const COUNTERS = [
+  {
+    to: "/workspace",
+    step: "00",
+    label: "Business workspace",
+    hint: "Where you stand, and what is waiting on you",
+    icon: LayoutDashboard,
+  },
   {
     to: "/you/page",
     step: "01",

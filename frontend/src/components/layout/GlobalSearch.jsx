@@ -81,10 +81,13 @@ export default function GlobalSearch({ className, autoFocus, onSubmitted, size =
       <input
         id={inputId}
         ref={inputRef}
+        type="search"
+        role="searchbox"
         value={q}
         autoFocus={autoFocus}
         onChange={(e) => setQ(e.target.value)}
         placeholder={`Search ${current.label.toLowerCase()}…`}
+        aria-label={`Search ${current.label.toLowerCase()}`}
         className={cn(
           "flex-1 min-w-0 bg-transparent pl-10 pr-2 text-ink-1 placeholder:text-ink-4 focus:outline-none rounded-l-xl",
           tall ? "text-base" : "text-sm"

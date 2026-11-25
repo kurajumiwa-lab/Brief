@@ -184,7 +184,7 @@ const renderAt = (path, element) =>
 describe("Outside navigation", () => {
   it("presents the five destinations with one prominent create action", async () => {
     const { PRIMARY_NAV } = await import("@/config/navigation");
-    expect(PRIMARY_NAV.map((i) => i.label)).toEqual(["Home", "Regions", "Create", "Inbox", "You"]);
+    expect(PRIMARY_NAV.map((i) => i.label)).toEqual(["Home", "Explore", "Create", "Inbox", "Profile"]);
     expect(PRIMARY_NAV.filter((i) => i.action)).toHaveLength(1);
     expect(PRIMARY_NAV.find((i) => i.action).label).toBe("Create");
     expect(new Set(PRIMARY_NAV.map((i) => i.to)).size).toBe(5);
@@ -192,11 +192,11 @@ describe("Outside navigation", () => {
 
   it("keeps every old URL resolving to the tab that absorbed it", async () => {
     const { PRIMARY_NAV, isPrimaryActive } = await import("@/config/navigation");
-    const regions = PRIMARY_NAV.find((i) => i.label === "Regions");
+    const regions = PRIMARY_NAV.find((i) => i.label === "Explore");
     const inbox = PRIMARY_NAV.find((i) => i.label === "Inbox");
-    const you = PRIMARY_NAV.find((i) => i.label === "You");
+    const you = PRIMARY_NAV.find((i) => i.label === "Profile");
 
-    // Discovery — including the retired markets and mall — is Regions.
+    // Discovery — including the retired markets and mall — is Explore.
     for (const path of ["/regions", "/explore", "/browse", "/network", "/nearby/food", "/map",
       "/markets", "/mall", "/news", "/search/goods", "/listing/x", "/place/y", "/events",
       "/groups", "/lists"]) {
