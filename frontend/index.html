@@ -35,6 +35,20 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <!--
+      The boot paint. The cold-start screen is deep forest and the document
+      behind it is warm ivory, so without this the two would trade places in
+      front of the person: an ivory flash before the screen has arrived. The
+      screen takes the paint away when it hands over.
+
+      `!important` because the document's own colour is a utility class, and
+      a utility would otherwise win.
+    -->
+    <style id="wasta-boot-paint">
+      body {
+        background-color: #0d2b24 !important;
+      }
+    </style>
+    <!--
       Two families, not four. The seven-segment and Orbitron faces were dropped
       in v3: they cost two extra requests and hurt legibility below 24px.
       `font-display: swap` means the system stack paints first either way.

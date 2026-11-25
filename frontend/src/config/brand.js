@@ -58,6 +58,15 @@ export const BRAND = {
    * sits above a short line of text. `tagline` stays for titles and sentences.
    */
   shortLine: "The right connections.",
+  /**
+   * The manner, under the promise.
+   *
+   * The cold-start screen has room for one more line under the wordmark, and
+   * it should say something the promise does not: not what the product is
+   * for, but how it goes about it. Thirty-six characters — long enough to be
+   * a sentence, short enough to sit under a mark on a phone.
+   */
+  noteLine: "A more considered way to connect.",
   /** The address people type. Empty until a Wasta domain is owned and routed. */
   domain: "",
   /** Fallback domain shown until the real one is live. */

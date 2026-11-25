@@ -76,6 +76,20 @@ export default {
           line: token("mk-line"),
           green: token("mk-green"),
         },
+        // The cold-start screen wears its own palette — forest and gold —
+        // because it exists before the product's theme has been chosen. The
+        // scale is deliberately small and deliberately separate: a screen that
+        // borrows the product's tokens would be re-skinned with them, and a
+        // loading screen that changes colour with the app is a flicker.
+        wasta: {
+          forest: token("wasta-forest"),
+          green: token("wasta-green"),
+          gold: token("wasta-gold"),
+          "gold-soft": token("wasta-gold-soft"),
+          ivory: token("wasta-ivory"),
+          surface: token("wasta-surface"),
+          muted: token("wasta-muted"),
+        },
       },
       fontFamily: {
         sans: ["Inter var", "Inter", "system-ui", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "sans-serif"],
