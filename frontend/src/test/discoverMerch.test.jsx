@@ -119,9 +119,10 @@ function setFeed(items) {
 }
 
 describe("1 · spotlight and featured merchandising", () => {
-  it("shows a spotlight and a three-card Featured & Trending grid", async () => {
+  it("opens with the region card and a three-card Featured & Trending grid", async () => {
     await renderDiscover();
-    expect(await screen.findByTestId("discover-spotlight")).toBeInTheDocument();
+    const spotlight = await screen.findByTestId("region-spotlight");
+    expect(within(spotlight).getByRole("heading", { name: /Nyanza/i })).toBeInTheDocument();
 
     const featured = await screen.findByTestId("discover-featured");
     expect(within(featured).getByText("Featured & Trending")).toBeInTheDocument();
@@ -134,41 +135,38 @@ describe("1 · spotlight and featured merchandising", () => {
     expect(within(screen.getByTestId("regions-grid")).getAllByTestId(/^content-card-/)).toHaveLength(1);
   });
 
-  it("opens like a shopfront: hero, trust strip, departments and a shop toolbar", async () => {
+  it("opens like a region shelf: identity, one search, categories and a deck", async () => {
     await renderDiscover();
-    const hero = await screen.findByTestId("discover-hero");
-    expect(within(hero).getByText(/Great finds/i)).toBeInTheDocument();
-    expect(within(hero).getByText(/Better deals/i)).toBeInTheDocument();
-    expect(within(hero).getByRole("button", { name: /shop sale items/i })).toBeInTheDocument();
-    expect(within(hero).getByText(/never paid placement/i)).toBeInTheDocument();
+    const spotlight = await screen.findByTestId("region-spotlight");
+    expect(within(spotlight).getByText(/Kenya/)).toBeInTheDocument();
     // The old 2×2 trust wall is gone; the four facts live behind the ? button.
     expect(screen.queryByLabelText("How this marketplace works")).not.toBeInTheDocument();
-    fireEvent.click(within(hero).getByTestId("discover-how-it-works-button"));
+    fireEvent.click(screen.getByTestId("discover-how-it-works-button"));
     const works = await screen.findByRole("dialog", { name: /how wasta works/i });
     expect(within(works).getByText("No paid placement")).toBeInTheDocument();
     expect(within(works).getByText("Trade on record")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Popular categories" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Shop all products" })).toBeInTheDocument();
-    expect(screen.getByLabelText("Filter by category")).toBeInTheDocument();
-    expect(screen.getByLabelText("Sort products")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Categories" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "What’s on offer" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Sort results")).toBeInTheDocument();
     // One live search, and it lives in the bar that sticks under the app header.
     const toolbar = screen.getByTestId("discover-toolbar");
     expect(toolbar.className).toMatch(/sticky/);
     expect(within(toolbar).getByRole("searchbox", { name: /search everything/i })).toBeInTheDocument();
+    expect(screen.getAllByRole("searchbox", { name: /search everything/i })).toHaveLength(1);
   });
 
-  it("turns the quick chips into real URL filters, with no duplicate search", async () => {
+  it("turns the category grid into real URL filters, with no duplicate search", async () => {
     await renderDiscover();
-    const chips = await screen.findByTestId("discover-quick-filters");
+    const grid = await screen.findByTestId("explore-categories");
     expect(screen.getAllByRole("searchbox", { name: /search everything/i })).toHaveLength(1);
 
-    fireEvent.click(within(chips).getByRole("button", { name: "Events" }));
+    fireEvent.click(within(grid).getByRole("button", { name: "Rounds" }));
     await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("kind=rounds"));
-    expect(screen.getByTestId("discover-quick-rounds")).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByTestId("discover-category-rounds")).toHaveAttribute("aria-pressed", "true");
 
-    fireEvent.click(screen.getByTestId("discover-quick-rounds"));
+    fireEvent.click(screen.getByTestId("discover-category-rounds"));
     await waitFor(() => expect(screen.getByTestId("location").textContent).not.toContain("kind=rounds"));
-    expect(screen.getByTestId("discover-quick-rounds")).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByTestId("discover-category-rounds")).toHaveAttribute("aria-pressed", "false");
   });
 
   it("clears the sticky search and sale door together when the shelf resets", async () => {
@@ -184,26 +182,26 @@ describe("1 · spotlight and featured merchandising", () => {
     expect(location).not.toContain("kind=listing");
   });
 
-  it("melts the top-pick flyer, place and price into one full-bleed poster", async () => {
+  it("counts the region from the records it holds, and says where they came from", async () => {
     await renderDiscover();
-    const spotlight = await screen.findByTestId("discover-spotlight");
-    const poster = within(spotlight).getByTestId("spotlight-poster");
-    expect(poster).toHaveAttribute("data-poster", "true");
-    expect(within(poster).getByText(/featured round/i)).toBeInTheDocument();
-    expect(within(poster).getByText("Kisumu Music Round")).toBeInTheDocument();
-    expect(within(poster).getByText("Kisumu")).toBeInTheDocument();
-    // The event flyer may carry its own total, so the live price is explicitly a floor.
-    expect(within(poster).getByText("From KSh 200")).toBeInTheDocument();
-    expect(within(poster).getByRole("link", { name: /see event/i })).toHaveAttribute("href", "/events/e-1");
+    const spotlight = await screen.findByTestId("region-spotlight");
+    // Five fixtures: a round, a listing, a service, a rental and a person.
+    // One listing, two owners, three offers — and the note says they came
+    // from the loaded page rather than from the region.
+    expect(within(spotlight).getByTestId("region-metric-listings")).toHaveTextContent("1");
+    expect(within(spotlight).getByTestId("region-metric-businesses")).toHaveTextContent("2");
+    expect(within(spotlight).getByTestId("region-metric-offers")).toHaveTextContent("3");
+    expect(within(spotlight).getByTestId("region-metrics-note")).toHaveTextContent(/results loaded/i);
+    // The region has a clear action of its own.
+    expect(within(spotlight).getByTestId("region-open")).toHaveAttribute("href", "/regions/nyanza");
+    expect(within(spotlight).getByTestId("region-post")).toBeInTheDocument();
   });
 
-  it("turns the hero sale door into the same URL-bound filter as the category strip", async () => {
+  it("keeps the deck's count tied to what is on screen", async () => {
     await renderDiscover();
-    const hero = await screen.findByTestId("discover-hero");
-    fireEvent.click(within(hero).getByRole("button", { name: /shop sale items/i }));
-    await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("public_sale=true"));
-    expect(screen.getByTestId("location").textContent).toContain("kind=listing");
-    expect(screen.getByTestId("location").textContent).toContain("intent=offers");
+    const deck = await screen.findByTestId("discover-shop-toolbar");
+    await waitFor(() =>
+      expect(within(deck).getByTestId("explore-count")).toHaveTextContent(/results loaded/i));
   });
 
   it("gives every product card a share action and a real price plate", async () => {
@@ -230,11 +228,12 @@ describe("1 · spotlight and featured merchandising", () => {
 });
 
 describe("2 · the saved strip and device-local favourites", () => {
-  it("pins Saved first in the icon strip and uses routes, not filters", async () => {
+  it("keeps Saved in the grid as a route, not a filter", async () => {
     await renderDiscover();
     const strip = await screen.findByTestId("explore-categories");
-    expect(strip.firstElementChild).toHaveAttribute("data-testid", "discover-saved-pill");
-    expect(strip.firstElementChild.querySelector("svg")).toBeTruthy();
+    const saved = within(strip).getByTestId("discover-saved-pill");
+    expect(saved).toHaveAttribute("href", "/discover/favorites");
+    expect(saved.querySelector("svg")).toBeTruthy();
     expect(within(strip).getByTestId("explore-kind-listing").querySelector("svg")).toBeTruthy();
 
     fireEvent.click(within(strip).getByRole("button", { name: /goods/i }));

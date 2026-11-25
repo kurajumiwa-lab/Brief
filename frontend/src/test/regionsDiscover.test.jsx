@@ -1,5 +1,5 @@
 /**
- * REGIONS IS DISCOVERY AGAIN — with a region knob, not a market knob.
+ * REGIONS IS DISCOVERY — with a region knob, not a market knob.
  *
  * The old discovery screen is the right shape: one search, the four posting
  * types, colour-coded categories, filters and results. What was wrong was the
@@ -8,11 +8,16 @@
  *
  * These specs pin the reversion and the one change:
  *
- *   1. /regions renders the discovery layout, including the type row;
+ *   1. /regions renders the discovery layout, including the category grid;
  *   2. the knob is the region, derived from where the person is;
  *   3. picking a region is shareable (URL) and lands on that region's page;
  *   4. no market strip, no GPS second answer, no "Gikomba";
- *   5. search scopes and the type row still drive the one feed.
+ *   5. search scopes and the category grid still drive the one feed.
+ *
+ * The redesign that followed kept all five and removed the duplication the
+ * review complained about: the chip row under the search bar is gone (the
+ * category grid says the same thing), the generic hero is gone (the region
+ * card says something true instead), and there is exactly one search.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
@@ -84,16 +89,18 @@ async function renderRegions(path = "/regions") {
   );
 }
 
-describe("1 · the discovery layout is back", () => {
-  it("opens with one single-select category strip and one search", async () => {
+describe("1 · the discovery layout, rebuilt", () => {
+  it("opens with one search, one category grid and no duplicated filter row", async () => {
     await renderRegions();
-    expect(await screen.findByRole("heading", { name: "Discover" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Explore" })).toBeInTheDocument();
     const bar = screen.getByRole("group", { name: /browse by category/i });
     for (const label of ["All", "Goods", "Services", "Rentals", "Rounds", "Spotted"]) {
       expect(within(bar).getByRole("button", { name: label })).toBeInTheDocument();
     }
     expect(screen.queryByRole("navigation", { name: /browse discovery/i })).not.toBeInTheDocument();
-    expect(screen.getByRole("searchbox", { name: /search everything/i })).toBeInTheDocument();
+    expect(screen.getAllByRole("searchbox", { name: /search everything/i })).toHaveLength(1);
+    // The chip row under the search duplicated the category grid; it is gone.
+    expect(screen.queryByTestId("discover-quick-filters")).not.toBeInTheDocument();
     fireEvent.click(within(bar).getByRole("button", {name: "Services"}));
     await waitFor(() => {
       const nextBar = screen.getByRole("group", { name: /browse by category/i });
@@ -160,9 +167,17 @@ describe("3 · no market surface survives", () => {
   it("keeps the region as a scope, not a gate", async () => {
     await renderRegions("/regions?region=nyanza");
     const context = await screen.findByTestId("region-context");
-    expect(within(context).getByRole("link", { name: /open region/i })).toHaveAttribute("href", "/regions/nyanza");
-    // The feed is still the network's feed — the region names it, it does not
-    // hide everything outside a market gate.
+    expect(context).toHaveTextContent(/Nyanza · Kisumu/i);
+    // The region's own page is reached from the region card, once.
+    const spotlight = await screen.findByTestId("region-spotlight");
+    expect(within(spotlight).getByTestId("region-open")).toHaveAttribute("href", "/regions/nyanza");
+    // A chosen region is a real scope: the feed is asked for the region's hub
+    // and a wide radius around it. It is still the network's feed — records
+    // with no position are never hidden by a radius.
+    await waitFor(() =>
+      expect(mocks.feed).toHaveBeenCalledWith(
+        expect.objectContaining({ lat: expect.any(Number), lng: expect.any(Number), radius_km: 50 }),
+      ));
     expect(await screen.findByTestId("content-card-listing")).toBeInTheDocument();
   });
 });
@@ -267,9 +282,10 @@ describe("6 · the region list never covers the permanent search", () => {
       expect(Number.parseFloat(panel.style.maxHeight)).toBeGreaterThan(0);
       expect(panel.className).toMatch(/overflow-y-auto/);
 
-      // The permanent search and its chips are still on screen and usable.
+      // The permanent search and the category grid are still on screen and
+      // usable while the region list is open.
       expect(screen.getByRole("searchbox", { name: /search everything/i })).toBeVisible();
-      expect(screen.getByTestId("discover-quick-filters")).toBeInTheDocument();
+      expect(screen.getByTestId("explore-categories")).toBeInTheDocument();
     } finally {
       restore();
     }

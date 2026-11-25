@@ -14,3 +14,17 @@ if (!window.matchMedia) {
 Element.prototype.scrollIntoView = Element.prototype.scrollIntoView || vi.fn();
 window.URL.createObjectURL = window.URL.createObjectURL || vi.fn(() => "blob:mock");
 window.URL.revokeObjectURL = window.URL.revokeObjectURL || vi.fn();
+
+// jsdom has no IntersectionObserver, and the feed's infinite scroll builds one
+// as soon as a page reports a next cursor. The stub never fires, which is the
+// same as a browser where the sentinel has not scrolled into view — but unlike
+// a missing constructor, it does not take the screen down.
+if (!window.IntersectionObserver) {
+  window.IntersectionObserver = class {
+    constructor() {}
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+    takeRecords() { return []; }
+  };
+}

@@ -30,6 +30,12 @@ export const COUNTRIES = [
  * `slug` is the URL. `aliases` is what a typed address or an imported contact
  * might call the same place, and it is what makes the region match without
  * asking anyone to spell "Nyanza" correctly.
+ *
+ * `lat` / `lng` are the coordinates of the region's HUB — the city people give
+ * directions by. They are what makes a chosen region a real scope: picking
+ * "Coast" centres the feed on Mombasa instead of merely relabelling whatever
+ * the feed was already showing. The screen always says which point it used, so
+ * a region is never allowed to look like it filtered the whole country.
  */
 export const REGIONS = [
   {
@@ -38,6 +44,8 @@ export const REGIONS = [
     country: "KE",
     hub: "Nairobi",
     aliases: ["nairobi", "kiambu", "machakos", "kajiado", "thika", "ruiru", "westlands", "cbd", "gikomba", "marikiti", "wakulima"],
+    lat: -1.2864,
+    lng: 36.8172,
     knownFor: ["Services", "Software", "Finance", "Logistics"],
     summary: "The country's services and logistics hub: professional practices, software, transport and wholesale.",
     note: "Fastest place to find a licensed professional or a same-day courier.",
@@ -48,6 +56,8 @@ export const REGIONS = [
     country: "KE",
     hub: "Mombasa",
     aliases: ["mombasa", "kilifi", "malindi", "watamu", "diani", "lamu", "taita", "taveta", "kongowea"],
+    lat: -4.0435,
+    lng: 39.6682,
     knownFor: ["Import & export", "Hospitality", "Spices", "Transport"],
     summary: "The port economy: imports, clearing and forwarding, hospitality and the coastal food trade.",
     note: "Most cross-border goods enter here before moving inland.",
@@ -58,6 +68,8 @@ export const REGIONS = [
     country: "KE",
     hub: "Kisumu",
     aliases: ["kisumu", "kisii", "siaya", "homa bay", "migori", "bondo", "ahero", "kibuye"],
+    lat: -0.0917,
+    lng: 34.768,
     knownFor: ["Fresh produce", "Fishing", "Education", "Health services"],
     summary: "The lake economy: fresh produce, fish, learning institutions and a dense small-town service trade.",
     note: "Kisumu and Kisii are the two anchors; most routes pass through one of them.",
@@ -68,6 +80,8 @@ export const REGIONS = [
     country: "KE",
     hub: "Kakamega",
     aliases: ["kakamega", "bungoma", "busia", "webuye", "vihiga", "kisumu road"],
+    lat: 0.2827,
+    lng: 34.7519,
     knownFor: ["Sugar", "Maize", "Cross-border trade", "Building materials"],
     summary: "The western corridor into Uganda: sugar, maize, building materials and busy border trade.",
     note: "Busia is the crossing most members here use.",
@@ -78,6 +92,8 @@ export const REGIONS = [
     country: "KE",
     hub: "Nakuru",
     aliases: ["nakuru", "eldoret", "kericho", "naivasha", "kitale", "narok", "bomet"],
+    lat: -0.3031,
+    lng: 36.08,
     knownFor: ["Grains", "Dairy", "Flowers", "Transport"],
     summary: "The country's food basket and haulage spine: grains, dairy, horticulture and long-distance transport.",
     note: "Nakuru and Eldoret are the two depots to know.",
@@ -88,6 +104,8 @@ export const REGIONS = [
     country: "KE",
     hub: "Nyeri",
     aliases: ["nyeri", "thika", "murang'a", "karatina", "nyahururu", "kirinyaga", "kerugoya"],
+    lat: -0.4167,
+    lng: 36.95,
     knownFor: ["Coffee", "Dairy", "Produce", "Agri-inputs"],
     summary: "Highland produce and dairy, with strong coffee and agri-input chains around Nyeri and Karatina.",
     note: "A good region for cooperatives and group buying.",
@@ -98,6 +116,8 @@ export const REGIONS = [
     country: "KE",
     hub: "Machakos",
     aliases: ["machakos", "meru", "embu", "kitui", "makueni", "wote", "isiolo"],
+    lat: -1.5167,
+    lng: 37.2667,
     knownFor: ["Fruit", "Livestock", "Hardware", "Repairs"],
     summary: "Fruit, livestock and a deep bench of fundis and repair trades along the Mombasa road corridor.",
     note: "Machakos is the busiest town for trades and hardware.",
@@ -108,6 +128,8 @@ export const REGIONS = [
     country: "KE",
     hub: "Garissa",
     aliases: ["garissa", "wajir", "mandera", "dadaab"],
+    lat: -0.4547,
+    lng: 39.6461,
     knownFor: ["Livestock", "Water", "Solar", "Cross-border trade"],
     summary: "Livestock, water and solar equipment, with trade moving across the eastern border.",
     note: "Long distances make verified contacts more valuable here, not less.",
@@ -118,6 +140,8 @@ export const REGIONS = [
     country: "UG",
     hub: "Kampala",
     aliases: ["kampala", "entebbe", "mukono", "jinja", "wakiso", "masaka"],
+    lat: 0.3476,
+    lng: 32.5825,
     knownFor: ["Services", "Food", "Textiles", "Logistics"],
     summary: "Uganda's commercial centre: services, food distribution, textiles and the lake routes.",
     note: "Jinja and Mukono are within the same day's trading radius.",
@@ -128,6 +152,8 @@ export const REGIONS = [
     country: "UG",
     hub: "Mbale",
     aliases: ["mbale", "tororo", "busia uganda", "soroti", "kumi"],
+    lat: 0.9753,
+    lng: 34.1667,
     knownFor: ["Grains", "Coffee", "Border trade", "Produce"],
     summary: "The grain and coffee belt towards the Kenyan border, anchored by Mbale and Tororo.",
     note: "Busia and Malaba crossings set the day's prices.",
@@ -138,6 +164,8 @@ export const REGIONS = [
     country: "UG",
     hub: "Gulu",
     aliases: ["gulu", "lira", "arua", "kitgum", "nebbi"],
+    lat: 2.7746,
+    lng: 32.299,
     knownFor: ["Oil seeds", "Livestock", "Construction", "Transport"],
     summary: "Oil seeds, livestock and a construction trade growing around Gulu and Lira.",
     note: "Arua is the western anchor of this corridor.",
@@ -148,6 +176,8 @@ export const REGIONS = [
     country: "UG",
     hub: "Mbarara",
     aliases: ["mbarara", "fort portal", "kasese", "bushenyi", "kabale"],
+    lat: -0.6072,
+    lng: 30.6545,
     knownFor: ["Dairy", "Bananas", "Tourism", "Coffee"],
     summary: "Dairy, bananas and tourism services, with strong cooperative structures around Mbarara.",
     note: "Fort Portal and Kasese serve the Rwenzori corridor.",
@@ -158,6 +188,8 @@ export const REGIONS = [
     country: "ET",
     hub: "Addis Ababa",
     aliases: ["addis", "addis ababa", "bole", "mer kato", "akaki"],
+    lat: 9.03,
+    lng: 38.74,
     knownFor: ["Manufacturing", "Services", "Coffee", "Logistics"],
     summary: "Ethiopia's commercial centre and the clearing point for coffee, manufacturing and services.",
     note: "Mer Kato remains the reference market for wholesale pricing.",
@@ -168,6 +200,8 @@ export const REGIONS = [
     country: "ET",
     hub: "Adama",
     aliases: ["oromia", "adama", "nazret", "bishoftu", "jimma", "hawassa road"],
+    lat: 8.54,
+    lng: 39.27,
     knownFor: ["Coffee", "Grains", "Floriculture", "Transport"],
     summary: "Coffee, grains and flowers along the Addis–Adama corridor, with strong haulage links.",
     note: "Adama is the junction most members use for the south.",
@@ -178,6 +212,8 @@ export const REGIONS = [
     country: "ET",
     hub: "Bahir Dar",
     aliases: ["amhara", "bahir dar", "gondar", "dessie", "kombolcha"],
+    lat: 11.5936,
+    lng: 37.3908,
     knownFor: ["Textiles", "Grains", "Livestock", "Lake trade"],
     summary: "Textiles, grains and livestock around Bahir Dar, Gondar and the Dessie–Kombolcha corridor.",
     note: "Lake Tana links the northern towns.",
@@ -188,6 +224,8 @@ export const REGIONS = [
     country: "ET",
     hub: "Mekelle",
     aliases: ["tigray", "mekelle", "axum", "adigrat", "shire"],
+    lat: 13.4967,
+    lng: 39.4753,
     knownFor: ["Building materials", "Produce", "Transport", "Repairs"],
     summary: "Building materials, produce and repair trades rebuilding around Mekelle and Adigrat.",
     note: "Verified contacts matter most where supply is thin.",
@@ -198,6 +236,8 @@ export const REGIONS = [
     country: "RW",
     hub: "Kigali",
     aliases: ["kigali", "nyarugenge", "gasabo", "kicukiro"],
+    lat: -1.9441,
+    lng: 30.0619,
     knownFor: ["Services", "Software", "Hospitality", "Logistics"],
     summary: "Rwanda's services and technology centre, with a compact, well-connected supplier base.",
     note: "Most national routes start and end inside Kigali.",
@@ -208,6 +248,8 @@ export const REGIONS = [
     country: "RW",
     hub: "Rwamagana",
     aliases: ["rwamagana", "kayonza", "nyagatare", "kibungo"],
+    lat: -1.95,
+    lng: 30.1,
     knownFor: ["Livestock", "Maize", "Agri-inputs", "Transport"],
     summary: "The eastern livestock and maize belt, with a growing agri-input trade.",
     note: "Nyagatare is the reference point for cattle.",
@@ -218,6 +260,8 @@ export const REGIONS = [
     country: "TZ",
     hub: "Dar es Salaam",
     aliases: ["dar", "dar es salaam", "kariakoo", "temeke", "kinondoni"],
+    lat: -6.7924,
+    lng: 39.2083,
     knownFor: ["Import & export", "Wholesale", "Logistics", "Hospitality"],
     summary: "Tanzania's port and wholesale centre; the Kariakoo trade sets prices for much of the interior.",
     note: "A key crossing point for goods moving to and from the coast.",
@@ -228,6 +272,8 @@ export const REGIONS = [
     country: "TZ",
     hub: "Arusha",
     aliases: ["arusha", "moshi", "kilimanjaro", "manyara", "tanga"],
+    lat: -3.3869,
+    lng: 36.683,
     knownFor: ["Tourism", "Coffee", "Fresh produce", "Transport"],
     summary: "Tourism, coffee and fresh produce around Arusha and Moshi, with strong service trades.",
     note: "Arusha is the meeting point for the northern circuit.",
@@ -238,6 +284,8 @@ export const REGIONS = [
     country: "TZ",
     hub: "Mwanza",
     aliases: ["mwanza", "geita", "bukoba", "shinyanga", "bariadi"],
+    lat: -2.5167,
+    lng: 32.9,
     knownFor: ["Fishing", "Cotton", "Mining supplies", "Transport"],
     summary: "Fishing, cotton and mining supplies around Mwanza and the lake ports.",
     note: "Ferries carry a large share of the daily trade.",
@@ -277,6 +325,26 @@ export function regionFromPlace(place = "") {
 export const DEFAULT_REGION = REGION_BY_SLUG["nairobi-metro"];
 
 export const regionPath = (region) => `/regions/${region.slug}`;
+
+/**
+ * How wide a regional scope is.
+ *
+ * A region is a corridor, not a postcode. 50 km around the hub reaches the
+ * towns a trader in that corridor actually serves, and the screen says
+ * "within 50 km of Kisumu" rather than pretending the whole lake is on
+ * screen.
+ */
+export const REGION_SCOPE_RADIUS_KM = 50;
+
+/**
+ * The point a regional scope is centred on, or null when the region has no
+ * anchor. A region without coordinates cannot scope anything, and pretending
+ * otherwise would be the same lie the old market knob told.
+ */
+export function regionAnchor(region) {
+  if (!region || region.lat == null || region.lng == null) return null;
+  return { lat: Number(region.lat), lng: Number(region.lng), hub: region.hub };
+}
 
 /** The short label on the discovery knob: "Nyanza · Kisumu", never a market. */
 export const regionLabel = (region) =>
