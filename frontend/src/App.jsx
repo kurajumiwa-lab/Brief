@@ -1,4 +1,4 @@
-import { useEffect, useState, lazy, Fragment } from "react";
+import { useEffect, useState, lazy, Fragment, useRef } from "react";
 import { Routes, Route, Navigate, Link, useLocation } from "react-router-dom";
 import Shell from "@/components/layout/Shell";
 import { PageSpinner } from "@/components/ui/Spinner";
@@ -232,19 +232,65 @@ function StockRoute() {
 export default function App() {
   const token = useAuthStore((s) => s.token);
   const ready = useAuthStore((s) => s.ready);
+  const vendor = useAuthStore((s) => s.vendor);
   const fetchVendor = useAuthStore((s) => s.fetchVendor);
   const [splashDone, setSplashDone] = useState(false);
+  const appRef = useRef(null);
 
   useEffect(() => {
     if (!ready) fetchVendor();
   }, [ready, token, fetchVendor]);
 
+  /* ── What the application actually knows ─────────────────────────────────
+     The cold-start screen does not keep its own opinions about how far along
+     the boot is. It is told, in the screen's own words, and it says nothing
+     the application has not established:
+
+       no session to check   → the shelf is opening
+       a session in flight   → the network is being discovered
+       the profile is known  → the connections are being curated
+       the session settled   → the experience is being prepared
+
+     A signed-out visitor has no network to discover, so they are not told
+     about one. */
+  const milestone = !token ? "shelf" : !ready ? "network" : vendor ? "curate" : "prepare";
+
+  /* ── The application behind the screen is inert while it is up ──────────
+     A fixed overlay hides the page but does not stop the keyboard walking
+     into it: a tab press could land on a button nobody can see, and a
+     screen reader would be reading a page that is not there yet. `inert`
+     takes the whole subtree out of the pointer, the tab order and the
+     accessibility tree until the screen has gone.
+
+     The attribute is set here rather than by React because React 18 does not
+     support `inert` as a property, and a boolean prop would be dropped with
+     a warning. */
+  useEffect(() => {
+    const el = appRef.current;
+    if (!el) return;
+    if (splashDone) el.removeAttribute("inert");
+    else el.setAttribute("inert", "");
+  }, [splashDone]);
+
   return (
     <>
-      {/* The five-second cold-start screen. It runs alongside the session check
-          rather than before it, so the time is spent, not added. */}
-      {!splashDone && <BootSplash onDone={() => setSplashDone(true)} />}
-      <AppRoutes />
+      {/* The cold-start screen. It runs alongside the session check rather
+          than before it, so the time is spent, not added — and it leaves
+          when the application is ready, not when a timer says so. */}
+      {!splashDone && (
+        <BootSplash
+          onDone={() => setSplashDone(true)}
+          ready={ready}
+          milestone={milestone}
+          showReplay={import.meta.env.DEV}
+        />
+      )}
+      {/* `contents` keeps the wrapper out of the layout: the routes are
+          exactly where they were, and the wrapper is only here to hold the
+          `inert` attribute. */}
+      <div ref={appRef} className="contents">
+        <AppRoutes />
+      </div>
     </>
   );
 }

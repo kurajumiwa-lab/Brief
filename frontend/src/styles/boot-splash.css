@@ -1,0 +1,364 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   THE COLD-START SCREEN
+   -----------------------------------------------------------------------
+   A full-bleed sheet of deep forest, an ivory badge carrying the W, a gold
+   shelf underneath it, and a bar that says how far along the application is.
+
+   The rules that matter here, and why they are written this way:
+
+   · THE CANVAS IS THE FOREST. Every word on it is ivory or gold, and both
+     clear AA against it (14.12:1 and 5.93:1). Nothing is asked to be read
+     that cannot be read.
+
+   · THE BADGE IS PAPER. The monogram is forest on ivory (14.12:1) and the
+     woven second stroke is forest green (5.90:1). Gold is deliberately kept
+     off the badge: gold on ivory is 2.38:1, so the gold stays where it has
+     contrast — on the canvas.
+
+   · THE BAR IS A FILL, NOT A NUMBER. The width is `scaleX()` on a unitless
+     custom property, which every browser understands. It is not a
+     percentage multiplied inside `calc()`, which most do not.
+
+   · THE MOVEMENT IS DECORATION. `prefers-reduced-motion` stills the whole
+     product in src/index.css; the rules below go one step further and make
+     sure a stilled screen still *looks* right — a sweeping sheen becomes a
+     quiet sliver rather than an empty track.
+
+   · THE SHELF IS THE METAPHOR AND THE MEASURE. The gold blocks below the
+     badge are one per milestone, and a block lights when the application
+     reports that milestone. The shelf fills because the work did.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.wasta-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 68% at 50% -12%, rgb(var(--wasta-green) / 0.24), transparent 62%),
+    radial-gradient(96% 54% at 50% 114%, rgb(var(--wasta-gold) / 0.12), transparent 60%),
+    rgb(var(--wasta-forest));
+  color: rgb(var(--wasta-ivory));
+  padding-top: calc(1.25rem + env(safe-area-inset-top, 0px));
+  padding-right: calc(1.25rem + env(safe-area-inset-right, 0px));
+  padding-bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
+  padding-left: calc(1.25rem + env(safe-area-inset-left, 0px));
+  transition: opacity var(--dur-3, 260ms) var(--ease-out, ease);
+}
+
+/* The screen has no outline of its own; the focus ring belongs to whatever
+   inside it is focused. */
+.wasta-splash:focus {
+  outline: none;
+}
+
+.wasta-splash[data-phase="leaving"] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* A gold ring on the forest — the one focus colour this screen may use. */
+.wasta-splash :focus-visible {
+  outline: 2px solid rgb(var(--wasta-gold));
+  outline-offset: 3px;
+  border-radius: 0.375rem;
+}
+
+/* ── The body ──────────────────────────────────────────────────────────── */
+.wasta-splash__body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.25rem;
+  width: 100%;
+  max-width: 20rem;
+  margin-inline: auto;
+  text-align: center;
+}
+
+/* ── The mark ──────────────────────────────────────────────────────────── */
+.wasta-splash__emblem {
+  position: relative;
+  width: clamp(8.5rem, 30vw, 10.5rem);
+  aspect-ratio: 1;
+  filter: drop-shadow(0 20px 30px rgb(0 0 0 / 0.38));
+}
+
+.wasta-splash__mark {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+/* The frame: gold, on the canvas, where it has contrast. */
+.wasta-splash__frame {
+  fill: none;
+  stroke: rgb(var(--wasta-gold));
+  stroke-width: 1.5;
+  opacity: 0.9;
+}
+
+.wasta-splash__badge {
+  fill: rgb(var(--wasta-ivory));
+}
+
+/* The hairline inside the paper: quiet, and only ever a rule. */
+.wasta-splash__hairline {
+  fill: none;
+  stroke: rgb(var(--wasta-muted));
+  stroke-width: 1;
+  opacity: 0.28;
+}
+
+.wasta-splash__stroke {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  /* `pathLength="1"` on the path means one unit is the whole stroke, so the
+     draw-on animation is a single number from 1 to 0. */
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+}
+
+.wasta-splash__stroke--main {
+  stroke: rgb(var(--wasta-forest));
+  stroke-width: 9;
+}
+
+.wasta-splash__stroke--weave {
+  stroke: rgb(var(--wasta-green));
+  stroke-width: 4.5;
+  opacity: 0.85;
+}
+
+/* The connection points: ivory on the forest stroke, so they read as knots
+   in the line rather than as more line. */
+.wasta-splash__node {
+  fill: rgb(var(--wasta-ivory));
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.wasta-splash__node--apex {
+  fill: rgb(var(--wasta-ivory));
+}
+
+/* The one thing that breathes: the middle of the W. */
+.wasta-splash__pulse {
+  fill: none;
+  stroke: rgb(var(--wasta-green));
+  stroke-width: 2;
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: wasta-pulse 2.6s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
+}
+
+@keyframes wasta-pulse {
+  0% {
+    transform: scale(0.55);
+    opacity: 0.75;
+  }
+  70% {
+    transform: scale(1.7);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.7);
+    opacity: 0;
+  }
+}
+
+/* ── The shelf ─────────────────────────────────────────────────────────────
+   The curated shelf, doing the metaphor properly: one gold block per
+   milestone, and a block lights when the application reports that
+   milestone. The blocks are on the canvas, so the gold keeps its 5.93:1. */
+.wasta-splash__shelf {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+}
+
+.wasta-splash__blocks {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 0.4rem;
+  height: 0.45rem;
+}
+
+/* The volumes are not all the same: a shelf of curated things is not a dotted
+   line. Each one is a different width, and each one is a different
+   milestone. */
+.wasta-splash__block {
+  width: 1rem;
+  height: 0.45rem;
+  border-radius: 2px;
+  background: rgb(var(--wasta-gold));
+  opacity: 0.22;
+  transform: translateY(2px);
+  transition:
+    opacity var(--dur-2, 180ms) var(--ease-out, ease),
+    transform var(--dur-2, 180ms) var(--ease-out, ease);
+}
+
+.wasta-splash__block:nth-child(1) {
+  width: 1.25rem;
+}
+
+.wasta-splash__block:nth-child(2) {
+  width: 0.8rem;
+}
+
+.wasta-splash__block:nth-child(3) {
+  width: 1.05rem;
+}
+
+.wasta-splash__block:nth-child(4) {
+  width: 0.7rem;
+}
+
+.wasta-splash__block:nth-child(5) {
+  width: 1.4rem;
+}
+
+.wasta-splash__block[data-active="true"] {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.wasta-splash__rule {
+  width: 7.5rem;
+  height: 1.5px;
+  border-radius: 999px;
+  background: rgb(var(--wasta-gold));
+  opacity: 0.5;
+}
+
+/* ── The meter ─────────────────────────────────────────────────────────────
+   The fill is a unitless scale, so the browser does the arithmetic. */
+.wasta-splash__track {
+  position: relative;
+  width: 100%;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgb(var(--wasta-ivory) / 0.14);
+}
+
+.wasta-splash__fill {
+  height: 100%;
+  width: 100%;
+  border-radius: inherit;
+  background: linear-gradient(
+    90deg,
+    rgb(var(--wasta-gold)),
+    rgb(var(--wasta-gold-soft))
+  );
+  transform: scaleX(var(--wasta-splash-progress, 0));
+  transform-origin: left center;
+  transition: transform var(--dur-3, 260ms) var(--ease-out, ease);
+}
+
+/* Indeterminate: the bar says it does not know, and shows that honestly by
+   moving instead of counting. */
+.wasta-splash__track[data-mode="indeterminate"] .wasta-splash__fill {
+  animation: wasta-sheen 1.8s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
+.wasta-splash__track[data-mode="indeterminate"][data-complete="true"] .wasta-splash__fill {
+  animation: none;
+  transform: scaleX(1);
+}
+
+@keyframes wasta-sheen {
+  0% {
+    transform: translateX(-32%) scaleX(0.26);
+  }
+  100% {
+    transform: translateX(108%) scaleX(0.26);
+  }
+}
+
+/* ── The words ─────────────────────────────────────────────────────────────
+   Three levels of quiet, and each one is measured: the status line is ivory
+   (14.12:1), the tagline is ivory at 62% (6.26:1) and the note under it is
+   ivory at 55% (5.24:1). */
+.wasta-splash__status {
+  color: rgb(var(--wasta-ivory));
+}
+
+.wasta-splash__tagline {
+  color: rgb(var(--wasta-ivory) / 0.62);
+}
+
+.wasta-splash__note {
+  color: rgb(var(--wasta-ivory) / 0.55);
+}
+
+.wasta-splash__percent {
+  color: rgb(var(--wasta-gold));
+}
+
+/* ── The replay control ────────────────────────────────────────────────────
+   A reviewer's control, not a product feature: it rewinds the mark and the
+   copy so the opening can be watched again without a slow network. */
+.wasta-splash__replay {
+  color: rgb(var(--wasta-ivory) / 0.78);
+  border-color: rgb(var(--wasta-gold) / 0.45);
+  background: transparent;
+}
+
+.wasta-splash__replay:hover {
+  color: rgb(var(--wasta-ivory));
+  border-color: rgb(var(--wasta-gold) / 0.8);
+  background: rgb(var(--wasta-gold) / 0.12);
+}
+
+/* ── Less movement, please ─────────────────────────────────────────────────
+   The product is stilled in src/index.css; these rules make sure the stilled
+   screen still reads as a screen. A sheen that has been stopped at its last
+   key frame would leave an empty track, so it is replaced by a quiet sliver
+   that says the same thing: this is still working. */
+@media (prefers-reduced-motion: reduce) {
+  .wasta-splash {
+    transition: none;
+  }
+
+  .wasta-splash__track[data-mode="indeterminate"] .wasta-splash__fill {
+    animation: none;
+    transform: scaleX(0.26);
+  }
+
+  .wasta-splash__pulse {
+    animation: none;
+    opacity: 0.5;
+  }
+
+  .wasta-splash__fill,
+  .wasta-splash__block {
+    transition: none;
+  }
+}
+
+/* ── Small screens ────────────────────────────────────────────────────────
+   The mark is the first thing to give up room, and the gaps close before the
+   words do — the words are the part that has to be read. */
+@media (max-height: 680px) {
+  .wasta-splash__body {
+    gap: 0.9rem;
+  }
+
+  .wasta-splash__emblem {
+    width: clamp(6.5rem, 24vw, 8rem);
+  }
+}

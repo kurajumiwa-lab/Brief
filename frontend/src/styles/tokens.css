@@ -256,6 +256,41 @@
   --header-h: 60px;
   --rail-h: 48px;
   --tabbar-h: 64px;
+
+  /* ── The cold-start screen ─────────────────────────────────────────────
+     The loading screen is a sheet of paper laid over the product, and it
+     wears its own palette: deep forest and forest green carry the mark,
+     warm gold is the accent, and the paper is ivory.
+
+     These sit apart from the product's tokens on purpose. The screen exists
+     before the product's theme has been chosen, and it answers to its own
+     contrast rules (src/test/bootSplash.test.jsx) rather than to the ones
+     that govern a page.
+
+     Measured on the forest canvas:
+       ivory            14.12:1   every word
+       ivory at 62%     6.26:1   the quiet line under the mark
+       ivory at 55%     5.24:1   the smallest line on the screen
+       warm gold        5.93:1   the frame, the shelf, the bar, the number
+       warm gold soft   9.13:1   the far end of the bar's gradient
+       forest green     2.39:1   the ambient light only — never a word
+       muted grey       3.07:1   never a word on this canvas
+
+     Measured on the ivory badge:
+       deep forest      14.12:1   the monogram, the nodes
+       forest green      5.90:1   the woven second stroke
+       muted grey        4.60:1   hairlines and quiet rules
+       warm gold         2.38:1   never on the badge — the gold is the
+                                 canvas's accent, and it keeps its contrast
+                                 there
+     ──────────────────────────────────────────────────────────────────── */
+  --wasta-forest: 13 43 36;     /* #0D2B24 — deep forest */
+  --wasta-green: 45 106 91;     /* #2D6A5B — forest green */
+  --wasta-gold: 197 155 95;     /* #C59B5F — warm gold */
+  --wasta-gold-soft: 226 197 152; /* #E2C598 — the far end of the bar */
+  --wasta-ivory: 248 247 244;   /* #F8F7F4 — ivory */
+  --wasta-surface: 239 236 230; /* #EFECE6 — warm surface */
+  --wasta-muted: 107 114 110;   /* #6B726E — muted grey */
 }
 
 .dark {
