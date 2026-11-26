@@ -4,7 +4,7 @@ import {
   Plus, MessagesSquare, ShieldCheck, Layers3, BarChart3, FileCheck, LayoutDashboard,
   Sparkles, Receipt, ShoppingBag, ShoppingCart, List, ListChecks, Inbox,
   ScanLine, Mail, Search, ClipboardCheck, Settings, BookOpen, HeartHandshake,
-  Ruler, KeyRound, SlidersHorizontal, FolderOpen, LockKeyhole, LifeBuoy,
+  Ruler, KeyRound, SlidersHorizontal, FolderOpen, LockKeyhole, LifeBuoy, Bell,
 } from "lucide-react";
 import { BRIEF_LANDING_ENABLED, DESK_ENABLED, MAIL_ENABLED } from "@/config/flags";
 
@@ -297,6 +297,15 @@ export const SETTINGS_GROUPS = [
       { to: "/orders/records", label: "Trade record", icon: ClipboardCheck },
       { to: "/payments", label: "Receipts", icon: Receipt },
       { to: "/calendar", label: "Calendar", icon: CalendarDays },
+    ],
+  },
+  {
+    title: "What you are told about",
+    items: [
+      // Moved out of the Inbox: a watch decides which notifications arrive, so
+      // it is configuration, not a message. It sat above the conversation list
+      // because the deleted Activity screen had nowhere else to put it.
+      { to: "/more/notifications", label: "Notification watches", icon: Bell },
     ],
   },
   {

@@ -515,12 +515,12 @@ describe("Activity detail ledger", () => {
 
 describe("Activity watches and Profile utility", () => {
   it("creates a neighbourhood watch from user-chosen preferences", async () => {
-    mocks.outsideState.activity = {
-      groups: [],
-      counts: { unread_notifications: 0, rooms: 0, rooms_active_today: 0, attending: 0 },
-    };
-    const ActivityPage = (await import("@/pages/inbox/InboxPage")).default;
-    renderAt("/activity", <ActivityPage />);
+    // The watch form is a SETTING, so it now lives at /more/notifications
+    // rather than above the Inbox message list. It was never part of reading a
+    // message; it decides which messages will arrive. Same component, same
+    // payload, different door.
+    const NotificationsSettings = (await import("@/pages/more/NotificationsSettings")).default;
+    renderAt("/more/notifications", <NotificationsSettings />);
 
     expect(await screen.findByTestId("activity-watches-panel")).toBeInTheDocument();
     fireEvent.click(screen.getByTestId("toggle-add-watch-btn"));

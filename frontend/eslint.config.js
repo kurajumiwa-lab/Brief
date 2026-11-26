@@ -103,8 +103,18 @@ export default [
   },
 
   {
-    // Config and tooling files run in Node, not the browser.
-    files: ["*.config.js", "vite.config.js", "postcss.config.js", "tailwind.config.js"],
+    // Config and tooling files run in Node, not the browser. Scripts are in
+    // here too: `scripts/lint-changed.mjs` is the gate itself, and linting it
+    // as browser code reported `process` and `console` as undefined — the
+    // linter complaining about the file that runs the linter.
+    files: [
+      "*.config.js",
+      "vite.config.js",
+      "postcss.config.js",
+      "tailwind.config.js",
+      "scripts/**/*.mjs",
+      "scripts/**/*.js",
+    ],
     languageOptions: { globals: { ...globals.node } },
   },
 

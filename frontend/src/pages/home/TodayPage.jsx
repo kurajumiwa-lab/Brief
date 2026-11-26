@@ -1,10 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import TodayView from "@/components/home/TodayView";
+import TradePassModal from "@/components/inbox/TradePassModal";
 import { useAuthStore } from "@/stores/authStore";
 import { useIdentityStore } from "@/stores/identityStore";
 import { useOutsideStore } from "@/stores/outsideStore";
 import { useStockStore } from "@/stores/stockStore";
-import { spottedDealAPI } from "@/lib/api";
+import { toast } from "@/components/ui/Toast";
+import { apiError, corridorTaskAPI, outsideAPI, recurringRoutineAPI, spottedDealAPI } from "@/lib/api";
+import ledgerAPI from "@/lib/ledgerApi";
 import { useOffice } from "@/hooks/useOffice";
 import { rankFor } from "@/config/identity";
 import { regionFromPlace } from "@/config/regions";
@@ -44,6 +47,51 @@ export default function TodayPage() {
   const { office } = useOffice();
   const [deals, setDeals] = useState([]);
 
+  // ── The week band ──────────────────────────────────────────────────────
+  // Rounds and RSVPs, the work board and routine prompts moved here from the
+  // Inbox, which now shows only Chats and Notifications. Same endpoints, same
+  // components — a relocation, not a rewrite. Each load is independent so one
+  // failing call cannot take the band down with it.
+  const [agenda, setAgenda] = useState([]);
+  const [agendaStatus, setAgendaStatus] = useState("idle");
+  const [agendaError, setAgendaError] = useState("");
+  const [openPass, setOpenPass] = useState(null);
+  const [confirmingId, setConfirmingId] = useState(null);
+
+  const loadAgenda = useCallback(async () => {
+    setAgendaStatus("loading");
+    try {
+      const { data } = await outsideAPI.agenda();
+      setAgenda(data.items || []);
+      setAgendaError("");
+    } catch (err) {
+      setAgendaError(apiError(err, "Check your connection and try again."));
+    } finally {
+      setAgendaStatus("ready");
+    }
+  }, []);
+
+  const [taskData, setTaskData] = useState(null);
+  const loadTasks = useCallback(async () => {
+    try {
+      const { data } = await corridorTaskAPI.inbox(7);
+      setTaskData(data);
+    } catch {
+      // A missing work board hides that section; it does not hide Home.
+      setTaskData(null);
+    }
+  }, []);
+
+  const [sharePrompts, setSharePrompts] = useState([]);
+  const loadSharePrompts = useCallback(async () => {
+    try {
+      const { data } = await recurringRoutineAPI.mine();
+      setSharePrompts(data?.share_prompts || []);
+    } catch {
+      setSharePrompts([]);
+    }
+  }, []);
+
   useEffect(() => {
     loadIdentity();
   }, [loadIdentity]);
@@ -55,9 +103,26 @@ export default function TodayPage() {
     // not a second copy of it.
     loadFeed();
     loadActivity();
+    loadAgenda();
+    loadTasks();
+    loadSharePrompts();
     fetchMine().catch(() => {});
     fetchMovements().catch(() => {});
-  }, [loadFeed, loadLocation, loadActivity, fetchMine, fetchMovements, location]);
+  }, [loadFeed, loadLocation, loadActivity, loadAgenda, loadTasks, loadSharePrompts,
+      fetchMine, fetchMovements, location]);
+
+  const confirmTrade = async (item) => {
+    setConfirmingId(item.id);
+    try {
+      await ledgerAPI.confirmCompletion(item.record_id);
+      toast.success("Booking confirmed");
+      await loadAgenda();
+    } catch (err) {
+      toast.error(apiError(err, "That booking could not be confirmed."));
+    } finally {
+      setConfirmingId(null);
+    }
+  };
 
   const region = useMemo(
     () => regionFromPlace(vendor?.physical_location || location?.label),
@@ -135,6 +200,15 @@ export default function TodayPage() {
       .slice(0, 4);
   }, [items]);
 
+  // Hoisted: a hook called inside JSX props is a rules-of-hooks violation that
+  // works only by luck. The work board's day strip is derived, not fetched.
+  const taskDays = useMemo(
+    () => (taskData?.days || [])
+      .filter((day) => day.available + day.claimed > 0)
+      .map((day) => day.date),
+    [taskData],
+  );
+
   const rank = rankFor({ vendor, identity });
 
   const unreadNotifications = (activity?.groups || []).reduce(
@@ -150,9 +224,24 @@ export default function TodayPage() {
   const firstName = name.split(" ")[0];
 
   return (
-    <TodayView
+    <>
+      <TodayView
       name={name}
       firstName={firstName}
+      agenda={agenda}
+      agendaLoading={agendaStatus === "loading" || agendaStatus === "idle"}
+      agendaError={agendaError}
+      onRetryAgenda={loadAgenda}
+      onOpenPass={setOpenPass}
+      onConfirmTrade={confirmTrade}
+      confirmingId={confirmingId}
+      taskDays={taskDays}
+      taskData={taskData}
+      onTasksChanged={loadTasks}
+      defaultRegion={region?.slug}
+      town={String(vendor?.physical_location || "").split(",")[0].trim()}
+      sharePrompts={sharePrompts}
+      onShared={loadSharePrompts}
       rank={rank}
       region={region}
       happening={happening}
@@ -179,5 +268,11 @@ export default function TodayPage() {
         },
       }}
     />
+      <TradePassModal
+        pass={openPass}
+        memberHandle={vendor?.vendor_handle}
+        onClose={() => setOpenPass(null)}
+      />
+    </>
   );
 }

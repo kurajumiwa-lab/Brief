@@ -19,7 +19,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.setConfig({ testTimeout: 20000 });
 
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 
 const ok = (data) => Promise.resolve({ data });
@@ -510,18 +510,38 @@ describe("Explore", () => {
 describe("Activity", () => {
   const Activity = async () => (await import("@/pages/inbox/InboxPage")).default;
 
-  it("groups notifications instead of showing one undifferentiated wall", async () => {
+  it("lists notifications chronologically, with no group walls to scroll past", async () => {
+    // The brief replaced seven headed groups with one chronological list, so
+    // "grouped by kind" is now the thing to assert is ABSENT. What survives is
+    // the requirement underneath it: every notification is still reachable, and
+    // the newest is at the top.
     const ActivityPage = await Activity();
-    renderAt("/activity", <ActivityPage />);
-    await waitFor(() => expect(screen.getByTestId("activity-section-invitations")).toBeInTheDocument());
-    expect(screen.getByText("Kisumu Hikers invited you")).toBeInTheDocument();
+    renderAt("/activity?tab=notifications", <ActivityPage />);
+
+    await waitFor(() =>
+      expect(screen.getByText("Kisumu Hikers invited you")).toBeInTheDocument(),
+    );
+    expect(screen.queryByTestId("activity-section-invitations")).toBeNull();
+    expect(screen.queryByText(/requests to join, invites and approvals/i)).toBeNull();
   });
 
-  it("shows the counts that are real work", async () => {
+  it("carries unread counts on the two permanent tabs", async () => {
+    // The three summary tiles (conversations / events / attending) are gone.
+    // Their honest replacement is the per-tab count, which is the number a
+    // person actually acts on.
     const ActivityPage = await Activity();
     renderAt("/activity", <ActivityPage />);
-    await waitFor(() => expect(screen.getByTestId("activity-rooms")).toHaveTextContent("2"));
-    expect(screen.getByTestId("activity-attending")).toHaveTextContent("3");
+
+    const tabs = await screen.findByTestId("inbox-tabs");
+    // The payload in this fixture has one unread notification and no rooms.
+    // The count sits on the tab, and a tab with nothing unread shows no badge
+    // at all rather than a zero.
+    await waitFor(() =>
+      expect(
+        within(tabs).getByRole("tab", { name: /notifications/i }),
+      ).toHaveTextContent("1"),
+    );
+    expect(within(tabs).getByRole("tab", { name: /chats/i })).not.toHaveTextContent(/\d/);
   });
 });
 

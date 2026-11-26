@@ -299,6 +299,38 @@ export const useOutsideStore = create((set, get) => ({
     }
   },
 
+  /**
+   * Mark ONE notification read in the local record.
+   *
+   * Called after the server accepts `POST /notifications/{id}/read`. It is
+   * deliberately per-record: there is no "mark all" here and there must not be,
+   * because the Inbox shows a single list and opening one row may not clear the
+   * others. Rebuilt immutably so every subscriber (tab bar, header bell, Home's
+   * badge) re-renders from the same new object rather than three separate
+   * counts.
+   */
+  markNotificationReadLocal: (notificationId) => {
+    const activity = get().activity;
+    if (!activity || !notificationId) return;
+    set({
+      activity: {
+        ...activity,
+        groups: (activity.groups || []).map((group) => ({
+          ...group,
+          items: (group.items || []).map((item) =>
+            item.id === notificationId ? { ...item, is_read: true } : item,
+          ),
+        })),
+        counts: activity.counts?.unread_notifications
+          ? {
+              ...activity.counts,
+              unread_notifications: Math.max(0, activity.counts.unread_notifications - 1),
+            }
+          : activity.counts,
+      },
+    });
+  },
+
   /** Everything unread across every group — the tab badge. */
   activityCount: () => {
     const activity = get().activity;
