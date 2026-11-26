@@ -11,9 +11,14 @@ import ExplorePage from "@/pages/explore/ExplorePage";
  * feed state.
  */
 const SECTIONS = {
-  goods: { kind: "listing", intent: "offers", public_sale: "true" },
+  // Goods is offers AND the community's spotted public sales — those are
+  // reports about a good on sale, and the goods door is where a person looks
+  // for one. `public_sale` is a real frontend scope; nothing here invents a
+  // request parameter the server does not understand.
+  goods: { kind: "listing", public_sale: "true" },
   services: { kind: "service" },
   rentals: { kind: "rental" },
+  events: { kind: "event" },
   verified: { trust: "3", min_level: "3" },
   trending: { feed: "trending" },
 };
@@ -37,5 +42,5 @@ export default function DiscoverSectionPage() {
     if (changed) setParams(next, { replace: true });
   }, [section]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  return <ExplorePage regionAware />;
+  return <ExplorePage />;
 }

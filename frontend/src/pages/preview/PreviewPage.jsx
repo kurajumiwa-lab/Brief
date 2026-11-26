@@ -272,7 +272,6 @@ export default function PreviewPage() {
             knob, kept here as the "All regions" screen. */}
         {screen === "discover" && (
           <ExplorePage
-            regionAware
             demo={{
               items: DEMO_DISCOVERY,
               location: { lat: -0.095, lng: 34.77, label: "Kondele, Kisumu", radius_km: 15 },

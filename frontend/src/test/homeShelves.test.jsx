@@ -60,13 +60,15 @@ describe("Home step 6 — nearby goods, services and rentals", () => {
     expect(within(shelf).getAllByTestId("nearby-card")).toHaveLength(3);
   });
 
-  it("prints a seller's real price and says Open when there is none", () => {
+  it("prints a seller's real price and says Price on request when there is none", () => {
     wrap(<NearbyShelf items={trade} region={region} />);
     const shelf = screen.getByTestId("nearby-shelf");
     // A real price is shown as the seller set it.
     expect(within(shelf).getByText("KSh 500")).toBeInTheDocument();
-    // No price is "Open". The card never invents a figure to fill the space.
-    expect(within(shelf).getByText("Open")).toBeInTheDocument();
+    // No price is "Price on request". The card never invents a figure to fill
+    // the space, and it never says "Open", which reads like a price.
+    expect(within(shelf).getByText("Price on request")).toBeInTheDocument();
+    expect(within(shelf).queryByText("Open")).not.toBeInTheDocument();
   });
 
   it("renders nothing at all when the shelf is empty", () => {

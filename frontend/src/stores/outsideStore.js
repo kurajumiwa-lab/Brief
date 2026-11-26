@@ -45,6 +45,25 @@ export const LAYERS = [
 
 const keyOf = (item) => `${item.kind}:${item.id}`;
 
+/**
+ * THE REQUEST PARAMETERS FOR "AROUND YOU".
+ *
+ * A point, and the width the person chose. There is no point — no GPS, no
+ * typed area — then there is no scope, and the feed is the whole network.
+ * That is the honest answer: it is better to show everything than to show
+ * everything as if it were nearby.
+ */
+export function locationScope(location) {
+  if (!location) return null;
+  if (location.lat == null || location.lng == null) return null;
+  const radius = Number(location.radius_km);
+  return {
+    lat: location.lat,
+    lng: location.lng,
+    radius_km: Number.isFinite(radius) && radius > 0 ? radius : 15,
+  };
+}
+
 export const useOutsideStore = create((set, get) => ({
   // ── location ─────────────────────────────────────────────────────────────
   location: null,
@@ -161,9 +180,14 @@ export const useOutsideStore = create((set, get) => ({
    */
   loadFeed: async ({ kinds = null, query = null, force = false, scope = null } = {}) => {
     if (!force && get().status === "loading") return null;
-    set({ status: "loading", error: "", failure: null, kinds, lastQuery: query, scope });
+    // The scope in force. An explicit one — a region the person chose — wins.
+    // Otherwise it is their own location and the radius they chose, so
+    // "around you" really is around them and the radius control really
+    // changes what comes back.
+    const effectiveScope = scope ?? locationScope(get().location);
+    set({ status: "loading", error: "", failure: null, kinds, lastQuery: query, scope: effectiveScope });
     try {
-      const data = await get()._fetch({ kinds, q: query, limit: 20, ...(scope || {}) });
+      const data = await get()._fetch({ kinds, q: query, limit: 20, ...(effectiveScope || {}) });
       set({
         items: data.items || [],
         cursor: data.next_cursor || null,
@@ -212,6 +236,28 @@ export const useOutsideStore = create((set, get) => ({
 
   refreshFeed: () =>
     get().loadFeed({ kinds: get().kinds, query: get().lastQuery, scope: get().scope, force: true }),
+
+  /**
+   * Refresh the scope in one action: ask the device where the person is now,
+   * then ask the feed again around that point.
+   *
+   * The permission is only ever requested from a press — a prompt nobody
+   * asked for is a prompt people refuse — and a refusal is reported, never
+   * papered over with a substitute location. The feed is NOT reloaded when
+   * the device says no: the previous scope is still true, and reloading it
+   * would suggest the screen had changed when it had not.
+   */
+  refreshNearby: async () => {
+    const result = await get().requestGps();
+    if (!result.ok) return result;
+    await get().loadFeed({
+      kinds: get().kinds,
+      query: get().lastQuery,
+      scope: get().scope,
+      force: true,
+    });
+    return result;
+  },
 
   /** Optimistic reaction: the heart fills now, the server confirms after. */
   toggleReaction: async (item, reaction) => {
@@ -265,15 +311,43 @@ export const useOutsideStore = create((set, get) => ({
   reset: () => set({ items: [], cursor: null, status: "idle", activity: null, failure: null, error: "" }),
 }));
 
-/** The words a location chip shows, whatever produced the point. */
+/**
+ * The words a location chip shows, whatever produced the point.
+ *
+ * The rule the brief sets is simple: never print a place the app does not
+ * actually know. There is no town or county in here that was not typed by
+ * the person or returned by the server, and a device that cannot share a
+ * location says exactly that rather than guessing a town.
+ *
+ * A GPS fix with no reverse-geocoded name is "Your current location" — it is
+ * true, and it claims no town. A point that is not there at all is
+ * "Location unavailable", which is a fact about the device rather than a
+ * failure to answer.
+ */
 export function locationLabel(location) {
-  if (!location) return "Setting your area…";
+  if (!location) return "Location unavailable";
   if (location.label) return location.label;
-  if (location.source === "unset") return "Choose your area";
-  if (location.lat != null && location.lng != null) {
-    return `${location.lat.toFixed(3)}, ${location.lng.toFixed(3)}`;
+  const hasPoint = location.lat != null && location.lng != null;
+  switch (location.source) {
+    case "gps":
+    case "request":
+      return hasPoint ? "Your current location" : "Location unavailable";
+    case "manual":
+      return hasPoint ? "Your chosen area" : "Location unavailable";
+    case "vendor_profile":
+      return "Your business address";
+    case "market_zone":
+      return "Your nearest market";
+    default:
+      return "Location unavailable";
   }
-  return "Choose your area";
+}
+
+/** True when the app has a point it can honestly stand behind. */
+export function hasUsableLocation(location) {
+  if (!location) return false;
+  if (location.source === "unset") return false;
+  return location.lat != null && location.lng != null;
 }
 
 /** A sentence that explains why the app thinks you are here. */

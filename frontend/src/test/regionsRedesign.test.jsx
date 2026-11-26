@@ -6,21 +6,24 @@
  * category cards, and a nearby list that said "We couldn't load what's around
  * you" and stopped there.
  *
- * The first three are presentation. The fourth was a functional fault, and it
- * is the reason this file exists: a failed list must name its cause, offer a
- * retry, keep the rest of the screen alive, and — above all — never present a
- * missing number as a zero. A marketplace that shows "0 listings" because the
- * request failed is telling a person their town is empty when the truth is
- * that the app did not ask.
+ * The first three were presentation, and the answer to all three was
+ * subtraction: one search, one category grid, one filter door, and no
+ * statistics card standing between the person and the listings. The fourth
+ * was a functional fault, and it is the reason this file exists: a failed
+ * list must name its cause, offer a retry, keep the rest of the screen alive,
+ * and — above all — never present a missing number as a zero. A marketplace
+ * that shows "0 listings" because the request failed is telling a person
+ * their town is empty when the truth is that the app did not ask.
  *
  * These specs cover:
  *
  *   1. ONE search, ONE category grid, ONE filters door;
- *   2. the regional spotlight's counts — true, or a dash, never a zero;
+ *   2. the count — true, or a sentence that says why, never a zero;
  *   3. a chosen region being a real scope, and a way back to "around me";
  *   4. location permission that can be refused without breaking the screen;
  *   5. a failed nearby list that says why, retries, and falls back;
- *   6. the compact "items on sale" empty state with a way to change it.
+ *   6. the compact empty state with a way to change it;
+ *   7. the list and the map as two views of one search.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
@@ -117,7 +120,7 @@ afterEach(() => {
 describe("1 · one search, one category grid, one filters door", () => {
   it("never shows two search fields or two filter surfaces", async () => {
     await renderRegions();
-    await screen.findByTestId("region-spotlight");
+    await screen.findByTestId("discover-masthead");
 
     // One field. The header's own search is hidden on the discovery routes,
     // because the page's field answers the same question in the same place.
@@ -136,67 +139,66 @@ describe("1 · one search, one category grid, one filters door", () => {
 
   it("counts the filters that are on, and clears them in one action", async () => {
     await renderRegions();
-    await screen.findByTestId("region-spotlight");
+    await screen.findByTestId("discover-masthead");
 
     fireEvent.click(screen.getByTestId("explore-more-filters"));
     const panel = await screen.findByTestId("explore-filter-panel");
     fireEvent.click(within(panel).getByRole("button", { name: /this weekend/i }));
 
     await waitFor(() => expect(screen.getByTestId("explore-more-filters")).toHaveTextContent("1"));
+    expect(screen.getByTestId("explore-more-filters")).toHaveTextContent(/this weekend/i);
 
     fireEvent.click(screen.getByTestId("explore-clear-all"));
     await waitFor(() => expect(screen.getByTestId("explore-more-filters")).not.toHaveTextContent("1"));
+  });
+
+  it("does not bring back a statistics card above the listings", async () => {
+    await renderRegions();
+    const deck = await screen.findByTestId("discover-shop-toolbar");
+    const grid = await screen.findByTestId("explore-results");
+    // The count lives in the deck, next to the results it counts — not in a
+    // hero card with three numbers nobody can act on.
+    expect(within(deck).getByTestId("explore-count")).toBeInTheDocument();
+    expect(screen.queryByTestId("region-spotlight")).not.toBeInTheDocument();
+    expect(deck.compareDocumentPosition(grid) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });
 
 /* ────────────────────────────────────────────────────────────────────────── */
 
-describe("2 · the regional spotlight tells the truth", () => {
+describe("2 · the count tells the truth", () => {
   it("counts the records it holds and says where they came from", async () => {
     await renderRegions();
-    const spotlight = await screen.findByTestId("region-spotlight");
-
+    const deck = await screen.findByTestId("discover-shop-toolbar");
     await waitFor(() =>
-      expect(within(spotlight).getByTestId("region-metric-listings")).toHaveTextContent("1"));
-    expect(within(spotlight).getByTestId("region-metric-businesses")).toHaveTextContent("2");
-    expect(within(spotlight).getByTestId("region-metric-offers")).toHaveTextContent("2");
-    expect(within(spotlight).getByTestId("region-metrics-note")).toHaveTextContent(
-      /from the 2 results loaded for Nyanza/i,
-    );
+      expect(within(deck).getByTestId("explore-count")).toHaveTextContent("2 results loaded"));
+    // It is the count on the screen, not a regional total dressed up as one.
+    expect(within(deck).getByTestId("explore-count")).toHaveTextContent(/near you/i);
   });
 
-  it("shows a dash, never a zero, while the results are still loading", async () => {
+  it("never prints a zero while the results are still loading", async () => {
     let release;
-    mocks.feed.mockImplementation(() => new Promise((resolve) => { release = () => resolve(ok({ items: [], next_cursor: null, center: {}, location: LOCATION })); }));
+    mocks.feed.mockImplementation(() => new Promise((resolve) => {
+      release = () => resolve(ok({ items: [LISTING], next_cursor: null, center: {}, location: LOCATION }));
+    }));
     await renderRegions();
 
-    const spotlight = await screen.findByTestId("region-spotlight");
-    expect(within(spotlight).getByTestId("region-metric-listings")).toHaveTextContent("—");
-    expect(within(spotlight).getByTestId("region-metrics-note")).toHaveTextContent(
-      /once the results/i,
-    );
+    const deck = await screen.findByTestId("discover-shop-toolbar");
+    expect(within(deck).getByTestId("explore-count")).toHaveTextContent(/loading/i);
+    expect(within(deck).getByTestId("explore-count")).not.toHaveTextContent("0");
     release?.();
   });
 
-  it("says the counts are unavailable when the list failed, and never says zero", async () => {
+  it("says the count is unavailable when the list failed, and never says zero", async () => {
     mocks.feed.mockRejectedValue(Object.assign(new Error("boom"), {
       response: { status: 503, data: { detail: "The database is reachable but its tables do not exist yet" } },
     }));
     await renderRegions();
 
-    const spotlight = await screen.findByTestId("region-spotlight");
+    const deck = await screen.findByTestId("discover-shop-toolbar");
     await waitFor(() =>
-      expect(within(spotlight).getByTestId("region-metrics-note")).toHaveTextContent(/unavailable/i));
-    expect(within(spotlight).getByTestId("region-metric-listings")).toHaveTextContent("—");
-    expect(within(spotlight).getByTestId("region-metric-listings")).not.toHaveTextContent("0");
-  });
-
-  it("names the region and offers one clear action", async () => {
-    await renderRegions();
-    const spotlight = await screen.findByTestId("region-spotlight");
-    expect(within(spotlight).getByRole("heading", { name: "Nyanza" })).toBeInTheDocument();
-    expect(within(spotlight).getByTestId("region-open")).toHaveAttribute("href", "/regions/nyanza");
-    expect(within(spotlight).getByTestId("region-post")).toBeInTheDocument();
+      expect(within(deck).getByTestId("explore-count")).toHaveTextContent(/couldn.t load/i));
+    expect(within(deck).getByTestId("explore-count")).not.toHaveTextContent("0");
   });
 });
 
@@ -215,18 +217,39 @@ describe("3 · a chosen region is a real scope", () => {
 
   it("leaves an inferred region alone — it must not move the search away from you", async () => {
     await renderRegions();
-    await screen.findByTestId("region-spotlight");
+    await screen.findByTestId("discover-masthead");
     await waitFor(() => expect(mocks.feed).toHaveBeenCalled());
     const params = mocks.feed.mock.calls[0][0];
     expect(params.lat).toBeUndefined();
     expect(params.lng).toBeUndefined();
+    // The sentence says the truth about a scope nobody chose.
     expect(await screen.findByTestId("regions-scope-label")).toHaveTextContent(/Kondele, Kisumu/i);
   });
 
   it("puts the search back on you when you ask for your own location", async () => {
     await renderRegions("/regions?region=nyanza");
-    await screen.findByTestId("region-spotlight");
-    await waitFor(() => expect(mocks.feed).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(screen.getByTestId("regions-scope-label")).toHaveTextContent(/Centred on Kisumu/i));
+
+    fireEvent.click(screen.getByTestId("regions-scope-toggle"));
+    // The region stops being a scope: it is no longer in the URL, and the
+    // feed is no longer centred on the hub.
+    await waitFor(() => expect(screen.getByTestId("location")).not.toHaveTextContent("region=nyanza"));
+    await waitFor(() => {
+      const calls = mocks.feed.mock.calls;
+      const last = calls[calls.length - 1][0];
+      expect(last.radius_km).not.toBe(50);
+    });
+  });
+});
+
+/* ────────────────────────────────────────────────────────────────────────── */
+
+describe("4 · a refused location does not break the screen", () => {
+  it("reports the refusal and keeps the region scope and the typed area", async () => {
+    await renderRegions("/regions?region=nyanza");
+    await waitFor(() =>
+      expect(screen.getByTestId("regions-scope-label")).toHaveTextContent(/Centred on Kisumu/i));
 
     const { useOutsideStore } = await import("@/stores/outsideStore");
     // The device refuses the permission: the region scope must survive it.
@@ -235,36 +258,40 @@ describe("3 · a chosen region is a real scope", () => {
       value: { getCurrentPosition: (_ok, fail) => fail({ code: 1 }) },
     });
 
-    fireEvent.click(screen.getByTestId("regions-scope-toggle"));
+    // The scope sentence is the door: the refused person must not have to
+    // hunt for the typed fallback.
+    fireEvent.click(screen.getByTestId("regions-scope-label"));
     fireEvent.click(await screen.findByRole("button", { name: /use my location/i }));
 
     await waitFor(() => expect(useOutsideStore.getState().locationStatus).toBe("denied"));
     expect(await screen.findByText(/permission declined/i)).toBeInTheDocument();
     // The screen still has a scope, and it is still the region.
     expect(screen.getByTestId("regions-scope-label")).toHaveTextContent(/Centred on Kisumu/i);
+    // …and the typed area is right there.
+    expect(screen.getByTestId("location-input")).toBeInTheDocument();
   });
 
   it("says so when the device cannot share a location at all", async () => {
     await renderRegions();
-    await screen.findByTestId("region-spotlight");
+    await screen.findByTestId("discover-masthead");
 
     const { useOutsideStore } = await import("@/stores/outsideStore");
     Object.defineProperty(navigator, "geolocation", { configurable: true, value: undefined });
 
-    fireEvent.click(screen.getByTestId("regions-scope-toggle"));
+    fireEvent.click(screen.getByTestId("regions-scope-label"));
     fireEvent.click(await screen.findByRole("button", { name: /use my location/i }));
 
     await waitFor(() => expect(useOutsideStore.getState().locationStatus).toBe("unavailable"));
     expect(await screen.findByText(/can.t share a location/i)).toBeInTheDocument();
     // The typed area is still there: a refusal is a change of route, not a
     // dead end.
-    expect(screen.getByTestId("regions-area-input")).toBeInTheDocument();
+    expect(screen.getByTestId("location-input")).toBeInTheDocument();
   });
 });
 
 /* ────────────────────────────────────────────────────────────────────────── */
 
-describe("4 · a failed nearby list says why, and stays alive", () => {
+describe("5 · a failed nearby list says why, and stays alive", () => {
   it("names the failure, offers a retry, and keeps the rest of the screen", async () => {
     mocks.feed.mockRejectedValue(Object.assign(new Error("boom"), {
       response: { status: 500, data: { detail: "upstream exploded" } },
@@ -277,10 +304,11 @@ describe("4 · a failed nearby list says why, and stays alive", () => {
     expect(within(panel).getByText(/technical note/i)).toBeInTheDocument();
     expect(within(panel).getByTestId("explore-retry")).toBeInTheDocument();
 
-    // The region, the categories and the scope are all still on screen: one
+    // The scope, the categories and the search are all still on screen: one
     // broken list does not take the screen with it.
-    expect(screen.getByTestId("region-spotlight")).toBeInTheDocument();
+    expect(screen.getByTestId("regions-scope-label")).toBeInTheDocument();
     expect(screen.getByTestId("explore-categories")).toBeInTheDocument();
+    expect(screen.getByRole("searchbox", { name: /search everything/i })).toBeInTheDocument();
   });
 
   it("retries the same request when asked", async () => {
@@ -294,16 +322,6 @@ describe("4 · a failed nearby list says why, and stays alive", () => {
     fireEvent.click(screen.getByTestId("explore-retry"));
     expect(await screen.findByTestId("content-card-listing")).toBeInTheDocument();
     expect(screen.queryByTestId("explore-error")).not.toBeInTheDocument();
-  });
-
-  it("never turns a failed request into a count of zero", async () => {
-    mocks.feed.mockRejectedValue(Object.assign(new Error("boom"), { response: { status: 500 } }));
-    await renderRegions();
-
-    await screen.findByTestId("explore-error");
-    const deck = screen.getByTestId("discover-shop-toolbar");
-    expect(within(deck).getByTestId("explore-count")).toHaveTextContent(/couldn.t load/i);
-    expect(within(deck).getByTestId("explore-count")).not.toHaveTextContent("0");
   });
 
   it("keeps the rows on screen when only the NEXT page fails", async () => {
@@ -340,25 +358,27 @@ describe("4 · a failed nearby list says why, and stays alive", () => {
 
 /* ────────────────────────────────────────────────────────────────────────── */
 
-describe("5 · items on sale has a compact empty state with a way out", () => {
-  it("offers a seller and a spotter when nothing is priced", async () => {
+describe("6 · the empty state is compact and has a way out", () => {
+  it("offers a way to clear the filters and a way to publish", async () => {
     mocks.feed.mockImplementation(() =>
       ok({ items: [], next_cursor: null, center: {}, location: LOCATION }));
     await renderRegions();
 
-    const empty = await screen.findByTestId("discover-deals-empty");
-    expect(within(empty).getByText(/no priced items here yet/i)).toBeInTheDocument();
-    expect(within(empty).getByTestId("discover-deals-publish")).toBeInTheDocument();
-    expect(within(empty).getByTestId("discover-deals-spot")).toBeInTheDocument();
+    const empty = await screen.findByTestId("explore-empty");
+    expect(within(empty).getByRole("heading", { name: /nothing here yet/i })).toBeInTheDocument();
+    expect(within(empty).getByTestId("explore-empty-clear")).toBeInTheDocument();
+    expect(within(empty).getByTestId("explore-empty-publish")).toBeInTheDocument();
+    // No promotional plate, no deals rail pretending to be an empty state.
+    expect(screen.queryByTestId("discover-deals-empty")).not.toBeInTheDocument();
   });
 });
 
 /* ────────────────────────────────────────────────────────────────────────── */
 
-describe("6 · the list and the map are two views of one search", () => {
+describe("7 · the list and the map are two views of one search", () => {
   it("carries the search to the map and offers the way back", async () => {
     await renderRegions("/regions?q=rice&region=nyanza");
-    await screen.findByTestId("region-spotlight");
+    await screen.findByTestId("discover-masthead");
 
     fireEvent.click(screen.getByTestId("regions-view-map"));
     await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("/map?"));

@@ -5,10 +5,17 @@ import { describe, expect, it, vi } from "vitest";
 /**
  * THE HEADER CONTRACT — logo, search, bell, profile, one row.
  *
- * The brief asks for that arrangement on every screen. The old header hid the
- * search field on Home, which is the screen where a person most often already
- * knows what they want, and buried "something is waiting" inside an account
- * dropdown. Both are pinned here so they cannot regress quietly.
+ * The brief asks for that arrangement on every screen, and the old header
+ * broke it twice: it hid search on Home, which is where a person most often
+ * knows exactly what they want, and it buried "something is waiting" inside
+ * an account dropdown. Both are pinned here so they cannot regress quietly.
+ *
+ * There is one refinement the review forced, and it is pinned too:
+ * "repeated search areas" was a complaint. Home and Explore each own a search
+ * in the page, where the person is already looking — so on those two routes
+ * the header stands down rather than printing a second field that answers the
+ * same question. A search is never missing; on those screens it is the page's,
+ * and it is the same component, writing to the same results.
  */
 
 const activity = {
@@ -49,13 +56,28 @@ function renderAt(path = "/") {
   );
 }
 
+const searchFields = (container) =>
+  container.querySelectorAll("[id^='global-search-']");
+
 describe("the header", () => {
-  it("keeps the search field on Home, where people arrive knowing what they want", () => {
-    const { container } = renderAt("/");
-    // The md+ field is the one that stays in the row. It must be present on
-    // every route, Home included.
-    const fields = container.querySelectorAll("#global-search-, [id^='global-search-']");
-    expect(fields.length).toBeGreaterThan(0);
+  it("keeps the app's one search field on every screen that does not own its own", () => {
+    // The historic `global-search-` id is kept, so anything that reached for
+    // the header field — including this spec — still finds it.
+    for (const path of ["/inbox", "/you", "/settings", "/map"]) {
+      const { container, unmount } = renderAt(path);
+      expect(searchFields(container).length, `search on ${path}`).toBeGreaterThan(0);
+      unmount();
+    }
+  });
+
+  it("stands down on Home and Explore, where the page owns the one field", () => {
+    // Not a missing search: Home's hero and Explore's toolbar render the same
+    // `MarketplaceSearch`. Two fields on one screen was the complaint.
+    for (const path of ["/", "/explore", "/regions"]) {
+      const { container, unmount } = renderAt(path);
+      expect(searchFields(container).length, `no duplicate search on ${path}`).toBe(0);
+      unmount();
+    }
   });
 
   it("gives anything waiting its own bell with a count and an inbox route", () => {

@@ -7,13 +7,18 @@
  * the phone:
  *
  *   1. the location card is gone from first paint, but not gone — one press
- *      brings back the entire control (GPS, typed area, layer, sharing);
- *   2. categories are colour-coded, wrap, and are never a horizontal carousel;
- *   3. the colour a category has in the selector is the colour it has on the
- *      card that comes back from that filter;
- *   4. time and price are demoted behind "More filters", which counts what is
- *      on, and Clear resets everything;
- *   5. content and markets appear before the old wall of controls.
+ *      brings back the entire control (GPS, typed area, radius, layer);
+ *   2. the FIVE categories are colour-coded, wrap, and are never a carousel;
+ *   3. the colour a category has in the selector is the colour it has on
+ *      the card that comes back from that filter;
+ *   4. time, price and the posting types are demoted behind one door that
+ *      counts AND names what is on, and Clear resets everything;
+ *   5. content arrives before the furniture.
+ *
+ * What these specs deliberately do NOT ask for any more: a market strip, a
+ * row of posting types permanently on screen, a seven-tile category grid, or
+ * a second search field. Those were the "repeated surfaces" the brief asked
+ * to lose, and the screen is better without them.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
@@ -48,14 +53,6 @@ const ITEMS = [
   },
 ];
 
-const MARKET_ROW = {
-  id: "m1", name: "Kibuye Market", city: "Kisumu", country: "Kenya",
-  distance_km: 0.9, located: true, registered: 0, active_vendors: 0,
-  selling_vendors: 0, listings: 0, recent_vendors: 0, services: 0, equipment: 0,
-  last_activity_at: null, categories: [], empty: true,
-  invitation: "No trader has claimed Kibuye yet. If you trade here, be the first.",
-};
-
 const mocks = vi.hoisted(() => ({ setLocation: vi.fn(), feed: vi.fn() }));
 
 vi.mock("@/lib/api", () => ({
@@ -72,9 +69,11 @@ vi.mock("@/lib/api", () => ({
   marketsAPI: {
     around: vi.fn(() => ok({
       radius_km: 25, origin: { lat: -0.095, lng: 34.77 },
-      markets: [MARKET_ROW], active_count: 0, inviting_count: 1, wider: [], unlocated: [], note: null,
+      markets: [], active_count: 0, inviting_count: 0, wider: [], unlocated: [], note: null,
     })),
   },
+  serviceProviderAPI: { list: vi.fn(() => ok({ providers: [], count: 0, total: 0, limit: 24, filters: {}, note: "" })) },
+  spottedDealAPI: { list: vi.fn(() => ok([])) },
   geoAPI: { geocode: vi.fn(() => ok({ lat: -0.095, lng: 34.77 })) },
   apiError: (_e, fallback) => fallback,
 }));
@@ -100,8 +99,10 @@ describe("1 · the location card is compacted, not removed", () => {
   it("shows where you are as a pill and keeps the full controls one press away", async () => {
     await renderExplore();
 
-    // First paint: a pill, no card.
-    const pill = await screen.findByTestId("explore-place");
+    // First paint: ONE pill that says what the results are looking from, and
+    // no location card. The knob beside it chooses a region; the pill is the
+    // sentence about the scope, and it is the door to the full controls.
+    const pill = await screen.findByTestId("regions-scope-label");
     await waitFor(() => expect(pill).toHaveTextContent(/Kondele, Kisumu/i));
     expect(screen.queryByTestId("location-bar")).not.toBeInTheDocument();
     expect(pill).toHaveAttribute("aria-expanded", "false");
@@ -112,23 +113,26 @@ describe("1 · the location card is compacted, not removed", () => {
     expect(await screen.findByTestId("location-bar")).toBeInTheDocument();
   });
 
-  it("keeps the radius on one line instead of a row of large buttons", async () => {
+  it("keeps the radius one press away, on one line instead of a row of large buttons", async () => {
     await renderExplore();
-    await waitFor(() => expect(screen.getByTestId("explore-radius-15")).toHaveAttribute("aria-pressed", "true"));
+    fireEvent.click(await screen.findByTestId("regions-scope-label"));
 
-    fireEvent.click(screen.getByTestId("explore-radius-50"));
+    await waitFor(() =>
+      expect(screen.getByTestId("radius-15")).toHaveAttribute("aria-pressed", "true"));
+
+    fireEvent.click(screen.getByTestId("radius-50"));
     // The store merges the change into the saved location, so the call carries
     // the full record — the radius is what changed.
     await waitFor(() => expect(mocks.setLocation).toHaveBeenCalledWith(
       expect.objectContaining({ radius_km: 50 }),
     ));
     // The radius lives in the location store, so Explore does not keep a copy.
-    expect(screen.queryByTestId("location-bar")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("radius-15")).toHaveAttribute("aria-pressed", "false");
   });
 });
 
 describe("2 · categories are colour-coded and never a carousel", () => {
-  it("shows every category at once, in a wrapping grid", async () => {
+  it("shows every one of the five categories at once, in a wrapping grid", async () => {
     await renderExplore();
     const group = await screen.findByTestId("explore-categories");
 
@@ -136,24 +140,28 @@ describe("2 · categories are colour-coded and never a carousel", () => {
     expect(group.className).toMatch(/\bgrid\b/);
     expect(group.className).not.toMatch(/overflow-x|flex-nowrap|snap-x/);
 
-    for (const key of ["goods", "people", "services", "rentals", "events", "communities", "collections"]) {
+    for (const key of ["all", "goods", "services", "rentals", "events"]) {
       const tile = group.querySelector(`[data-category="${key}"]`);
       expect(tile, `${key} tile`).toBeTruthy();
-      expect(tile.getAttribute("aria-pressed")).toBe("false");
+      // Nothing is filtered yet, so only "All" is pressed.
+      expect(tile.getAttribute("aria-pressed")).toBe(key === "all" ? "true" : "false");
     }
+    // Five categories. Not seven, and not a second vocabulary.
+    expect(group.querySelectorAll("[data-category]")).toHaveLength(5);
   });
 
   it("gives each category its own restrained hue", async () => {
     await renderExplore();
     const group = await screen.findByTestId("explore-categories");
-    const washes = ["goods", "people", "services", "rentals"].map(
+    const washes = ["goods", "services", "rentals", "events"].map(
       (key) => group.querySelector(`[data-category="${key}"]`).className,
     );
-    // Four categories, four different background classes.
-    const bg = (cls) => (cls.match(/bg-\[#([0-9A-Fa-f]{6})\]/) || [])[1];
+    // Four categories, four different background classes…
+    const bg = (cls) => (cls.match(/bg-cat-[a-z-]+/) || [])[0];
     expect(new Set(washes.map(bg)).size).toBe(4);
-    // ...and none of them is a saturated brand block.
-    expect(washes.every((cls) => bg(cls))).toBe(true);
+    // …and every one of them is a soft wash from the shared palette, never a
+    // saturated brand block.
+    expect(washes.every((cls) => bg(cls) && bg(cls).endsWith("-soft"))).toBe(true);
   });
 
   it("carries the same hue onto the result that comes back", async () => {
@@ -166,7 +174,7 @@ describe("2 · categories are colour-coded and never a carousel", () => {
     const card = await screen.findByTestId("content-card-listing");
     const badge = card.querySelector('[data-tint="goods"]');
     expect(badge).toBeTruthy();
-    expect(badge.className).toMatch(/bg-\[#E8F2EC\]/);
+    expect(badge.className).toMatch(/bg-cat-goods-soft/);
     // A service result wears the services hue, not the goods one.
     const service = screen.getByTestId("content-card-service");
     expect(service.querySelector('[data-tint="services"]')).toBeTruthy();
@@ -174,10 +182,16 @@ describe("2 · categories are colour-coded and never a carousel", () => {
 });
 
 describe("3 · filters are consolidated, not deleted", () => {
-  it("keeps the posting types on one quiet row", async () => {
+  it("keeps the posting types behind the one filter door", async () => {
     await renderExplore();
+    // Nothing is permanently on screen: a screen showing five filter chips at
+    // all times shows none of them clearly.
+    expect(screen.queryByTestId("explore-type-available")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("explore-more-filters"));
+    const panel = await screen.findByTestId("explore-filter-panel");
     for (const key of ["all", "available", "wanted", "scheduled", "opportunity", "post"]) {
-      expect(screen.getByTestId(`explore-type-${key}`)).toBeInTheDocument();
+      expect(within(panel).getByTestId(`explore-type-${key}`)).toBeInTheDocument();
     }
     fireEvent.click(screen.getByTestId("explore-type-wanted"));
     await waitFor(() => expect(screen.getByTestId("explore-type-wanted")).toHaveAttribute("aria-pressed", "true"));
@@ -193,6 +207,8 @@ describe("3 · filters are consolidated, not deleted", () => {
     fireEvent.click(within(panel).getByRole("button", { name: /this weekend/i }));
 
     await waitFor(() => expect(screen.getByTestId("explore-more-filters")).toHaveTextContent("1"));
+    // It says what is on, not only how much: a filter hidden behind a number
+    // is a filter nobody can find.
     expect(screen.getByTestId("explore-more-filters")).toHaveTextContent(/this weekend/i);
   });
 
@@ -204,24 +220,23 @@ describe("3 · filters are consolidated, not deleted", () => {
     fireEvent.click(await screen.findByRole("button", { name: /today/i }));
     await waitFor(() => expect(screen.getByTestId("explore-more-filters")).toHaveTextContent("1"));
 
-    fireEvent.click(screen.getByTestId("explore-clear"));
+    fireEvent.click(screen.getByTestId("explore-clear-all"));
     await waitFor(() => expect(screen.getByTestId("explore-kind-listing")).toHaveAttribute("aria-pressed", "false"));
     expect(screen.getByTestId("explore-more-filters")).not.toHaveTextContent("1");
-    expect(screen.queryByTestId("explore-clear")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("explore-clear-all")).not.toBeInTheDocument();
   });
 });
 
 describe("4 · content arrives earlier", () => {
-  it("puts categories and markets above the feed, and the feed above nothing", async () => {
+  it("puts the categories above the results, and the results above nothing", async () => {
     await renderExplore();
     const categories = await screen.findByTestId("explore-categories");
-    const markets = await screen.findByTestId("market-strip");
     const card = await screen.findByTestId("content-card-listing");
 
-    // Document order is reading order: categories → markets → results.
-    expect(within(markets).getAllByTestId("market-strip-row").length).toBeGreaterThan(0);
-    expect(categories.compareDocumentPosition(markets) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(markets.compareDocumentPosition(card) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // Document order is reading order: categories → results.
+    expect(categories.compareDocumentPosition(card) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // The market strip is gone: a market is a place you go to, not a feed.
+    expect(screen.queryByTestId("market-strip")).not.toBeInTheDocument();
   });
 
   it("no longer opens with a three-line introduction", async () => {
