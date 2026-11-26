@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
-import { Link, NavLink, useLocation } from "react-router-dom";
+import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { Bell, Menu, Search, X } from "lucide-react";
 import Logo from "./Logo";
-import GlobalSearch from "./GlobalSearch";
 import AccountMenu from "./AccountMenu";
+import MarketplaceSearch from "@/components/search/MarketplaceSearch";
 import { isPrimaryActive, PRIMARY_TABS } from "@/config/navigation";
 import { useAuthStore } from "@/stores/authStore";
 import { useOutsideStore } from "@/stores/outsideStore";
 import { useUIStore } from "@/stores/uiStore";
+import { resultsHref } from "@/config/searchCategories";
 import { cn } from "@/lib/utils";
 
 /**
@@ -15,10 +16,13 @@ import { cn } from "@/lib/utils";
  *
  * The brief asks for a compact bar and this is it. What changed:
  *
- *   · **Search is always present.** It used to appear only off Home, on the
- *     theory that Home was the place you browsed. That was wrong: Home is where
- *     a person most often knows exactly what they want. A search box that hides
- *     on the busiest screen is a search box that is not there.
+ *   · **A search is never missing, and never doubled.** The header keeps the
+ *     field on every screen that does not own one. Home and Explore own theirs
+ *     in the page, where the person is already looking — and on those two the
+ *     header stands down, because two fields answering the same question on
+ *     one screen is the "repeated search area" this app was asked to lose.
+ *     The header's field keeps the historic `global-search-` id so anything
+ *     that reached for it still finds it.
  *   · **A bell, not a menu item.** Anything waiting on a reply is an action, so
  *     it gets an icon with a count and a route to the Inbox, rather than being
  *     one line inside an account dropdown.
@@ -38,6 +42,7 @@ export default function AppHeader() {
   const activity = useOutsideStore((s) => s.activity);
   const loadActivity = useOutsideStore((s) => s.loadActivity);
   const { pathname } = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!activity) loadActivity();
@@ -57,15 +62,19 @@ export default function AppHeader() {
 
   // The shopfront keeps one warm chrome across its header, so the catalogue
   // does not open under a cool grey bar that belongs to the trade screens.
-  const isDiscovery = pathname === "/regions" || pathname.startsWith("/regions/") || pathname.startsWith("/discover");
+  const isDiscovery = pathname === "/regions" || pathname.startsWith("/regions/")
+    || pathname.startsWith("/explore") || pathname.startsWith("/discover");
+  const isHome = pathname === "/" || pathname === "/home";
 
-  // ONE SEARCH, NOT TWO. On the discovery routes the page owns a persistent
-  // search of its own — the region shelf's own field, which filters the
-  // results in place. The header field routes the same words to the same
-  // screen, so keeping both on screen meant two search boxes answering the
-  // same question, and the review was right to call that repeated search
-  // areas. On the discovery routes the page's field is the one.
-  const showHeaderSearch = !isDiscovery;
+  // ONE SEARCH, NOT TWO — and never zero.
+  //
+  // Home and Explore each own a search of their own, and they own it in the
+  // page, where the person is already looking. The header field routes the
+  // same words to the same results screen, so keeping both on screen meant
+  // two search boxes answering the same question — which is what "repeated
+  // search areas" meant. On those two screens the page's field is the one.
+  // Everywhere else the header keeps it, so a search is never missing.
+  const showHeaderSearch = !isDiscovery && !isHome;
 
   return (
     <header
@@ -94,7 +103,16 @@ export default function AppHeader() {
           {/* The field is the widest thing in the row on every screen, which is
               what "compact logo + search + bell + profile" asks for. */}
           {showHeaderSearch && (
-            <GlobalSearch className="ml-0.5 hidden min-w-0 flex-1 md:flex md:max-w-[22rem] lg:max-w-[26rem]" />
+            <MarketplaceSearch
+              enableShortcut
+              idPrefix="global-search-"
+              className="ml-0.5 hidden min-w-0 flex-1 md:flex md:max-w-[22rem] lg:max-w-[26rem]"
+              variant="compact"
+              showCategories={false}
+              placeholder="Search the marketplace"
+              aria-label="Search everything"
+              onSubmit={(term) => navigate(resultsHref({ q: term }))}
+            />
           )}
 
           <nav aria-label="Primary" className="ml-auto hidden items-center gap-0.5 lg:flex">
@@ -167,7 +185,18 @@ export default function AppHeader() {
 
       {showHeaderSearch && mobileSearch && (
         <div id="mobile-search" className="animate-slide-down border-t border-edge-1 bg-surface-0 px-4 py-3 md:hidden">
-          <GlobalSearch autoFocus onSubmitted={() => setMobileSearch(false)} />
+          <MarketplaceSearch
+            enableShortcut
+            idPrefix="global-search-"
+            variant="compact"
+            showCategories={false}
+            placeholder="Search the marketplace"
+            aria-label="Search everything"
+            onSubmit={(term) => {
+              setMobileSearch(false);
+              navigate(resultsHref({ q: term }));
+            }}
+          />
         </div>
       )}
     </header>

@@ -1,13 +1,25 @@
 /**
- * DISCOVER IS A MERCHANDISING FEED, NOT A FILTER PANEL.
+ * DISCOVER IS THE SAME MARKETPLACE, REACHED BY A SHAREABLE PATH.
  *
- * These specs pin the conversion layout and the rules that keep it honest:
+ * "Discover" was a second marketplace: a regional spotlight with invented
+ * statistics, a mandatory "Featured & Trending" grid, intent chips, a saved
+ * pill inside a custom category strip, and a services door that showed a mixed
+ * feed. The review asked for one marketplace — so Discover is now a set of
+ * ADDRESSES into Explore, and the address decides the filters.
  *
- *   · a spotlight built only from live records;
- *   · a Featured & Trending grid that needs three real items and never fakes one;
- *   · the strict Level 3+ door falling back to Level 2+, then to an all-levels rail;
- *   · smart category routes that are URL-bound and deep-linkable;
- *   · saves held on this device, with no server signal.
+ * What is still worth pinning, and is pinned here:
+ *
+ *   · a section path becomes query state, so a link is shareable;
+ *   · an explicit query in the URL wins over the path's default;
+ *   · one search, one category grid, no second marketplace furniture;
+ *   · a save is held on this device and opens the Saved route;
+ *   · the Services door is a provider directory, not a filtered feed;
+ *   · a quiet page falls back honestly instead of dead-ending.
+ *
+ * What is deliberately NOT pinned any more: the spotlight, the featured grid,
+ * intent chips, the market strip and the seven-category strip. They were
+ * removed by the brief, and a spec that keeps asking for them keeps a product
+ * the review already rejected.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
@@ -54,11 +66,6 @@ const ITEMS = [
   {
     id: "r-1", kind: "rental", to: "/rentals/r-1", title: "Tent hire for a round",
     category: "rentals", location: "Kondele", price_kes: 1500, distance_km: 4.1,
-    owner: highOwner, counts: {}, meta: {},
-  },
-  {
-    id: "p-1", kind: "person", to: "/p/milimani", title: "Milimani Cereals",
-    category: "bulk groceries", location: "Kisumu central", distance_km: 2.0,
     owner: highOwner, counts: {}, meta: {},
   },
 ];
@@ -118,58 +125,40 @@ function setFeed(items) {
     ok({ items, next_cursor: null, center: {}, location: LOCATION }));
 }
 
-describe("1 · spotlight and featured merchandising", () => {
-  it("opens with the region card and a three-card Featured & Trending grid", async () => {
+describe("1 · one marketplace, not a second one", () => {
+  it("opens like the Explore screen: one search, one category grid, one deck", async () => {
     await renderDiscover();
-    const spotlight = await screen.findByTestId("region-spotlight");
-    expect(within(spotlight).getByRole("heading", { name: /Nyanza/i })).toBeInTheDocument();
+    await screen.findByTestId("discover-masthead");
 
-    const featured = await screen.findByTestId("discover-featured");
-    expect(within(featured).getByText("Featured & Trending")).toBeInTheDocument();
-    expect(within(featured).getAllByTestId(/^content-card-/)).toHaveLength(3);
-    expect(within(featured).getAllByTestId("region-card-distance")).toHaveLength(3);
-    expect(within(featured).getAllByTestId("region-card-distance")[0]).toHaveTextContent("1.2 km");
-    // The three featured items leave the dense grid rather than repeating there.
-    // The person record no longer comes to Discover at all: five fixtures minus
-    // a person minus three featured leaves exactly one dense card.
-    expect(within(screen.getByTestId("regions-grid")).getAllByTestId(/^content-card-/)).toHaveLength(1);
-  });
-
-  it("opens like a region shelf: identity, one search, categories and a deck", async () => {
-    await renderDiscover();
-    const spotlight = await screen.findByTestId("region-spotlight");
-    expect(within(spotlight).getByText(/Kenya/)).toBeInTheDocument();
-    // The old 2×2 trust wall is gone; the four facts live behind the ? button.
-    expect(screen.queryByLabelText("How this marketplace works")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByTestId("discover-how-it-works-button"));
-    const works = await screen.findByRole("dialog", { name: /how wasta works/i });
-    expect(within(works).getByText("No paid placement")).toBeInTheDocument();
-    expect(within(works).getByText("Trade on record")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Categories" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "What’s on offer" })).toBeInTheDocument();
-    expect(screen.getByLabelText("Sort results")).toBeInTheDocument();
-    // One live search, and it lives in the bar that sticks under the app header.
-    const toolbar = screen.getByTestId("discover-toolbar");
-    expect(toolbar.className).toMatch(/sticky/);
-    expect(within(toolbar).getByRole("searchbox", { name: /search everything/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Explore" })).toBeInTheDocument();
     expect(screen.getAllByRole("searchbox", { name: /search everything/i })).toHaveLength(1);
+    const grid = screen.getByTestId("explore-categories");
+    for (const label of ["All", "Goods", "Services", "Rentals", "Events"]) {
+      expect(within(grid).getByRole("button", { name: label })).toBeInTheDocument();
+    }
+    expect(screen.getByTestId("discover-shop-toolbar")).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Sort results" })).toBeInTheDocument();
+
+    // The second marketplace's furniture is gone.
+    expect(screen.queryByTestId("region-spotlight")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("discover-featured")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("discover-category-person")).not.toBeInTheDocument();
   });
 
-  it("turns the category grid into real URL filters, with no duplicate search", async () => {
+  it("turns the category grid into real URL filters", async () => {
     await renderDiscover();
     const grid = await screen.findByTestId("explore-categories");
-    expect(screen.getAllByRole("searchbox", { name: /search everything/i })).toHaveLength(1);
 
-    fireEvent.click(within(grid).getByRole("button", { name: "Rounds" }));
-    await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("kind=rounds"));
-    expect(screen.getByTestId("discover-category-rounds")).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(within(grid).getByRole("button", { name: "Events" }));
+    await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("kind=event"));
+    expect(screen.getByTestId("explore-kind-event")).toHaveAttribute("aria-pressed", "true");
 
-    fireEvent.click(screen.getByTestId("discover-category-rounds"));
-    await waitFor(() => expect(screen.getByTestId("location").textContent).not.toContain("kind=rounds"));
-    expect(screen.getByTestId("discover-category-rounds")).toHaveAttribute("aria-pressed", "false");
+    fireEvent.click(screen.getByTestId("explore-kind-event"));
+    await waitFor(() => expect(screen.getByTestId("location").textContent).not.toContain("kind=event"));
+    expect(screen.getByTestId("explore-kind-event")).toHaveAttribute("aria-pressed", "false");
   });
 
-  it("clears the sticky search and sale door together when the shelf resets", async () => {
+  it("clears the search and the category together when the deck resets", async () => {
     await renderDiscover("/discover?q=rice&kind=listing&public_sale=true");
     const search = await screen.findByRole("searchbox", { name: /search everything/i });
     expect(search).toHaveValue("rice");
@@ -178,72 +167,42 @@ describe("1 · spotlight and featured merchandising", () => {
     await waitFor(() => expect(search).toHaveValue(""));
     const location = screen.getByTestId("location").textContent;
     expect(location).not.toContain("q=rice");
-    expect(location).not.toContain("public_sale=true");
     expect(location).not.toContain("kind=listing");
+    expect(location).not.toContain("public_sale=true");
   });
 
-  it("counts the region from the records it holds, and says where they came from", async () => {
-    await renderDiscover();
-    const spotlight = await screen.findByTestId("region-spotlight");
-    // Five fixtures: a round, a listing, a service, a rental and a person.
-    // One listing, two owners, three offers — and the note says they came
-    // from the loaded page rather than from the region.
-    expect(within(spotlight).getByTestId("region-metric-listings")).toHaveTextContent("1");
-    expect(within(spotlight).getByTestId("region-metric-businesses")).toHaveTextContent("2");
-    expect(within(spotlight).getByTestId("region-metric-offers")).toHaveTextContent("3");
-    expect(within(spotlight).getByTestId("region-metrics-note")).toHaveTextContent(/results loaded/i);
-    // The region has a clear action of its own.
-    expect(within(spotlight).getByTestId("region-open")).toHaveAttribute("href", "/regions/nyanza");
-    expect(within(spotlight).getByTestId("region-post")).toBeInTheDocument();
-  });
-
-  it("keeps the deck's count tied to what is on screen", async () => {
+  it("counts what is on the screen, and says so", async () => {
     await renderDiscover();
     const deck = await screen.findByTestId("discover-shop-toolbar");
     await waitFor(() =>
-      expect(within(deck).getByTestId("explore-count")).toHaveTextContent(/results loaded/i));
+      expect(within(deck).getByTestId("explore-count")).toHaveTextContent(/4 results loaded/i));
   });
 
-  it("gives every product card a share action and a real price plate", async () => {
+  it("gives every product card a share action and a level chip", async () => {
     await renderDiscover();
-    const grid = await screen.findByTestId("regions-grid");
+    const grid = await screen.findByTestId("explore-results");
     const card = within(grid).getAllByTestId(/^content-card-/)[0];
     expect(within(card).getByTestId("region-card-share")).toBeInTheDocument();
     expect(within(card).getByTestId("region-card-level")).toBeInTheDocument();
   });
 
-  it("asks the server for one category only instead of filtering a mixed feed on screen", async () => {
+  it("asks the server for the category's kinds instead of filtering a mixed feed on screen", async () => {
     await renderDiscover("/discover?kind=event");
-    await waitFor(() => expect(mocks.feed).toHaveBeenCalledWith(expect.objectContaining({ kinds: ["event"] })));
-    expect(screen.queryByTestId("discover-category-person")).not.toBeInTheDocument();
-  });
-
-  it("does not fake a featured grid with fewer than three items", async () => {
-    setFeed(ITEMS.slice(0, 2));
-    await renderDiscover();
-    await screen.findByTestId("regions-grid");
-    expect(screen.queryByTestId("discover-featured")).not.toBeInTheDocument();
-    expect(within(screen.getByTestId("regions-grid")).getAllByTestId(/^content-card-/)).toHaveLength(2);
+    await waitFor(() => expect(mocks.feed).toHaveBeenCalledWith(expect.objectContaining({ kinds: ["event", "scheduled"] })));
   });
 });
 
-describe("2 · the saved strip and device-local favourites", () => {
-  it("keeps Saved in the grid as a route, not a filter", async () => {
+describe("2 · the saved shelf is device-local, and is a route", () => {
+  it("is reachable from the screen as a link, not a filter", async () => {
     await renderDiscover();
-    const strip = await screen.findByTestId("explore-categories");
-    const saved = within(strip).getByTestId("discover-saved-pill");
+    const saved = await screen.findByTestId("discover-saved-pill");
     expect(saved).toHaveAttribute("href", "/discover/favorites");
     expect(saved.querySelector("svg")).toBeTruthy();
-    expect(within(strip).getByTestId("explore-kind-listing").querySelector("svg")).toBeTruthy();
-
-    fireEvent.click(within(strip).getByRole("button", { name: /goods/i }));
-    await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("/discover/goods"));
-    await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("kind=listing"));
   });
 
   it("saves a card on this device and opens the Saved route", async () => {
     await renderDiscover();
-    const grid = await screen.findByTestId("regions-grid");
+    const grid = await screen.findByTestId("explore-results");
     const card = within(grid).getAllByTestId(/^content-card-/)[0];
     const save = within(card).getByTestId("merch-card-save");
     expect(save).toHaveAttribute("aria-pressed", "false");
@@ -259,19 +218,19 @@ describe("2 · the saved strip and device-local favourites", () => {
   });
 });
 
-describe("3 · smart category routes", () => {
-  it("maps /discover/goods to offers and public sales", async () => {
+describe("3 · smart category routes are query state", () => {
+  it("maps /discover/goods to goods", async () => {
     await renderDiscover("/discover/goods");
-    await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("/discover/goods"));
     await waitFor(() => {
       const text = screen.getByTestId("location").textContent;
       expect(text).toContain("kind=listing");
-      expect(text).toContain("intent=offers");
       expect(text).toContain("public_sale=true");
+      // The path may not invent an intent the server does not understand.
+      expect(text).not.toContain("intent=");
     });
   });
 
-  it("maps /discover/rentals and /discover/trending", async () => {
+  it("maps /discover/rentals to rentals", async () => {
     await renderDiscover("/discover/rentals");
     await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("kind=rental"));
   });
@@ -281,24 +240,39 @@ describe("3 · smart category routes", () => {
     await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("feed=trending"));
   });
 
+  it("maps /discover/verified to the standing door", async () => {
+    await renderDiscover("/discover/verified");
+    await waitFor(() => {
+      const text = screen.getByTestId("location").textContent;
+      expect(text).toContain("trust=3");
+      expect(text).toContain("min_level=3");
+    });
+  });
+
   it("lets an explicit query win over the path default", async () => {
     await renderDiscover("/discover/goods?kind=rental&public_sale=false");
     await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("kind=rental"));
     expect(screen.getByTestId("location").textContent).toContain("public_sale=false");
     expect(screen.getByTestId("location").textContent).not.toContain("public_sale=true");
   });
+});
 
-  it("opens the Services door as a provider directory", async () => {
+describe("4 · the Services door is a provider directory", () => {
+  it("shows providers, never the mixed feed, and no dead filters", async () => {
     await renderDiscover("/discover/services");
     await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("kind=service"));
     expect(await screen.findByTestId("service-providers-empty")).toBeInTheDocument();
+    // Time, price, radius and standing do not apply to a provider list, so the
+    // screen does not offer them.
     expect(screen.queryByTestId("explore-more-filters")).not.toBeInTheDocument();
     expect(screen.queryByTestId("regions-trust")).not.toBeInTheDocument();
+    // …and it does not quietly fall back to a mixed feed.
+    expect(screen.queryByTestId("explore-results")).not.toBeInTheDocument();
   });
 });
 
-describe("4 · cold-start backfill", () => {
-  it("shows nearby Level 1–2 pages at 50 km instead of an empty page", async () => {
+describe("5 · a quiet page falls back honestly", () => {
+  it("shows a wider search instead of an empty page, clearly labelled", async () => {
     const nearby = {
       ...ITEMS[2],
       id: "s-nearby",
@@ -320,35 +294,18 @@ describe("4 · cold-start backfill", () => {
     expect(within(cold).getByRole("heading", { name: /Popular in .*all levels/i })).toBeInTheDocument();
     expect(within(cold).getByText("Village tailor")).toBeInTheDocument();
     expect(within(cold).getByTestId("region-card-distance")).toHaveTextContent("42.0 km");
+    // Those records are further out, and the screen says so.
+    expect(within(cold).getByText(/These are further out/i)).toBeInTheDocument();
     expect(screen.queryByTestId("explore-empty")).not.toBeInTheDocument();
   });
-});
 
-describe("5 · the Level 3+ door never dead-ends", () => {
-  it("falls back to Level 2+ when fewer than four Level 3 traders exist", async () => {
-    setFeed(ITEMS.slice(0, 4));
-    await renderDiscover("/discover/verified");
-    await waitFor(() => {
-      const text = screen.getByTestId("location").textContent;
-      expect(text).toContain("trust=3");
-      expect(text).toContain("min_level=3");
-    });
-    const featured = await screen.findByTestId("discover-featured");
-    expect(within(featured).getByText("School uniform tailoring")).toBeInTheDocument();
-    expect(
-      within(featured).getAllByTestId("region-card-level").some((node) => node.textContent === "Lvl 2"),
-    ).toBe(true);
-    expect(screen.queryByTestId("explore-filtered-empty")).not.toBeInTheDocument();
-  });
-
-  it("shows an all-levels Popular rail instead of a dead end", async () => {
+  it("shows the honest all-levels rail when a strict standing door finds nothing", async () => {
     setFeed([{ ...ITEMS[2], owner: { ...lowOwner, contact_exposed: false } }]);
     await renderDiscover("/discover/verified");
     const fallback = await screen.findByTestId("explore-filtered-empty");
     expect(within(fallback).getByText(/No Level 3\+ traders here yet/)).toBeInTheDocument();
-    expect(within(fallback).getByRole("heading", { name: /Popular in .*all levels/i })).toBeInTheDocument();
 
     fireEvent.click(within(fallback).getByRole("button", { name: /show every page/i }));
-    await waitFor(() => expect(screen.getByTestId("regions-grid")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByTestId("explore-results")).toBeInTheDocument());
   });
 });

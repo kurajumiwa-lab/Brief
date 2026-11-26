@@ -54,6 +54,9 @@ export default {
         // outside the brand family. `-soft` is the chip background, the
         // DEFAULT is the icon or border, `-text` is a label on the tint.
         cat: {
+          all: token("cat-all"),
+          "all-soft": token("cat-all-soft"),
+          "all-text": token("cat-all-text"),
           goods: token("cat-goods"),
           "goods-soft": token("cat-goods-soft"),
           "goods-text": token("cat-goods-text"),

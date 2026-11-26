@@ -407,7 +407,7 @@ describe("Location awareness", () => {
   it("accepts a typed location, so GPS is never required", async () => {
     const LocationBar = await Bar();
     renderAt("/", <LocationBar />);
-    fireEvent.click(screen.getByRole("button", { name: /^change$/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^options$/i }));
     fireEvent.change(await screen.findByTestId("location-input"), { target: { value: "Milimani, Kisumu" } });
     fireEvent.click(screen.getByRole("button", { name: /^save$/i }));
 
@@ -419,7 +419,7 @@ describe("Location awareness", () => {
   it("reads a pasted Google/WhatsApp pin without geocoding it", async () => {
     const LocationBar = await Bar();
     renderAt("/", <LocationBar />);
-    fireEvent.click(screen.getByRole("button", { name: /^change$/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^options$/i }));
     fireEvent.change(await screen.findByTestId("location-input"), {
       target: { value: "https://maps.google.com/?q=-0.0917,34.7680" },
     });
@@ -435,7 +435,7 @@ describe("Location awareness", () => {
   it("never turns on location sharing by default", async () => {
     const LocationBar = await Bar();
     renderAt("/", <LocationBar />);
-    fireEvent.click(screen.getByRole("button", { name: /^change$/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^options$/i }));
     const share = await screen.findByRole("checkbox", { name: /show me on the nearby shelf/i });
     expect(share).not.toBeChecked();
     expect(screen.getByText(/Off by default/i)).toBeInTheDocument();

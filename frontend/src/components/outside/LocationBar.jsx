@@ -23,11 +23,17 @@ import { parsePin } from "@/lib/geoPin";
  *     about Outside requires a location permission.
  *   · The radius is a filter, not a wall. Widening it adds content; it never
  *     hides unlocated content, which is enforced on the server.
+ *
+ * The permission itself is asked for from the store (`requestGps`), so the
+ * three outcomes — granted, declined, unavailable — are classified in one
+ * place and every screen tells the same story about them. A refusal is
+ * reported here; it is never answered with a substitute location.
  */
 export default function LocationBar({ className, showRadius = true }) {
   const location = useOutsideStore((s) => s.location);
   const loadLocation = useOutsideStore((s) => s.loadLocation);
   const setLocation = useOutsideStore((s) => s.setLocation);
+  const requestGps = useOutsideStore((s) => s.requestGps);
   const status = useOutsideStore((s) => s.locationStatus);
 
   const [editing, setEditing] = useState(false);
@@ -48,33 +54,20 @@ export default function LocationBar({ className, showRadius = true }) {
    * spent on first paint.
    */
   const useMyLocation = async () => {
-    if (!navigator?.geolocation) {
-      toast.error("This browser can't share a location — type your area instead.");
+    setLocating(true);
+    const result = await requestGps();
+    setLocating(false);
+    if (result.ok) {
+      toast.success("Showing what's around you.");
       return;
     }
-    setLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const saved = await setLocation({
-          geo_lat: pos.coords.latitude,
-          geo_lng: pos.coords.longitude,
-          source: "gps",
-          label: null,
-        });
-        setLocating(false);
-        if (saved) {
-          setEditing(false);
-          toast.success("Showing what's around you.");
-        } else {
-          toast.error("Couldn't save that location. Try typing your area.");
-        }
-      },
-      () => {
-        setLocating(false);
-        toast.error("Location permission declined — that's fine, type your area instead.");
-      },
-      { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 },
-    );
+    if (result.reason === "denied") {
+      toast.error("Location permission declined — type your area instead.");
+    } else if (result.reason === "unavailable") {
+      toast.error("This browser can't share a location — type your area instead.");
+    } else {
+      toast.error("Couldn't save that location. Try typing your area.");
+    }
   };
 
   const saveTyped = async () => {
@@ -134,7 +127,7 @@ export default function LocationBar({ className, showRadius = true }) {
           className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-edge-2 px-3 text-xs font-semibold text-ink-2 transition-colors hover:bg-surface-2"
         >
           <SlidersHorizontal size={14} aria-hidden="true" />
-          {editing ? "Close" : "Change"}
+          {editing ? "Close" : "Options"}
         </button>
       </div>
 
@@ -151,7 +144,7 @@ export default function LocationBar({ className, showRadius = true }) {
                 onClick={() => setLocation({ radius_km: option.value })}
                 data-testid={`radius-${option.value}`}
                 className={cn(
-                  "inline-flex h-8 items-center rounded-full border px-3 text-2xs font-semibold transition-colors",
+                  "inline-flex h-9 items-center rounded-full border px-3 text-2xs font-semibold transition-colors",
                   active
                     ? "border-brand-500 bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300"
                     : "border-edge-2 text-ink-3 hover:border-ink-4 hover:text-ink-1",
@@ -165,27 +158,46 @@ export default function LocationBar({ className, showRadius = true }) {
         </div>
       )}
 
+      {/* The typed area and the device button are ALWAYS here. A person who
+          refuses the permission must not have to hunt for the alternative. */}
+      <div className="mt-3 flex flex-wrap items-end gap-2 border-t border-edge-1 pt-3">
+        <Input
+          label="Your area"
+          wrapperClassName="min-w-0 flex-1"
+          value={label}
+          onChange={(e) => setLabel(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") saveTyped(); }}
+          placeholder="Kondele, Kisumu or paste a map pin"
+          hint="A neighbourhood, a town, a venue, or a Google/WhatsApp map link."
+          data-testid="location-input"
+        />
+        <Button onClick={saveTyped} loading={locating} disabled={locating}>
+          Save
+        </Button>
+        <Button variant="secondary" icon={Crosshair} onClick={useMyLocation} loading={locating}>
+          Use my location
+        </Button>
+      </div>
+
+      {status === "denied" && (
+        <p role="status" data-testid="location-denied" className="mt-2 text-2xs font-semibold text-accent-700">
+          Location permission declined — type your area instead.
+        </p>
+      )}
+      {status === "unavailable" && (
+        <p role="status" data-testid="location-unavailable" className="mt-2 text-2xs font-semibold text-accent-700">
+          This device can&apos;t share a location — type your area instead.
+        </p>
+      )}
+      {status === "error" && (
+        <p role="alert" className="mt-2 flex items-center gap-1.5 text-2xs font-medium text-danger">
+          <X size={12} aria-hidden="true" />
+          That didn&apos;t save. Your previous area is still in use.
+        </p>
+      )}
+
       {editing && (
         <div className="mt-3 space-y-3 border-t border-edge-1 pt-3">
-          <div className="flex flex-wrap items-end gap-2">
-            <Input
-              label="Your area"
-              wrapperClassName="min-w-0 flex-1"
-              value={label}
-              onChange={(e) => setLabel(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") saveTyped(); }}
-              placeholder="Kondele, Kisumu or paste a map pin"
-              hint="A neighbourhood, a town, a venue, or a Google/WhatsApp map link."
-              data-testid="location-input"
-            />
-            <Button onClick={saveTyped} loading={locating} disabled={locating}>
-              Save
-            </Button>
-            <Button variant="secondary" icon={Crosshair} onClick={useMyLocation} loading={locating}>
-              Use my location
-            </Button>
-          </div>
-
           <Select
             label="How wide should we look?"
             options={LAYERS}
@@ -208,13 +220,6 @@ export default function LocationBar({ className, showRadius = true }) {
               </span>
             </span>
           </label>
-
-          {status === "error" && (
-            <p role="alert" className="flex items-center gap-1.5 text-2xs font-medium text-danger">
-              <X size={12} aria-hidden="true" />
-              That didn't save. Your previous area is still in use.
-            </p>
-          )}
         </div>
       )}
     </section>

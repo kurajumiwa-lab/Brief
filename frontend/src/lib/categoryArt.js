@@ -58,6 +58,21 @@ export const priceLabel = (value) => {
   return `KSh ${new Intl.NumberFormat("en-KE").format(amount)}`;
 };
 
+/**
+ * THE PRICE ON A LISTING CARD.
+ *
+ * A seller who has not set a price has not set one. The card says so
+ * ("Price on request") rather than filling the space with a guess or with a
+ * bare "Open", which reads like a button and tells a buyer nothing about
+ * whether a price exists. It is still the truth: nothing is invented.
+ */
+export const listingPrice = (value) => {
+  if (value === null || value === undefined || value === "") return "Price on request";
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) return "Price on request";
+  return `KSh ${new Intl.NumberFormat("en-KE").format(amount)}`;
+};
+
 export const momentumLabel = (item = {}) => {
   const joined = Number(item.counts?.booked ?? item.counts?.attending ?? item.counts?.responses ?? 0);
   const capacity = Number(item.meta?.capacity || 0);

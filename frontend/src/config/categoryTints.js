@@ -1,112 +1,104 @@
 import {
-  CalendarDays, ClipboardList, Layers, MessageSquare, Package, Truck,
-  Users, UsersRound, Wrench,
+  CalendarDays, ClipboardList, Layers, MessageSquare, Package, Truck, Wrench,
 } from "lucide-react";
 
 /**
- * CATEGORY COLOUR — one vocabulary, every surface.
+ * CATEGORY COLOUR — one vocabulary, five categories, one palette.
  *
  * A category is not a filter button that happens to be green. "Services" is
- * pale blue in the Explore selector, pale blue on the card that comes back from
- * that filter, and pale blue on a market's door list. If a person learns the
- * colour once, it keeps paying them back every time it appears — which is the
- * whole point of a visual language rather than decoration.
+ * the same wash on the Explore selector, on the card that comes back from that
+ * filter, and on the Home grid. If a person learns the colour once, it keeps
+ * paying them back every time it appears.
  *
- * The hues are deliberately restrained: a pastel wash and a darker matching
- * ink of the same family, never a saturated block. Everything below is a static
- * class string so Tailwind can see it at build time; arbitrary values are used
- * because these colours are not part of the marketplace's brand ramp.
+ * The brief asked for ONE palette — forest green, terracotta, warm ivory,
+ * sage, charcoal — and for a product that no longer reads as a dozen
+ * competing features. So the categories stopped inventing hues of their own:
+ * they borrow from the palette that is already there.
+ *
+ *   All       neutral stone    — the unfiltered feed
+ *   Goods     terracotta       — the brief's second voice
+ *   Services  forest green     — the brief's identity colour
+ *   Rentals   forest on sage   — the brief's sage ground
+ *   Events    warm clay        — the only warm neutral left
+ *
+ * Every wash is low-chroma and every ink clears 4.5:1 on its own wash
+ * (measured in src/test/contrast.test.js). Colours come from `--cat-*`
+ * tokens, so the palette lives in exactly one file and this one names no hex.
  *
  * `wash`  — the background of a tile or badge
  * `ink`   — the matching text and icon colour; also the selection ring, via
  *           `ring-current`, so one value drives both
- * `dot`   — the solid colour, for a 4px marker where a wash would be too loud
+ * `dot`   — the solid colour, for a marker where a wash would be too loud
  */
 const hue = (label, icon, wash, ink, dot) => ({ label, icon, wash, ink, dot });
 
 export const CATEGORY_TINTS = {
+  all: hue(
+    "All", Layers,
+    "bg-cat-all-soft",
+    "text-cat-all-text",
+    "#4A4A46",
+  ),
   goods: hue(
     "Goods", Package,
-    "bg-[#E8F2EC] dark:bg-[#17332A]",
-    "text-[#276A49] dark:text-[#A9D9BF]",
-    "#276A49",
-  ),
-  people: hue(
-    "People", Users,
-    "bg-[#EAEAF8] dark:bg-[#232244]",
-    "text-[#5953A5] dark:text-[#BEB9F1]",
-    "#5953A5",
+    "bg-cat-goods-soft",
+    "text-cat-goods-text",
+    "#D95336",
   ),
   services: hue(
     "Services", Truck,
-    "bg-[#E6F1F7] dark:bg-[#16303A]",
-    "text-[#36738E] dark:text-[#A6D3E6]",
-    "#36738E",
+    "bg-cat-services-soft",
+    "text-cat-services-text",
+    "#123B32",
   ),
-  equipment: hue(
-    "Equipment", Wrench,
-    "bg-[#F5EEE2] dark:bg-[#33291B]",
-    "text-[#7E5D2C] dark:text-[#E3C58E]",
-    "#7E5D2C",
+  rentals: hue(
+    "Rentals", Wrench,
+    "bg-cat-rentals-soft",
+    "text-cat-rentals-text",
+    "#123B32",
   ),
   events: hue(
     "Events", CalendarDays,
-    "bg-[#F4EAF0] dark:bg-[#33222B]",
-    "text-[#99516F] dark:text-[#E7B0C8]",
-    "#99516F",
-  ),
-  communities: hue(
-    "Communities", UsersRound,
-    "bg-[#E9EFF0] dark:bg-[#223033]",
-    "text-[#526D70] dark:text-[#B7D2D4]",
-    "#526D70",
-  ),
-  collections: hue(
-    "Collections", Layers,
-    "bg-[#EFEFE7] dark:bg-[#2B2E22]",
-    "text-[#63654B] dark:text-[#CACEA7]",
-    "#63654B",
-  ),
-  rentals: hue(
-    "Rentals", Truck,
-    "bg-[#EDEDF4] dark:bg-[#25263A]",
-    "text-[#5D6180] dark:text-[#B5B9D7]",
-    "#5D6180",
+    "bg-cat-events-soft",
+    "text-cat-events-text",
+    "#7C5A1E",
   ),
 
-  /* The four local posting types, plus a plain post. These are not categories
-     — they describe what a person is doing, not what the thing is — but they
-     appear on the same cards, so they share the vocabulary instead of
-     inventing a second one. */
+  /* The local posting types. These are not categories — they describe what a
+     person is doing, not what the thing is — but they appear on the same
+     cards, so they share the vocabulary instead of inventing a second one.
+     "Available" is an offer, so it wears Goods. A "Round" is an event, so it
+     wears Events. Everything else is neutral: a request or a post is not a
+     thing for sale and must not be painted like one. */
   available: hue(
     "Available", Package,
-    "bg-[#E8F2EC] dark:bg-[#17332A]",
-    "text-[#276A49] dark:text-[#A9D9BF]",
-    "#276A49",
+    "bg-cat-goods-soft",
+    "text-cat-goods-text",
+    "#D95336",
   ),
   wanted: hue(
-    "Wanted", Wrench,
-    "bg-[#F7EFE0] dark:bg-[#332A19]",
-    "text-[#8A6320] dark:text-[#E6C68C]",
-    "#8A6320",
+    "Wanted", ClipboardList,
+    "bg-cat-all-soft",
+    "text-cat-all-text",
+    "#4A4A46",
   ),
   scheduled: hue(
     "Scheduled", CalendarDays,
-    "bg-[#F2EAF3] dark:bg-[#2F2233]",
-    "text-[#7C5185] dark:text-[#D5AFDC]",
-    "#7C5185",
+    "bg-cat-events-soft",
+    "text-cat-events-text",
+    "#7C5A1E",
   ),
   opportunity: hue(
     "Opportunity", ClipboardList,
-    "bg-[#F6EBE7] dark:bg-[#332420]",
-    "text-[#9A5237] dark:text-[#E6B3A0]",
-    "#9A5237",
+    "bg-cat-all-soft",
+    "text-cat-all-text",
+    "#4A4A46",
   ),
   post: hue(
     "Post", MessageSquare,
-    "bg-[#F0F1EE] dark:bg-[#242925]",
-    "text-[#55605A] dark:text-[#BAC6BF]",
-    "#55605A",
+    "bg-cat-all-soft",
+    "text-cat-all-text",
+    "#4A4A46",
   ),
 };
 
@@ -114,68 +106,63 @@ export const CATEGORY_TINTS = {
  * Which colour a content `kind` wears.
  *
  * The feed's kinds and the Explore categories are not the same list, so this is
- * the one place the two are reconciled: a `listing` is Goods, a `person` is
- * People, a `service` is Services. Anything unrecognised falls back to the
- * neutral Post tint rather than to an invented colour.
+ * the one place the two are reconciled: a `listing` is Goods, a `service` is
+ * Services, a `rental` is Rentals, an `event` is Events. Anything that is not
+ * something for sale — a post, a request, a person — wears the neutral All
+ * wash rather than being given a colour of its own.
  */
 export const KIND_TO_CATEGORY = {
   listing: "goods",
-  person: "people",
+  available: "goods",
+  market: "goods",
   service: "services",
+  provider: "services",
   rental: "rentals",
   event: "events",
-  community: "communities",
-  collection: "collections",
-  available: "available",
-  wanted: "wanted",
-  scheduled: "scheduled",
-  opportunity: "opportunity",
-  post: "post",
-  place: "post",
-  market: "goods",
+  scheduled: "events",
+  person: "all",
+  community: "all",
+  collection: "all",
+  wanted: "all",
+  opportunity: "all",
+  post: "all",
+  place: "all",
 };
 
 export function tintForKind(kind) {
-  return CATEGORY_TINTS[KIND_TO_CATEGORY[kind] || "post"] || CATEGORY_TINTS.post;
+  return CATEGORY_TINTS[KIND_TO_CATEGORY[kind] || "all"] || CATEGORY_TINTS.all;
 }
 
 /**
- * The categories a person can actually filter Explore by.
+ * The five categories a person can browse, in the order the brief names them.
  *
- * Seven, not the eight in the mockup: the discovery feed has no `equipment`
- * kind, so an Equipment tile would either duplicate Rentals or return nothing.
- * Its hue still exists in `CATEGORY_TINTS` and is used where equipment is real
- * (a market's Equipment door, the tools screens) — the vocabulary is complete
- * even where the filter is not.
+ * There used to be seven tiles plus a chip row plus a type row, which is how
+ * a discovery screen ends up looking crowded. There is now one list, and it
+ * is the same list on Home, on Explore and in the header.
  */
 export const EXPLORE_CATEGORIES = [
+  { key: "all", kind: "" },
   { key: "goods", kind: "listing" },
-  { key: "people", kind: "person" },
   { key: "services", kind: "service" },
   { key: "rentals", kind: "rental" },
   { key: "events", kind: "event" },
-  { key: "communities", kind: "community" },
-  { key: "collections", kind: "collection" },
 ];
 
-
 /**
- * THE BUSINESS DESK — the same five hues, borrowed, not invented.
+ * THE BUSINESS DESK — the same five washes, borrowed, not invented.
  *
  * A desk is a buying need, and it wears the hue of the category it is closest
- * to: digital work is Goods green, software is Services blue, field work is
- * Equipment sand, devices are People indigo, and the catch-all is Communities
- * teal. Reusing the vocabulary is the point — a second palette for a second
+ * to. Reusing the vocabulary is the point — a second palette for a second
  * screen would mean the colours had stopped meaning anything.
  */
 export const DESK_TINT = {
   digital_services: "goods",
   business_software: "services",
-  field_operations: "equipment",
-  device_management: "people",
-  custom: "communities",
+  field_operations: "rentals",
+  device_management: "all",
+  custom: "all",
 };
 
 export function tintForDesk(deskKey) {
-  return CATEGORY_TINTS[DESK_TINT[deskKey]] || CATEGORY_TINTS.post;
+  return CATEGORY_TINTS[DESK_TINT[deskKey] || "all"] || CATEGORY_TINTS.all;
 }

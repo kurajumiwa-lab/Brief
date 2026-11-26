@@ -1,9 +1,9 @@
 /**
  * REGIONS IS DISCOVERY — with a region knob, not a market knob.
  *
- * The old discovery screen is the right shape: one search, the four posting
- * types, colour-coded categories, filters and results. What was wrong was the
- * place control. It named a market ("Gikomba"), which made the app read like a
+ * The old discovery screen is the right shape: one search, colour-coded
+ * categories, one filter door and results. What was wrong was the place
+ * control. It named a market ("Gikomba"), which made the app read like a
  * directory of stalls and went stale as soon as a trader moved.
  *
  * These specs pin the reversion and the one change:
@@ -16,8 +16,8 @@
  *
  * The redesign that followed kept all five and removed the duplication the
  * review complained about: the chip row under the search bar is gone (the
- * category grid says the same thing), the generic hero is gone (the region
- * card says something true instead), and there is exactly one search.
+ * category grid says the same thing), the generic hero is gone (the scope
+ * line says something true instead), and there is exactly one search.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
@@ -57,6 +57,7 @@ vi.mock("@/lib/api", () => ({
   },
   marketsAPI: { around: mocks.market, list: mocks.market },
   serviceProviderAPI: { list: vi.fn(() => ok({ providers: [], count: 0, total: 0, limit: 24, filters: {}, note: "" })) },
+  spottedDealAPI: { list: vi.fn(() => ok([])) },
   geoAPI: { geocode: vi.fn(() => ok({ lat: -0.095, lng: 34.77 })) },
   apiError: (_e, fallback) => fallback,
 }));
@@ -94,14 +95,14 @@ describe("1 · the discovery layout, rebuilt", () => {
     await renderRegions();
     expect(await screen.findByRole("heading", { name: "Explore" })).toBeInTheDocument();
     const bar = screen.getByRole("group", { name: /browse by category/i });
-    for (const label of ["All", "Goods", "Services", "Rentals", "Rounds", "Spotted"]) {
+    for (const label of ["All", "Goods", "Services", "Rentals", "Events"]) {
       expect(within(bar).getByRole("button", { name: label })).toBeInTheDocument();
     }
     expect(screen.queryByRole("navigation", { name: /browse discovery/i })).not.toBeInTheDocument();
     expect(screen.getAllByRole("searchbox", { name: /search everything/i })).toHaveLength(1);
     // The chip row under the search duplicated the category grid; it is gone.
     expect(screen.queryByTestId("discover-quick-filters")).not.toBeInTheDocument();
-    fireEvent.click(within(bar).getByRole("button", {name: "Services"}));
+    fireEvent.click(within(bar).getByRole("button", { name: "Services" }));
     await waitFor(() => {
       const nextBar = screen.getByRole("group", { name: /browse by category/i });
       expect(within(nextBar).getByRole("button", { name: "Services" })).toHaveAttribute("aria-pressed", "true");
@@ -123,7 +124,8 @@ describe("2 · the knob is a region", () => {
       expect(screen.getByTestId("region-picker-label")).toHaveTextContent(/Nyanza · Kisumu/i));
     expect(knob).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByText(/gikomba/i)).not.toBeInTheDocument();
-    expect(screen.queryByTestId("explore-place")).not.toBeInTheDocument();
+    // The full location card is never on the screen: it is one press away,
+    // and a market is never the answer.
     expect(screen.queryByTestId("location-bar")).not.toBeInTheDocument();
   });
 
@@ -143,8 +145,8 @@ describe("2 · the knob is a region", () => {
     await waitFor(() =>
       expect(screen.getByTestId("region-picker-label")).toHaveTextContent(/Coast · Mombasa/i));
     expect(screen.getByTestId("location")).toHaveTextContent("/regions?region=coast");
-    // The same knob reaches the region's own page without a second screen.
-    expect(screen.getByTestId("region-context")).toHaveTextContent(/Coast · Mombasa/i);
+    // The scope line says what the region actually did to the search.
+    expect(screen.getByTestId("regions-scope-label")).toHaveTextContent(/Centred on Mombasa/i);
   });
 
   it("honours a shared region in the URL over the device's last choice", async () => {
@@ -166,11 +168,13 @@ describe("3 · no market surface survives", () => {
 
   it("keeps the region as a scope, not a gate", async () => {
     await renderRegions("/regions?region=nyanza");
-    const context = await screen.findByTestId("region-context");
-    expect(context).toHaveTextContent(/Nyanza · Kisumu/i);
-    // The region's own page is reached from the region card, once.
-    const spotlight = await screen.findByTestId("region-spotlight");
-    expect(within(spotlight).getByTestId("region-open")).toHaveAttribute("href", "/regions/nyanza");
+    // The scope line says what the region did to the search…
+    const scope = await screen.findByTestId("regions-scope-label");
+    expect(scope).toHaveTextContent(/Centred on Kisumu/i);
+    // …and the region's own page is one press away, from the same knob.
+    fireEvent.click(screen.getByTestId("region-picker"));
+    const panel = await screen.findByTestId("region-picker-panel");
+    expect(within(panel).getByRole("link", { name: /open nyanza/i })).toHaveAttribute("href", "/regions/nyanza");
     // A chosen region is a real scope: the feed is asked for the region's hub
     // and a wide radius around it. It is still the network's feed — records
     // with no position are never hidden by a radius.

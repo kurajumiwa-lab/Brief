@@ -1,6 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi, beforeEach } from "vitest";
 
 vi.mock("@/lib/receiptsApi", () => ({
   receiptsAPI: {
@@ -10,6 +10,7 @@ vi.mock("@/lib/receiptsApi", () => ({
 }));
 
 import TodayView from "@/components/home/TodayView";
+import { useOutsideStore } from "@/stores/outsideStore";
 import { REGION_BY_SLUG } from "@/config/regions";
 
 const region = REGION_BY_SLUG.nyanza;
@@ -18,10 +19,12 @@ const trade = [
   {
     id: "l-1", kind: "listing", to: "/listing/l-1", title: "Maize flour 2kg",
     category: "bulk groceries", location: "Kisumu central", price_kes: 500, distance_km: 2.1,
+    owner: { id: "v-1", name: "Milimani Cereals", movements_completed: 3 },
   },
   {
     id: "r-1", kind: "rental", to: "/rentals/r-1", title: "Tent hire for a round",
     category: "rentals", location: "Kondele", price_kes: 1500, distance_km: 4.1,
+    owner: { id: "v-2", name: "Kondele Hire" },
   },
 ];
 
@@ -37,6 +40,16 @@ const communityItems = [
   },
 ];
 
+beforeEach(() => {
+  // The location store is real, but it must not reach the network in a unit
+  // test: the Home page only needs to know what the app would be told.
+  useOutsideStore.setState({
+    location: null,
+    locationStatus: "idle",
+    loadLocation: vi.fn(),
+  });
+});
+
 function renderHome(overrides = {}) {
   return render(
     <MemoryRouter>
@@ -46,6 +59,7 @@ function renderHome(overrides = {}) {
         region={region}
         nearby={trade}
         community={communityItems}
+        page={{ published: true, href: "/p/amina", counts: { offers: 1, trades: 2 } }}
         {...overrides}
       />
     </MemoryRouter>,
@@ -53,53 +67,79 @@ function renderHome(overrides = {}) {
 }
 
 describe("Home opens on discovery", () => {
-  it("leads with where you are and what you are looking for", () => {
-    renderHome();
-    const location = screen.getByTestId("home-location");
-    expect(location).toHaveAttribute("href", "/regions");
-    expect(location).toHaveTextContent(/Looking around/i);
-    expect(location).toHaveTextContent(region.name || region.hub);
-    // The search is the largest control on the screen, and it is the app's own.
-    expect(screen.getByRole("searchbox")).toBeInTheDocument();
+  it("leads with the greeting and the notifications", () => {
+    renderHome({ unread: 2 });
+    expect(screen.getByRole("heading", { name: /Amina/ })).toBeInTheDocument();
+    const bell = screen.getByTestId("home-notifications");
+    expect(bell).toHaveAttribute("href", "/inbox");
+    expect(bell).toHaveTextContent("2 waiting");
   });
 
-  it("says plainly when no area has been chosen, instead of naming one", () => {
-    renderHome({ region: null });
-    const location = screen.getByTestId("home-location");
-    expect(location).toHaveTextContent(/No area chosen/i);
-    expect(location).toHaveTextContent(/Choose your area/i);
+  it("puts one compact location control under the greeting", () => {
+    renderHome();
+    const indicator = screen.getByTestId("location-indicator");
+    expect(indicator).toBeInTheDocument();
+    expect(screen.getByTestId("location-indicator-toggle")).toHaveAttribute("aria-expanded", "false");
+    // The full controls are one press away, never permanently on screen.
+    expect(screen.queryByTestId("location-bar")).not.toBeInTheDocument();
   });
 
-  it("offers the four marketplace categories as doors, not as a list of types", () => {
+  it("says plainly when no area is known, instead of naming one", () => {
     renderHome();
-    const doors = [
-      ["/discover?kind=listing", "Goods"],
-      ["/discover?kind=service", "Services"],
-      ["/discover?kind=rental", "Rentals"],
-      ["/discover?kind=event", "Events"],
-    ];
+    expect(screen.getByTestId("location-indicator-label")).toHaveTextContent(/Location unavailable/i);
+    // The location control may not claim a town the app was never told.
+    expect(screen.getByTestId("location-indicator")).not.toHaveTextContent(/Nyanza|Nairobi|Kisumu/);
+  });
+
+  it("names the area it was actually given, and no other", () => {
+    useOutsideStore.setState({
+      location: { lat: -0.095, lng: 34.77, label: "Kondele, Kisumu", radius_km: 15, source: "manual" },
+      loadLocation: vi.fn(),
+    });
+    renderHome();
+    const label = screen.getByTestId("location-indicator-label");
+    expect(label).toHaveTextContent("Kondele, Kisumu");
+    // A named area is not permission to invent a second one.
+    expect(label).not.toHaveTextContent(/Nairobi/);
+  });
+
+  it("has ONE search, and it is the app's search", () => {
+    renderHome();
+    const fields = screen.getAllByRole("searchbox");
+    expect(fields).toHaveLength(1);
+    expect(fields[0]).toHaveAttribute("aria-label", "Search everything");
+  });
+
+  it("offers the five marketplace categories as doors, not as a list of types", () => {
+    renderHome();
     const band = within(screen.getByTestId("discovery-band"));
+    const doors = [
+      ["/regions", "All"],
+      ["/regions?kind=listing", "Goods"],
+      ["/regions?kind=service", "Services"],
+      ["/regions?kind=rental", "Rentals"],
+      ["/regions?kind=event", "Events"],
+    ];
     for (const [href, label] of doors) {
-      const link = band.getByRole("link", { name: new RegExp(label, "i") });
+      const link = band.getByRole("link", { name: new RegExp(`^${label}`, "i") });
       expect(link.getAttribute("href")).toBe(href);
     }
+    // Two columns on a phone: a single column of five tiles is a scroll.
+    expect(band.getByTestId("explore-categories").className).toMatch(/grid-cols-2/);
   });
 
-  it("offers the map as a door that counts only what it really has", () => {
+  it("shows the nearby listings on the standard card", () => {
     renderHome();
-    const map = screen.getByTestId("map-discovery");
-    expect(within(map).getByText("2 listings near you")).toBeInTheDocument();
-    // The areas are the real ones the records carry.
-    expect(within(map).getByText("Kisumu central")).toBeInTheDocument();
-    expect(within(map).getByText("Kondele")).toBeInTheDocument();
-    expect(screen.getByTestId("map-discovery-open")).toHaveAttribute("href", "/map");
-  });
-
-  it("never claims a count it does not have", () => {
-    renderHome({ nearby: [] });
-    const map = screen.getByTestId("map-discovery");
-    expect(within(map).getByText("Nothing on the map yet")).toBeInTheDocument();
-    expect(within(map).queryByText(/listings near you/)).not.toBeInTheDocument();
+    const shelf = screen.getByTestId("nearby-shelf");
+    const cards = within(shelf).getAllByTestId(/^content-card-/);
+    expect(cards).toHaveLength(2);
+    // The facts the brief names, on every card.
+    expect(within(cards[0]).getByText("Maize flour 2kg")).toBeInTheDocument();
+    expect(within(cards[0]).getByText("KSh 500")).toBeInTheDocument();
+    expect(within(cards[0]).getByTestId("region-card-distance")).toHaveTextContent("2.1 km");
+    expect(within(cards[0]).getByTestId("listing-card-seller")).toHaveTextContent("Milimani Cereals");
+    expect(within(cards[0]).getByTestId("region-card-level")).toBeInTheDocument();
+    expect(within(cards[0]).getByTestId("merch-card-save")).toBeInTheDocument();
   });
 
   it("gives community activity its own section, apart from the trade shelves", () => {
@@ -118,19 +158,27 @@ describe("Home opens on discovery", () => {
     expect(screen.queryByTestId("community-shelf")).not.toBeInTheDocument();
   });
 
-  it("orders the page: hero, categories, map, trade, community, then the secondary doors", () => {
+  it("carries no promotional banner and no second map door", () => {
     renderHome();
-    const hero = screen.getByTestId("home-location");
-    const map = screen.getByTestId("map-discovery");
+    // A marketplace page must not open with a marketing plate competing with
+    // the listings, and the map lives next to the results it maps.
+    expect(screen.queryByText(/See what is trading in the city today/i)).not.toBeInTheDocument();
+    expect(screen.queryByTestId("map-discovery")).not.toBeInTheDocument();
+  });
+
+  it("orders the page: hero, categories, nearby, then activity, then the records", () => {
+    renderHome();
+    const hero = screen.getByTestId("location-indicator");
+    const band = screen.getByTestId("discovery-band");
     const nearby = screen.getByTestId("nearby-shelf");
     const community = screen.getByTestId("community-shelf");
 
-    expect(hero.compareDocumentPosition(map) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(map.compareDocumentPosition(nearby) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(hero.compareDocumentPosition(band) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(band.compareDocumentPosition(nearby) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(nearby.compareDocumentPosition(community) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 
-    // Rewards are real, and they are last: the page is a marketplace first.
-    const rewards = screen.getByRole("heading", { name: /Explore your town/i });
-    expect(community.compareDocumentPosition(rewards) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // The person's own records sit BELOW the marketplace, not above it.
+    const records = screen.getByTestId("identity-strip");
+    expect(community.compareDocumentPosition(records) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });

@@ -46,14 +46,19 @@ describe("Regions visual grid", () => {
 
     const cards = screen.getAllByTestId("content-card-listing");
     expect(cards).toHaveLength(1);
+    // No photograph of this listing: the card says so, and borrows the
+    // category art rather than pretending it has a picture of the goods.
     expect(within(cards[0]).getByTestId("region-card-art")).toHaveAttribute("data-fallback", "true");
     expect(within(cards[0]).getByTestId("region-card-level")).toHaveTextContent("Lvl 3");
     expect(within(cards[0]).getByTestId("region-card-momentum")).toHaveTextContent("4/10 joined");
     expect(within(cards[0]).getByText("KSh 500")).toBeInTheDocument();
 
     const photo = screen.getByTestId("content-card-service");
+    // A real photograph is the seller's own, and the card says that too.
     expect(within(photo).getByTestId("region-card-art")).toHaveAttribute("data-fallback", "false");
-    expect(within(photo).getByText("Open")).toBeInTheDocument();
+    // No price is "Price on request". The card never invents a figure, and it
+    // never says "Open", which reads like a price.
+    expect(within(photo).getByText("Price on request")).toBeInTheDocument();
     expect(within(photo).getByText("/p/new-tailor")).toBeInTheDocument();
     expect(within(photo).getByText("No trades yet")).toBeInTheDocument();
   });
@@ -88,7 +93,7 @@ describe("Regions visual grid", () => {
   });
 });
 
-describe("Regions intent and standing filters", () => {
+describe("Regions standing filter", () => {
   it("falls back to Level 2+ when the strict standing door finds nothing", () => {
     render(
       <MemoryRouter>
@@ -106,13 +111,13 @@ describe("Regions intent and standing filters", () => {
     // The standing filter lives in the one consolidated filters door.
     fireEvent.click(screen.getByTestId("explore-more-filters"));
     fireEvent.click(screen.getByTestId("regions-trust"));
-    const grid = screen.getByTestId("regions-grid");
+    const grid = screen.getByTestId("explore-results");
     expect(within(grid).getByText("School uniform tailoring")).toBeInTheDocument();
     expect(within(grid).getByTestId("region-card-level")).toHaveTextContent("Lvl 2");
     expect(screen.queryByTestId("explore-filtered-empty")).not.toBeInTheDocument();
   });
 
-  it("shows the honest all-levels rail when even Level 2 has nothing", () => {
+  it("says so when even Level 2 has nothing, and offers the way out", () => {
     render(
       <MemoryRouter>
         <ExplorePage
@@ -133,11 +138,11 @@ describe("Regions intent and standing filters", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Show every page" }));
     expect(
-      within(screen.getByTestId("regions-grid")).getByText("School uniform tailoring"),
+      within(screen.getByTestId("explore-results")).getByText("School uniform tailoring"),
     ).toBeInTheDocument();
   });
 
-  it("offers intent chips and never inflates a Level 2 trader to Level 3", () => {
+  it("never inflates a Level 2 trader to Level 3", () => {
     render(
       <MemoryRouter>
         <ExplorePage
@@ -153,18 +158,13 @@ describe("Regions intent and standing filters", () => {
     );
 
     fireEvent.click(screen.getByTestId("explore-more-filters"));
-    expect(screen.getByTestId("regions-intent-all")).toHaveAttribute("aria-pressed", "true");
-    const grid = within(screen.getByTestId("regions-grid"));
+    const grid = within(screen.getByTestId("explore-results"));
     expect(grid.getByText("Maize flour 2kg")).toBeInTheDocument();
     expect(grid.getByText("School uniform tailoring")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByTestId("regions-intent-offers"));
-    expect(screen.getByTestId("regions-intent-offers")).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByTestId("location")).toHaveTextContent("intent=offers");
-
     fireEvent.click(screen.getByTestId("regions-trust"));
     expect(screen.getByTestId("regions-trust")).toHaveAttribute("aria-pressed", "true");
-    const trusted = within(screen.getByTestId("regions-grid"));
+    const trusted = within(screen.getByTestId("explore-results"));
     expect(trusted.getByText("Maize flour 2kg")).toBeInTheDocument();
     // Level 2 is shown as Level 2 when the strict door falls back; it is never
     // rounded up to "verified".

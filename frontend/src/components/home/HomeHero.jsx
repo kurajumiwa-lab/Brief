@@ -1,30 +1,32 @@
-import { Link } from "react-router-dom";
-import { ChevronRight, MapPin, Navigation } from "lucide-react";
-import GlobalSearch from "@/components/layout/GlobalSearch";
-import { RankChip } from "@/components/identity/Rank";
+import { Link, useNavigate } from "react-router-dom";
+import { Bell } from "lucide-react";
+import MarketplaceSearch from "@/components/search/MarketplaceSearch";
+import LocationIndicator from "@/components/location/LocationIndicator";
+import { resultsHref } from "@/config/searchCategories";
 
 /**
- * THE HOME HERO — where you are, and what you are looking for.
+ * THE HOME HERO — who you are, where you are, and what you want.
  *
- * The redesign's first demand was a Home that opens on *discovery*, not on the
- * person. That sounds like a small change; it is not, because the old opening
- * was three stacked things (a date, a greeting, a rank chip) and none of them
- * could be acted on. The hero now answers the only two questions a person has
- * when they open a marketplace:
+ * The brief asks for a Home that opens on discovery and answers, in this
+ * order: the greeting and the notifications, a compact location, and one
+ * search field. Everything else moved down.
  *
- *   WHERE AM I?   a location control that is a real link to the region screen
- *   WHAT DO I WANT?  the search field, in the largest control on the screen
+ * What changed, and why:
  *
- * The greeting is still here — it is a marketplace that knows your name — but
- * it is now the *caption* on the page rather than the headline of it. Rank
- * moves beside the greeting as a quiet chip: a fact about exposure, not the
- * subject of the screen.
- *
- * The search is the app's own `GlobalSearch`, so it keeps its scope selector
- * and its ⌘K shortcut, and it routes to the same results system as the header.
- * Nothing here is a second search implementation.
+ *   · THE PLACE IS GONE. The old hero named a town — "Looking around
+ *     Nairobi" — and that town was guessed from the business address or from
+ *     the last region this device happened to use. It was an assumption
+ *     printed as a fact, and it moved every result on the screen. Now the
+ *     location control says what the app actually knows, and says
+ *     "Location unavailable" when it does not know.
+ *   · THE SEARCH IS THE APP'S SEARCH. It is the same component Explore uses,
+ *     it writes to the same place, and submitting goes to the same dedicated
+ *     results screen. There is no second search implementation and no second
+ *     set of results.
+ *   · THE NOTIFICATIONS ARE UP HERE. Anything waiting on a reply is an
+ *     action, and an action that is below four shelves is an action nobody
+ *     takes.
  */
-
 function greetingFor(hour) {
   if (hour < 12) return "Good morning";
   if (hour < 17) return "Good afternoon";
@@ -34,11 +36,12 @@ function greetingFor(hour) {
 export default function HomeHero({
   name = "there",
   firstName,
-  rank,
-  place = null,
-  placeTo = "/regions",
+  unread = 0,
+  term = "",
+  onTermChange,
   now = new Date(),
 }) {
+  const navigate = useNavigate();
   const hour = now instanceof Date ? now.getHours() : new Date(now).getHours();
   const dateLabel = now instanceof Date
     ? now.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })
@@ -46,47 +49,39 @@ export default function HomeHero({
   const displayName = firstName || name;
 
   return (
-    <header className="space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <header className="space-y-3">
+      <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="ds-eyebrow">{dateLabel}</p>
           <h1 className="ds-display mt-1.5">
             {greetingFor(hour)}, {displayName}
           </h1>
         </div>
-        {rank && (
-          <div className="flex items-center gap-2 pt-1">
-            <RankChip rank={rank} />
-          </div>
-        )}
+
+        <Link
+          to="/inbox"
+          data-testid="home-notifications"
+          className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-xl border border-edge-2 bg-surface-1 px-3 text-2xs font-bold text-ink-2 transition-colors hover:border-brand-500 hover:text-ink-1"
+        >
+          <Bell size={15} aria-hidden="true" />
+          {unread > 0 ? `${unread} waiting` : "Inbox"}
+        </Link>
       </div>
 
-      {/* WHERE AM I. The place is a link, because "where am I looking" is a
-          question with a screen behind it — and the person may want to change
-          it. When no place is known the control says so and still goes
-          somewhere, instead of claiming a town nobody chose. */}
-      <Link
-        to={placeTo}
-        data-testid="home-location"
-        className="ds-card ds-card-interactive ds-focus flex min-h-11 items-center gap-2.5 px-3 py-2.5"
-      >
-        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300">
-          {place ? <MapPin size={16} aria-hidden="true" /> : <Navigation size={16} aria-hidden="true" />}
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block text-micro font-bold uppercase tracking-[0.12em] text-ink-4">
-            {place ? "Looking around" : "No area chosen"}
-          </span>
-          <span className="block truncate text-sm font-bold text-ink-1">
-            {place || "Choose your area"}
-          </span>
-        </span>
-        <ChevronRight size={16} className="shrink-0 text-ink-4" aria-hidden="true" />
-      </Link>
+      {/* WHERE AM I. One compact control, and it never guesses a place. */}
+      <LocationIndicator />
 
       {/* WHAT DO I WANT. The biggest control on the screen, because search is
           the shortest path from a thought to a thing that exists. */}
-      <GlobalSearch size="lg" />
+      <MarketplaceSearch
+        variant="hero"
+        value={term}
+        onChange={onTermChange}
+        onSubmit={(text) => navigate(resultsHref({ q: text }))}
+        showCategories={false}
+        placeholder="Search goods, services, rentals and events"
+        aria-label="Search everything"
+      />
     </header>
   );
 }
