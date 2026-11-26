@@ -10,13 +10,26 @@ const sizes = { sm: "sm:max-w-md", md: "sm:max-w-lg", lg: "sm:max-w-2xl", xl: "s
  * v3 modal — a bottom sheet on a phone, a centred dialog on a desktop.
  * Focus is trapped and returned, Escape closes, the page behind cannot scroll.
  */
-export default function Modal({ open, onClose, title, description, size = "md", footer, children, className }) {
+export default function Modal({
+  open,
+  onClose,
+  title,
+  description,
+  size = "md",
+  footer,
+  children,
+  className,
+  restoreFocusTo = null,
+}) {
   const panelRef = useRef(null);
   const returnTo = useRef(null);
 
   useEffect(() => {
     if (!open) return;
-    returnTo.current = document.activeElement;
+    // The global confirmation records its opener at ask-time, before this
+    // dialog's autoFocus button takes over. Other modals fall back to the
+    // active element at mount.
+    returnTo.current = restoreFocusTo || document.activeElement;
     const onKey = (e) => {
       if (e.key === "Escape") return onClose?.();
       if (e.key !== "Tab" || !panelRef.current) return;
@@ -42,9 +55,13 @@ export default function Modal({ open, onClose, title, description, size = "md", 
       clearTimeout(t);
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = prev;
-      returnTo.current?.focus?.();
+      // The control that opened this dialog may have been removed by the
+      // action just taken; focus only what is still on the page.
+      if (returnTo.current && document.contains(returnTo.current)) {
+        returnTo.current.focus?.({ preventScroll: true });
+      }
     };
-  }, [open, onClose]);
+  }, [open, onClose, restoreFocusTo]);
 
   return createPortal(
     <AnimatePresence>

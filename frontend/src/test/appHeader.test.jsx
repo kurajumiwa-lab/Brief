@@ -3,19 +3,12 @@ import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
 /**
- * THE HEADER CONTRACT — logo, search, bell, profile, one row.
+ * THE HEADER CONTRACT — logo, search, Chats, Notifications, profile.
  *
- * The brief asks for that arrangement on every screen, and the old header
- * broke it twice: it hid search on Home, which is where a person most often
- * knows exactly what they want, and it buried "something is waiting" inside
- * an account dropdown. Both are pinned here so they cannot regress quietly.
- *
- * There is one refinement the review forced, and it is pinned too:
- * "repeated search areas" was a complaint. Home and Explore each own a search
- * in the page, where the person is already looking — so on those two routes
- * the header stands down rather than printing a second field that answers the
- * same question. A search is never missing; on those screens it is the page's,
- * and it is the same component, writing to the same results.
+ * The brief asks for that arrangement on every screen. A combined Inbox badge
+ * was retired: it could not tell a person whether a message needed a reply or
+ * an alert needed reading. These specs pin two permanent shortcuts with two
+ * real counts, and the one-search rule that keeps the bar compact.
  */
 
 const activity = {
@@ -23,8 +16,13 @@ const activity = {
     { items: [{ is_read: false }, { is_read: false }, { is_read: true }] },
     { items: [{ is_read: false }] },
   ],
-  counts: { rooms_active_today: 0 },
+  counts: { rooms_active_today: 7 },
 };
+
+const rooms = [
+  { id: "r-1", unread_count: 2 },
+  { id: "r-2", unread_count: 0 },
+];
 
 vi.mock("@/stores/authStore", () => ({
   useAuthStore: (selector) => selector({
@@ -36,6 +34,13 @@ vi.mock("@/stores/outsideStore", () => ({
   useOutsideStore: (selector) => selector({
     activity,
     loadActivity: vi.fn(),
+  }),
+}));
+
+vi.mock("@/stores/chatStore", () => ({
+  useChatStore: (selector) => selector({
+    rooms,
+    fetchRooms: vi.fn(() => Promise.resolve(rooms)),
   }),
 }));
 
@@ -61,8 +66,6 @@ const searchFields = (container) =>
 
 describe("the header", () => {
   it("keeps the app's one search field on every screen that does not own its own", () => {
-    // The historic `global-search-` id is kept, so anything that reached for
-    // the header field — including this spec — still finds it.
     for (const path of ["/inbox", "/you", "/settings", "/map"]) {
       const { container, unmount } = renderAt(path);
       expect(searchFields(container).length, `search on ${path}`).toBeGreaterThan(0);
@@ -71,8 +74,6 @@ describe("the header", () => {
   });
 
   it("stands down on Home and Explore, where the page owns the one field", () => {
-    // Not a missing search: Home's hero and Explore's toolbar render the same
-    // `MarketplaceSearch`. Two fields on one screen was the complaint.
     for (const path of ["/", "/explore", "/regions"]) {
       const { container, unmount } = renderAt(path);
       expect(searchFields(container).length, `no duplicate search on ${path}`).toBe(0);
@@ -80,18 +81,23 @@ describe("the header", () => {
     }
   });
 
-  it("gives anything waiting its own bell with a count and an inbox route", () => {
+  it("keeps Chats and Notifications one tap away, with separate unread counts", () => {
     renderAt("/");
-    const bell = screen.getByRole("link", { name: /inbox, 3 waiting/i });
-    expect(bell).toHaveAttribute("href", "/inbox");
-    // The count is real: 3 unread across the groups. The Inbox tab badge shows
-    // the same number, which is ordinary (a tab badge and a bell badge are the
-    // same fact in two places), so scope this assertion to the bell itself.
-    expect(bell.textContent).toContain("3");
+    const chats = screen.getByRole("link", { name: /chats, 2 unread messages/i });
+    const notifications = screen.getByRole("link", { name: /notifications, 3 unread/i });
+    expect(chats).toHaveAttribute("href", "/inbox?tab=chats");
+    expect(notifications).toHaveAttribute("href", "/inbox?tab=notifications");
+    // `rooms_active_today: 7` is activity, not unread mail. It must not be
+    // added to either number and silently become a wrong count.
+    expect(chats.textContent).toContain("2");
+    expect(notifications.textContent).toContain("3");
+    expect(screen.queryByText("7")).not.toBeInTheDocument();
   });
 
-  it("still offers the drawer and the account on every screen", () => {
+  it("keeps both shortcuts on a screen with no search of its own", () => {
     renderAt("/regions");
+    expect(screen.getByTestId("header-chats")).toBeInTheDocument();
+    expect(screen.getByTestId("header-notifications")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Workspace menu" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Account" })).toBeInTheDocument();
   });

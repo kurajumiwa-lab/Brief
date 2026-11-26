@@ -67,12 +67,18 @@ function renderHome(overrides = {}) {
 }
 
 describe("Home opens on discovery", () => {
-  it("leads with the greeting and the notifications", () => {
-    renderHome({ unread: 2 });
+  it("leads with the greeting, Chats and Notifications — with separate counts", () => {
+    renderHome({ attention: { chats: 1, notifications: 2, waiting: 0 } });
     expect(screen.getByRole("heading", { name: /Amina/ })).toBeInTheDocument();
-    const bell = screen.getByTestId("home-notifications");
-    expect(bell).toHaveAttribute("href", "/inbox");
-    expect(bell).toHaveTextContent("2 waiting");
+    const chats = screen.getByTestId("home-chats");
+    const notifications = screen.getByTestId("home-notifications");
+    expect(chats).toHaveAttribute("href", "/inbox?tab=chats");
+    expect(chats).toHaveAccessibleName(/1 unread message/i);
+    expect(notifications).toHaveAttribute("href", "/inbox?tab=notifications");
+    expect(notifications).toHaveAccessibleName(/2 unread/i);
+    // A combined "waiting" badge cannot say which messages need a reply.
+    expect(notifications.textContent).toContain("2");
+    expect(chats.textContent).toContain("1");
   });
 
   it("puts one compact location control under the greeting", () => {

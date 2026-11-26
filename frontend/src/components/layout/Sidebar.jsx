@@ -13,6 +13,7 @@ import { VENDOR_ROLES } from "@/config/constants";
 import { toast } from "@/components/ui/Toast";
 import { useConfirm } from "@/components/ui/ConfirmDialog";
 import { cn } from "@/lib/utils";
+import { hasOpenConfirmDialog } from "@/lib/confirmDialog";
 import { BRAND } from "@/config/brand";
 
 /**
@@ -99,7 +100,11 @@ function IdentityCard({ onNavigate }) {
   // the flow, so there is no floating layer to dismiss.
   useEffect(() => {
     if (!open) return;
-    const onKey = (event) => event.key === "Escape" && setOpen(false);
+    const onKey = (event) => {
+      // The nested confirmation owns Escape. Closing this disclosure at the
+      // same time removes the button the dialog must return focus to.
+      if (event.key === "Escape" && !hasOpenConfirmDialog()) setOpen(false);
+    };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [open]);
@@ -129,32 +134,48 @@ function IdentityCard({ onNavigate }) {
       return;
     }
 
-    // "Dormant" is not a mode, it is a removal from discovery: the network and
-    // the recommendation engine both filter `current_role != 'dormant'`, and the
-    // endpoint sets it with no guard. A one-tap row in a drawer must not quietly
-    // take a business off the market, so this one asks first.
+    // "Dormant" is not a mode, it is a removal from discovery. The confirm is
+    // the human safeguard; the server also requires a short-lived signed token
+    // bound to the current role before it will make the change. Neither one
+    // substitutes for the other.
+    let confirmedDormant = false;
     if (nextRole === "dormant") {
-      const ok = await confirm({
+      confirmedDormant = await confirm({
         title: "Stop appearing in discovery?",
         message:
           "Other businesses will no longer find you in the network or in recommendations. Your page, stock and records stay exactly as they are, and you can switch back at any time.",
         confirmLabel: "Go dormant",
         danger: true,
       });
-      if (!ok) {
-        setOpen(false);
+      if (!confirmedDormant) {
+        // Keep the role menu open. Closing it here also removes the control
+        // that the confirmation dialog must return focus to.
         return;
       }
     }
 
     setBusy(nextRole);
     try {
-      await switchRole(nextRole);
+      await switchRole(nextRole, { confirmedDormant });
       const label = VENDOR_ROLES.find((item) => item.value === nextRole)?.label;
       toast.success(`Now operating as: ${label}`);
       setOpen(false);
-    } catch {
-      toast.error("Could not change how you operate. Try again.");
+    } catch (error) {
+      const detail = error?.response?.data?.detail;
+      const code = typeof detail === "object" ? detail?.code : null;
+      if (code === "stale_role" || code === "invalid_dormancy_confirmation") {
+        // Another tab already changed the mode. Refresh the identity the
+        // drawer is showing, then ask the person to choose again.
+        useAuthStore.getState().fetchVendor?.().catch(() => {});
+        toast.error(
+          typeof detail?.message === "string"
+            ? detail.message
+            : "Your operating mode changed. Refresh and choose again.",
+        );
+        setOpen(false);
+      } else {
+        toast.error("Could not change how you operate. Try again.");
+      }
     } finally {
       setBusy("");
     }

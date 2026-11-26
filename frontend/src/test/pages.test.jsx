@@ -44,7 +44,9 @@ vi.mock("@/lib/api", () => {
       suggested: vi.fn(() => ok([{ vendor_id: "v-3", vendor_handle: "boda_express", business_name: "Boda Express", business_categories: ["logistics"], current_role: "both", network_score: 1, reasons: ["They source what you stock"] }])),
       connections: vi.fn(() => ok([{ vendor_id: "v-2", vendor_handle: "kibanda_kitchen", business_name: "Kibanda Kitchen", business_categories: [], current_role: "sourcing", connection_type: "trade", parasitism_score: 35 }])),
       network: vi.fn(() => ok([ME, OTHER])), connect: vi.fn(() => ok({ message: "Connected" })), disconnect: vi.fn(() => ok({})),
-      switchRole: vi.fn((role) => ok({ role })), byHandle: vi.fn(() => ok(OTHER)), profile: vi.fn(() => ok({})), patronStatus: vi.fn(() => ok({ is_patron: true, tier: "starter", max_lists: 1, max_vendors_per_list: 20 })),
+      switchRole: vi.fn((role) => ok({ role })),
+      dormantConfirmation: vi.fn(() => ok({ current_role: "selling", confirmation_token: "server-token", confirm_dormant: true })),
+      byHandle: vi.fn(() => ok(OTHER)), profile: vi.fn(() => ok({})), patronStatus: vi.fn(() => ok({ is_patron: true, tier: "starter", max_lists: 1, max_vendors_per_list: 20 })),
       becomePatron: vi.fn(() => ok({})), update: vi.fn(() => ok(ME)), updateProfile: vi.fn(() => ok({})), graph: vi.fn(() => ok({})),
     },
     // The drawer reads this to decide whether the business is reachable.
@@ -751,16 +753,25 @@ describe("Drawer navigation", () => {
     fireEvent.click(screen.getByRole("button", { name: /operating as selling/i }));
     const menu = screen.getByRole("menu", { name: /how you operate/i });
 
-    // `current_role !== 'dormant'` is the discovery filter on both the network
-    // and the recommendation engine. One tap must not silently remove a
-    // business from the market, so the drawer raises a confirm first.
+    // `dormant` removes a business from every discovery surface. One tap must
+    // not silently do that: the drawer asks, then the server issues its own
+    // short-lived confirmation token before the write.
     fireEvent.click(within(menu).getByRole("menuitemradio", { name: /^dormant\b/i }));
     expect(await screen.findByText(/stop appearing in discovery/i)).toBeInTheDocument();
     // Nothing has been sent yet.
     expect(api.vendorAPI.switchRole).not.toHaveBeenCalled();
+    expect(api.vendorAPI.dormantConfirmation).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole("button", { name: /^go dormant$/i }));
-    await waitFor(() => expect(api.vendorAPI.switchRole).toHaveBeenCalledWith("dormant"));
+    await waitFor(() => expect(api.vendorAPI.dormantConfirmation).toHaveBeenCalled());
+    await waitFor(() => expect(api.vendorAPI.switchRole).toHaveBeenCalledWith(
+      "dormant",
+      expect.objectContaining({
+        expected_current_role: "selling",
+        confirm_dormant: true,
+        confirmation_token: "server-token",
+      }),
+    ));
   });
 
   it("does not send the role change when the dormancy warning is dismissed", async () => {
@@ -773,6 +784,7 @@ describe("Drawer navigation", () => {
     );
     fireEvent.click(await screen.findByRole("button", { name: /cancel/i }));
     expect(api.vendorAPI.switchRole).not.toHaveBeenCalled();
+    expect(api.vendorAPI.dormantConfirmation).not.toHaveBeenCalled();
   });
 
   it("reads the contact record instead of assuming there is no reply route", async () => {

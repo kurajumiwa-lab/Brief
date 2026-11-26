@@ -1,5 +1,5 @@
 import { Outlet, useLocation } from "react-router-dom";
-import { useEffect, Suspense } from "react";
+import { useCallback, useEffect, Suspense } from "react";
 import AppHeader from "./AppHeader";
 import MobileTabBar from "./MobileTabBar";
 import { SidebarContent } from "./Sidebar";
@@ -22,6 +22,8 @@ export default function Shell() {
   const setSections = useUIStore((s) => s.setMobileSidebar);
   const { pathname } = useLocation();
   const fullBleed = pathname.startsWith("/chat");
+  // Stable so the Drawer does not re-run its focus effect on a parent render.
+  const closeSections = useCallback(() => setSections(false), [setSections]);
 
   // Close the sections drawer and return to the top on every navigation.
   useEffect(() => {
@@ -67,7 +69,7 @@ export default function Shell() {
           is already grouped. One title, one close button, both in the content. */}
       <Drawer
         open={sectionsOpen}
-        onClose={() => setSections(false)}
+        onClose={closeSections}
         side="left"
         width="max-w-xs"
         className="!p-0"
@@ -77,7 +79,7 @@ export default function Shell() {
         label="Workspace menu"
       >
         <div className="h-full">
-          <SidebarContent onNavigate={() => setSections(false)} />
+          <SidebarContent onNavigate={closeSections} />
         </div>
       </Drawer>
 

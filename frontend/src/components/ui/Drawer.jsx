@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { hasOpenConfirmDialog } from "@/lib/confirmDialog";
 
 /**
  * A side sheet.
@@ -39,10 +40,23 @@ export default function Drawer({
 }) {
   const panelRef = useRef(null);
   const restoreTo = useRef(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   useEffect(() => {
     if (!open) return;
-    const onKey = (e) => e.key === "Escape" && onClose?.();
+    const onKey = (e) => {
+      if (e.key !== "Escape") return;
+      // A confirmation opened over the sheet owns Escape first. Both layers
+      // listen on document, so otherwise one keypress cancels the confirmation
+      // AND closes the drawer, losing the keyboard user's place.
+      if (hasOpenConfirmDialog()) return;
+      const otherDialogs = Array.from(
+        document.querySelectorAll('[role="dialog"][aria-modal="true"]'),
+      ).filter((node) => node !== panelRef.current && !panelRef.current?.contains(node));
+      if (otherDialogs.length) return;
+      onCloseRef.current?.();
+    };
 
     // Remember what had focus, then move focus into the sheet.
     restoreTo.current = document.activeElement;
@@ -62,7 +76,9 @@ export default function Drawer({
         back.focus({ preventScroll: true });
       }
     };
-  }, [open, onClose]);
+  // `onClose` is read through a ref: an inline callback from the parent must
+  // not re-run this effect and overwrite `restoreTo` with the panel itself.
+  }, [open]);
 
   const fromX = side === "left" ? "-100%" : "100%";
   return createPortal(

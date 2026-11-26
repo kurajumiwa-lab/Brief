@@ -67,15 +67,9 @@ export default function IdentityStrip({ name, page = {}, institution = null }) {
           <p className="mt-0.5 truncate text-micro text-ink-4">
             {published ? url.replace(/^https?:\/\//, "") : "Not published yet"}
           </p>
-          {page.counts && (
-            <p className="mt-1.5 flex flex-wrap gap-x-2 gap-y-0.5 text-micro text-ink-4">
-              <span>{page.counts.offers ?? 0} on the page</span>
-              <span aria-hidden="true">·</span>
-              <span>{page.counts.trades ?? 0} trades</span>
-              <span aria-hidden="true">·</span>
-              <span>{page.counts.verified ? "Confirmed" : "Not yet confirmed"}</span>
-            </p>
-          )}
+          {/* Page statistics belong on Profile, not in Home's first screen.
+              The public address and the one share action are what a person
+              needs here; the numbers were a dashboard in miniature. */}
         </div>
         <div className="flex shrink-0 gap-1.5">
           {published && (

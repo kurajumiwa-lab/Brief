@@ -2,6 +2,8 @@
 from datetime import timedelta
 from sqlalchemy import and_, func, or_
 
+from app.models.vendor import VendorRole
+
 
 def active_window(now, *, starts_at=None, expires_at=None):
     conditions = []
@@ -18,6 +20,13 @@ def scheduled_event_window(now, start):
 
 
 def discoverable(vendor):
-    # Absent key means legacy/default ON. This setting controls discovery, not
-    # a deliberately shared profile, booking history, or direct links.
-    return func.coalesce(vendor.public_page['discoverable'].as_boolean(), True).is_(True)
+    # Two independent switches, both owned by the account holder:
+    #   * `current_role == dormant` is the global "I am not trading" state;
+    #   * `public_page.discoverable` is the page's finer browse setting.
+    # Absent page key means legacy/default ON. This predicate is for browse,
+    # search and recommendation surfaces only — a deliberately shared profile,
+    # booking history and direct links remain reachable by design.
+    return and_(
+        vendor.current_role != VendorRole.DORMANT,
+        func.coalesce(vendor.public_page['discoverable'].as_boolean(), True).is_(True),
+    )

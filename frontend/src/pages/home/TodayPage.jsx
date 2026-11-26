@@ -5,6 +5,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { useIdentityStore } from "@/stores/identityStore";
 import { useOutsideStore } from "@/stores/outsideStore";
 import { useStockStore } from "@/stores/stockStore";
+import useAttentionCounts from "@/hooks/useAttentionCounts";
 import { toast } from "@/components/ui/Toast";
 import { apiError, corridorTaskAPI, outsideAPI, recurringRoutineAPI, spottedDealAPI } from "@/lib/api";
 import ledgerAPI from "@/lib/ledgerApi";
@@ -36,8 +37,7 @@ export default function TodayPage() {
   const loadFeed = useOutsideStore((s) => s.loadFeed);
   const location = useOutsideStore((s) => s.location);
   const loadLocation = useOutsideStore((s) => s.loadLocation);
-  const activity = useOutsideStore((s) => s.activity);
-  const loadActivity = useOutsideStore((s) => s.loadActivity);
+  const attention = useAttentionCounts();
 
   const mine = useStockStore((s) => s.mine);
   const fetchMine = useStockStore((s) => s.fetchMine);
@@ -102,13 +102,12 @@ export default function TodayPage() {
     // three ways. Regions still owns deep browsing; this is a page of the feed,
     // not a second copy of it.
     loadFeed();
-    loadActivity();
     loadAgenda();
     loadTasks();
     loadSharePrompts();
     fetchMine().catch(() => {});
     fetchMovements().catch(() => {});
-  }, [loadFeed, loadLocation, loadActivity, loadAgenda, loadTasks, loadSharePrompts,
+  }, [loadFeed, loadLocation, loadAgenda, loadTasks, loadSharePrompts,
       fetchMine, fetchMovements, location]);
 
   const confirmTrade = async (item) => {
@@ -211,14 +210,12 @@ export default function TodayPage() {
 
   const rank = rankFor({ vendor, identity });
 
-  const unreadNotifications = (activity?.groups || []).reduce(
-    (total, group) => total + group.items.filter((item) => !item.is_read).length,
-    0,
-  );
   const waitingTrades = movements.filter((movement) =>
     ["pending", "requested", "confirmed"].includes(movement.status),
   ).length;
-  const unread = unreadNotifications + (activity?.counts?.rooms_active_today || 0) + waitingTrades;
+  // Home receives the same chat/notification readings as the permanent header
+  // shortcuts. Trade confirmations are a third, explicitly named action.
+  const homeAttention = { ...attention, waiting: waitingTrades };
 
   const name = vendor?.business_name || vendor?.vendor_handle || "there";
   const firstName = name.split(" ")[0];
@@ -248,7 +245,7 @@ export default function TodayPage() {
       nearby={nearby}
       deals={deals}
       community={community}
-      unread={unread}
+      attention={homeAttention}
       institution={
         office
           ? {

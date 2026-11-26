@@ -1,42 +1,25 @@
 import { NavLink, useLocation } from "react-router-dom";
 import { PRIMARY_TABS, isPrimaryActive } from "@/config/navigation";
-import { useStockStore, needsMyAction } from "@/stores/stockStore";
-import { useChatStore } from "@/stores/chatStore";
 import { useAuthStore } from "@/stores/authStore";
-import { useOutsideStore } from "@/stores/outsideStore";
 import { cn } from "@/lib/utils";
 
 /**
- * The five Outside destinations, sized for the thumb zone.
+ * The five destinations, sized for the thumb zone.
  *
- *   Home · Local network · Mall · Connect · My World
+ * Home · Explore · Create · Inbox · Profile
  *
  * Create IS the central tab, and the brief asks for it to be the prominent one:
  * a filled circle between Inbox and the rest, not a sixth equal-weight icon.
  * The `action` branch below renders that treatment.
  *
- * Badges are only shown where they mean work is waiting: Activity carries
- * unread notifications plus conversations that moved today. A count that
- * doesn't ask anything of you is noise, so nothing else is badged.
+ * The combined Inbox badge is deliberately gone. Chats and Notifications
+ * carry their own counts in the permanent header shortcuts; repeating one
+ * ambiguous number here made the same attention twice and said less.
  */
 export default function MobileTabBar() {
-  const movements = useStockStore((s) => s.movements);
-  const rooms = useChatStore((s) => s.rooms);
   const vendor = useAuthStore((s) => s.vendor);
-  const activity = useOutsideStore((s) => s.activity);
   const { pathname } = useLocation();
   const isDiscovery = pathname === "/regions" || pathname.startsWith("/regions/") || pathname.startsWith("/discover");
-
-  // Unread notifications, plus rooms that had a message today — the same two
-  // numbers the Activity screen shows, so the badge never disagrees with it.
-  const unreadNotifications = (activity?.groups || []).reduce(
-    (total, group) => total + group.items.filter((i) => !i.is_read).length, 0);
-  const counts = {
-    activity: unreadNotifications + (activity?.counts?.rooms_active_today || 0),
-    // Kept so a caller that still asks for the old keys gets a real number.
-    orders: movements.filter(needsMyAction).length,
-    chat: rooms.reduce((total, room) => total + (room.unread_count || 0), 0),
-  };
 
   return (
     <nav
@@ -50,7 +33,6 @@ export default function MobileTabBar() {
         {PRIMARY_TABS.map((item) => {
           const Icon = item.icon;
           const active = isPrimaryActive(item, pathname, vendor?.vendor_handle);
-          const count = item.badge ? counts[item.badge] : 0;
 
           if (item.action) {
             return (
@@ -109,11 +91,6 @@ export default function MobileTabBar() {
                   )}
                 >
                   <Icon size={19} strokeWidth={active ? 2.4 : 1.9} aria-hidden="true" />
-                  {count > 0 && (
-                    <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-brand-700 text-white text-micro font-bold grid place-items-center tabular-nums ring-2 ring-surface-0">
-                      {count > 9 ? "9+" : count}
-                    </span>
-                  )}
                 </span>
                 <span className="truncate max-w-full">{item.label}</span>
               </NavLink>

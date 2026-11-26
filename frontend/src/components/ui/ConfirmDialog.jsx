@@ -13,6 +13,7 @@ export default function ConfirmDialog() {
       onClose={() => resolve(false)}
       size="sm"
       title={confirm?.title || "Are you sure?"}
+      restoreFocusTo={confirm?.restoreFocusTo || null}
       footer={
         <>
           <Button variant="ghost" size="sm" onClick={() => resolve(false)}>
@@ -24,7 +25,7 @@ export default function ConfirmDialog() {
         </>
       }
     >
-      <div className="flex gap-3 text-sm text-ink-3">
+      <div data-confirm-dialog="true" className="flex gap-3 text-sm text-ink-3">
         {confirm?.danger && <AlertTriangle size={18} className="text-amber-400 shrink-0 mt-0.5" />}
         <p>{confirm?.message}</p>
       </div>
