@@ -25,14 +25,19 @@ const variants = {
   dangerGhost: "bg-transparent text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10",
 };
 
+// A control's radius is 12px, and a card's is 16px — the design system's two
+// numbers, stated once. `rounded-btn` is the token (see tokens.css /
+// borderRadius in tailwind.config.js) so a button cannot drift back to a pill
+// or to a 16px card radius one component at a time. The two smallest sizes
+// stay at 8px because a 28px-tall chip with a 12px corner is a lozenge.
 const sizes = {
   xs: "h-7 px-2.5 text-2xs gap-1 rounded-lg",
   sm: "h-9 px-3 text-xs gap-1.5 rounded-lg",
-  md: "h-10 px-4 text-sm gap-2 rounded-xl",
-  lg: "h-11 px-5 text-sm gap-2 rounded-xl",
-  xl: "h-12 px-6 text-base gap-2.5 rounded-xl",
+  md: "h-10 px-4 text-sm gap-2 rounded-btn",
+  lg: "h-11 px-5 text-sm gap-2 rounded-btn",
+  xl: "h-12 px-6 text-base gap-2.5 rounded-btn",
   icon: "h-9 w-9 rounded-lg",
-  iconLg: "h-11 w-11 rounded-xl",
+  iconLg: "h-11 w-11 rounded-btn",
 };
 
 const ICON = { xs: 13, sm: 14, md: 16, lg: 17, xl: 18, icon: 16, iconLg: 18 };

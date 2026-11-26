@@ -4,12 +4,12 @@ import {
   Plus, MessagesSquare, ShieldCheck, Layers3, BarChart3, FileCheck, LayoutDashboard,
   Sparkles, Receipt, ShoppingBag, ShoppingCart, List, ListChecks, Inbox,
   ScanLine, Mail, Search, ClipboardCheck, Settings, BookOpen, HeartHandshake,
-  Ruler, KeyRound, SlidersHorizontal, FolderOpen,
+  Ruler, KeyRound, SlidersHorizontal, FolderOpen, LockKeyhole, LifeBuoy,
 } from "lucide-react";
 import { BRIEF_LANDING_ENABLED, DESK_ENABLED, MAIL_ENABLED } from "@/config/flags";
 
 /**
- * THE NEW MAP — five destinations, seven drawer links, one identity.
+ * THE NEW MAP — five destinations, three drawer sections, one identity.
  *
  * The app used to answer "what can I do here?" with thirty-five links in a
  * drawer, five tabs, a browse rail, three shelves and a settings page per
@@ -61,37 +61,87 @@ export const PRIMARY_TABS = PRIMARY_NAV;
 export const CREATE_NAV = { to: "/create", label: "Create", icon: Plus };
 
 /**
- * The drawer. Seven rows, in the order a person reaches for them:
- * the workspace they belong to, the work in progress, then the rest.
+ * THE WORKSPACE DRAWER — Wasta 2.0.
  *
- * Home office is first because it is a *place you belong to*, not a tool. It
- * used to be item 31 of 35 under "Workspace tools", which is the same as not
- * shipping it.
+ * Three sections, which is the whole information architecture outside the five
+ * tabs:
+ *
+ *   My workspace   what the business owns — its overview, page, shelf, live
+ *                  orders, diary and ledger. Six rows, six existing modules.
+ *   Network        who it trades with and where it learns: markets and
+ *                  regions, groups, learning, events.
+ *   Account        the two doors that are about the account rather than the
+ *                  work. Settings is `/more`, the settings page itself; the
+ *                  two legal rows open the section they name on `/legal`.
+ *
+ * Orders & trades, Records & receipts and Offers & inventory stay three
+ * separate rows on purpose: they answer three different questions (what is
+ * happening, what happened, what is available) and they are three different
+ * modules in the API. Merging them into one "Inventory" screen was rejected.
  */
 export const SECTION_GROUPS = [
   {
-    title: "Your office",
+    title: "My workspace",
+    /** The workspace is what a business owns. Every row here is an existing
+     *  module: the surface that answers it, not a new page for it. */
     items: [
-      { to: "/office", label: "Home office", icon: Building2, hint: "The institution or team you belong to" },
+      { to: "/workspace", label: "Business overview", icon: LayoutDashboard },
+      { to: "/you/page", label: "My business page", icon: FileCheck },
+      { to: "/stock", label: "Offers & inventory", icon: Package },
       { to: "/orders", label: "Orders & trades", icon: ShoppingBag },
       { to: "/calendar", label: "Calendar", icon: CalendarDays },
+      { to: "/orders/records", label: "Records & receipts", icon: ClipboardCheck },
     ],
   },
   {
-    title: "Learn & meet",
+    title: "Network",
     items: [
+      // The Explore tab's own screen. "Where am I looking" is a place a person
+      // opens from a standing start, which is what this drawer is for.
+      { to: "/regions", label: "Markets & regions", icon: MapPin, tab: "Explore" },
+      { to: "/groups", label: "Groups & community", icon: Users },
       { to: "/learn", label: "Learn", icon: BookOpen },
-      { to: "/groups", label: "Groups", icon: Users },
       { to: "/events", label: "Events", icon: CalendarDays },
     ],
   },
   {
-    title: "Everything else",
+    title: "Account",
     items: [
-      { to: "/more", label: "Settings & records", icon: Settings, hint: "Receipts, plans, analytics and the long tail" },
+      // `/more` IS the settings page. It used to be reached through a
+      // `/you/settings` redirect, which meant the row could never show as
+      // current — the address bar had already moved on.
+      { to: "/more", label: "Settings", icon: Settings },
+      { to: "/legal#privacy", label: "Privacy & security", icon: LockKeyhole },
+      { to: "/legal#support", label: "Help & support", icon: LifeBuoy },
     ],
   },
 ];
+
+/** Every drawer row, flattened. Tests and tooling count from here. */
+export const DRAWER_ITEMS = SECTION_GROUPS.flatMap((group) => group.items);
+
+/**
+ * IS THIS ROW THE CURRENT DESTINATION?
+ *
+ * A plain prefix test is wrong twice over:
+ *
+ *   · `/orders` is a prefix of `/orders/records`, so "Orders & trades" and
+ *     "Records & receipts" would both light up on the ledger — two rows lit at
+ *     once is how a drawer stops being trustworthy about where you are;
+ *   · a hash row (`/legal#privacy`) must not claim the page for whichever of
+ *     the two legal rows renders first.
+ *
+ * So the one prefix that has a child route is special-cased to its own detail
+ * pages (`/orders/<id>`), and hash rows are decided by the hash, in the drawer.
+ */
+export function isDrawerActive(pathname, to) {
+  if (!to || to.includes("#")) return false;
+  if (pathname === to) return true;
+  // `/orders/123` is still the trade you are looking at. `/orders/records`
+  // is a different module and has its own row.
+  if (to === "/orders") return /^\/orders\/[^/]+$/.test(pathname) && pathname !== "/orders/records";
+  return pathname.startsWith(`${to}/`);
+}
 
 /** Flat inventory, kept for tests and anything counting the drawer. */
 export const SECONDARY_NAV = SECTION_GROUPS.flatMap((group) => group.items);

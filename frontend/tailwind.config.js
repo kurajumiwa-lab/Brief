@@ -191,6 +191,9 @@ export default {
         // One radius per card size, so cards stop drifting apart.
         card: "var(--card-radius)", "card-sm": "var(--card-radius-sm)",
         "card-lg": "var(--card-radius-lg)",
+        // A control's corner. 12px, named, so a button never borrows the card
+        // radius — the design system keeps those two apart on purpose.
+        btn: "var(--btn-radius)",
       },
       boxShadow: {
         xs: "var(--shadow-xs)",

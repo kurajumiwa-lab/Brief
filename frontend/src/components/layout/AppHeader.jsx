@@ -90,10 +90,12 @@ export default function AppHeader() {
           <button
             type="button"
             onClick={() => setSections(true)}
-            aria-label="More"
+            // The panel is the workspace menu, and it says so now: "More" was
+            // the old drawer's heading and it described a list of leftovers.
+            aria-label="Workspace menu"
             aria-expanded={sectionsOpen}
             aria-controls="secondary-sections"
-            className="-ml-2 shrink-0 rounded-xl p-2 text-ink-3 transition-colors hover:bg-surface-2 hover:text-ink-1 focus-visible:ring-2 focus-visible:ring-brand-500"
+            className="-ml-2 grid h-11 w-11 shrink-0 place-items-center rounded-btn text-ink-3 transition-colors hover:bg-surface-2 hover:text-ink-1 focus-visible:ring-2 focus-visible:ring-brand-500"
           >
             <Menu size={19} aria-hidden="true" />
           </button>

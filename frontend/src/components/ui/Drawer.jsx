@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export default function Drawer({ open, onClose, title, description, side = "right", width = "max-w-md", children, footer, className }) {
+export default function Drawer({ open, onClose, title, description, side = "right", width = "max-w-md", children, footer, className, hideHeader = false }) {
   useEffect(() => {
     if (!open) return;
     const onKey = (e) => e.key === "Escape" && onClose?.();
@@ -46,7 +46,10 @@ export default function Drawer({ open, onClose, title, description, side = "righ
               className
             )}
           >
-            {(title || onClose) && (
+            {/* A panel may own its header. The workspace drawer does: its top
+                bar is the product mark plus the business it belongs to, and a
+                second "More" bar above that was two titles for one panel. */}
+            {!hideHeader && (title || onClose) && (
               <div className="flex items-start justify-between gap-4 px-5 py-4 border-b border-edge-1 shrink-0">
                 <div className="min-w-0">
                   {title && <h2 className="text-sm font-semibold text-ink-1 truncate">{title}</h2>}
@@ -59,7 +62,7 @@ export default function Drawer({ open, onClose, title, description, side = "righ
                 )}
               </div>
             )}
-            <div className="flex-1 overflow-y-auto p-5">{children}</div>
+            <div className={cn("flex-1 overflow-y-auto", hideHeader ? "p-0" : "p-5")}>{children}</div>
             {footer && <div className="px-5 py-3 border-t border-edge-1 bg-surface-1 flex items-center justify-end gap-2 shrink-0">{footer}</div>}
           </motion.aside>
         </div>

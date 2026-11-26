@@ -62,16 +62,18 @@ export default function Shell() {
 
       <MobileTabBar />
 
+      {/* The drawer's own title bar is suppressed: the panel names the
+          business in the identity row, and "More" was a heading for a list that
+          is already grouped. One title, one close button, both in the content. */}
       <Drawer
         open={sectionsOpen}
         onClose={() => setSections(false)}
         side="left"
         width="max-w-xs"
         className="!p-0"
-        title="More"
-        description="The places you open from a standing start"
+        hideHeader
       >
-        <div className="-m-5 h-[calc(100%+2.5rem)]">
+        <div className="h-full">
           <SidebarContent onNavigate={() => setSections(false)} />
         </div>
       </Drawer>
