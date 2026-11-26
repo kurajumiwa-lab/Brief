@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 import { Download, ShieldCheck, Trash2, LifeBuoy } from "lucide-react";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
@@ -63,6 +63,19 @@ const SECTIONS = [
 export default function LegalPage() {
   const { vendor, logout } = useAuthStore();
   const [busy, setBusy] = useState(false);
+
+  // `/legal#privacy` and `/legal#support` are real addresses: the workspace
+  // drawer links straight to the section a person asked for, so arriving two
+  // screens above it would be a broken promise. The shell scrolls to top on
+  // every navigation, so this runs after that and wins.
+  const { hash } = useLocation();
+  useEffect(() => {
+    if (!hash) return;
+    const target = document.getElementById(hash.slice(1));
+    if (!target) return;
+    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+    target.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+  }, [hash]);
   const [confirm, setConfirm] = useState("");
   const [reason, setReason] = useState("");
 
@@ -111,8 +124,15 @@ export default function LegalPage() {
         </p>
       </div>
 
+      {/* Every section is addressable: `/legal#privacy`, `/legal#rights`. The
+          Account rows in the workspace drawer open the one they name. */}
       {SECTIONS.map((section) => (
-        <Card key={section.id} as="section">
+        <Card
+          key={section.id}
+          as="section"
+          id={section.id}
+          className="scroll-mt-24"
+        >
           <h2 className="text-sm font-bold text-ink-1 mb-2">{section.title}</h2>
           <ul className="space-y-2">
             {section.body.map((line) => (
@@ -169,7 +189,7 @@ export default function LegalPage() {
         </div>
       </Card>
 
-      <Card as="section">
+      <Card as="section" id="support" className="scroll-mt-24">
         <h2 className="text-sm font-bold text-ink-1 flex items-center gap-2">
           <LifeBuoy size={16} className="text-ink-3" /> Support
         </h2>

@@ -47,6 +47,11 @@ vi.mock("@/lib/api", () => {
       switchRole: vi.fn((role) => ok({ role })), byHandle: vi.fn(() => ok(OTHER)), profile: vi.fn(() => ok({})), patronStatus: vi.fn(() => ok({ is_patron: true, tier: "starter", max_lists: 1, max_vendors_per_list: 20 })),
       becomePatron: vi.fn(() => ok({})), update: vi.fn(() => ok(ME)), updateProfile: vi.fn(() => ok({})), graph: vi.fn(() => ok({})),
     },
+    // The drawer reads this to decide whether the business is reachable.
+    identityAPI: {
+      me: vi.fn(() => ok({ contact: { phone: "", email: "", show_phone: false, show_email: false }, capabilities: [] })),
+      save: vi.fn(() => ok({})),
+    },
     stockAPI: {
       mine: vi.fn(() => ok(STOCK)), network: vi.fn(() => ok(NETWORK_STOCK)), movements: vi.fn(() => ok(MOVEMENTS)), categories: vi.fn(() => ok(["vegetables", "textiles"])),
       add: vi.fn(() => ok({ message: "Stock added", stock_id: "s-new" })), get: vi.fn(() => ok({ ...STOCK[0], id: "s-new", name: "Spinach" })),
@@ -103,6 +108,8 @@ import ChatPage from "@/pages/chat/ChatPage";
 import Network from "@/pages/network/Network";
 import Sidebar from "@/components/layout/Sidebar";
 import AccountMenu from "@/components/layout/AccountMenu";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import { useIdentityStore } from "@/stores/identityStore";
 import MePage from "@/pages/me/MePage";
 import { SidebarContent } from "@/components/layout/Sidebar";
 
@@ -144,18 +151,23 @@ describe("routing & auth gate", () => {
     expect(screen.getByText(/nothing is selected for you/i)).toBeInTheDocument();
   });
 
-  it("keeps the secondary drawer free of the five primary destinations", async () => {
-    const { NAV } = await import("@/components/layout/Sidebar");
+  it("keeps the workspace drawer free of duplicate primary tabs", async () => {
+    const { DRAWER_ITEMS } = await import("@/config/navigation");
+    useAuthStore.setState({ token: "tok", vendor: ME, ready: true, loading: false });
     mount(<Sidebar />, "/");
-    const nav = await screen.findByRole("navigation", { name: /more/i });
-    for (const { label } of NAV) expect(within(nav).getByText(label)).toBeInTheDocument();
-    for (const label of [/^home$/i, /^regions$/i, /^inbox$/i, /^you$/i]) {
+    const nav = await screen.findByRole("navigation", { name: /workspace/i });
+    for (const { label } of DRAWER_ITEMS) expect(within(nav).getByText(label)).toBeInTheDocument();
+    // The five daily destinations own the bottom bar. Only "Markets & regions"
+    // shares a *route* with Explore, and it is labelled as that tab.
+    for (const label of [/^home$/i, /^explore$/i, /^inbox$/i, /^profile$/i]) {
       expect(within(nav).queryByRole("link", { name: label })).not.toBeInTheDocument();
     }
-    // Create is the one action; it is not in the drawer either.
     expect(within(nav).queryByRole("link", { name: /^create$/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole("radiogroup", { name: /current role/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /sign out/i })).not.toBeInTheDocument();
+    // The five tabs are never repeated by route.
+    const hrefs = within(nav).getAllByRole("link").map((a) => a.getAttribute("href"));
+    for (const route of ["/", "/create", "/inbox", "/you"]) {
+      expect(hrefs, `drawer repeats ${route}`).not.toContain(route);
+    }
   });
 });
 
@@ -619,42 +631,175 @@ describe("Compact business dashboard", () => {
 });
 
 describe("Drawer navigation", () => {
+  // `ConfirmDialog` is mounted once in the Shell. A drawer-only harness has to
+  // mount it too, or the dormancy warning is invisible to the test and a
+  // regression there would pass silently.
   const mountDrawer = () =>
     render(
       <MemoryRouter initialEntries={["/"]}>
-        <SidebarContent />
+        <SidebarContent onNavigate={() => {}} />
+        <ConfirmDialog />
       </MemoryRouter>,
     );
 
-  it("cuts the drawer to three short groups", async () => {
+  beforeEach(() => {
     useAuthStore.setState({ token: "tok", vendor: ME, ready: true, loading: false });
+  });
+
+  it("is three sections: the business, the network, the account", async () => {
     mountDrawer();
 
-    for (const title of ["Your office", "Learn & meet", "Everything else"]) {
+    for (const title of ["My workspace", "Network", "Account"]) {
       expect(screen.getByRole("heading", { name: title })).toBeInTheDocument();
     }
-    const links = screen.getAllByRole("link").map((a) => a.getAttribute("href"));
-    expect(links).toHaveLength(7);
-    expect(links).not.toContain("/markets");
-    expect(links).not.toContain("/mall");
-  });
-
-  it("does not repeat the five primary destinations", async () => {
-    useAuthStore.setState({ token: "tok", vendor: ME, ready: true, loading: false });
-    mountDrawer();
-
-    for (const label of ["Home", "Local network", "Mall", "Connect", "My World"]) {
-      expect(screen.queryByRole("link", { name: label })).not.toBeInTheDocument();
+    // The old headings described a drawer of leftovers. There is no "More"
+    // heading and no fourth group.
+    for (const gone of ["Your office", "Learn & meet", "Everything else", "More"]) {
+      expect(screen.queryByRole("heading", { name: gone })).not.toBeInTheDocument();
     }
   });
 
-  it("puts Home office first, then the work in progress, then one settings door", async () => {
-    useAuthStore.setState({ token: "tok", vendor: ME, ready: true, loading: false });
+  it("carries the six workspace rows the brief names, each on a real page", async () => {
     mountDrawer();
 
-    expect(screen.getByRole("link", { name: /home office/i })).toHaveAttribute("href", "/office");
-    expect(screen.getByRole("link", { name: /orders & trades/i })).toHaveAttribute("href", "/orders");
-    expect(screen.getByRole("link", { name: /calendar/i })).toHaveAttribute("href", "/calendar");
-    expect(screen.getByRole("link", { name: /settings & records/i })).toHaveAttribute("href", "/more");
+    const expected = [
+      ["Business overview", "/workspace"],
+      ["My business page", "/you/page"],
+      ["Offers & inventory", "/stock"],
+      ["Orders & trades", "/orders"],
+      ["Calendar", "/calendar"],
+      ["Records & receipts", "/orders/records"],
+    ];
+    for (const [label, href] of expected) {
+      expect(screen.getByRole("link", { name: label })).toHaveAttribute("href", href);
+    }
+  });
+
+  it("keeps Orders & trades, Records & receipts and Offers & inventory apart", async () => {
+    mountDrawer();
+
+    // Three different questions, three different modules. Collapsing them was
+    // the thing the brief forbade, so the routes are pinned rather than trusted
+    // to stay distinct.
+    const href = (name) => screen.getByRole("link", { name }).getAttribute("href");
+    expect(href("Orders & trades")).toBe("/orders");
+    expect(href("Records & receipts")).toBe("/orders/records");
+    expect(href("Offers & inventory")).toBe("/stock");
+  });
+
+  it("lists the Network rows and the two Account doors", async () => {
+    mountDrawer();
+
+    expect(screen.getByRole("link", { name: /markets & regions/i })).toHaveAttribute("href", "/regions");
+    expect(screen.getByRole("link", { name: /groups & community/i })).toHaveAttribute("href", "/groups");
+    expect(screen.getByRole("link", { name: /^learn$/i })).toHaveAttribute("href", "/learn");
+    expect(screen.getByRole("link", { name: /^events$/i })).toHaveAttribute("href", "/events");
+    // `/more` is the settings page. The old `/you/settings` was a redirect, so
+    // the row could never report itself as the current destination.
+    expect(screen.getByRole("link", { name: /^settings$/i })).toHaveAttribute("href", "/more");
+    // Both legal rows are the same page, opened at the section they name —
+    // those sections exist, so the label is not a promise the app breaks.
+    expect(screen.getByRole("link", { name: /privacy & security/i })).toHaveAttribute("href", "/legal#privacy");
+    expect(screen.getByRole("link", { name: /help & support/i })).toHaveAttribute("href", "/legal#support");
+  });
+
+  it("names the business and says whether it is reachable", async () => {
+    mountDrawer();
+
+    expect(screen.getByText("Mama Mboga Fresh")).toBeInTheDocument();
+    expect(screen.getByText("/p/mama_mboga")).toBeInTheDocument();
+    // ME has a live page (handle + name) and no published contact route.
+    expect(screen.getByText(/page live, no reply route/i)).toBeInTheDocument();
+  });
+
+  it("offers Sign out in the footer and signs the person out", async () => {
+    mountDrawer();
+
+    const out = screen.getByRole("button", { name: /sign out/i });
+    fireEvent.click(out);
+    expect(useAuthStore.getState().token).toBeNull();
+    expect(useAuthStore.getState().vendor).toBeNull();
+  });
+
+  it("writes no explanation under a row and no subtitle under the mark", async () => {
+    mountDrawer();
+
+    // A drawer is a list of labels. The reviewed copy — a sentence per row, a
+    // tagline under the wordmark, a paragraph at the bottom — is gone.
+    expect(screen.queryByText(/everything else, in one place/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/the five daily destinations/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/standing start/i)).not.toBeInTheDocument();
+  });
+
+  it("switches how the business operates from the identity row", async () => {
+    mountDrawer();
+
+    const trigger = screen.getByRole("button", { name: /operating as selling/i });
+    fireEvent.click(trigger);
+    const menu = screen.getByRole("menu", { name: /how you operate/i });
+    expect(within(menu).getByRole("menuitemradio", { name: /^sourcing\b/i })).toBeInTheDocument();
+    // The current mode is checked, not merely present.
+    expect(within(menu).getByRole("menuitemradio", { name: /^selling\b/i })).toHaveAttribute("aria-checked", "true");
+
+    fireEvent.click(within(menu).getByRole("menuitemradio", { name: /^both\b/i }));
+    await waitFor(() => expect(api.vendorAPI.switchRole).toHaveBeenCalledWith("both"));
+  });
+
+  it("asks before going dormant, because dormant is a delisting", async () => {
+    mountDrawer();
+
+    fireEvent.click(screen.getByRole("button", { name: /operating as selling/i }));
+    const menu = screen.getByRole("menu", { name: /how you operate/i });
+
+    // `current_role !== 'dormant'` is the discovery filter on both the network
+    // and the recommendation engine. One tap must not silently remove a
+    // business from the market, so the drawer raises a confirm first.
+    fireEvent.click(within(menu).getByRole("menuitemradio", { name: /^dormant\b/i }));
+    expect(await screen.findByText(/stop appearing in discovery/i)).toBeInTheDocument();
+    // Nothing has been sent yet.
+    expect(api.vendorAPI.switchRole).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: /^go dormant$/i }));
+    await waitFor(() => expect(api.vendorAPI.switchRole).toHaveBeenCalledWith("dormant"));
+  });
+
+  it("does not send the role change when the dormancy warning is dismissed", async () => {
+    mountDrawer();
+
+    fireEvent.click(screen.getByRole("button", { name: /operating as selling/i }));
+    fireEvent.click(
+      within(screen.getByRole("menu", { name: /how you operate/i }))
+        .getByRole("menuitemradio", { name: /^dormant\b/i }),
+    );
+    fireEvent.click(await screen.findByRole("button", { name: /cancel/i }));
+    expect(api.vendorAPI.switchRole).not.toHaveBeenCalled();
+  });
+
+  it("reads the contact record instead of assuming there is no reply route", async () => {
+    // The bug: `exposure()` counts a published phone/email as a reply route,
+    // and those live in the identity store — which the drawer never loaded. A
+    // business whose only route was a published email therefore showed "Not
+    // published" until the person happened to visit Profile, then silently
+    // became "Reachable". Seed the store the way a real load would, and the
+    // drawer must report it without a detour through Profile.
+    useIdentityStore.setState({
+      contact: { phone: "", email: "mama@example.ke", show_phone: false, show_email: true },
+      loaded: true,
+      status: "ready",
+    });
+    mountDrawer();
+
+    // The label and its detail are separate spans, so match across them.
+    const line = screen.getByText(/^Reachable/);
+    expect(line).toBeInTheDocument();
+  });
+
+  it("asks the server for the identity record when it has not been loaded", async () => {
+    useIdentityStore.setState({ loaded: false, status: "idle" });
+    mountDrawer();
+
+    // Not a guess and not a permanent "unknown": the drawer is the surface
+    // making the claim, so it fetches the fact itself (once per session).
+    await waitFor(() => expect(api.identityAPI.me).toHaveBeenCalled());
   });
 });

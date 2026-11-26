@@ -43,19 +43,19 @@ export const CATEGORY_TINTS = {
     "Goods", Package,
     "bg-cat-goods-soft",
     "text-cat-goods-text",
-    "#D95336",
+    "#B64B32",
   ),
   services: hue(
     "Services", Truck,
     "bg-cat-services-soft",
     "text-cat-services-text",
-    "#123B32",
+    "#10372D",
   ),
   rentals: hue(
     "Rentals", Wrench,
     "bg-cat-rentals-soft",
     "text-cat-rentals-text",
-    "#123B32",
+    "#10372D",
   ),
   events: hue(
     "Events", CalendarDays,
@@ -74,7 +74,7 @@ export const CATEGORY_TINTS = {
     "Available", Package,
     "bg-cat-goods-soft",
     "text-cat-goods-text",
-    "#D95336",
+    "#B64B32",
   ),
   wanted: hue(
     "Wanted", ClipboardList,

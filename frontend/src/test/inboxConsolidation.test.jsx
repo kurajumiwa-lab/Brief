@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
-import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
+import { render, screen, waitFor, within } from "@testing-library/react";
+import { MemoryRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 
 /**
  * ONE INBOX, REACHABLE FROM EVERY OLD DOOR.
@@ -12,8 +12,8 @@ import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
  * different filters, and did not contain the thing they clicked.
  *
  * These specs mount the real route table entries at each old URL and assert
- * that the same screen answers — and that `/mail` still starts on conversations,
- * which is the one thing the old Mail page did.
+ * that the same screen answers — and that `/mail` still lands somewhere that
+ * means what it used to, which is now `/inbox` itself.
  */
 
 const ok = (data) => Promise.resolve({ data });
@@ -65,14 +65,16 @@ vi.mock("@/pages/inbox/InboxPage", async () => {
 
 const renderAt = async (path) => {
   const { default: InboxPage } = await import("@/pages/inbox/InboxPage");
-  const InboxPageMail = () => <InboxPage initialFilter="messages" />;
   return render(
     <MemoryRouter initialEntries={[path]}>
       <LocationProbe />
       <Routes>
         <Route path="/inbox" element={<InboxPage />} />
+        {/* /activity still renders the Inbox: an old deep link must not break,
+            even though nothing in the navigation points here any more. */}
         <Route path="/activity" element={<InboxPage />} />
-        <Route path="/mail" element={<InboxPageMail />} />
+        {/* /mail is a redirect (an inbox-first screen has no second one). */}
+        <Route path="/mail" element={<Navigate to="/inbox" replace />} />
       </Routes>
     </MemoryRouter>,
   );
@@ -83,44 +85,42 @@ beforeEach(() => {
 });
 
 describe("the Inbox is one screen behind every old URL", () => {
-  for (const path of ["/inbox", "/activity", "/mail"]) {
-    it(`${path} renders the Inbox, with its heading and its controls`, async () => {
+  for (const path of ["/inbox", "/activity"]) {
+    it(`${path} renders the Inbox, with its heading and its two tabs`, async () => {
       await renderAt(path);
       expect(
         await screen.findByRole("heading", { level: 1, name: "Inbox" }),
       ).toBeInTheDocument();
 
-      // the three parts of Activity that were absorbed, not dropped
-      expect(await screen.findByTestId("activity-stats")).toBeInTheDocument();
-      expect(screen.getByTestId("activity-watches-panel")).toBeInTheDocument();
-      expect(screen.getByTestId("activity-filters")).toBeInTheDocument();
-
-      // the week, and the two modes
-      expect(screen.getByTestId("inbox-timeline")).toBeInTheDocument();
-      expect(screen.getByTestId("inbox-mode-waiting")).toBeInTheDocument();
-      expect(screen.getByTestId("inbox-mode-activity")).toBeInTheDocument();
+      // The screen is a messaging centre now: two tabs and the list. The
+      // dashboard that used to sit above the list is deliberately absent —
+      // those were removed by the brief, not by accident, so asserting they are
+      // gone is the test.
+      const tabs = await screen.findByTestId("inbox-tabs");
+      expect(within(tabs).getAllByRole("tab")).toHaveLength(2);
+      expect(screen.queryByTestId("activity-stats")).toBeNull();
+      expect(screen.queryByTestId("activity-filters")).toBeNull();
+      expect(screen.queryByTestId("activity-watches-panel")).toBeNull();
     });
   }
 
-  it("/mail opens already filtered to conversations, which is all the old page did", async () => {
+  it("/mail redirects to /inbox, which is the same destination it meant", async () => {
     await renderAt("/mail");
     await screen.findByRole("heading", { level: 1, name: "Inbox" });
-    const messagesChip = screen.getByTestId("activity-group-messages");
-    await waitFor(() =>
-      expect(messagesChip).toHaveAttribute("aria-pressed", "true"),
-    );
+    await waitFor(() => expect(currentLocation).toBe("/inbox"));
   });
 
-  it("/inbox opens on everything, not on a filter that hides unread work", async () => {
+  it("/inbox opens on Chats, because that is what an inbox opens on", async () => {
     await renderAt("/inbox");
     await screen.findByRole("heading", { level: 1, name: "Inbox" });
-    expect(screen.getByTestId("activity-group-all")).toHaveAttribute(
-      "aria-pressed",
+    const tabs = screen.getByTestId("inbox-tabs");
+    expect(within(tabs).getByRole("tab", { name: /chats/i })).toHaveAttribute(
+      "aria-selected",
       "true",
     );
   });
 
-  it("the Inbox does not redirect anywhere — the URL is the destination", async () => {
+  it("the Inbox does not redirect /activity anywhere — the URL is the destination", async () => {
     await renderAt("/activity");
     await screen.findByRole("heading", { level: 1, name: "Inbox" });
     expect(currentLocation).toBe("/activity");
@@ -133,13 +133,17 @@ describe("the Inbox never claims to be empty when it failed to load", () => {
     api.outsideAPI.activity.mockImplementationOnce(() => Promise.reject(new Error("boom")));
     const { default: InboxPage } = await import("@/pages/inbox/InboxPage");
     render(
-      <MemoryRouter initialEntries={["/inbox"]}>
+      <MemoryRouter initialEntries={["/inbox?tab=notifications"]}>
         <Routes>
           <Route path="/inbox" element={<InboxPage />} />
         </Routes>
       </MemoryRouter>,
     );
-    expect(await screen.findByTestId("activity-error")).toBeInTheDocument();
-    expect(screen.queryByTestId("activity-empty")).toBeNull();
+    // The tab has to be open before the notification list is the thing on
+    // screen; a failure is a failure on whichever tab you are standing on.
+    const { default: InboxPageDefault } = await import("@/pages/inbox/InboxPage");
+    expect(InboxPageDefault).toBeTruthy();
+    expect(await screen.findByTestId("inbox-notifications-error")).toBeInTheDocument();
+    expect(screen.queryByTestId("inbox-notifications-empty")).toBeNull();
   });
 });

@@ -1,19 +1,24 @@
 /**
- * ACTIVITY — the dashboard layout contract.
+ * THE INBOX — an inbox-first contract.
  *
- * These specs exist because the Activity screen is judged on what fits on one
- * phone screen, and "it looked right on my laptop" is not a test. jsdom cannot
- * measure pixels, so every assertion here is about the *rules* that decide the
- * layout:
+ * This file used to pin the opposite design. It asserted a three-column grid of
+ * statistics, a neighbourhood-watches row above the list, and all seven filter
+ * pills in one horizontally-scrollable row — the dashboard that made the Inbox
+ * unusable for reading messages. Those assertions were correct for that screen
+ * and are wrong for this one, so they have been replaced rather than deleted:
+ * the requirement did not disappear, it inverted.
  *
- *   · the three statistics are one grid row of three columns, and there is no
- *     horizontal scroller or carousel anywhere near them;
- *   · all seven filters exist as one non-wrapping row inside the only
- *     horizontally scrollable container on the page;
- *   · the heading is the short one, with no explanatory paragraph;
- *   · failure and emptiness are compact lines in the flow, not tall cards;
- *   · the numbers still come from the activity payload, and a filter still
- *     filters.
+ * What is pinned now, because each one is a thing a future edit could quietly
+ * take back:
+ *
+ *   · two permanent tabs, both always present, each carrying its own count;
+ *   · no statistics row, no filter row, no watches panel, no explanatory
+ *     paragraph — the seven pieces of furniture the brief names;
+ *   · notifications are one chronological list with one-line bodies, not seven
+ *     headed groups with a description under each;
+ *   · opening ONE notification marks exactly that one read, and no other;
+ *   · opening a chat marks no notification read at all;
+ *   · loading, empty and failed are three visibly different states.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -47,47 +52,62 @@ const ACTIVITY = {
         is_read: true, created_at: "2026-10-15T09:00:00",
       }],
     },
+    {
+      key: "trades", count: 1,
+      items: [{
+        id: "n-3", type: "movement", group: "trades",
+        title: "Sukuma wiki moved", body: "Kibanda Kitchen confirmed", data: { movement_id: "m-9" },
+        is_read: false, created_at: "2026-10-17T08:00:00",
+      }],
+    },
     { key: "events", count: 0, items: [] },
-    { key: "trades", count: 0, items: [] },
     { key: "community", count: 0, items: [] },
     { key: "account", count: 0, items: [] },
   ],
-  counts: { unread_notifications: 7, rooms: 4, rooms_active_today: 2, attending: 3 },
+  counts: { unread_notifications: 2, rooms: 4, rooms_active_today: 2, attending: 3 },
   preferences: { groups: [], muted_groups: [] },
 };
 
-const mocks = vi.hoisted(() => ({ activity: vi.fn(), watches: vi.fn(), bookings: vi.fn() }));
+const ROOMS = [
+  {
+    id: "r-1", name: "Nyabere", room_type: "direct", unread_count: 2,
+    last_message: { body: "Are you available for the Kisii trip?" },
+    last_message_at: "2026-10-17T10:32:00",
+  },
+  {
+    id: "r-2", name: "Wakulima Sourcing", room_type: "group", unread_count: 0,
+    last_message: { body: "Fresh this morning" },
+    last_message_at: "2026-10-16T09:00:00",
+  },
+];
 
-// The consolidated Inbox also reads rooms, movements, its week, the corridor
-// board and the event payment queue. Each one fails quietly in the page, so a
-// stub that resolves empty is enough — these specs are about layout, not data.
+const mocks = vi.hoisted(() => ({
+  activity: vi.fn(),
+  rooms: vi.fn(),
+  markRead: vi.fn(),
+  markAllRead: vi.fn(),
+}));
+
 vi.mock("@/lib/api", () => ({
   apiError: (_e, fallback) => fallback,
   outsideAPI: { activity: mocks.activity, agenda: vi.fn(() => ok({ items: [] })) },
+  chatAPI: { rooms: mocks.rooms },
+  notificationAPI: { markRead: mocks.markRead, markAllRead: mocks.markAllRead },
   eventAPI: { paymentQueue: vi.fn(() => ok([])), confirmPayment: vi.fn(() => ok({})) },
   spottedDealAPI: { jury: vi.fn(() => ok([])), mine: vi.fn(() => ok([])), dispute: vi.fn(() => ok({})) },
   corridorTaskAPI: { inbox: vi.fn(() => ok({ days: [] })) },
   recurringRoutineAPI: { mine: vi.fn(() => ok({ share_prompts: [] })) },
-  chatAPI: { rooms: vi.fn(() => ok([])) },
   default: {},
 }));
 
 vi.mock("@/lib/receiptsApi", () => ({
-  receiptsAPI: {
-    ledger: vi.fn(() => ok({ receipts: [] })),
-    myMerchants: vi.fn(() => ok([])),
-  },
+  receiptsAPI: { ledger: vi.fn(() => ok({ receipts: [] })), myMerchants: vi.fn(() => ok([])) },
 }));
-
-// The stores are real zustand stores, not mocks: the page reads them through
-// selectors and the test resets them in beforeEach, which a stub cannot do.
-// Only the API layer is faked, which is the same boundary the app uses.
-
 
 vi.mock("@/lib/ledgerApi", () => ({
   ledgerAPI: {
-    listWatches: mocks.watches,
-    myBookings: mocks.bookings,
+    listWatches: vi.fn(() => ok({ items: [] })),
+    myBookings: vi.fn(() => ok({ items: [] })),
     createWatch: vi.fn(() => ok({})),
     deleteWatch: vi.fn(() => ok({})),
     markNotificationActed: vi.fn(() => ok({})),
@@ -100,222 +120,244 @@ vi.mock("@/stores/authStore", () => ({
   }),
 }));
 
-const renderAt = (element) =>
+const renderAt = (element, path = "/inbox") =>
   render(
-    <MemoryRouter initialEntries={["/activity"]}>
+    <MemoryRouter initialEntries={[path]}>
       <Routes>
         <Route path="*" element={element} />
       </Routes>
     </MemoryRouter>,
   );
 
-// The page these assertions describe is now the consolidated Inbox — the
-// three-number grid, the watches row and the filters all moved there with it.
-const ActivityPage = async () => (await import("@/pages/inbox/InboxPage")).default;
+const InboxPage = async () => (await import("@/pages/inbox/InboxPage")).default;
 
 beforeEach(async () => {
   mocks.activity.mockReset().mockImplementation(() => ok(ACTIVITY));
-  mocks.watches.mockReset().mockImplementation(() => ok({ items: [] }));
-  mocks.bookings.mockReset().mockImplementation(() => ok({ items: [] }));
+  mocks.rooms.mockReset().mockImplementation(() => ok(ROOMS));
+  mocks.markRead.mockReset().mockImplementation(() => ok({}));
+  mocks.markAllRead.mockReset().mockImplementation(() => ok({}));
   const { useOutsideStore } = await import("@/stores/outsideStore");
   useOutsideStore.setState({ activity: null, activityStatus: "idle" });
+  const { useChatStore } = await import("@/stores/chatStore");
+  useChatStore.setState({ rooms: [], activeRoom: null, messages: [] });
+  document.body.innerHTML = "";
 });
 
-describe("Inbox — the three statistics", () => {
-  it("puts all three in one three-column grid, with no carousel and no horizontal scroller", async () => {
-    const Page = await ActivityPage();
+describe("Inbox — two permanent tabs", () => {
+  it("always shows both, and lands on Chats", async () => {
+    const Page = await InboxPage();
     renderAt(<Page />);
 
-    const stats = await screen.findByTestId("activity-stats");
-    const classes = stats.className;
+    const tabs = await screen.findByTestId("inbox-tabs");
+    const chats = within(tabs).getByRole("tab", { name: /chats/i });
+    const notifications = within(tabs).getByRole("tab", { name: /notifications/i });
 
-    expect(classes).toContain("grid-cols-3");
-    expect(classes).toContain("grid");
-    // The requirement in one assertion: a scroller here would mean the third
-    // number is only reachable by swiping, which is not "shown".
-    expect(classes).not.toContain("overflow-x-auto");
-    expect(classes).not.toContain("overflow-x-scroll");
-    expect(classes).not.toContain("snap-x");
-    expect(classes).not.toContain("flex");
-    expect(stats).not.toHaveAttribute("aria-roledescription");
-    expect(stats.children).toHaveLength(3);
+    expect(chats).toHaveAttribute("aria-selected", "true");
+    expect(notifications).toHaveAttribute("aria-selected", "false");
+    // Neither tab is ever absent — a tab that vanishes when empty reads as a
+    // feature that was removed.
+    expect(within(tabs).getAllByRole("tab")).toHaveLength(2);
   });
 
-  it("shows the real numbers and names each one", async () => {
-    const Page = await ActivityPage();
+  it("keeps a count on each tab, including the one you are not on", async () => {
+    const Page = await InboxPage();
     renderAt(<Page />);
 
-    const rooms = await screen.findByTestId("activity-rooms");
-    expect(rooms).toHaveTextContent("2");
-    expect(rooms).toHaveTextContent(/Conversations/i);
-    expect(rooms).toHaveTextContent(/active today/i);
+    const tabs = await screen.findByTestId("inbox-tabs");
+    // Chats: 2 unread in r-1. Notifications: 2 unread in the payload.
+    const chats = within(tabs).getByRole("tab", { name: /chats/i });
+    const notifications = within(tabs).getByRole("tab", { name: /notifications/i });
 
-    const events = screen.getByTestId("activity-attending");
-    expect(events).toHaveTextContent("3");
-    expect(events).toHaveTextContent(/Events/i);
-
-    const unread = screen.getByTestId("activity-unread");
-    expect(unread).toHaveTextContent("7");
-    expect(unread).toHaveTextContent(/Notifications/i);
+    expect(within(chats).getByLabelText(/2 unread chats/i)).toHaveTextContent("2");
+    // The count for the tab you are NOT on is the whole point: it is how the
+    // screen tells you something arrived elsewhere.
+    expect(within(notifications).getByLabelText(/2 unread notifications/i)).toHaveTextContent("2");
   });
 
-  it("keeps every tile the same shape, whatever the count", async () => {
-    const Page = await ActivityPage();
+  it("switches to Notifications and back without losing either list", async () => {
+    const Page = await InboxPage();
     renderAt(<Page />);
-    const stats = await screen.findByTestId("activity-stats");
 
-    const tiles = ["activity-rooms", "activity-attending", "activity-unread"].map((id) =>
-      screen.getByTestId(id).firstElementChild
+    const tabs = await screen.findByTestId("inbox-tabs");
+    fireEvent.click(within(tabs).getByRole("tab", { name: /notifications/i }));
+
+    expect((await screen.findAllByTestId("inbox-notification-row")).length).toBeGreaterThan(0);
+    expect(within(tabs).getByRole("tab", { name: /notifications/i })).toHaveAttribute("aria-selected", "true");
+
+    fireEvent.click(within(tabs).getByRole("tab", { name: /chats/i }));
+    expect((await screen.findAllByTestId("inbox-chat-row")).length).toBeGreaterThan(0);
+  });
+
+  it("opens on Notifications when the URL says so, so the tab survives a reload", async () => {
+    const Page = await InboxPage();
+    renderAt(<Page />, "/inbox?tab=notifications");
+
+    const tabs = await screen.findByTestId("inbox-tabs");
+    expect(within(tabs).getByRole("tab", { name: /notifications/i })).toHaveAttribute(
+      "aria-selected", "true",
     );
-    // The shared box, not the whole class string: two tiles are links and
-    // carry a hover state the third does not, but the geometry must match or
-    // the row stops reading as one band.
-    for (const shared of ["min-h-[104px]", "rounded-2xl", "border", "p-2.5", "flex-col", "min-w-0"]) {
-      expect(tiles.map((t) => t.className.includes(shared))).toEqual([true, true, true]);
-    }
-    expect(stats).toBeInTheDocument();
-  });
-
-  it("survives a zero-everywhere payload without collapsing", async () => {
-    mocks.activity.mockImplementation(() =>
-      ok({ ...ACTIVITY, counts: { unread_notifications: 0, rooms: 0, rooms_active_today: 0, attending: 0 } })
-    );
-    const Page = await ActivityPage();
-    renderAt(<Page />);
-
-    expect(await screen.findByTestId("activity-rooms")).toHaveTextContent("0");
-    expect(screen.getByTestId("activity-stats").children).toHaveLength(3);
   });
 });
 
-describe("Inbox — the compact header", () => {
-  it("says Inbox, and nothing else", async () => {
-    const Page = await ActivityPage();
+describe("Inbox — the furniture the brief removed", () => {
+  it("has no statistics row, filter row or watches panel", async () => {
+    const Page = await InboxPage();
+    renderAt(<Page />);
+    await screen.findByTestId("inbox-tabs");
+
+    // Each of these was a real element of the old screen, and each is named in
+    // the brief as something to remove rather than relocate.
+    expect(screen.queryByTestId("activity-stats")).toBeNull();
+    expect(screen.queryByTestId("activity-filters")).toBeNull();
+    expect(screen.queryByTestId("activity-watches-panel")).toBeNull();
+    expect(screen.queryByTestId("toggle-add-watch-btn")).toBeNull();
+  });
+
+  it("says Inbox and nothing under it", async () => {
+    const Page = await InboxPage();
     renderAt(<Page />);
 
-    // The tab, the route and this page now agree on one name. Before the merge
-    // the tab said Inbox, the heading said Connect and the URL said /activity.
     const heading = await screen.findByRole("heading", { level: 1, name: "Inbox" });
-    expect(heading).toBeInTheDocument();
-    expect(screen.queryByText(/what's waiting for you/i)).toBeNull();
-    expect(screen.queryByText(/measured by real follow-through/i)).toBeNull();
-    // A 24px page title is the compact end of the brief; the old one rendered
-    // at `title-page` (28px) with an eyebrow above it.
     expect(heading.className).toContain("text-2xl");
+    // No eyebrow above it and no introductory sentence below it.
+    expect(screen.queryByText(/^now$/i)).toBeNull();
+    expect(screen.queryByText(/your week first/i)).toBeNull();
+    expect(screen.queryByText(/only a reply that is actually waiting/i)).toBeNull();
+  });
+
+  it("has no 'Waiting on a reply' or 'Everything else' heading", async () => {
+    const Page = await InboxPage();
+    renderAt(<Page />, "/inbox?tab=notifications");
+    await screen.findByTestId("inbox-tabs");
+
+    expect(screen.queryByText(/waiting on a reply/i)).toBeNull();
+    expect(screen.queryByText(/everything else/i)).toBeNull();
+  });
+
+  it("offers search and settings as the only header actions", async () => {
+    const Page = await InboxPage();
+    renderAt(<Page />);
+
+    expect(await screen.findByRole("link", { name: /^search$/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /^settings$/i })).toHaveAttribute("href", "/more");
   });
 });
 
-describe("Inbox — neighbourhood watches", () => {
-  it("is one compact row with the short description and an Add action", async () => {
-    const Page = await ActivityPage();
+describe("Inbox — Chats", () => {
+  it("shows sender, preview, time and an unread count on one row", async () => {
+    const Page = await InboxPage();
     renderAt(<Page />);
 
-    const panel = await screen.findByTestId("activity-watches-panel");
-    expect(within(panel).getByRole("heading", { name: /neighbourhood watches/i })).toBeInTheDocument();
-    expect(within(panel).getByText(/alerts for local needs, artisans and produce/i)).toBeInTheDocument();
-    expect(within(panel).getByTestId("toggle-add-watch-btn")).toHaveTextContent(/^Add$/);
-    expect(panel.className).toContain("p-3");
+    const row = (await screen.findAllByTestId("inbox-chat-row"))[0];
+    expect(within(row).getByText("Nyabere")).toBeInTheDocument();
+    expect(within(row).getByText("Are you available for the Kisii trip?")).toBeInTheDocument();
+    expect(within(row).getByLabelText(/2 unread/i)).toBeInTheDocument();
+    expect(row).toHaveAttribute("href", "/chat?room=r-1");
   });
 
-  it("still opens the watch form and saves what was chosen", async () => {
-    const Page = await ActivityPage();
+  it("says so honestly when there are no conversations", async () => {
+    mocks.rooms.mockImplementation(() => ok([]));
+    const Page = await InboxPage();
     renderAt(<Page />);
 
-    fireEvent.click(await screen.findByTestId("toggle-add-watch-btn"));
-    fireEvent.change(screen.getByTestId("watch-keyword-input"), { target: { value: "fence" } });
-    fireEvent.click(screen.getByTestId("save-watch-btn"));
-
-    const { ledgerAPI } = await import("@/lib/ledgerApi");
-    await waitFor(() => expect(ledgerAPI.createWatch).toHaveBeenCalled());
+    expect(await screen.findByTestId("inbox-chats-empty")).toBeInTheDocument();
+    expect(screen.getByText(/no conversations yet/i)).toBeInTheDocument();
   });
 });
 
-describe("Inbox — filters", () => {
-  it("keeps all seven in one non-wrapping, horizontally scrollable row", async () => {
-    const Page = await ActivityPage();
-    renderAt(<Page />);
+describe("Inbox — Notifications", () => {
+  const openNotifications = async () => {
+    const Page = await InboxPage();
+    renderAt(<Page />, "/inbox?tab=notifications");
+    await screen.findByTestId("inbox-tabs");
+  };
 
-    const row = await screen.findByTestId("activity-filters");
-    expect(row.className).toContain("flex-nowrap");
-    expect(row.className).toContain("overflow-x-auto");
+  it("is one chronological list, newest first, with no group headings", async () => {
+    await openNotifications();
 
-    const labels = ["Everything", "Invitations", "Events", "Replies", "Trades & Bookings", "Communities", "Account"];
-    for (const label of labels) {
-      expect(within(row).getByRole("button", { name: new RegExp(label.replace("&", "&"), "i") })).toBeInTheDocument();
-    }
+    const rows = await screen.findAllByTestId("inbox-notification-row");
+    // n-3 (17 Oct), n-1 (16 Oct), n-2 (15 Oct) — order is by time, not by group,
+    // which is why a reply from an hour ago cannot sit under an invitation from
+    // last week. Asserted by title, because the destination of each row is
+    // `destinationFor`'s business and has its own test file.
+    expect(rows.map((row) => row.textContent)).toEqual([
+      expect.stringContaining("Sukuma wiki moved"),
+      expect.stringContaining("Kisumu Hikers invited you"),
+      expect.stringContaining("Otieno answered your question"),
+    ]);
+
+    // The seven grouped headings and their blurbs are gone.
+    expect(screen.queryByText(/requests to join, invites and approvals/i)).toBeNull();
+    expect(screen.queryByText(/trades & bookings/i)).toBeNull();
   });
 
-  it("shows a category that came back empty, because the filter still exists", async () => {
-    // The old code rendered filters from the server payload, so an empty
-    // category silently vanished from the row.
-    mocks.activity.mockImplementation(() =>
-      ok({ ...ACTIVITY, groups: ACTIVITY.groups.map((g) => (g.key === "account" ? { key: "account", count: 0, items: [] } : g)) })
-    );
-    const Page = await ActivityPage();
-    renderAt(<Page />);
-    const row = await screen.findByTestId("activity-filters");
-    expect(within(row).getByTestId("activity-group-account")).toBeInTheDocument();
+  it("clamps the body to one line instead of printing a paragraph", async () => {
+    await openNotifications();
+    const [first] = await screen.findAllByTestId("inbox-notification-row");
+
+    const body = within(first).getByText("Kibanda Kitchen confirmed");
+    expect(body.className).toContain("line-clamp-1");
   });
 
-  it("still filters the feed when a pill is pressed", async () => {
-    const Page = await ActivityPage();
-    renderAt(<Page />);
+  it("marks exactly one notification read, and never mark-all", async () => {
+    await openNotifications();
 
-    expect(await screen.findByTestId("activity-section-invitations")).toBeInTheDocument();
-    expect(screen.getByTestId("activity-section-replies")).toBeInTheDocument();
+    const rows = await screen.findAllByTestId("inbox-notification-row");
+    // n-3 is unread; opening it must mark that one.
+    fireEvent.click(rows[0]);
 
-    fireEvent.click(screen.getByTestId("activity-group-replies"));
-
-    expect(screen.getByTestId("activity-group-replies")).toHaveAttribute("aria-pressed", "true");
-    expect(screen.queryByTestId("activity-section-invitations")).toBeNull();
-    expect(screen.getByTestId("activity-section-replies")).toBeInTheDocument();
-  });
-});
-
-describe("Inbox — feed states", () => {
-  it("states a failure in one compact line, with a working Try again", async () => {
-    mocks.activity.mockImplementation(() => Promise.reject(new Error("boom")));
-    const Page = await ActivityPage();
-    renderAt(<Page />);
-
-    const alert = await screen.findByTestId("activity-error");
-    expect(alert).toHaveTextContent(/couldn't load activity/i);
-    expect(alert.className).not.toContain("p-6");
-    expect(alert.className).not.toContain("text-center");
-
-    mocks.activity.mockImplementation(() => ok(ACTIVITY));
-    fireEvent.click(within(alert).getByRole("button", { name: /try again/i }));
-
-    await waitFor(() => expect(screen.getByTestId("activity-section-invitations")).toBeInTheDocument());
-    expect(mocks.activity.mock.calls.length).toBeGreaterThan(1);
+    await waitFor(() => expect(mocks.markRead).toHaveBeenCalledWith("n-3"));
+    expect(mocks.markRead).toHaveBeenCalledTimes(1);
+    // The brief forbids the blunt instrument, and it is the one the old screen
+    // would have reached for.
+    expect(mocks.markAllRead).not.toHaveBeenCalled();
   });
 
-  it("says you're all caught up without a wall of cards", async () => {
-    mocks.activity.mockImplementation(() =>
-      ok({ ...ACTIVITY, groups: ACTIVITY.groups.map((g) => ({ ...g, count: 0, items: [] })), counts: { unread_notifications: 0, rooms: 0, rooms_active_today: 0, attending: 0 } })
-    );
-    const Page = await ActivityPage();
-    renderAt(<Page />);
+  it("does not mark a read notification again", async () => {
+    await openNotifications();
 
-    const empty = await screen.findByTestId("activity-empty");
-    expect(empty).toHaveTextContent(/you're all caught up/i);
-    expect(empty.className).not.toContain("p-6");
-    // The old empty state was a bordered card with three door tiles; the point
-    // of the new one is that it takes a line, not a screen.
-    expect(within(empty).queryAllByRole("listitem")).toHaveLength(0);
+    const rows = await screen.findAllByTestId("inbox-notification-row");
+    // n-2 is already read.
+    fireEvent.click(rows[2]);
+
+    await waitFor(() => expect(mocks.rooms).toHaveBeenCalled());
+    expect(mocks.markRead).not.toHaveBeenCalled();
   });
 
-  it("keeps loading, empty and failed as three different things", async () => {
+  it("marks no notification read when a chat is opened", async () => {
+    const Page = await InboxPage();
+    renderAt(<Page />);
+
+    const [firstChat] = await screen.findAllByTestId("inbox-chat-row");
+    fireEvent.click(firstChat);
+    expect(mocks.markRead).not.toHaveBeenCalled();
+    expect(mocks.markAllRead).not.toHaveBeenCalled();
+  });
+
+  it("says you're caught up without a wall of cards", async () => {
+    mocks.activity.mockImplementation(() => ok({ groups: [], counts: {} }));
+    await openNotifications();
+
+    expect(await screen.findByTestId("inbox-notifications-empty")).toBeInTheDocument();
+    expect(screen.getByText(/all caught up/i)).toBeInTheDocument();
+  });
+
+  it("states a failure in place, with a way to retry", async () => {
+    mocks.activity.mockImplementation(() => Promise.reject(new Error("offline")));
+    await openNotifications();
+
+    const alert = await screen.findByTestId("inbox-notifications-error");
+    expect(alert).toHaveAttribute("role", "alert");
+    expect(within(alert).getByRole("button", { name: /try again/i })).toBeInTheDocument();
+  });
+
+  it("keeps loading and empty as different states", async () => {
+    // A promise that never settles: the skeleton shows, the empty state does not.
     mocks.activity.mockImplementation(() => new Promise(() => {}));
-    const Page = await ActivityPage();
-    renderAt(<Page />);
+    await openNotifications();
 
-    await waitFor(() => {
-      expect(screen.getByTestId("activity-stats")).toBeInTheDocument();
-    });
-    // Nothing has failed and nothing is empty: no error line, no "caught up".
-    expect(screen.queryByTestId("activity-error")).toBeNull();
-    expect(screen.queryByTestId("activity-empty")).toBeNull();
+    expect(await screen.findByTestId("inbox-notifications-loading")).toBeInTheDocument();
+    expect(screen.queryByTestId("inbox-notifications-empty")).toBeNull();
   });
 });
 
@@ -323,10 +365,10 @@ describe("Inbox — bottom navigation clearance", () => {
   it("pads the scroll area by the tab bar plus the device safe area", async () => {
     const { default: Shell } = await import("@/components/layout/Shell");
     render(
-      <MemoryRouter initialEntries={["/activity"]}>
+      <MemoryRouter initialEntries={["/inbox"]}>
         <Routes>
           <Route path="/" element={<Shell />}>
-            <Route path="activity" element={<div>page</div>} />
+            <Route path="inbox" element={<div>page</div>} />
           </Route>
         </Routes>
       </MemoryRouter>

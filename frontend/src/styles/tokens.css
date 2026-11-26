@@ -9,22 +9,33 @@
    clean, modern, mobile-first African marketplace. These six are the whole
    vocabulary — surface, ground, action, category and text all come from them:
 
-     · FOREST GREEN   #123B32   brand-600      identity, the filled action
-     · TERRACOTTA     #D95336   accent-400     the second voice, merchandising
-     · WARM IVORY     #F8F6F1   surface-0     the page
-     · SAGE           #DDECE4   brand-50      the quiet tinted ground
-     · CHARCOAL       #252525   ink-1         the text
-     · SECONDARY TEXT #777872   ink-secondary the quiet voice
+     · FOREST GREEN   #10372D   brand-600      identity, the filled action
+     · TERRACOTTA     #B64B32   accent-600     the second voice, merchandising
+     · WARM IVORY     #F7F6F1   surface-0      the page
+     · SAGE           #DCEAE2   brand-50       the quiet tinted ground
+     · CHARCOAL       #282B29   ink-1          the text
+     · SECONDARY TEXT #777872   ink-secondary  the quiet voice
+
+   These six are the "Connected Commerce Network" design system's anchors —
+   the owner's Wasta 2.0 brief names exactly these values, and the ramp
+   neighbours are derived from them so the palette resolves to one family
+   rather than a set of near-misses.
 
    MEASURED, AND WHERE EACH ONE IS ALLOWED
 
-   White on forest green is 12.37:1, so brand-600 carries white without
+   White on forest green is 13.07:1, so brand-600 carries white without
    effort and brand-700/800/900 get darker for their hover and active steps.
 
-   White on terracotta is 4.01:1 — under AA. So terracotta is used literally
-   as accent-400 (tints, borders, large marks, and the category wash for
-   Goods) and a filled control that carries white uses accent-600 (#B34327,
-   5.60:1). accent-700 is terracotta as TEXT on a light card (6.86:1).
+   The brief's terracotta is 5.20:1 under white, so accent-600 is the filled
+   control AND the brief's named anchor. accent-400 stays the lighter
+   terracotta for tints, borders, large marks and the Goods category wash;
+   accent-700 is terracotta as TEXT on a light card (6.86:1).
+
+   THE SAGE MOVED ONE STEP, AND SO DID ITS NEIGHBOUR. #DCEAE2 is darker than
+   the previous #DDECE4, which pushed ink-4 to 4.46:1 on it — under AA on the
+   tightest surface in the product. ink-4 is now #666761 (4.60:1 on sage),
+   because the fix belongs in the neighbour and not in a colour the brief
+   named. contrast.test.js measures this pair directly.
 
    The brief's Secondary Text #777872 measures 4.12:1 on warm ivory: it is
    legible for LARGE text (AA large is 3:1) and for muted graphic marks, and
@@ -52,20 +63,24 @@
 :root {
   color-scheme: light;
 
-  /* ── Surfaces: warm ivory #F7F5F0, the brief's background ─────────────── */
-  --surface-0: 248 246 241; /* #F8F6F1 — warm ivory, the brief's canvas */
+  /* ── Surfaces: warm ivory #F7F6F1, the brief's background ─────────────── */
+  --surface-0: 247 246 241; /* #F7F6F1 — warm ivory, the brief's canvas */
   --surface-1: 255 255 255; /* card   #FFFFFF */
   --surface-2: 241 238 231; /* quiet field / hover, warmed to match */
   --surface-3: 231 228 220;
   --surface-4: 214 211 203;
-  --surface-inverse: 18 59 50;
+  --surface-inverse: 16 55 45;
 
   /* ── Ink: charcoal and the brief's secondary ────────────────────────── */
-  --ink-1: 37 37 37;    /* #252525 charcoal — the brief's text colour */
+  --ink-1: 40 43 41;    /* #282B29 charcoal — the brief's text colour.
+                              14.69:1 on ivory, so it carries every heading. */
   --ink-2: 70 71 66;    /* #464742 */
   --ink-3: 92 93 87;    /* #5C5D57 — body secondary (6.16:1 on ivory) */
-  --ink-4: 104 105 99;  /* #686963 — metadata (5.22:1 on ivory, 4.54:1 on
-                           sage, the tightest surface in the product) */
+  --ink-4: 102 103 97;  /* #666761 — metadata. 5.28:1 on ivory, 4.60:1 on
+                           sage. The sage moved one step (#DCEAE2) and this
+                           moved with it: the old pair measured 4.46:1, which
+                           is under AA, and the fix belongs in the neighbour —
+                           not in the brand colour the brief named. */
   --ink-secondary: 119 120 114; /* #777872 — the brief's Secondary Text.
                                   4.12:1 on ivory: LARGE text and muted
                                   graphic marks only, never body copy. */
@@ -77,17 +92,17 @@
   --edge-3: 187 182 170;
 
   /* ── Brand: deep teal #123D35. Identity, not just an action. ─────────── */
-  --brand-50: 221 236 228;  /* #DDECE4 — the brief's sage */
+  --brand-50: 220 234 226;  /* #DCEAE2 — the brief's sage */
   --brand-100: 205 229 217;
   --brand-200: 176 213 197;
   --brand-300: 133 190 168;
   --brand-400: 76 157 133;
   --brand-500: 38 118 96;
-  --brand-600: 18 59 50;    /* #123B32 — the brief's forest green.
-                              White on it: 12.37:1 */
-  --brand-700: 14 48 40;
-  --brand-800: 11 39 32;
-  --brand-900: 8 29 24;
+  --brand-600: 16 55 45;    /* #10372D — the brief's forest green.
+                              White on it: 13.07:1 */
+  --brand-700: 13 46 37;
+  --brand-800: 10 38 31;
+  --brand-900: 7 28 23;
   --brand-950: 5 19 16;
 
   /* ── Tech: the second voice. Confirmation and live state — never a CTA ─ */
@@ -128,9 +143,9 @@
   --accent-400: 217 83 54;  /* #D95336 — the brief's terracotta. White on
                               it is 4.01:1, so it is a surface, a border and
                               a large mark — never a fill under white text. */
-  --accent-500: 196 71 44;
-  --accent-600: 179 67 39;  /* #B34327 — white on this is 5.60:1, so this is
-                              the filled control */
+  --accent-500: 197 82 55;
+  --accent-600: 182 75 50;  /* #B64B32 — the brief's terracotta. White on
+                              this is 5.20:1, so this is the filled control. */
   --accent-700: 157 58 33;  /* 6.86:1 on white — terracotta as text */
   --accent-800: 133 47 26;
   --accent-900: 108 38 21;
@@ -227,8 +242,8 @@
 
   /* ── The filled green surface the hero and network bands sit on. Solid,
      never a gradient: the gradient is what read as glassmorphism. ──────── */
-  --market-1: 18 59 50;  /* #123B32 — brand-600, the brief's forest green */
-  --market-2: 14 48 40;  /* one step darker, for pressed state and scrims */
+  --market-1: 16 55 45;  /* #123B32 — brand-600, the brief's forest green */
+  --market-2: 13 46 37;  /* one step darker, for pressed state and scrims */
 
   /* ── Spacing scale. New layout uses this and nothing else ───────────────
      4px base, so the rhythm is 4/8/12/16/24/32/48/64. Tailwind's own scale
@@ -244,9 +259,13 @@
   --space-8: 4rem;
 
   /* ── Cards: one radius, one padding, one gap ─────────────────────────── */
+  /* 16px. The design system's card corner, and the one a panel or a sheet
+     uses. A control is 12px (--btn-radius) and never borrows this. */
   --card-radius: 1rem;
   --card-radius-sm: 0.75rem;
   --card-radius-lg: 1.5rem;
+  /* 12px. Filled controls, inputs and segmented chips. */
+  --btn-radius: 0.75rem;
   --card-pad: 1rem;
   --card-gap: 0.75rem;
   --card-image-ratio: 4 / 3;
@@ -315,8 +334,8 @@
 .dark {
   color-scheme: dark;
 
-  --market-1: 18 59 50;
-  --market-2: 14 48 40;
+  --market-1: 16 55 45;
+  --market-2: 13 46 37;
 
   /* Warm-dark: the ivory canvas after dark. */
   --surface-0: 18 20 19;
@@ -324,7 +343,7 @@
   --surface-2: 36 40 37;
   --surface-3: 47 52 48;
   --surface-4: 60 66 61;
-  --surface-inverse: 248 246 241;
+  --surface-inverse: 247 246 241;
 
   --ink-1: 246 245 242;
   --ink-2: 214 212 206;

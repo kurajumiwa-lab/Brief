@@ -2,13 +2,12 @@ import { describe, expect, it } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 import {
-  BROWSE_NAV, CREATE_NAV, CREATE_TYPES, PRIMARY_NAV, SEARCH_SCOPES, SECTION_GROUPS,
-  isInboxPath, isPrimaryActive, isRegionPath, isYouPath,
+  BROWSE_NAV, CREATE_NAV, CREATE_TYPES, DRAWER_ITEMS, PRIMARY_NAV, SEARCH_SCOPES,
+  SECTION_GROUPS, isDrawerActive, isInboxPath, isPrimaryActive, isRegionPath, isYouPath,
 } from "@/config/navigation";
-import { NAV_BRIEF } from "@/components/layout/Sidebar";
 
 /**
- * THE NEW MAP (v5): five destinations, seven drawer links, one identity.
+ * THE NEW MAP (v5): five destinations, three drawer sections, one identity.
  *
  * The contract these tests pin is smaller than the old one on purpose:
  *
@@ -22,10 +21,6 @@ import { NAV_BRIEF } from "@/components/layout/Sidebar";
  *   · no path ever highlights two tabs.
  */
 describe("v5 navigation map", () => {
-  it("keeps the legacy Brief inventory as a non-rendered record", () => {
-    expect(NAV_BRIEF.map(({ to }) => to)).toEqual(["/tasks", "/analytics", "/pos"]);
-  });
-
   it("defines five destinations, with Create as the one prominent action", () => {
     expect(PRIMARY_NAV.map(({ label }) => label)).toEqual([
       "Home", "Explore", "Create", "Inbox", "Profile",
@@ -42,25 +37,66 @@ describe("v5 navigation map", () => {
     }
   });
 
-  it("cuts the drawer to seven links in three groups", () => {
-    const items = SECTION_GROUPS.flatMap((group) => group.items);
-    expect(items).toHaveLength(7);
+  it("cuts the drawer to thirteen rows in the three Wasta 2.0 sections", () => {
     expect(SECTION_GROUPS.map(({ title }) => title)).toEqual([
-      "Your office", "Learn & meet", "Everything else",
+      "My workspace", "Network", "Account",
     ]);
-    expect(items.map(({ to }) => to)).toEqual([
-      "/office", "/orders", "/calendar", "/learn", "/groups", "/events", "/more",
-    ]);
-    // Home office is first because it is a place you belong to, not a tool.
-    expect(items[0].label).toBe("Home office");
+    expect(DRAWER_ITEMS).toHaveLength(13);
+    expect(SECTION_GROUPS.map((g) => g.items.length)).toEqual([6, 4, 3]);
+
+    // The workspace is first because it is what the business owns.
+    const workspace = SECTION_GROUPS[0].items;
+    expect(workspace[0].label).toBe("Business overview");
+    expect(workspace[0].to).toBe("/workspace");
+    for (const item of DRAWER_ITEMS) {
+      expect(item.icon, `${item.label} has no icon`).toBeTruthy();
+      expect(item.to.startsWith("/"), `${item.label} → ${item.to}`).toBe(true);
+    }
   });
 
-  it("never repeats a primary destination in the drawer", () => {
-    const drawer = SECTION_GROUPS.flatMap((group) => group.items.map((item) => item.to));
+  it("keeps activity, history and what is available on three different modules", () => {
+    const byLabel = Object.fromEntries(DRAWER_ITEMS.map((item) => [item.label, item.to]));
+    // "Orders & trades" is the live work, "Records & receipts" is the ledger,
+    // "Offers & inventory" is the shelf. One nav row each, three routes.
+    expect(byLabel["Orders & trades"]).toBe("/orders");
+    expect(byLabel["Records & receipts"]).toBe("/orders/records");
+    expect(byLabel["Offers & inventory"]).toBe("/stock");
+    expect(new Set(["Orders & trades", "Records & receipts", "Offers & inventory"].map((l) => byLabel[l])).size).toBe(3);
+  });
+
+  it("never repeats a primary destination in the drawer, except the one it names", () => {
+    const drawer = DRAWER_ITEMS.map((item) => item.to);
     for (const tab of PRIMARY_NAV) {
-      expect(drawer).not.toContain(tab.to);
+      if (tab.to === "/regions") continue; // "Markets & regions", labelled as Explore
+      expect(drawer, `drawer repeats the ${tab.label} tab`).not.toContain(tab.to);
     }
-    expect(drawer.some((to) => to === "/" || to === "/me")).toBe(false);
+    // The Explore row is honest about being the same screen as the tab.
+    const regions = DRAWER_ITEMS.find((item) => item.to === "/regions");
+    expect(regions.label).toBe("Markets & regions");
+    expect(regions.tab).toBe("Explore");
+  });
+
+  it("highlights exactly one drawer row per screen", () => {
+    const lit = (path) => DRAWER_ITEMS.filter((item) => isDrawerActive(path, item.to)).map((i) => i.label);
+
+    expect(lit("/workspace")).toEqual(["Business overview"]);
+    expect(lit("/stock")).toEqual(["Offers & inventory"]);
+    expect(lit("/calendar")).toEqual(["Calendar"]);
+    expect(lit("/more")).toEqual(["Settings"]);
+    expect(lit("/regions")).toEqual(["Markets & regions"]);
+
+    // The defect this exists to prevent: `/orders` is a prefix of
+    // `/orders/records`, and both rows used to light up on the ledger.
+    expect(lit("/orders")).toEqual(["Orders & trades"]);
+    expect(lit("/orders/records")).toEqual(["Records & receipts"]);
+    // A single trade is still the Orders row, not the ledger.
+    expect(lit("/orders/abc-123")).toEqual(["Orders & trades"]);
+
+    // The two legal rows never claim the page without their hash.
+    expect(lit("/legal")).toEqual([]);
+    for (const path of ["/", "/you", "/inbox", "/create", "/groups", "/learn", "/events"]) {
+      expect(lit(path).length, `${path} lights ${lit(path).join(", ")}`).toBeLessThanOrEqual(1);
+    }
   });
 
   it("absorbs every discovery surface into Regions — including the retired markets", () => {

@@ -6,6 +6,7 @@ import ReceiptScanCard from "@/components/receipts/ReceiptScanCard";
 import TownDoors from "@/components/home/TownDoors";
 import StreetDoor from "@/components/home/StreetDoor";
 import HappeningShelf from "@/components/home/HappeningShelf";
+import WeekBand from "@/components/home/WeekBand";
 import NearbyShelf from "@/components/home/NearbyShelf";
 import FeaturedDealsShelf from "@/components/home/FeaturedDealsShelf";
 import IdentityStrip from "@/components/home/IdentityStrip";
@@ -59,6 +60,22 @@ export default function TodayView({
   institution = null,
   unread = 0,
   now = new Date(),
+  // The week band. These arrived from the Inbox, which is now only Chats and
+  // Notifications; the props are passed straight through so this stays a view.
+  agenda = [],
+  agendaLoading = false,
+  agendaError = "",
+  onRetryAgenda,
+  onOpenPass,
+  onConfirmTrade,
+  confirmingId,
+  taskDays = [],
+  taskData = null,
+  onTasksChanged,
+  defaultRegion,
+  town,
+  sharePrompts = [],
+  onShared,
 }) {
   const [term, setTerm] = useState("");
 
@@ -101,6 +118,28 @@ export default function TodayView({
 
       {/* ── 4 · the five categories, as doors ────────────────────────────── */}
       <DiscoveryBand />
+
+      {/* ── what is on this week ──────────────────────────────────────────
+          Rounds and RSVPs, work and routines. These moved here from the Inbox
+          so that screen could be messages and nothing else. Placed after the
+          doors and before the shelves: a thing with a date outranks a thing
+          you might like. */}
+      <WeekBand
+        agenda={agenda}
+        agendaLoading={agendaLoading}
+        agendaError={agendaError}
+        onRetryAgenda={onRetryAgenda}
+        onOpenPass={onOpenPass}
+        onConfirmTrade={onConfirmTrade}
+        confirmingId={confirmingId}
+        taskDays={taskDays}
+        taskData={taskData}
+        onTasksChanged={onTasksChanged}
+        defaultRegion={defaultRegion}
+        town={town}
+        sharePrompts={sharePrompts}
+        onShared={onShared}
+      />
 
       {/* ── 5 · what is within reach ─────────────────────────────────────── */}
       <NearbyShelf items={nearbyMatches} region={region} />

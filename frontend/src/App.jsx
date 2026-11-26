@@ -55,11 +55,12 @@ import { canSellGoods } from "@/config/identity";
 // deep links, but no navigation points at them.
 /**
  * `/mail` is the old conversations-only screen. It is not a page any more; it
- * is the Inbox with its conversation filter already applied. Keeping the URL
- * alive costs one line and keeps yesterday's links working.
+ * is the Inbox with its Chats tab already selected. Keeping the URL alive costs
+ * one line and keeps yesterday's links working — and now it lands on the tab
+ * that means the same thing, rather than on a filter row that no longer exists.
  */
 function InboxPageMail() {
-  return <InboxPage initialFilter="messages" />;
+  return <Navigate to="/inbox" replace />;
 }
 
 const TodayPage = lazy(() => import("@/pages/home/TodayPage"));
@@ -88,6 +89,7 @@ const InboxPage = lazy(() => import("@/pages/inbox/InboxPage"));
 const RoutinesPage = lazy(() => import("@/pages/routines/RoutinesPage"));
 const StreetPage = lazy(() => import("@/pages/street/StreetPage"));
 const MorePage = lazy(() => import("@/pages/more/MorePage"));
+const NotificationsSettings = lazy(() => import("@/pages/more/NotificationsSettings"));
 // Flag-gated pages are lazy on purpose: the flag decides whether the route
 // exists, but a page nobody can open should not be downloaded by anybody.
 const IntegrationsPage = lazy(() => import("@/pages/integrations/IntegrationsPage"));
@@ -421,6 +423,9 @@ function AppRoutes() {
           <Route path="/you/identity" element={<IdentityPage />} />
           <Route path="/you/rank" element={<RankPage />} />
           <Route path="/more" element={<MorePage />} />
+          {/* The watches panel moved out of the Inbox and into Settings, where
+              it belongs: it decides what will be sent, it is not what was sent. */}
+          <Route path="/more/notifications" element={<NotificationsSettings />} />
           {/* Linked from the notice-board shelf. The page already existed and
               was never registered, so the link was a 404 in an empty room. */}
           <Route path="/notices" element={<NoticeBoardPage />} />

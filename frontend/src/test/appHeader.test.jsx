@@ -92,7 +92,7 @@ describe("the header", () => {
 
   it("still offers the drawer and the account on every screen", () => {
     renderAt("/regions");
-    expect(screen.getByRole("button", { name: "More" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Workspace menu" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Account" })).toBeInTheDocument();
   });
 });
