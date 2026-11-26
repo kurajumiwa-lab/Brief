@@ -1,23 +1,12 @@
 name: CI
 
-# WHY THIS FILE DID NOT EXIST, AND WHAT IT CHANGES
+# WHY THIS WORKFLOW EXISTS
 #
-# The repository had 89 backend test files and 107 frontend ones, and nothing
-# ran them before a merge. The failures that motivated this workflow were all
-# invisible to review and trivial to catch mechanically:
-#
-#   · a page that was imported into the bundle but reachable by no route,
-#   · a notification type with no destination,
-#   · a link to `/notices` where no route existed,
-#   · production sitting 26 migrations behind the code,
-#   · a Python module that stopped compiling.
-#
-# Four jobs, run on every push and every pull request: the frontend (tests,
-# production build, and the route/contrast invariants), the backend (compile
-# check plus the suite on a real PostgreSQL, which the tests require because
-# they use advisory locks and `to_regclass`), a migration-applies-over-data
-# drill, and a schema-drift check that would have caught a hand-written
-# migration that did not match its model.
+# Quality checks must not depend on a person remembering a command. Every push
+# and every pull request to main runs the frontend tests and production build,
+# the backend compile check and suite against real PostgreSQL, and the three
+# migration checks. The workflow is CI-only: it has no deploy secrets, no
+# package publish, no production environment and no SSH.
 
 on:
   push:
@@ -25,6 +14,12 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+
+# Least privilege. The install token needs `contents: write` plus `workflows`
+# permission to push this file; the RUN token only needs to read the checkout.
+# No `packages: write`, `id-token: write`, deploy secrets or environments.
+permissions:
+  contents: read
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -38,9 +33,12 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v4
+      # Full history lets lint:changed diff against origin/main on a PR.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: "22"
           cache: npm
@@ -51,16 +49,20 @@ jobs:
       - name: Install
         run: npm ci --no-audit --no-fund
 
-      - name: Lint
+      # New and changed frontend files are gated. ESLint still reports the
+      # repository's pre-existing errors below, but they cannot hide a new one.
+      - name: Lint changed files
+        run: npm run lint:changed origin/main
+
+      - name: Lint all (report only)
         run: npx eslint src --max-warnings 0
-        continue-on-error: true # reported, not blocking, while the backlog clears
+        continue-on-error: true # 26 pre-existing errors; see docs/ci/README.md
 
       - name: Tests
         run: npx vitest run --reporter=verbose
 
       # Catches unresolved imports, a page that no longer builds, and — via
-      # src/test/notificationRoutes.test.js — routes, notification
-      # destinations and duplicate route paths.
+      # the route/contrast invariant tests — dead links and palette drift.
       - name: Production build
         run: npx vite build
 
@@ -70,7 +72,7 @@ jobs:
           ls -la dist/assets/*.js | awk '{printf "- %d kB  %s\n", $5/1024, $9}' \
             | sort -t' ' -k2 -rn | head -5 >> "$GITHUB_STEP_SUMMARY"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: frontend-dist
           path: frontend/dist
@@ -83,9 +85,9 @@ jobs:
       run:
         working-directory: backend
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.11"
           cache: pip
@@ -102,8 +104,6 @@ jobs:
       # The tests need a real PostgreSQL — they take advisory locks and call
       # `to_regclass`, neither of which SQLite supports. `pgserver` bundles
       # PostgreSQL so this works on a bare runner with no service container.
-      # No `--timeout`: pytest-timeout is not a dependency, and a CI step that
-      # fails on an unrecognised flag fails for the wrong reason.
       - name: Tests
         run: python -m pytest -q
         env:
@@ -117,9 +117,9 @@ jobs:
       run:
         working-directory: backend
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.11"
 
@@ -128,8 +128,7 @@ jobs:
 
       # Alembic refuses to run with more than one head: that is a failed merge
       # waiting to happen, and it is the one migration defect detectable without
-      # a database. (Alembic's own history cannot tell us whether production has
-      # been migrated — see docs/briefs/production-migrations.md.)
+      # a database.
       - name: Exactly one head
         run: |
           python - <<'PY'
@@ -147,12 +146,8 @@ jobs:
           DATABASE_URL: postgresql+asyncpg://postgres@/unused
           SECRET_KEY: ci-not-a-real-secret
 
-      # The check that matters most, and the one this repository learned the
-      # hard way: a database is only migrated correctly if the result matches
-      # the models. A hand-written migration can advance `alembic_version`
-      # while creating the wrong columns, and nothing else in this workflow
-      # would notice. Drill first (proves the chain applies over live-shaped
-      # data), then parity (proves the result matches the code).
+      # Drill first (proves the chain applies over live-shaped data), then
+      # parity (proves the result matches the models).
       - name: Migrations apply over existing data
         run: python scripts/migration_drill.py
         env:
@@ -164,9 +159,6 @@ jobs:
           import os, subprocess, sys, tempfile
           import pgserver
 
-          # schema_parity.py inspects whatever DATABASE_URL names, so point it at
-          # a real database built by `alembic upgrade head` — same code path as
-          # a deploy, not a `create_all`.
           with tempfile.TemporaryDirectory() as tmp:
               uri = pgserver.get_server(tmp).get_uri()
               env = {**os.environ,

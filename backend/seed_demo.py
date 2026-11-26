@@ -125,7 +125,16 @@ def main():
     c.call("mama_mboga", "PUT", "/vendors/me", json={"current_role": "selling", "geo_lat": -1.2745, "geo_lng": 36.8258})
     c.call("kibanda_kitchen", "PUT", "/vendors/me", json={"current_role": "sourcing", "geo_lat": -1.2833, "geo_lng": 36.8290})
     c.call("gikomba_textiles", "PUT", "/vendors/me", json={"current_role": "both", "geo_lat": -1.2811, "geo_lng": 36.8425})
-    c.call("boda_express", "PUT", "/vendors/me", json={"current_role": "dormant"})
+    # Going dormant is a two-step API operation: it removes the business from
+    # discovery, so the server issues a short-lived confirmation token before
+    # the write. The demo seed follows the same contract as the UI.
+    consent = c.call("boda_express", "POST", "/vendors/switch-role/dormant/confirmation")
+    c.call("boda_express", "PUT", "/vendors/me", json={
+        "current_role": "dormant",
+        "expected_current_role": consent["current_role"],
+        "confirm_dormant": True,
+        "confirmation_token": consent["confirmation_token"],
+    })
     c.call("mama_mboga", "PUT", "/vendors/me/profile", json={
         "primary_goods": ["sukuma wiki", "spinach", "tomatoes", "onions"], "accepts_bulk": True, "offers_credit": False,
         "operating_hours": {"mon-sat": "05:00-14:00"}, "warehouse_address": "Stall 41, Ngara Market"})

@@ -137,7 +137,12 @@ export const vendorAPI = {
   update: (data) => api.put("/vendors/me", data),
   profile: () => api.get("/vendors/me/profile"),
   updateProfile: (data) => api.put("/vendors/me/profile", data),
-  switchRole: (role) => api.post(`/vendors/switch-role/${role}`),
+  /** Server-issued, short-lived intent token for the dormancy write. */
+  dormantConfirmation: () => api.post("/vendors/switch-role/dormant/confirmation"),
+  switchRole: (role, confirmation) =>
+    confirmation
+      ? api.post(`/vendors/switch-role/${role}`, confirmation)
+      : api.post(`/vendors/switch-role/${role}`),
   network: (params) => api.get("/vendors/network", { params: noEmpty(params) }),
   byHandle: (handle) => api.get(`/vendors/${handle}`),
   connect: (id) => api.post(`/vendors/connect/${id}`),

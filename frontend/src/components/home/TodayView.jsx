@@ -58,6 +58,7 @@ export default function TodayView({
   community = [],
   page = {},
   institution = null,
+  attention,
   unread = 0,
   now = new Date(),
   // The week band. These arrived from the Inbox, which is now only Chats and
@@ -110,6 +111,7 @@ export default function TodayView({
       <HomeHero
         name={name}
         firstName={firstName}
+        attention={attention || { chats: 0, notifications: unread, waiting: 0 }}
         unread={unread}
         term={term}
         onTermChange={setTerm}
@@ -214,15 +216,28 @@ export default function TodayView({
           receipt is highest while the person is still in the shop. */}
       <ReceiptScanCard />
 
-      {/* The feature doors: real destinations, one row, last. */}
-      <TownDoors />
-
-      <StreetDoor />
-
-      <p className="flex items-center justify-center gap-1.5 pt-1 text-center text-micro text-ink-4">
-        <MapPin size={11} aria-hidden="true" />
-        Order is by proximity and record. Nothing here is paid placement.
-      </p>
+      {/* Feature doors stay available, but no longer compete with attention
+          and live opportunities. One disclosure replaces two more cards; the
+          destinations and the no-paid-placement promise are unchanged. */}
+      <details
+        data-testid="home-tools"
+        className="group rounded-2xl border border-edge-1 bg-surface-1 px-4 py-3"
+      >
+        <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 text-xs font-bold text-ink-1 marker:hidden">
+          More business tools
+          <span aria-hidden="true" className="text-micro font-semibold text-ink-4 transition-transform group-open:rotate-180">
+            ▾
+          </span>
+        </summary>
+        <div className="mt-3 space-y-3 border-t border-edge-1 pt-3">
+          <TownDoors />
+          <StreetDoor />
+          <p className="flex items-center justify-center gap-1.5 text-center text-micro text-ink-4">
+            <MapPin size={11} aria-hidden="true" />
+            Order is by proximity and record. Nothing here is paid placement.
+          </p>
+        </div>
+      </details>
     </div>
   );
 }

@@ -84,8 +84,29 @@ export const useVendorStore = create((set, get) => ({
     return data;
   },
 
-  switchRole: async (role) => {
-    const { data } = await vendorAPI.switchRole(role);
+  /**
+   * Change operating mode. Dormancy is intentionally two-step on the server:
+   * the UI's confirmation is only the human part. The store obtains a signed
+   * intent token from the backend and sends it with the current role, so a
+   * stale tab or direct API call cannot silently delist the business.
+   */
+  switchRole: async (role, options = {}) => {
+    let confirmation;
+    if (role === "dormant") {
+      if (!options.confirmedDormant) {
+        throw new Error("Dormancy must be confirmed before changing role");
+      }
+      const { data: challenge } = await vendorAPI.dormantConfirmation();
+      confirmation = {
+        expected_current_role: challenge.current_role,
+        confirm_dormant: true,
+        confirmation_token: challenge.confirmation_token,
+      };
+    }
+    const response = confirmation
+      ? await vendorAPI.switchRole(role, confirmation)
+      : await vendorAPI.switchRole(role);
+    const { data } = response;
     useAuthStore.getState().setVendor({ current_role: data.role || role });
     return data;
   },

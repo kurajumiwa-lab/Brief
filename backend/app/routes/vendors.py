@@ -1,9 +1,9 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, Response
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,7 +12,16 @@ from app.services.discovery_visibility import discoverable
 from app.database import get_db
 from app.models.vendor import ACCOUNT_KINDS, Vendor, VendorProfile, VendorRole, vendor_connections
 from app.routes.auth import get_current_vendor
+from app.platform.security import (
+    DORMANCY_CONFIRMATION_MINUTES,
+    create_dormancy_confirmation_token,
+)
 from app.services import discovery, patron_service, stock_engine, vendor_network
+from app.services.role_switch import (
+    RoleChangeConfirmation,
+    assert_role_change_allowed,
+    current_role_value,
+)
 from app.services.media_urls import MediaUrlError, clean_image_urls
 from app.services.work_showcase import (
     MAX_WORK_ITEMS,
@@ -97,6 +106,11 @@ class VendorOut(BaseModel):
 
 
 class VendorUpdate(BaseModel):
+    # The dedicated switch endpoint is preferred. `PUT /me` is kept for all
+    # existing profile editors, but it enforces the same server-side dormancy
+    # guard when a caller includes `current_role`. Unknown legacy fields stay
+    # ignored rather than breaking existing profile forms; they can never
+    # satisfy the explicit confirmation fields below.
     business_name: Optional[str] = None
     display_name: Optional[str] = None
     account_kind: Optional[str] = None
@@ -111,6 +125,10 @@ class VendorUpdate(BaseModel):
     geo_lat: Optional[float] = None
     geo_lng: Optional[float] = None
     finance_mode: Optional[str] = None  # 'conventional' | 'halal_sharia'
+    # Required only when `current_role` is dormant. See `role_switch.py`.
+    expected_current_role: Optional[VendorRole] = None
+    confirm_dormant: Optional[bool] = None
+    confirmation_token: Optional[str] = Field(default=None, max_length=2048)
 
 
 class ProfileUpdate(BaseModel):
@@ -202,6 +220,22 @@ async def update_profile(
     db: AsyncSession = Depends(get_db),
 ):
     payload = data.model_dump(exclude_none=True)
+
+    # A role write through the general profile endpoint is guarded by exactly
+    # the same server-side confirmation as the dedicated switch endpoint.
+    # Validate BEFORE mutating the ORM object: a rejected request must not
+    # leave a partially changed vendor in the session.
+    requested_role = payload.pop("current_role", None)
+    confirmation = RoleChangeConfirmation(
+        expected_current_role=payload.pop("expected_current_role", None),
+        confirm_dormant=bool(payload.pop("confirm_dormant", False)),
+        confirmation_token=payload.pop("confirmation_token", None),
+    )
+    if requested_role is not None:
+        requested_role = VendorRole(requested_role)
+        assert_role_change_allowed(vendor, requested_role, confirmation)
+        payload["current_role"] = requested_role
+
     if "finance_mode" in payload and payload["finance_mode"] not in ("conventional", "halal_sharia"):
         raise HTTPException(400, "finance_mode must be 'conventional' or 'halal_sharia'")
     if "account_kind" in payload:
@@ -317,16 +351,52 @@ async def update_extended_profile(
     return out
 
 
+@router.post("/switch-role/dormant/confirmation")
+async def dormancy_confirmation(
+    response: Response,
+    vendor: Vendor = Depends(get_current_vendor),
+):
+    """Start the server-backed two-step confirmation for going dormant.
+
+    This endpoint does not change the account. It records the *current* role
+    in a signed five-minute token, which must accompany the later mutation.
+    A stale tab, a replayed request or a client that skipped this call cannot
+    delist the business.
+    """
+    current = current_role_value(vendor)
+    token = create_dormancy_confirmation_token(vendor.id, current)
+    expires_at = datetime.utcnow() + timedelta(minutes=DORMANCY_CONFIRMATION_MINUTES)
+    # A confirmation token is a short-lived intent, not a cacheable profile read.
+    response.headers["Cache-Control"] = "no-store"
+    return {
+        "confirmation_token": token,
+        "current_role": current,
+        "expires_at": expires_at.isoformat() + "Z",
+        "confirm_dormant": True,
+    }
+
+
 @router.post("/switch-role/{role}")
 async def switch_role(
     role: VendorRole,
+    confirmation: Optional[RoleChangeConfirmation] = Body(default=None),
     vendor: Vendor = Depends(get_current_vendor),
     db: AsyncSession = Depends(get_db),
 ):
-    """Switch between sourcing/selling/both. You're always a vendor."""
+    """Switch operating mode. Dormancy is an independently confirmed transition.
+
+    Leaving dormant and switching between active modes stay one-step actions.
+    Entering dormant requires the signed token from the confirmation endpoint
+    plus an explicit acknowledgement and the caller's expected current role.
+    """
+    previous_role = assert_role_change_allowed(vendor, role, confirmation)
     vendor.current_role = role
     await db.commit()
-    return {"message": f"Now operating as: {role.value}", "role": role.value}
+    return {
+        "message": f"Now operating as: {role.value}",
+        "role": role.value,
+        "previous_role": previous_role,
+    }
 
 
 @router.get("/network", response_model=List[VendorOut])

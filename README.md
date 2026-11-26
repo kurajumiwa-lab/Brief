@@ -163,13 +163,18 @@ app is not publicly reachable.
 
 ## CI
 
-The workflow is committed at `docs/ci/ci.yml` and needs one `cp` to activate —
-see [`docs/ci/README.md`](docs/ci/README.md). Once installed, on every push and
-pull request:
+The CI-only workflow is prepared at `docs/ci/ci.yml`, with an identical copy
+ready at `.github/workflows/ci.yml`. Installing the latter needs a GitHub
+account/token with workflow-file permission; Arena's current GitHub App was
+refused that push. See [`docs/ci/README.md`](docs/ci/README.md) for activation
+and required status checks. Once installed, on every push and pull request to
+`main`:
 
-- **Frontend** — `npm ci`, tests, production build, bundle-size report.
+- **Frontend** — `npm ci`, changed-file lint, tests, production build,
+  bundle-size report.
 - **Backend** — `compileall`, then the full suite on a bundled PostgreSQL.
-- **Migrations** — asserts exactly one Alembic head.
+- **Migrations** — one Alembic head, migration drill over seeded data, and
+  schema parity after `alembic upgrade head`.
 
 The frontend tests include repository-wide invariants that no single component
 test could catch:

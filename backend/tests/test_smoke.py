@@ -252,9 +252,29 @@ async def test_full_loop(client):
     assert r.status_code == 200
     r = await client.post(f"/api/events/{event_id}/register", headers=b)
     assert r.status_code == 400  # already
-    r = await client.get("/api/events/browse", headers=b)
+    # A list-scoped event is a private invitation, not a public browse result.
+    # The registered user still sees it in their own events and by direct link;
+    # browse deliberately excludes Event.vendor_list_id and Event.group_id.
+    r = await client.get("/api/events/mine", headers=b)
     ev = next(e for e in r.json() if e["id"] == event_id)
     assert ev["spots_left"] == 0 and ev["my_status"] == "registered"
+    r = await client.get(f"/api/events/{event_id}", headers=b)
+    assert r.status_code == 200 and r.json()["id"] == event_id
+
+    # Public events remain discoverable. Keep a separate browse journey so the
+    # smoke test covers BOTH visibility rules instead of asserting a stale one.
+    r = await client.post("/api/events/create", headers=b, json={
+        "title": "Open market meetup", "event_type": "sourcing_trip",
+        "start_date": "2027-01-16T06:00:00", "end_date": "2027-01-16T12:00:00",
+        "location": "Marikiti", "max_vendors": 5,
+    })
+    assert r.status_code == 201, r.text
+    public_event_id = r.json()["event_id"]
+    r = await client.get("/api/events/browse", headers=b)
+    assert r.status_code == 200
+    assert any(e["id"] == public_event_id for e in r.json())
+    assert not any(e["id"] == event_id for e in r.json())
+
     r = await client.get("/api/vendors/me/patron", headers=s)
     assert r.json()["total_events_organized"] == 1
 

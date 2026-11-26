@@ -32,7 +32,14 @@ export const useUIStore = create(
       /** Promise-based confirm: `if (await askConfirm({...})) …` */
       askConfirm: (opts) =>
         new Promise((resolve) => {
-          set({ confirm: { confirmLabel: "Confirm", ...opts, resolve } });
+          // Capture the control BEFORE the dialog mounts. React's autoFocus on
+          // the confirm button can move focus during the same commit, so a
+          // plain `document.activeElement` read inside Modal would remember
+          // the dialog's own button instead of the control that opened it.
+          const restoreFocusTo = typeof document !== "undefined"
+            ? document.activeElement
+            : null;
+          set({ confirm: { confirmLabel: "Confirm", ...opts, resolve, restoreFocusTo } });
         }),
       resolveConfirm: (answer) => {
         get().confirm?.resolve?.(answer);

@@ -29,6 +29,7 @@ from app.models.groups import GroupMembership
 from app.models.stock import QualityStatus, StockItem
 from app.models.vendor import Vendor, VendorProfile, vendor_connections
 from app.models.vendor_list import VendorListMembership
+from app.services.discovery_visibility import discoverable
 from app.services.stock_engine import fulfillment_rate
 
 WEIGHTS = {
@@ -134,7 +135,9 @@ async def discover(
     """Score and rank vendors for `vendor`. Returns plain dicts ready for JSON."""
     ctx = await _my_context(db, vendor)
 
-    query = select(Vendor).where(Vendor.id != vendor.id, Vendor.current_role != "dormant")
+    # One authoritative predicate for every discovery surface. `discoverable`
+    # excludes dormant accounts and honours the page's own browse setting.
+    query = select(Vendor).where(Vendor.id != vendor.id, discoverable(Vendor))
     if category:
         query = query.where(Vendor.business_categories.contains([category]))
     if location:
