@@ -57,8 +57,10 @@ rejected the push with:
 refusing to allow a GitHub App to create or update workflow .github/workflows/ci.yml without workflows permission
 ```
 
-The safe installation is therefore a plain copy from an account/token with
-workflow-file permission — not granting deploy secrets or package-write to CI:
+The Contents API returns `403 Resource not accessible by integration` under the
+same token, so it is not a workaround. The safe installation is a plain copy
+from an account/token with workflow-file permission — not granting deploy
+secrets or package-write to CI:
 
 ```bash
 mkdir -p .github/workflows
