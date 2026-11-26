@@ -47,6 +47,11 @@ vi.mock("@/lib/api", () => {
       switchRole: vi.fn((role) => ok({ role })), byHandle: vi.fn(() => ok(OTHER)), profile: vi.fn(() => ok({})), patronStatus: vi.fn(() => ok({ is_patron: true, tier: "starter", max_lists: 1, max_vendors_per_list: 20 })),
       becomePatron: vi.fn(() => ok({})), update: vi.fn(() => ok(ME)), updateProfile: vi.fn(() => ok({})), graph: vi.fn(() => ok({})),
     },
+    // The drawer reads this to decide whether the business is reachable.
+    identityAPI: {
+      me: vi.fn(() => ok({ contact: { phone: "", email: "", show_phone: false, show_email: false }, capabilities: [] })),
+      save: vi.fn(() => ok({})),
+    },
     stockAPI: {
       mine: vi.fn(() => ok(STOCK)), network: vi.fn(() => ok(NETWORK_STOCK)), movements: vi.fn(() => ok(MOVEMENTS)), categories: vi.fn(() => ok(["vegetables", "textiles"])),
       add: vi.fn(() => ok({ message: "Stock added", stock_id: "s-new" })), get: vi.fn(() => ok({ ...STOCK[0], id: "s-new", name: "Spinach" })),
@@ -103,6 +108,8 @@ import ChatPage from "@/pages/chat/ChatPage";
 import Network from "@/pages/network/Network";
 import Sidebar from "@/components/layout/Sidebar";
 import AccountMenu from "@/components/layout/AccountMenu";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import { useIdentityStore } from "@/stores/identityStore";
 import MePage from "@/pages/me/MePage";
 import { SidebarContent } from "@/components/layout/Sidebar";
 
@@ -624,10 +631,14 @@ describe("Compact business dashboard", () => {
 });
 
 describe("Drawer navigation", () => {
+  // `ConfirmDialog` is mounted once in the Shell. A drawer-only harness has to
+  // mount it too, or the dormancy warning is invisible to the test and a
+  // regression there would pass silently.
   const mountDrawer = () =>
     render(
       <MemoryRouter initialEntries={["/"]}>
         <SidebarContent onNavigate={() => {}} />
+        <ConfirmDialog />
       </MemoryRouter>,
     );
 
@@ -732,5 +743,63 @@ describe("Drawer navigation", () => {
 
     fireEvent.click(within(menu).getByRole("menuitemradio", { name: /^both\b/i }));
     await waitFor(() => expect(api.vendorAPI.switchRole).toHaveBeenCalledWith("both"));
+  });
+
+  it("asks before going dormant, because dormant is a delisting", async () => {
+    mountDrawer();
+
+    fireEvent.click(screen.getByRole("button", { name: /operating as selling/i }));
+    const menu = screen.getByRole("menu", { name: /how you operate/i });
+
+    // `current_role !== 'dormant'` is the discovery filter on both the network
+    // and the recommendation engine. One tap must not silently remove a
+    // business from the market, so the drawer raises a confirm first.
+    fireEvent.click(within(menu).getByRole("menuitemradio", { name: /^dormant\b/i }));
+    expect(await screen.findByText(/stop appearing in discovery/i)).toBeInTheDocument();
+    // Nothing has been sent yet.
+    expect(api.vendorAPI.switchRole).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: /^go dormant$/i }));
+    await waitFor(() => expect(api.vendorAPI.switchRole).toHaveBeenCalledWith("dormant"));
+  });
+
+  it("does not send the role change when the dormancy warning is dismissed", async () => {
+    mountDrawer();
+
+    fireEvent.click(screen.getByRole("button", { name: /operating as selling/i }));
+    fireEvent.click(
+      within(screen.getByRole("menu", { name: /how you operate/i }))
+        .getByRole("menuitemradio", { name: /^dormant\b/i }),
+    );
+    fireEvent.click(await screen.findByRole("button", { name: /cancel/i }));
+    expect(api.vendorAPI.switchRole).not.toHaveBeenCalled();
+  });
+
+  it("reads the contact record instead of assuming there is no reply route", async () => {
+    // The bug: `exposure()` counts a published phone/email as a reply route,
+    // and those live in the identity store — which the drawer never loaded. A
+    // business whose only route was a published email therefore showed "Not
+    // published" until the person happened to visit Profile, then silently
+    // became "Reachable". Seed the store the way a real load would, and the
+    // drawer must report it without a detour through Profile.
+    useIdentityStore.setState({
+      contact: { phone: "", email: "mama@example.ke", show_phone: false, show_email: true },
+      loaded: true,
+      status: "ready",
+    });
+    mountDrawer();
+
+    // The label and its detail are separate spans, so match across them.
+    const line = screen.getByText(/^Reachable/);
+    expect(line).toBeInTheDocument();
+  });
+
+  it("asks the server for the identity record when it has not been loaded", async () => {
+    useIdentityStore.setState({ loaded: false, status: "idle" });
+    mountDrawer();
+
+    // Not a guess and not a permanent "unknown": the drawer is the surface
+    // making the claim, so it fetches the fact itself (once per session).
+    await waitFor(() => expect(api.identityAPI.me).toHaveBeenCalled());
   });
 });

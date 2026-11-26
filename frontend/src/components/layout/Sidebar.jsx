@@ -11,6 +11,7 @@ import { SECTION_GROUPS, isDrawerActive } from "@/config/navigation";
 import { reachability, REACHABILITY } from "@/lib/reachability";
 import { VENDOR_ROLES } from "@/config/constants";
 import { toast } from "@/components/ui/Toast";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
 import { cn } from "@/lib/utils";
 import { BRAND } from "@/config/brand";
 
@@ -70,10 +71,29 @@ const DOT = {
  */
 function IdentityCard({ onNavigate }) {
   const vendor = useAuthStore((s) => s.vendor);
-  const identity = useIdentityStore((s) => s);
+  // The store's real fields, not the whole store object: subscribing to `s`
+  // re-renders on every unrelated write (status, error, loaded), and passing
+  // the object means `exposure()` sees a new identity every time.
+  const contact = useIdentityStore((s) => s.contact);
+  const affiliation = useIdentityStore((s) => s.affiliation);
+  const licence = useIdentityStore((s) => s.licence);
   const switchRole = useVendorStore((s) => s.switchRole);
+  const confirm = useConfirm();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState("");
+
+  // LOAD THE CONTACT RECORD, or the indicator lies.
+  //
+  // `exposure()` counts a published phone/email as a reply route, and those
+  // live in the identity store — which the drawer never read. A business whose
+  // only route was a published email therefore showed as "Not published" until
+  // the person happened to visit Profile, then silently became "Reachable".
+  // The drawer is the surface that makes the claim, so it fetches the record
+  // itself. The store de-duplicates, so this is one request per session and a
+  // no-op everywhere else.
+  useEffect(() => {
+    if (vendor) useIdentityStore.getState().load();
+  }, [vendor, vendor?.id]);
 
   // Escape closes the disclosure. No outside-click handler: the panel sits in
   // the flow, so there is no floating layer to dismiss.
@@ -99,7 +119,7 @@ function IdentityCard({ onNavigate }) {
     );
   }
 
-  const reach = reachability(vendor, identity);
+  const reach = reachability(vendor, { contact, affiliation, licence });
   const role = VENDOR_ROLES.find((item) => item.value === vendor.current_role);
   const handle = vendor.vendor_handle;
 
@@ -108,6 +128,25 @@ function IdentityCard({ onNavigate }) {
       setOpen(false);
       return;
     }
+
+    // "Dormant" is not a mode, it is a removal from discovery: the network and
+    // the recommendation engine both filter `current_role != 'dormant'`, and the
+    // endpoint sets it with no guard. A one-tap row in a drawer must not quietly
+    // take a business off the market, so this one asks first.
+    if (nextRole === "dormant") {
+      const ok = await confirm({
+        title: "Stop appearing in discovery?",
+        message:
+          "Other businesses will no longer find you in the network or in recommendations. Your page, stock and records stay exactly as they are, and you can switch back at any time.",
+        confirmLabel: "Go dormant",
+        danger: true,
+      });
+      if (!ok) {
+        setOpen(false);
+        return;
+      }
+    }
+
     setBusy(nextRole);
     try {
       await switchRole(nextRole);

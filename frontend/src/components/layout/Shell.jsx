@@ -72,6 +72,9 @@ export default function Shell() {
         width="max-w-xs"
         className="!p-0"
         hideHeader
+        // The content draws the bar, so the sheet has to be *named* here — a
+        // dialog announced as "Panel" tells a screen-reader user nothing.
+        label="Workspace menu"
       >
         <div className="h-full">
           <SidebarContent onNavigate={() => setSections(false)} />
