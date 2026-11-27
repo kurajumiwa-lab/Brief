@@ -89,15 +89,23 @@ export function CategoryRow({ value = "all", onSelect, className }) {
  * category's own colour and a photograph of the category, so a person can
  * find "Rentals" by shape before they read it.
  */
-export function CategoryTiles({ value = "all", onSelect, categoryHref = null, className }) {
+export function CategoryTiles({ value = "all", onSelect, categoryHref = null, excludeAll = false, className }) {
+  const categories = excludeAll
+    ? EXPLORE_CATEGORIES.filter((c) => c.key !== "all")
+    : EXPLORE_CATEGORIES;
+
   return (
     <div
       role="group"
       aria-label="Browse by category"
       data-testid="explore-categories"
-      className={cn("grid grid-cols-2 gap-3 sm:grid-cols-3", className)}
+      className={cn(
+        "grid grid-cols-2 gap-3",
+        !excludeAll && "sm:grid-cols-3",
+        className,
+      )}
     >
-      {EXPLORE_CATEGORIES.map(({ key, kind }) => {
+      {categories.map(({ key, kind }) => {
         const tint = CATEGORY_TINTS[key];
         const Icon = tint.icon;
         const active = value === key;
@@ -135,7 +143,7 @@ export function CategoryTiles({ value = "all", onSelect, categoryHref = null, cl
               data-testid={`explore-kind-${kind || "all"}`}
               data-category={key}
               data-kind={kind}
-              className="group overflow-hidden rounded-2xl border border-edge-1 bg-surface-1 transition-colors hover:border-edge-2 focus-visible:ring-2 focus-visible:ring-brand-500"
+              className="group overflow-hidden rounded-2xl border border-edge-1 bg-surface-1 shadow-sm transition-all hover:border-edge-2 hover:shadow-md focus-visible:ring-2 focus-visible:ring-brand-500"
             >
               {body}
             </Link>

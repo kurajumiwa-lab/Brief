@@ -30,6 +30,7 @@ export default function DiscoveryBand({ category = "all" }) {
 
       <CategoryTiles
         value={category}
+        excludeAll
         categoryHref={(key) => resultsHref({ category: key })}
       />
     </section>
