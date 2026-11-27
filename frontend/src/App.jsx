@@ -151,6 +151,7 @@ const EnquiryInboxPage = lazy(() => import("@/pages/storefront/EnquiryInboxPage"
 // Operator-only intake desk: photographs of public advertising become market
 // data. The API answers 403 without a market-ops role, so the route is public.
 const MarketIntakePage = lazy(() => import("@/pages/intake/MarketIntakePage"));
+const PhotoCataloguePage = lazy(() => import("@/pages/catalogue/PhotoCataloguePage"));
 // The product sold to signed-in vendors: prices from public advertising, with
 // seller contacts behind the partner tier.
 const MarketDataPage = lazy(() => import("@/pages/market/MarketDataPage"));
@@ -353,6 +354,7 @@ function AppRoutes() {
       <Route path="/storefront/inbox" element={<EnquiryInboxPage />} />
       {/* Operator side of the market dataset: read photographs, confirm prices. */}
       <Route path="/intake" element={<MarketIntakePage />} />
+      <Route path="/catalogue/photo" element={<PhotoCataloguePage />} />
       <Route path="/market-data" element={<MarketDataPage />} />
       {/* The post-join question. Outside the shell on purpose: no tabs, no
           drawer, no shelves — one answer and then the app. */}
