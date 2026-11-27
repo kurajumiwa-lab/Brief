@@ -84,6 +84,7 @@ const YouPage = lazy(() => import("@/pages/you/YouPage"));
 const WorkspacePage = lazy(() => import("@/pages/workspace/WorkspacePage"));
 const IdentityPage = lazy(() => import("@/pages/you/IdentityPage"));
 const RankPage = lazy(() => import("@/pages/you/RankPage"));
+const EarningsPage = lazy(() => import("@/pages/earnings/EarningsPage"));
 const StartPage = lazy(() => import("@/pages/start/StartPage"));
 const InboxPage = lazy(() => import("@/pages/inbox/InboxPage"));
 const RoutinesPage = lazy(() => import("@/pages/routines/RoutinesPage"));
@@ -424,6 +425,9 @@ function AppRoutes() {
           <Route path="/you/page" element={<PageEditor />} />
           <Route path="/you/identity" element={<IdentityPage />} />
           <Route path="/you/rank" element={<RankPage />} />
+          {/* The member's economic evidence: opportunities, referrals, events,
+              commissions (pending ≠ due ≠ paid) and what the page cannot count. */}
+          <Route path="/you/earnings" element={<EarningsPage />} />
           <Route path="/more" element={<MorePage />} />
           {/* The watches panel moved out of the Inbox and into Settings, where
               it belongs: it decides what will be sent, it is not what was sent. */}

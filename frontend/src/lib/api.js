@@ -1332,3 +1332,8 @@ export const meritAPI = {
   concierge: () => api.get("/merit/concierge"),
   report: () => api.get("/merit/report"),
 };
+
+export const earningsAPI = {
+  /** The caller's own opportunities & earnings. Counts and sums of stored rows — never estimates, never other people's data. */
+  me: () => api.get("/earnings/me"),
+};
