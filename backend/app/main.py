@@ -404,6 +404,9 @@ app.include_router(merit_router, prefix="/api/merit", tags=["Merit"])
 
 from app.modules.knowledge.router import router as knowledge_router  # noqa: E402
 app.include_router(knowledge_router, prefix="/api/knowledge", tags=["Knowledge directory"])
+from app.modules.earnings.router import router as earnings_router  # noqa: E402
+# Earnings: the member's economic evidence. Read-only; holds nothing, pays nothing out.
+app.include_router(earnings_router, prefix="/api/earnings", tags=["My earnings"])
 from app.modules.routine.router import router as routine_router  # noqa: E402
 from app.modules.street.router import router as street_router  # noqa: E402
 app.include_router(routine_router, prefix="/api/routine", tags=["Daily routine"])
@@ -463,6 +466,7 @@ async def api_root():
             "notifications": "/api/notifications",
             "passport": "/api/passport",
             "growth": "/api/growth",
+            "earnings": "/api/earnings",
             "enterprise": "/api/enterprise",
             "files": "/api/files",
             "collective": "/api/collective",

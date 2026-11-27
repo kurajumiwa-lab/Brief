@@ -13,6 +13,7 @@ import {
   Copy,
   Package,
   PenLine,
+  Wallet,
   Settings,
   Share2,
   ShieldCheck,
@@ -478,6 +479,25 @@ export default function YouView({
             )}
           </div>
         </div>
+      </section>
+
+      {/* 06. Opportunities & earnings */}
+      <section className="space-y-2.5" aria-label="Opportunities and earnings">
+        <Link
+          to="/you/earnings"
+          className="flex items-center gap-3 rounded-[20px] border border-edge-1 bg-[#FFFFFF] p-5 transition-colors hover:border-edge-2 dark:bg-surface-1"
+        >
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#E7F1EC] text-[#103D32] dark:bg-brand-500/15 dark:text-brand-300">
+            <Wallet size={18} aria-hidden="true" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-bold text-ink-1">My opportunities &amp; earnings</span>
+            <span className="mt-0.5 block text-2xs text-ink-4">
+              Work completed, referrals verified, commissions pending · due · paid — and what cannot be counted yet.
+            </span>
+          </span>
+          <ChevronRight size={16} className="shrink-0 text-ink-4" aria-hidden="true" />
+        </Link>
       </section>
 
       {/* 06. Your stock & settings */}
