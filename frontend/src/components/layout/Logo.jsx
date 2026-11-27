@@ -14,7 +14,7 @@ import { BRAND } from "@/config/brand";
 export function LogoMark({ size = 32, className }) {
   return (
     <span
-      className={cn("inline-grid place-items-center rounded-xl bg-ink-1 text-surface-0 shrink-0", className)}
+      className={cn("inline-grid place-items-center rounded-xl bg-[#103D32] text-white shrink-0", className)}
       style={{ width: size, height: size }}
       aria-hidden="true"
     >
@@ -43,8 +43,10 @@ export default function Logo({ to = "/", compact = false, className }) {
     >
       <LogoMark />
       {!compact && (
-        <span className="hidden sm:flex items-baseline gap-1">
-          <span className="text-lg font-extrabold tracking-tight text-ink-1 leading-none">{BRAND.wordmark}</span>
+        <span className="flex items-baseline gap-1">
+          <span className="text-base sm:text-lg font-extrabold tracking-tight text-[#103D32] dark:text-ink-1 leading-none">
+            {BRAND.wordmark}
+          </span>
           <span className="w-1.5 h-1.5 rounded-full bg-tech-500 mb-0.5" aria-hidden="true" />
         </span>
       )}
