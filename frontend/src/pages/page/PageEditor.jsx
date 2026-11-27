@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { Check, Copy, Eye, Globe, Share2, X } from "lucide-react";
+import { Camera, Check, Copy, Eye, Globe, Share2, Trash2, X } from "lucide-react";
+import Avatar from "@/components/ui/Avatar";
 import { RegionCard } from "@/components/regions/RegionsGrid";
 import Card, { CardHeader, CardTitle } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
@@ -9,7 +10,7 @@ import Textarea from "@/components/ui/Textarea";
 import { PageSpinner } from "@/components/ui/Spinner";
 import { toast } from "@/components/ui/Toast";
 import SocialTrustEditor from "@/components/social/SocialTrustEditor";
-import { professionalAPI, profileHandleAPI, apiError } from "@/lib/api";
+import { fileAPI, professionalAPI, profileHandleAPI, vendorAPI, apiError } from "@/lib/api";
 import { pageAddress, shareLinks } from "@/lib/pageShare";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/authStore";
@@ -48,6 +49,9 @@ export default function PageEditor() {
   const [visibilitySaving, setVisibilitySaving] = useState(false);
   const [newHandle, setNewHandle] = useState("");
   const [handleSaving, setHandleSaving] = useState(false);
+  const [logoUrl, setLogoUrl] = useState(vendor?.logo_url || vendor?.avatar_url || "");
+  const [logoSaving, setLogoSaving] = useState(false);
+  const logoInputRef = useRef(null);
   // What was last saved, so the bar can say honestly whether there is anything
   // to save. A form that never admits to being dirty makes people hunt for a
   // button; one that does makes the next step obvious.
@@ -95,6 +99,40 @@ export default function PageEditor() {
       toast.error(apiError(err, "Could not save your Page."));
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleLogoUpload(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setLogoSaving(true);
+    try {
+      const { data: uploaded } = await fileAPI.upload(file);
+      const url = uploaded?.url || uploaded?.file_url || "";
+      if (!url) throw new Error("Upload did not return an image URL.");
+      await vendorAPI.updateProfile({ logo_url: url, avatar_url: url });
+      setLogoUrl(url);
+      setVendor({ logo_url: url, avatar_url: url });
+      toast.success("Profile photo & logo updated.");
+    } catch (err) {
+      toast.error(apiError(err, "Could not update your logo."));
+    } finally {
+      setLogoSaving(false);
+      if (logoInputRef.current) logoInputRef.current.value = "";
+    }
+  }
+
+  async function handleLogoRemove() {
+    setLogoSaving(true);
+    try {
+      await vendorAPI.updateProfile({ logo_url: null, avatar_url: null });
+      setLogoUrl("");
+      setVendor({ logo_url: null, avatar_url: null });
+      toast.success("Logo removed.");
+    } catch (err) {
+      toast.error(apiError(err, "Could not remove your logo."));
+    } finally {
+      setLogoSaving(false);
     }
   }
 
@@ -182,6 +220,55 @@ export default function PageEditor() {
       )}
 
       <form onSubmit={save} className="space-y-6">
+        <Card>
+          <CardHeader><CardTitle>Profile photo &amp; logo</CardTitle></CardHeader>
+          <div className="flex flex-wrap items-center gap-4">
+            <Avatar
+              name={form.display_name || vendor?.business_name || "Your page"}
+              src={logoUrl}
+              size="xl"
+              className="rounded-2xl"
+            />
+            <div className="min-w-0 flex-1 space-y-2">
+              <p className="text-xs text-ink-3">
+                Shown on your profile, public page, and marketplace listings.
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  ref={logoInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleLogoUpload}
+                  className="hidden"
+                  aria-label="Upload profile photo or logo"
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  icon={Camera}
+                  loading={logoSaving}
+                  onClick={() => logoInputRef.current?.click()}
+                >
+                  {logoUrl ? "Change logo" : "Upload logo"}
+                </Button>
+                {logoUrl && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    icon={Trash2}
+                    disabled={logoSaving}
+                    onClick={handleLogoRemove}
+                  >
+                    Remove
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        </Card>
+
         <Card><CardHeader><CardTitle>Contact &amp; reachability</CardTitle></CardHeader>
           <div className="space-y-3"><Input required label="Display name" maxLength={200} value={form.display_name} onChange={set("display_name")} />
           <Input label="WhatsApp / phone number" type="tel" value={form.phone} onChange={set("phone")} hint="Kenyan mobile: 07…, 01… or +254…. Changing it resets phone verification." />
