@@ -433,10 +433,10 @@ async def _people(db, viewer, pair, limit, now):
     out = []
     for v in rows:
         out.append(_item(
-            id=str(v.id), kind="person", to=f"/@{v.vendor_handle}",
-            title=v.business_name, summary=v.business_description,
+            id=str(v.id), kind="person", to=f"/p/{v.vendor_handle}",
+            title=v.business_name, summary=(v.public_page or {}).get("tagline") or (v.public_page or {}).get("about") or v.business_description,
             category=(v.business_categories or [None])[0] if v.business_categories else None,
-            tags=list(v.business_categories or []),
+            tags=[*list(v.business_categories or []), v.vendor_handle],
             # A person's location is only shown at the level they chose to
             # share; the exact pin never travels in a public card.
             location=v.physical_location, geo_lat=v.geo_lat, geo_lng=v.geo_lng,
@@ -810,6 +810,9 @@ async def build_feed(db, viewer, *, kinds=DEFAULT_KINDS, lat=None, lng=None,
     payload = []
     for r in page:
         entry = {k: v for k, v in r.item.items() if not k.startswith("__")}
+        if entry.get("kind") == "person":
+            # Coordinates are used for proximity, not exposed on a public Page card.
+            entry["geo_lat"] = entry["geo_lng"] = None
         entry["score"] = r.score
         entry["reasons"] = r.reasons
         entry["reactions"] = reactions.get((r.item["kind"], r.item["id"]), {})
