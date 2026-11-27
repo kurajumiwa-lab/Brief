@@ -323,8 +323,8 @@ export default function PageEditor() {
               <span>
                 {form.discoverable ? (
                   <>
-                    <strong className="font-semibold text-ink-1">People browsing Regions</strong> can find
-                    you by town and category. This is switched <strong>on</strong>.
+                    <strong className="font-semibold text-ink-1">People browsing Public Pages in Explore</strong> can find
+                    you by name, handle, town or category. This is switched <strong>on</strong>.
                   </>
                 ) : (
                   <>
@@ -353,7 +353,7 @@ export default function PageEditor() {
               data-testid="page-discoverable"
             />
             <span>
-              Let people find me by browsing Regions
+              Let people find me in Public Pages on Explore
               <span className="mt-0.5 block text-2xs text-ink-3">
                 Saves the moment you tick it. This one does not wait for the save bar.
               </span>
@@ -365,8 +365,8 @@ export default function PageEditor() {
               <p className="mb-1.5 text-2xs font-bold uppercase tracking-wide text-ink-4">Your card in Regions</p>
               <RegionCard item={{ kind: "person", id: vendor?.id || "preview", to: handle ? `/p/${handle}` : "#", title: form.display_name || "Your name", category: (vendor?.business_categories || [])[0], location: form.town, owner: { ...vendor, name: form.display_name, handle } }} />
             </div>
-            <Link className="text-xs font-semibold text-brand-700 hover:underline" to="/regions">
-              See the live Regions feed →
+            <Link className="text-xs font-semibold text-brand-700 hover:underline" to="/regions?kind=person">
+              Browse public Pages →
             </Link>
           </div>
           <p className="mt-3 text-micro text-ink-4">

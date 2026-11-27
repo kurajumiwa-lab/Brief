@@ -178,16 +178,17 @@ export const useOutsideStore = create((set, get) => ({
    * and "try again" ask for exactly the same thing the first page asked for,
    * instead of quietly falling back to the person's saved location.
    */
-  loadFeed: async ({ kinds = null, query = null, force = false, scope = null } = {}) => {
-    if (!force && get().status === "loading") return null;
+  loadFeed: async ({ kinds = null, query = null, scope = null } = {}) => {
+    const requestId = (get().feedRequestId || 0) + 1;
     // The scope in force. An explicit one — a region the person chose — wins.
     // Otherwise it is their own location and the radius they chose, so
     // "around you" really is around them and the radius control really
     // changes what comes back.
     const effectiveScope = scope ?? locationScope(get().location);
-    set({ status: "loading", error: "", failure: null, kinds, lastQuery: query, scope: effectiveScope });
+    set({ status: "loading", error: "", failure: null, kinds, lastQuery: query, scope: effectiveScope, feedRequestId: requestId });
     try {
       const data = await get()._fetch({ kinds, q: query, limit: 20, ...(effectiveScope || {}) });
+      if (get().feedRequestId !== requestId) return null;
       set({
         items: data.items || [],
         cursor: data.next_cursor || null,
@@ -199,6 +200,7 @@ export const useOutsideStore = create((set, get) => ({
       });
       return data;
     } catch (err) {
+      if (get().feedRequestId !== requestId) return null;
       // The one line this store used to print for every cause — offline,
       // timed out, signed out, broken server — is now the *headline* of a
       // classified failure, and the screen can say what happened and whether
@@ -211,11 +213,12 @@ export const useOutsideStore = create((set, get) => ({
 
   /** Next page. Appends, and drops anything already on screen. */
   loadMore: async () => {
-    const { cursor, status, kinds, lastQuery, scope } = get();
+    const { cursor, status, kinds, lastQuery, scope, feedRequestId } = get();
     if (!cursor || status === "loading" || status === "loading_more") return;
     set({ status: "loading_more" });
     try {
       const data = await get()._fetch({ kinds, q: lastQuery, limit: 20, cursor, ...(scope || {}) });
+      if (get().feedRequestId !== feedRequestId) return;
       const seen = new Set(get().items.map(keyOf));
       const fresh = (data.items || []).filter((item) => !seen.has(keyOf(item)));
       set((state) => ({
@@ -224,6 +227,7 @@ export const useOutsideStore = create((set, get) => ({
         status: "ready",
       }));
     } catch {
+      if (get().feedRequestId !== feedRequestId) return;
       // A failed *next page* is not a failed screen: the rows already on it
       // are still true. Keep them and stop paging.
       set({ status: "ready", cursor: null });

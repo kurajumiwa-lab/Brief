@@ -312,3 +312,14 @@ describe("6 · the region list never covers the permanent search", () => {
     await waitFor(() => expect(screen.queryByTestId("region-picker-panel")).not.toBeInTheDocument());
   });
 });
+
+describe("public Page discovery", () => {
+  it("offers a directory and links its results directly to the public Page", async () => {
+    mocks.feed.mockImplementation(({ kinds }) => ok({ items: kinds?.includes("person") ? [{ id: "p1", kind: "person", title: "Amina Bakery", summary: "Fresh bread", location: "Kisumu", to: "/p/amina" }] : ITEMS, next_cursor: null, center: {}, location: LOCATION }));
+    await renderRegions();
+    fireEvent.click(screen.getByRole("button", { name: "Browse public Pages" }));
+    expect(await screen.findByRole("link", { name: /Amina Bakery/ })).toHaveAttribute("href", "/p/amina");
+    expect(screen.getByTestId("location")).toHaveTextContent("kind=person");
+    expect(mocks.feed).toHaveBeenCalledWith(expect.objectContaining({ kinds: ["person"] }));
+  });
+});

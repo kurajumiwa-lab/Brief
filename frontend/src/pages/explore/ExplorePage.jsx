@@ -112,6 +112,7 @@ export default function ExplorePage({ demo = null }) {
   const price = params.get("price") || "";
   const trust = params.get("trust") || (params.get("min_level") === "3" ? "3" : "");
   const publicSale = params.get("public_sale") === "true";
+  const isPages = kind === "person";
   const category = categoryForKind(kind);
   // Services are people, not countable goods. That door gets its own read.
   const isServices = category === "services";
@@ -159,12 +160,13 @@ export default function ExplorePage({ demo = null }) {
    * for nothing. A category with no compatible type keeps the category.
    */
   const kinds = useMemo(() => {
+    if (isPages) return ["person"];
     const base = kindsForCategory(category);
     if (!type) return base;
     if (!base) return [type];
     const narrowed = base.filter((value) => value === type);
     return narrowed.length ? narrowed : base;
-  }, [category, type]);
+  }, [category, type, isPages]);
 
   useEffect(() => {
     if (!demo && !location) loadLocation();
@@ -346,7 +348,7 @@ export default function ExplorePage({ demo = null }) {
     // People live on the Home feed now. Explore is about what is on offer,
     // not a directory of faces; person records are filtered even when the
     // search endpoint returns them in its default kind set.
-    const sourceItems = items.filter((item) => item.kind !== "person");
+    const sourceItems = items.filter((item) => isPages ? item.kind === "person" : item.kind !== "person");
     const strict = trust === "3" ? sourceItems.filter((item) => ownerLevel(item.owner) >= 3) : null;
     // A strict Level 3+ door that finds fewer than four traders falls back to
     // Level 2+, as the design contract says. It never silently calls a Level 2
@@ -356,11 +358,11 @@ export default function ExplorePage({ demo = null }) {
       : sourceItems;
     // Community-spotted sales are reports about a public sale. They belong
     // with the goods, and only when nothing else is narrowing the screen.
-    const includeSpotted = !demo
+    const includeSpotted = !isPages && !demo
       && (category === "all" || category === "goods" || publicSale)
       && (publicSale || (!when && !price && trust !== "3"));
     return includeSpotted ? [...spotted, ...permitted] : permitted;
-  }, [items, trust, demo, category, when, price, publicSale, spotted]);
+  }, [items, trust, demo, category, when, price, publicSale, spotted, isPages]);
 
   const resultItems = isServices ? providerItems : visibleItems;
   const renderableStandard = resultItems.filter((item) => item.feed_kind !== "SPOTTED_DEAL");
@@ -662,12 +664,12 @@ export default function ExplorePage({ demo = null }) {
           value={q}
           onChange={(value) => patchParams({ q: (value || "").trim() })}
           onSubmit={(term) => navigate(`/regions?q=${encodeURIComponent(term)}${kind ? `&kind=${kind}` : ""}`)}
-          filtersOpen={filtersOpen && !isServices}
-          onToggleFilters={isServices ? null : () => setFiltersOpen((value) => !value)}
+          filtersOpen={filtersOpen && !isServices && !isPages}
+          onToggleFilters={isServices || isPages ? null : () => setFiltersOpen((value) => !value)}
           filterCount={filterCount}
           filterSummary={filterSummary}
           variant="compact"
-          placeholder="Search goods, services, rentals and events"
+          placeholder={isPages ? "Search pages by name, handle, town or category" : "Search goods, services, rentals and events"}
           aria-label="Search everything"
           showCategories={false}
         >
@@ -677,10 +679,14 @@ export default function ExplorePage({ demo = null }) {
         {/* THE CATEGORIES — the same five everywhere, in a wrapping grid that
             is never a carousel. A category hidden behind a swipe is a
             category missing from the product. */}
-        <CategoryRow value={category} onSelect={selectCategory} />
+        <CategoryRow value={isPages ? "" : category} onSelect={selectCategory} />
+        <button type="button" aria-pressed={isPages} onClick={() => patchParams({ kind: isPages ? "" : "person", filter: "", type: "", when: "", price: "", trust: "", min_level: "", public_sale: "" })}
+          className={cn("rounded-full border px-3 py-2 text-xs font-bold", isPages ? "border-brand-700 bg-brand-50 text-brand-700" : "border-edge-2 text-ink-2")}>
+          Browse public Pages
+        </button>
       </div>
 
-      {!demo && !isServices && (
+      {!demo && !isServices && !isPages && (
         <>
           <SpotDealModal
             region={region?.slug}
@@ -693,7 +699,7 @@ export default function ExplorePage({ demo = null }) {
       )}
 
       {/* ── 2 · the results ───────────────────────────────────────────────── */}
-      {!isServices && (
+      {!isServices && !isPages && (
         <ResultDeck
           countText={countText}
           countState={status === "error" ? "error" : "ready"}
@@ -707,7 +713,20 @@ export default function ExplorePage({ demo = null }) {
       )}
 
       <section aria-live="polite" aria-busy={status === "loading"} className="space-y-3">
-        {isServices ? (
+        {isPages ? (
+          <div className="space-y-3">
+            <div><h2 className="text-lg font-bold text-ink-1">Public Pages</h2><p className="text-xs text-ink-3">Find people and businesses in your area. Open a Page to see what they do.</p></div>
+            {status === "loading" && !items.length ? <FeedSkeleton /> : status === "error" && !items.length ? <FeedErrorPanel failure={failure} onRetry={retryFeed} region={region} onPublish={postHere} /> : (
+              <>
+                {visibleItems.length === 0 && !cursor && <p className="text-sm text-ink-3">No Pages found in this scope. Try another search or area.</p>}
+                <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2" data-testid="public-pages-results">
+                  {visibleItems.map((item) => <li key={item.id}><Link to={item.to} className="block rounded-xl border border-edge-1 bg-surface-1 p-4 hover:border-brand-500"><span className="block font-bold text-ink-1">{item.title}</span>{item.summary && <span className="mt-1 block text-sm text-ink-3">{item.summary}</span>}<span className="mt-2 block text-xs text-ink-4">{[item.category, item.location].filter(Boolean).join(" · ")}</span><span className="mt-2 block text-xs font-semibold text-brand-700">View Page →</span></Link></li>)}
+                </ul>
+                {cursor && <button type="button" onClick={loadMore} disabled={status === "loading_more"} className="text-sm font-bold text-brand-700">{status === "loading_more" ? "Loading…" : "Load more Pages"}</button>}
+              </>
+            )}
+          </div>
+        ) : isServices ? (
           <ServiceProvidersPanel
             status={providerStatus}
             error={providerError}

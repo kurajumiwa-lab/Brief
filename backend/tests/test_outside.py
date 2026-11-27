@@ -662,7 +662,11 @@ async def test_people_category_and_discovery_switch(client, author, viewer, monk
     monkeypatch.setattr(settings, "PROFESSIONAL_PROFILE_ENABLED", True)
     profile = (await client.get('/api/vendors/me', headers=author)).json()
     before = await client.get('/api/outside/feed', headers=viewer, params={'kinds':'person','limit':50})
-    assert profile['id'] in {row['id'] for row in before.json()['items']}
+    row = next(row for row in before.json()['items'] if row['id'] == profile['id'])
+    assert row['to'] == f"/p/{row['meta']['handle']}"
+    assert row['geo_lat'] is None and row['geo_lng'] is None
+    found = await client.get('/api/outside/search', headers=viewer, params={'kinds':'person', 'q': row['meta']['handle']})
+    assert profile['id'] in {item['id'] for item in found.json()['items']}
     await client.put('/api/professional/me/page', headers=author, json={'discoverable':False})
     after = await client.get('/api/outside/feed', headers=viewer, params={'kinds':'person','limit':50})
     assert profile['id'] not in {row['id'] for row in after.json()['items']}
