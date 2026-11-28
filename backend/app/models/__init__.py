@@ -183,3 +183,4 @@ from app.modules.town.models import (  # noqa: F401
 from app.models.spotted_deals import SpottedDeal, SpottedDealFlag, SpottedDealSeenTap, SpottedDealCooldown, SpottedDealJuryAssignment, SpottedOptOutAttempt  # noqa: F401,E402
 
 from app.modules.market_opportunities.models import MarketOpportunity, OpportunityConversation  # noqa: F401
+from app.modules.campaigns.models import Campaign, CampaignOffer  # noqa: F401

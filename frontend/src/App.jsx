@@ -143,6 +143,7 @@ const EventShareRedirect = lazy(() => import("@/pages/events/EventShareRedirect"
 const EventsPage = lazy(() => import("@/pages/events/EventsPage"));
 const EventHubPage = lazy(() => import("@/pages/events/EventHubPage"));
 const EventDeskPage = lazy(() => import("@/pages/events/EventDeskPage"));
+const CampaignMarketplacePage = lazy(() => import("@/pages/campaigns/CampaignMarketplacePage"));
 const RateCardPage = lazy(() => import("@/pages/events/RateCardPage"));
 const PublicRateCardPage = lazy(() => import("@/pages/events/PublicRateCardPage"));
 const POSBridge = lazy(() => import("@/pages/pos/POSBridge"));
@@ -154,6 +155,7 @@ const EnquiryInboxPage = lazy(() => import("@/pages/storefront/EnquiryInboxPage"
 // data. The API answers 403 without a market-ops role, so the route is public.
 const MarketIntakePage = lazy(() => import("@/pages/intake/MarketIntakePage"));
 const PhotoCataloguePage = lazy(() => import("@/pages/catalogue/PhotoCataloguePage"));
+const PublicProductPage = lazy(() => import("@/pages/catalogue/PublicProductPage"));
 // The product sold to signed-in vendors: prices from public advertising, with
 // seller contacts behind the partner tier.
 const MarketDataPage = lazy(() => import("@/pages/market/MarketDataPage"));
@@ -351,6 +353,7 @@ function AppRoutes() {
       <Route path="/storefront/inbox" element={<EnquiryInboxPage />} />
       {/* Operator side of the market dataset: read photographs, confirm prices. */}
       <Route path="/intake" element={<MarketIntakePage />} />
+      <Route path="/product/:handle/:id" element={<PublicProductPage />} />
       <Route path="/catalogue/photo" element={<RequireVendor><PhotoCataloguePage /></RequireVendor>} />
       <Route path="/market-data" element={<MarketDataPage />} />
       {/* The post-join question. Outside the shell on purpose: no tabs, no
@@ -384,6 +387,7 @@ function AppRoutes() {
           <Route path="/home" element={<TodayPage />} />
           <Route path="/regions" element={<RegionsPage />} />
           <Route path="/market-opportunities" element={<MarketOpportunitiesPage />} />
+          <Route path="/campaigns" element={<CampaignMarketplacePage />} />
           {/* Shareable smart-category doors. The section sets a default query;
               /discover/favorites is local-only and has no server feed. */}
           <Route path="/discover" element={<RegionsPage />} />

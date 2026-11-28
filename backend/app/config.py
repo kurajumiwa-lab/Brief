@@ -103,6 +103,8 @@ class Settings(BaseSettings):
     # Optional paid vision provider; never expose the key to the browser.
     PHOTO_VISION_API_KEY: str = ""
     PHOTO_VISION_MODEL: str = "gpt-4o-mini"
+    GEMINI_CATALOGUE_API_KEY: str = ""
+    GEMINI_CATALOGUE_MODEL: str = "gemini-2.5-flash"
 
     APP_NAME: str = "Brief Vendor Network"
     VERSION: str = "2.2.0"
