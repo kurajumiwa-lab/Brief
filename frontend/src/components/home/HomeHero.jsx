@@ -37,7 +37,7 @@ export default function HomeHero({
       <div className="min-w-0">
         <p className="ds-eyebrow">{dateLabel}</p>
         <h1 className="ds-display mt-1">
-          {greetingFor(hour)}, {displayName}
+          {greetingFor(hour)}, {displayName}. What’s moving?
         </h1>
       </div>
 

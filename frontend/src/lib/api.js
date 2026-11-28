@@ -1337,3 +1337,10 @@ export const earningsAPI = {
   /** The caller's own opportunities & earnings. Counts and sums of stored rows — never estimates, never other people's data. */
   me: () => api.get("/earnings/me"),
 };
+
+// Seller-reported quotes. These are opportunities, not verified market prices.
+export const marketOpportunitiesAPI = {
+  list: (params = {}) => api.get("/market-opportunities", { params }),
+  create: (body) => api.post("/market-opportunities", body),
+  close: (id) => api.delete(`/market-opportunities/${id}`),
+};
