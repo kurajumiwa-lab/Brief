@@ -14,6 +14,7 @@ import CounterShelf from "@/components/home/CounterShelf";
 import DiscoveryBand from "@/components/home/DiscoveryBand";
 import CommunityShelf from "@/components/home/CommunityShelf";
 import HomeHero from "@/components/home/HomeHero";
+import MarketBriefing from "@/components/home/MarketBriefing";
 
 /**
  * HOME — the marketplace first, the person's own records second.
@@ -117,6 +118,8 @@ export default function TodayView({
         onTermChange={setTerm}
         now={now}
       />
+
+      <MarketBriefing />
 
       {/* ── 4 · the five categories, as doors ────────────────────────────── */}
       <DiscoveryBand />

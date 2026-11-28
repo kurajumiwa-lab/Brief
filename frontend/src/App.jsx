@@ -1,3 +1,4 @@
+import MarketOpportunitiesPage from "@/pages/market/MarketOpportunitiesPage";
 import { useEffect, useState, lazy, Fragment, useRef } from "react";
 import { Routes, Route, Navigate, Link, useLocation } from "react-router-dom";
 import Shell from "@/components/layout/Shell";
@@ -387,6 +388,7 @@ function AppRoutes() {
           <Route path="/" element={<TodayPage />} />
           <Route path="/home" element={<TodayPage />} />
           <Route path="/regions" element={<RegionsPage />} />
+          <Route path="/market-opportunities" element={<MarketOpportunitiesPage />} />
           {/* Shareable smart-category doors. The section sets a default query;
               /discover/favorites is local-only and has no server feed. */}
           <Route path="/discover" element={<RegionsPage />} />
