@@ -35,6 +35,7 @@ export default function PortfolioPage() {
   const { handle } = useParams();
   const navigate = useNavigate();
   const me = useAuthStore((s) => s.vendor);
+  const token = useAuthStore((s) => s.token);
   const identity = useIdentityStore();
   const loadIdentity = useIdentityStore((s) => s.load);
 
@@ -56,8 +57,7 @@ export default function PortfolioPage() {
     setTrustCard(null);
     setOffers([]);
     professionalAPI.page(slug).then(({ data }) => { if (alive && data.handle && data.handle !== slug.toLowerCase()) navigate(`/p/${data.handle}`, { replace: true }); else if (alive) setPageCard(data); }).catch(() => {});
-    vendorAPI
-      .byHandle(slug)
+    (token ? vendorAPI.byHandle(slug) : vendorAPI.publicPortfolio(slug))
       .then(({ data }) => {
         if (alive && data.vendor_handle && data.vendor_handle !== slug.toLowerCase()) navigate(`/p/${data.vendor_handle}`, { replace: true });
         else if (alive) setVendor(data);
@@ -84,7 +84,7 @@ export default function PortfolioPage() {
     return () => {
       alive = false;
     };
-  }, [handle, own, loadIdentity, navigate, slug]);
+  }, [handle, own, loadIdentity, navigate, slug, token]);
 
   /**
    * The owner's one write on this page: the gallery board.

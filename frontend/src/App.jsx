@@ -185,12 +185,7 @@ function RequireVendor({ children }) {
   const { token, vendor, ready, authError } = useAuthStore();
   const location = useLocation();
   if (!token) {
-    // A `/p/<handle>` link arrives from WhatsApp, and a stranger must see the
-    // page, not a login wall. It used to be redirected to the older
-    // `/page/<handle>`, which renders a different, card-shaped layout without
-    // the gallery or the listings — so the link we hand out showed the weaker
-    // page. It now renders exactly the page the owner sees, read-only: the
-    // components are public, only the editing controls are gated on `isOwner`.
+    // Public portfolio data comes from a dedicated read-only endpoint.
     const shared = location.pathname.match(/^\/p\/([^/]+)\/?$/);
     if (shared) return children;
     return <Navigate to="/auth" replace state={{ from: location.pathname + location.search }} />;
@@ -356,7 +351,7 @@ function AppRoutes() {
       <Route path="/storefront/inbox" element={<EnquiryInboxPage />} />
       {/* Operator side of the market dataset: read photographs, confirm prices. */}
       <Route path="/intake" element={<MarketIntakePage />} />
-      <Route path="/catalogue/photo" element={<PhotoCataloguePage />} />
+      <Route path="/catalogue/photo" element={<RequireVendor><PhotoCataloguePage /></RequireVendor>} />
       <Route path="/market-data" element={<MarketDataPage />} />
       {/* The post-join question. Outside the shell on purpose: no tabs, no
           drawer, no shelves — one answer and then the app. */}

@@ -24,9 +24,9 @@ const MAX_VOICE_BYTES = 512 * 1024;
 const VOICE_MIME_PREFERENCES = ["audio/webm;codecs=opus", "audio/ogg;codecs=opus", "audio/mp4", "audio/webm", "audio/ogg"];
 
 /** Composer. `onSend(payload)` receives a full MessageCreate body. */
-export default function ChatInput({ onSend, onSendVoice, disabled, sending, placeholder = "Message the room…" }) {
+export default function ChatInput({ onSend, onSendVoice, disabled, sending, placeholder = "Message the room…", initialText = "" }) {
   const [mode, setMode] = useState("text");
-  const [text, setText] = useState("");
+  const [text, setText] = useState(initialText);
   const [stockId, setStockId] = useState("");
   const [deal, setDeal] = useState(blankDeal);
   const [dealStock, setDealStock] = useState([]); // items a proposal can be about (the room's item, or the other side's shelf)

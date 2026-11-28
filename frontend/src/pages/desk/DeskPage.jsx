@@ -120,6 +120,8 @@ export default function DeskPage() {
         {editing === null && <Button onClick={() => setEditing("new")}>Add an offering</Button>}
       </header>
 
+      <Link to="/catalogue/photo" className="block rounded-xl border border-edge-1 p-4 text-sm hover:bg-surface-2"><strong>Add products from photos</strong><span className="block text-ink-3">Upload photos and list several products, one at a time.</span></Link>
+
       {editing !== null && (
         <Card className="p-4">
           <h2 className="text-base font-bold text-ink-1">

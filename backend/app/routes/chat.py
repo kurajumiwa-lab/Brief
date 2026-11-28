@@ -324,8 +324,12 @@ async def open_direct_room(
     p = chat_room_participants
     mine = select(p.c.room_id).where(p.c.vendor_id == vendor.id)
     theirs = select(p.c.room_id).where(p.c.vendor_id == vendor_id)
+    # Opportunity rooms are scoped to a particular offer; a generic direct
+    # conversation must not reuse one and contaminate its enquiry metrics.
+    from app.modules.market_opportunities.models import OpportunityConversation
     room = (await db.execute(select(ChatRoom).where(
         ChatRoom.room_type == ChatRoomType.DIRECT, ChatRoom.id.in_(mine), ChatRoom.id.in_(theirs),
+        ChatRoom.id.not_in(select(OpportunityConversation.room_id)),
     ))).scalars().first()
     created = False
     if room is None:
@@ -553,6 +557,8 @@ async def send_message(
         group = await db.get(VendorGroup, room.group_id)
         if group is not None:
             group.message_count += 1
+    from app.modules.market_opportunities.tracking import record_message
+    await record_message(db, room.id, vendor.id)
     await db.commit()
     await db.refresh(msg)
 
@@ -616,6 +622,8 @@ async def send_voice_note(
         if group is not None:
             group.message_count += 1
     try:
+        from app.modules.market_opportunities.tracking import record_message
+        await record_message(db, room.id, vendor.id)
         await db.commit()
     except Exception:
         await db.rollback()

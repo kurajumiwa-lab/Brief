@@ -182,4 +182,4 @@ from app.modules.town.models import (  # noqa: F401
 # Spotted sales schema is registered for migrations/parity, but not exposed yet.
 from app.models.spotted_deals import SpottedDeal, SpottedDealFlag, SpottedDealSeenTap, SpottedDealCooldown, SpottedDealJuryAssignment, SpottedOptOutAttempt  # noqa: F401,E402
 
-from app.modules.market_opportunities.models import MarketOpportunity  # noqa: F401
+from app.modules.market_opportunities.models import MarketOpportunity, OpportunityConversation  # noqa: F401
