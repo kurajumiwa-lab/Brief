@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Hash, ArrowLeft, Wifi, WifiOff, Users, LogIn, Receipt, UserCheck, MessageSquare } from "lucide-react";
 import Avatar from "@/components/ui/Avatar";
 import Button from "@/components/ui/Button";
@@ -12,6 +12,7 @@ import { toast } from "@/components/ui/Toast";
 import RoomList from "@/components/chat/RoomList";
 import MessageBubble from "@/components/chat/MessageBubble";
 import ChatInput from "@/components/chat/ChatInput";
+import ConversationOutcome from "@/components/market/ConversationOutcome";
 import ChatIdentityModal, { resolveIdentityDisplay } from "@/components/chat/ChatIdentityModal";
 import { useChatStore } from "@/stores/chatStore";
 import { useAuthStore } from "@/stores/authStore";
@@ -20,6 +21,9 @@ import { parseApiDate } from "@/lib/formatters";
 import { splitList, cn, titleCase } from "@/lib/utils";
 
 export default function ChatPage() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [draft, setDraft] = useState(() => location.state?.opportunityDraft || null);
   const [params, setParams] = useSearchParams();
   const roomParam = params.get("room");
   const me = useAuthStore((s) => s.vendor);
@@ -49,6 +53,11 @@ export default function ChatPage() {
     loadIdentity?.().catch(() => {});
     return () => leaveRoom();
   }, [fetchRooms, leaveRoom, loadIdentity]);
+
+  // Consume navigation state so a sent enquiry is not recreated on browser back.
+  useEffect(() => {
+    if (location.state?.opportunityDraft) navigate(`${location.pathname}${location.search}`, { replace: true, state: null });
+  }, [location.pathname, location.search, location.state, navigate]);
 
   // deep link: /chat?room=<id> — from groups, lists, vendor cards and deal buttons
   useEffect(() => {
@@ -86,6 +95,10 @@ export default function ChatPage() {
   };
 
   const canPost = activeRoom && (activeRoom.joined || activeRoom.room_type !== "niche");
+  // Once the intended composer mounts, keep the text there, not in route state.
+  useEffect(() => {
+    if (draft && canPost && activeRoom?.id === draft.roomId) setDraft(null);
+  }, [draft, canPost, activeRoom?.id]);
 
   const headerIdentity = resolveIdentityDisplay({
     vendor: me,
@@ -195,6 +208,7 @@ export default function ChatPage() {
               </span>
             </header>
 
+            {activeRoom.room_type === "direct" && <ConversationOutcome roomId={activeRoom.id} revision={messages.length} />}
             <div className="flex-1 overflow-y-auto py-3 bg-surface-0">
               {loading ? (
                 <Spinner className="py-10" />
@@ -223,6 +237,8 @@ export default function ChatPage() {
 
             {canPost ? (
               <ChatInput
+                key={activeRoom.id}
+                initialText={draft?.roomId === activeRoom.id ? draft.text : ""}
                 onSend={send}
                 onSendVoice={sendVoice}
                 sending={sending}

@@ -145,6 +145,7 @@ export const vendorAPI = {
       : api.post(`/vendors/switch-role/${role}`),
   network: (params) => api.get("/vendors/network", { params: noEmpty(params) }),
   byHandle: (handle) => api.get(`/vendors/${handle}`),
+  publicPortfolio: (handle) => api.get(`/profiles/${encodeURIComponent(handle)}`),
   connect: (id) => api.post(`/vendors/connect/${id}`),
   disconnect: (id) => api.delete(`/vendors/connect/${id}`),
   connections: () => api.get("/vendors/connections"),
@@ -856,6 +857,16 @@ export const workersAPI = {
   history: (id) => api.get(`/workers/assignments/${id}/history`),
 };
 
+export const photoCatalogueAPI = {
+  analyse: (files, language) => {
+    const form = new FormData();
+    files.forEach((file) => form.append("files", file));
+    form.append("language", language);
+    form.append("consent", "true");
+    return api.post("/photo-catalogue/analyse", form);
+  },
+};
+
 export const offeringsAPI = {
   /** My offerings, including hidden and unavailable ones. */
   mine: (params) => api.get("/offerings/mine", params ? { params } : undefined),
@@ -1342,5 +1353,14 @@ export const earningsAPI = {
 export const marketOpportunitiesAPI = {
   list: (params = {}) => api.get("/market-opportunities", { params }),
   create: (body) => api.post("/market-opportunities", body),
+  mine: (params = {}) => api.get("/market-opportunities/mine", { params }),
+  metrics: () => api.get("/market-opportunities/metrics"),
+  conversation: (roomId) => api.get(`/market-opportunities/conversations/${roomId}`),
+  confirmSale: (roomId) => api.put(`/market-opportunities/conversations/${roomId}/sale`),
+  withdrawSale: (roomId) => api.delete(`/market-opportunities/conversations/${roomId}/sale`),
+  edit: (id, body) => api.put(`/market-opportunities/${id}`, body),
+  renew: (id) => api.post(`/market-opportunities/${id}/renew`),
+  status: (id, status) => api.put(`/market-opportunities/${id}/status`, { status }),
+  enquiry: (id) => api.post(`/market-opportunities/${id}/enquiry`),
   close: (id) => api.delete(`/market-opportunities/${id}`),
 };

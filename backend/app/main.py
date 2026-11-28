@@ -21,6 +21,7 @@ from app.middleware.vendor_only import VendorOnlyMiddleware
 from app.modules.billing import router as billing_routes
 from app.modules.brief import router as brief_routes
 from app.modules.market_opportunities import router as market_opportunity_routes
+from app.modules.professional_card.public_portfolio import router as public_portfolio_router
 from app.modules.standing import router as passport_routes
 from app.modules.standing import sweep as standing_sweep
 from app.modules.catalog import router as catalog_routes
@@ -348,7 +349,10 @@ app.include_router(ops_routes.router, prefix="/api", tags=["Ops"])
 # v2.15 — Morning Brief: deterministic, read-only, vendor-scoped
 app.include_router(brief_routes.router, prefix="/api/brief", tags=["Morning Brief"])
 app.include_router(market_opportunity_routes.router, prefix="/api/market-opportunities", tags=["Market opportunities"])
+app.include_router(public_portfolio_router, prefix="/api/profiles", tags=["Public portfolio"])
 from app.modules.offerings.router import router as offerings_router, public as offerings_public  # noqa: E402
+from app.modules.photo_catalogue.router import router as photo_catalogue_router
+app.include_router(photo_catalogue_router, prefix="/api/photo-catalogue", tags=["Photo catalogue"])
 app.include_router(offerings_router, prefix="/api/offerings", tags=["Offerings"])
 app.include_router(offerings_public, prefix="/api/offerings", tags=["Offerings"])
 app.include_router(billing_routes.router, prefix="/api/billing", tags=["Subscription Billing"])

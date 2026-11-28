@@ -100,6 +100,10 @@ def validate_production_settings(settings: "Settings") -> None:
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
+    # Optional paid vision provider; never expose the key to the browser.
+    PHOTO_VISION_API_KEY: str = ""
+    PHOTO_VISION_MODEL: str = "gpt-4o-mini"
+
     APP_NAME: str = "Brief Vendor Network"
     VERSION: str = "2.2.0"
     DESCRIPTION: str = "Local activity and trade for people, households, artisans, institutions and businesses."

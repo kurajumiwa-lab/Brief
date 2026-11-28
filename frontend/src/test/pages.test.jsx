@@ -46,7 +46,7 @@ vi.mock("@/lib/api", () => {
       network: vi.fn(() => ok([ME, OTHER])), connect: vi.fn(() => ok({ message: "Connected" })), disconnect: vi.fn(() => ok({})),
       switchRole: vi.fn((role) => ok({ role })),
       dormantConfirmation: vi.fn(() => ok({ current_role: "selling", confirmation_token: "server-token", confirm_dormant: true })),
-      byHandle: vi.fn(() => ok(OTHER)), profile: vi.fn(() => ok({})), patronStatus: vi.fn(() => ok({ is_patron: true, tier: "starter", max_lists: 1, max_vendors_per_list: 20 })),
+      byHandle: vi.fn(() => ok(OTHER)), publicPortfolio: vi.fn(() => ok(OTHER)), profile: vi.fn(() => ok({})), patronStatus: vi.fn(() => ok({ is_patron: true, tier: "starter", max_lists: 1, max_vendors_per_list: 20 })),
       becomePatron: vi.fn(() => ok({})), update: vi.fn(() => ok(ME)), updateProfile: vi.fn(() => ok({})), graph: vi.fn(() => ok({})),
     },
     // The drawer reads this to decide whether the business is reachable.
@@ -62,6 +62,7 @@ vi.mock("@/lib/api", () => {
     },
     groupAPI: { browse: vi.fn(() => ok([])), mine: vi.fn(() => ok([])), get: vi.fn(() => ok({})), members: vi.fn(() => ok([])), create: vi.fn(), join: vi.fn(), leave: vi.fn(), approve: vi.fn(), createList: vi.fn() },
     listAPI: { browse: vi.fn(() => ok([])), mine: vi.fn(() => ok([])), members: vi.fn(() => ok([])), create: vi.fn(), register: vi.fn(), approve: vi.fn(), reject: vi.fn(), setOpen: vi.fn() },
+    marketOpportunitiesAPI: { conversation: vi.fn(() => Promise.reject({ response: { status: 404 } })) },
     chatAPI: {
       rooms: vi.fn(() => ok(ROOMS)), room: vi.fn(() => ok(ROOMS[0])), messages: vi.fn(() => ok(MESSAGES)),
       send: vi.fn((room, body) => ok({ message: "Sent", message_id: "x3", sent: { id: "x3", room_id: room, sender_id: "v-me", sender_handle: "mama_mboga", sender_business: "Mama Mboga Fresh", content: body.content, message_type: body.message_type, sent_at: "2026-09-29T09:10:00" } })),
@@ -448,28 +449,18 @@ describe("Business Control Centre, Stock Visibility, Shop Front & Gallery Photos
     expect(screen.queryByRole("navigation", { name: /shop navigation/i })).not.toBeInTheDocument();
   });
 
-  it("shows the full page to a stranger who opens a shared /p/ link", async () => {
-    // The address we hand out on WhatsApp must open without an account, and it
-    // must be the SAME page the owner sees — the gallery and the listings are
-    // the reason a stranger trusts it.
+  it("shows the read-only portfolio and gallery to a stranger", async () => {
     useAuthStore.setState({ token: null, vendor: null, ready: false });
-    // The professional card belongs to another handle in this suite's default
-    // mock; a real stranger's handle has one too, so answer it for this handle.
     api.professionalAPI.page.mockResolvedValueOnce(ok({ handle: "kibanda_kitchen", preset: "service", preset_content: null }));
-    api.vendorAPI.byHandle.mockResolvedValueOnce(ok({
-      ...OTHER,
-      gallery_items: [{ image_url: "/static/uploads/a.jpg", caption: "The stall", tag: "premises" }],
+    api.vendorAPI.publicPortfolio.mockResolvedValueOnce(ok({
+      ...OTHER, gallery_items: [{ image_url: "/static/uploads/a.jpg", caption: "The stall", tag: "premises" }],
       gallery_tags: { work: 0, "before-after": 0, premises: 1, team: 0, product: 0, event: 0, other: 0 },
     }));
-    api.offeringsAPI.of.mockResolvedValueOnce(ok({
-      items: [{ kind: "goods", id: "g1", title: "Kitenge 6-yard", price: 1200, price_unit: "per piece", price_mode: "fixed", available: true, photos: [] }],
-    }));
+    api.offeringsAPI.of.mockResolvedValueOnce(ok({ items: [{ kind: "goods", id: "g1", title: "Kitenge 6-yard", price: 1200, price_unit: "per piece", price_mode: "fixed", available: true, photos: [] }] }));
     mount(<App />, "/p/kibanda_kitchen");
-
     expect(await screen.findByRole("heading", { name: "Kibanda Kitchen" })).toBeInTheDocument();
     expect(await screen.findByTestId("page-gallery")).toBeInTheDocument();
     expect(await screen.findByText("Kitenge 6-yard")).toBeInTheDocument();
-    // Read-only: a visitor gets no editing controls.
     expect(screen.queryByTestId("gallery-add")).not.toBeInTheDocument();
   });
 
