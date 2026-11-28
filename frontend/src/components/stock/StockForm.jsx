@@ -1,14 +1,13 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Image, ClipboardList, Check } from "lucide-react";
-import Media from "@/components/ui/Media";
+import PhotoUploader from "@/components/media/PhotoUploader";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import Button from "@/components/ui/Button";
 import { toast } from "@/components/ui/Toast";
 import { STOCK_UNITS } from "@/config/constants";
 import { useStockStore } from "@/stores/stockStore";
-import { apiError, fileAPI } from "@/lib/api";
-import { readGalleryPhoto } from "@/lib/images";
+import { apiError } from "@/lib/api";
 import { numOrNull, splitList } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
@@ -39,53 +38,22 @@ const MODES = [
 // ── Photo + note ─────────────────────────────────────────────────────────────
 function PhotoNoteForm({ onDone }) {
   const { add } = useStockStore();
-  const fileRef = useRef(null);
-  const [photo, setPhoto] = useState(null); // { url, name } | null
+  const [photos, setPhotos] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [form, setForm] = useState({ name: "", price: "", quantity: "", unit: "units" });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  const onFile = async (e) => {
-    const files = Array.from(e.target.files || []);
-    const file = files[0];
-    if (!file) return;
-    setUploading(true);
-    setError("");
-    try {
-      // Several at once where the API supports it; the first is the card image
-      // and the rest ride along on the listing (`images` is a list everywhere).
-      const batch = files.length > 1 ? await fileAPI?.uploadMany?.(files).catch(() => null) : null;
-      if (batch?.data?.files?.length) {
-        setPhoto({
-          url: batch.data.files[0].url,
-          name: file.name,
-          extra: batch.data.files.slice(1).map((f) => f.url),
-        });
-        return;
-      }
-      // No `data:` fallback. That is the bug that made a shop look empty to
-      // everyone else: a base64 URL renders only in the tab that produced it,
-      // so the seller saw their photo and every buyer saw a blank tile.
-      // `readGalleryPhoto` throws with the reason instead of inventing a URL.
-      const url = await readGalleryPhoto(file);
-      if (url) setPhoto({ url, name: file.name });
-    } catch (err) {
-      setError(apiError(err, "The photo could not be uploaded"));
-    } finally {
-      setUploading(false);
-    }
-  };
-
   const submit = async (e) => {
     e.preventDefault();
+    if (saving || uploading) return;
     const price = Number(form.price);
     if (!form.name.trim()) return setError("Give the item a name");
     if (!Number.isFinite(price) || price <= 0) return setError("The price must be a number above zero");
     // Photos are a must on the shelf: a buyer scrolling a feed decides from the
     // picture before reading a single word of the listing. Saving without one
     // used to succeed silently and leave a card that looked broken.
-    if (!photo) return setError("Add a photo — buyers decide from the picture, not the title");
+    if (!photos.length) return setError("Add a photo — buyers decide from the picture, not the title");
     setSaving(true);
     setError("");
     try {
@@ -96,7 +64,7 @@ function PhotoNoteForm({ onDone }) {
         unit_of_measure: form.unit,
         unit_price: price,
         visible_to_network: true,
-        images: photo ? [photo.url, ...(photo.extra || [])] : [],
+        images: photos,
       });
       toast.success(`${saved.name} is on the shelf`);
       onDone?.(saved);
@@ -109,42 +77,7 @@ function PhotoNoteForm({ onDone }) {
 
   return (
     <form onSubmit={submit} className="space-y-4">
-      <div>
-        <button
-          type="button"
-          onClick={() => fileRef.current?.click()}
-          className="w-full rounded-2xl border border-edge-2 bg-surface-1 hover:bg-surface-2 transition-colors p-4 flex items-center gap-3 text-left"
-        >
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            multiple
-            className="hidden"
-            aria-label="Choose photos for this listing"
-            onChange={onFile}
-          />
-          {photo ? (
-            <>
-              <Media src={photo.url} alt="" className="w-14 h-14 rounded-xl object-cover" />
-              <span className="min-w-0">
-                <span className="block text-sm text-ink-1 font-medium truncate">{photo.name}</span>
-                <span className="block text-2xs text-ink-4 mt-0.5">Tap to replace</span>
-              </span>
-            </>
-          ) : (
-            <>
-              <span className="w-14 h-14 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center shrink-0">
-                <Image size={20} />
-              </span>
-              <span>
-                <span className="block text-sm text-ink-1 font-medium">{uploading ? "Uploading…" : "Add a photo"}</span>
-                <span className="block text-2xs text-ink-4 mt-0.5">The shelf shows it first</span>
-              </span>
-            </>
-          )}
-        </button>
-      </div>
+      <PhotoUploader value={photos} onChange={setPhotos} onBusyChange={setUploading} inputLabel="Choose photos for this listing" max={12} label="Product photos" hint="Add up to 12 photos. The first is the cover; buyers can view all photos on the listing." />
 
       <Input label="Item name" required value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="Sukuma wiki" />
       <div className="grid grid-cols-3 gap-3">
@@ -154,7 +87,7 @@ function PhotoNoteForm({ onDone }) {
       </div>
 
       {error && <p className="text-xs text-red-600 dark:text-red-400 font-medium" role="alert">{error}</p>}
-      <Button type="submit" loading={saving || uploading} fullWidth>
+      <Button type="submit" loading={saving || uploading} disabled={saving || uploading} fullWidth>
         Add to my stock
       </Button>
       <p className="text-2xs text-ink-4 text-center">Saved as a live line — the network can source it the moment it lands.</p>
@@ -298,14 +231,17 @@ const fromItem = (item) =>
 function FullForm({ item, onDone, onCancel }) {
   const { add, update, categories } = useStockStore();
   const [form, setForm] = useState(() => fromItem(item));
+  const [photos, setPhotos] = useState(() => item?.images || []);
+  const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState({});
-  useEffect(() => setForm(fromItem(item)), [item]);
+  useEffect(() => { setForm(fromItem(item)); setPhotos(item?.images || []); }, [item]);
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.type === "checkbox" ? e.target.checked : e.target.value }));
 
   const submit = async (e) => {
     e.preventDefault();
+    if (saving || uploading) return;
     const errs = {};
     if (!form.name.trim()) errs.name = "Give it a name";
     if (form.quantity_in_stock !== "" && Number(form.quantity_in_stock) < 0) errs.quantity_in_stock = "Can't be negative";
@@ -324,6 +260,7 @@ function FullForm({ item, onDone, onCancel }) {
       min_order_quantity: Number(form.min_order_quantity || 1),
       visible_to_network: !!form.visible_to_network,
       tags: splitList(form.tags),
+      ...(!item || Array.isArray(item.images) || photos.length ? { images: photos } : {}),
     };
     setSaving(true);
     try {
@@ -339,6 +276,7 @@ function FullForm({ item, onDone, onCancel }) {
 
   return (
     <form onSubmit={submit} className="space-y-4">
+      <PhotoUploader value={photos} onChange={setPhotos} onBusyChange={setUploading} max={12} label="Product photos" hint="The first photo is the cover. Buyers can view all photos on your listing." />
       <div className="grid sm:grid-cols-2 gap-3">
         <Input label="Item name" required value={form.name} onChange={set("name")} error={errors.name} placeholder="Sukuma wiki" wrapperClassName="sm:col-span-2" />
         <Input label="SKU" value={form.sku} onChange={set("sku")} placeholder="SUK-1" className="font-mono" />
@@ -379,7 +317,7 @@ function FullForm({ item, onDone, onCancel }) {
             Cancel
           </Button>
         )}
-        <Button type="submit" loading={saving}>
+        <Button type="submit" loading={saving || uploading} disabled={saving || uploading}>
           {item ? "Save changes" : "Add to shelf"}
         </Button>
       </div>

@@ -27,18 +27,19 @@ export default function SourceDialog({ item, open, onClose, onDone }) {
     setNotes("");
   }, [item?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const unit = price !== "" ? Number(price) : item?.unit_price ?? 0;
-  const total = useMemo(() => Number(quantity || 0) * Number(unit || 0), [quantity, unit]);
+  const unit = price !== "" ? Number(price) : (item?.wholesale_price ?? item?.unit_price ?? null);
+  const total = useMemo(() => unit == null ? null : Number(quantity || 0) * Number(unit), [quantity, unit]);
   const qtyError =
     quantity !== "" && Number(quantity) < min ? `Minimum order is ${num(min)}` : Number(quantity) > available ? `Only ${num(available)} available` : null;
 
   const submit = async (e) => {
     e.preventDefault();
-    if (qtyError || !item) return;
+    if (qtyError || !item || busy) return;
+    if (unit == null || !Number.isFinite(unit) || unit < 0) { toast.error("Ask the supplier for a price or enter a proposed unit price first."); return; }
     setBusy(true);
     try {
       const res = await source(item.id, { quantity: Number(quantity), proposed_price: numOrNull(price), notes: notes.trim() || null });
-      toast.success(`Request sent to @${item.vendor_handle} · ${currency(res.total_value ?? total)}`);
+      toast.success(`Request sent to @${item.vendor_handle}`);
       onDone?.(res);
       onClose?.();
     } catch (err) {
@@ -52,17 +53,18 @@ export default function SourceDialog({ item, open, onClose, onDone }) {
     <Modal open={open && !!item} onClose={onClose} title={item ? `Source ${item.name}` : ""} description={item ? `from ${item.vendor_business} · @${item.vendor_handle}` : ""} size="sm">
       {item && (
         <form onSubmit={submit} className="space-y-4">
+          <div className="rounded-xl bg-brand-50 p-3 text-xs text-brand-800 dark:bg-brand-500/10 dark:text-brand-200"><strong>Request, then arrange collection.</strong> The supplier confirms first; pickup or delivery is selected on the order page.</div>
           <div className="grid grid-cols-3 gap-2 text-center">
             <Fact label="available" value={`${num(available)} ${item.unit_of_measure || ""}`} />
             <Fact label="unit price" value={item.unit_price != null ? currency(item.unit_price) : "ask"} />
             <Fact label="min order" value={num(min)} />
           </div>
           <Input label={`Quantity (${item.unit_of_measure || "units"})`} type="number" min={min} max={available} step="any" required value={quantity} onChange={(e) => setQuantity(e.target.value)} error={qtyError} autoFocus />
-          <Input label="Proposed unit price" type="number" min="0" step="any" prefix="KES" value={price} onChange={(e) => setPrice(e.target.value)} hint="Leave blank to accept their unit price" />
-          <Textarea label="Notes for the supplier" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Pickup Saturday morning, cash on collection…" />
+          <details className="rounded-xl border border-edge-1 p-3" open={item.unit_price == null && item.wholesale_price == null ? true : undefined}><summary className="cursor-pointer text-xs font-bold text-ink-2">Price proposal &amp; note (optional)</summary><div className="mt-3 space-y-3"><Input label="Proposed unit price" type="number" min="0" step="any" prefix="KES" value={price} onChange={(e) => setPrice(e.target.value)} hint="Leave blank to accept their unit price" />
+          <Textarea label="Notes for the supplier" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Anything the supplier should know?" /></div></details>
           <div className="flex items-center justify-between rounded-lg bg-surface-1 border border-edge-1 px-3 py-2">
-            <span className="text-xs text-ink-4">Estimated total</span>
-            <span className="font-mono text-sm text-ink-1">{currency(total)}</span>
+            <span className="text-xs text-ink-4">Estimated product total<br />Delivery and fees not included</span>
+            <span className="font-mono text-sm text-ink-1">{total == null ? "Price needed" : currency(total)}</span>
           </div>
           <div className="flex justify-end gap-2">
             <Button variant="ghost" onClick={onClose}>

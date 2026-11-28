@@ -35,6 +35,8 @@ import { cn } from "@/lib/utils";
 export default function PhotoUploader({
   value = [],
   onChange,
+  onBusyChange,
+  inputLabel = "Choose photos from your gallery",
   max = 12,
   label = "Photos",
   hint = "Up to 12 at once, straight from your gallery.",
@@ -61,6 +63,7 @@ export default function PhotoUploader({
     }
     if (!accepted.length) return;
 
+    onBusyChange?.(true);
     setBusy(accepted.length);
     const uploaded = [];
     const failed = [];
@@ -78,6 +81,12 @@ export default function PhotoUploader({
     try {
       const { data } = await fileAPI.uploadMany(accepted);
       for (const stored of data?.files || []) if (stored?.url) uploaded.push(stored.url);
+      for (const rejected of data?.rejected || []) {
+        failed.push(rejected.filename || "Photo");
+        if (!reason && rejected.reason) reason = rejected.reason;
+      }
+      const missing = accepted.length - uploaded.length - failed.length;
+      for (let i = 0; i < missing; i++) failed.push("Photo");
     } catch (batchError) {
       remember(batchError);
       for (const file of accepted) {
@@ -96,6 +105,7 @@ export default function PhotoUploader({
     setBusy(0);
 
     if (uploaded.length) onChange([...photos, ...uploaded]);
+    onBusyChange?.(false);
     if (failed.length) {
       const detail = reason ? ` — ${reason}` : "";
       const message =
@@ -130,7 +140,7 @@ export default function PhotoUploader({
         accept="image/*"
         multiple
         className="hidden"
-        aria-label="Choose photos from your gallery"
+        aria-label={inputLabel}
         onChange={add}
       />
 
@@ -154,6 +164,7 @@ export default function PhotoUploader({
             <button
               type="button"
               onClick={() => remove(index)}
+              disabled={busy > 0}
               aria-label={`Remove photo ${index + 1}`}
               className="absolute right-1.5 top-1.5 grid h-6 w-6 place-items-center rounded-md bg-ink-1/80 text-white opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100 cursor-pointer"
             >

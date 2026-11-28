@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
-import { ArrowRight, Clock, Package } from "lucide-react";
-import Media from "@/components/ui/Media";
+import { ArrowRight, Clock } from "lucide-react";
+import ProductGallery from "@/components/stock/ProductGallery";
 import { OFFER_KINDS, offerKind, priceLine } from "@/config/showcase";
 import { cn } from "@/lib/utils";
 
@@ -111,23 +111,11 @@ function Chip({ active, onClick, count, children }) {
 
 function OfferCard({ item }) {
   const kind = offerKind(item.kind);
-  const photo = Array.isArray(item.photos) ? item.photos[0] : null;
   const unavailable = item.available === false;
   return (
-    <li className="flex gap-3 rounded-2xl border border-edge-1 bg-surface-0 p-3">
-      <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-surface-2">
-        <Media
-          src={photo}
-          alt=""
-          className="h-full w-full object-cover"
-          fallback={
-            <span className="grid h-full w-full place-items-center text-ink-4">
-              <Package size={18} aria-hidden="true" />
-            </span>
-          }
-        />
-      </div>
-      <div className="min-w-0 flex-1">
+    <li className="rounded-2xl border border-edge-1 bg-surface-0 p-3">
+      <ProductGallery images={item.photos} name={item.title} category={item.category} compact />
+      <div className="min-w-0 mt-3">
         <div className="flex items-start justify-between gap-2">
           <p className="min-w-0 text-xs font-bold leading-snug text-ink-1 line-clamp-2">{item.title}</p>
           {kind && <span className="shrink-0 rounded-full bg-surface-2 px-1.5 py-0.5 text-[0.625rem] font-bold uppercase tracking-wide text-ink-3">{kind.label}</span>}

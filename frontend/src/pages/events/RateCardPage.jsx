@@ -92,7 +92,12 @@ export default function RateCardPage() {
       toast.error("Give the card a headline first");
       return;
     }
+    if (packages.some((p) => !p.name.trim() || p.name.trim().length < 2 || p.price_kes === "" || !Number.isInteger(Number(p.price_kes)) || Number(p.price_kes) < 0 || Number(p.price_kes) > 100000000)) {
+      toast.error("Give each package a name and a whole KES price. Enter 0 only if it is free.");
+      return;
+    }
     setSaving(true);
+    let cardSaved = false;
     try {
       const card = await eventDeskAPI.saveRateCard({
         headline: headline.trim(),
@@ -106,24 +111,26 @@ export default function RateCardPage() {
         })),
         is_public: isPublic,
       });
+      cardSaved = true;
       const saved = await eventDeskAPI.savePackages(packages
         .filter((p) => p.name.trim())
         .map((p, index) => ({
           id: p.id || undefined,
           name: p.name.trim(),
           description: p.description.trim(),
-          price_kes: Number(p.price_kes) || 0,
+          price_kes: Number(p.price_kes),
           price_unit: p.price_unit,
           inclusions: splitList(p.inclusions),
           is_active: p.is_active !== false,
           sort_order: index,
         })));
       const next = saved.data.rate_card || card.data.rate_card;
+      if (Array.isArray(next?.packages)) setPackages(next.packages.map((p) => ({ ...p, price_kes: String(p.price_kes ?? ""), inclusions: (p.inclusions || []).join(", ") })));
       if (next?.public_url) setPublicUrl(next.public_url);
       if (next?.accepted_bookings !== undefined) setRateCardBookings(next.accepted_bookings);
-      toast.success("Rate card published");
+      toast.success(isPublic ? "Rate card published" : "Private rate card saved");
     } catch (error) {
-      toast.error(apiError(error, "Could not save the rate card"));
+      toast.error(cardSaved ? "Card details saved, but packages did not. Check your connection and save again." : apiError(error, "Could not save the rate card"));
     } finally {
       setSaving(false);
     }
@@ -137,7 +144,7 @@ export default function RateCardPage() {
         <div>
           <p className="text-2xs font-semibold uppercase tracking-wider text-brand-600">The event desk</p>
           <h2 className="text-xl font-semibold text-ink-1 tracking-tight">Build your rate card in 3 steps</h2>
-          <p className="text-xs text-ink-4 mt-1">A public price list for your work. An organiser can ask for a quote without a phone call.</p>
+          <p className="text-xs text-ink-4 mt-1">A shareable price list for services, creators and event suppliers. Show your work and the prices you set.</p>
           {Number(rateCardBookings) > 0 && <p className="text-2xs text-brand-700 dark:text-brand-300 mt-1">{rateCardBookings} accepted booking{rateCardBookings === 1 ? "" : "s"} on the desk</p>}
         </div>
         <div className="flex items-center gap-2">
@@ -147,7 +154,7 @@ export default function RateCardPage() {
               Preview
             </Button>
           )}
-          <Button size="sm" onClick={save} loading={saving} icon={CheckCircle2}>Publish</Button>
+          <Button size="sm" onClick={save} loading={saving} icon={CheckCircle2}>{isPublic ? "Publish" : "Save privately"}</Button>
         </div>
       </div>
 
@@ -160,12 +167,12 @@ export default function RateCardPage() {
           <Badge variant={isPublic ? "brand" : "gray"} size="xs">{isPublic ? "Public" : "Private"}</Badge>
         </div>
         <Input label="Headline" value={headline} onChange={(e) => setHeadline(e.target.value)}
-               placeholder="Garden weddings, set up before the first guest" maxLength={200} />
+               placeholder="e.g. Food creator in Nairobi or event decorator" maxLength={200} />
         <Textarea label="What is included in a typical job" rows={3} value={summary}
                   onChange={(e) => setSummary(e.target.value)} maxLength={4000}
                   placeholder="Full decor, tables and lighting for 120 guests in Kisumu and Kisii." />
         <div>
-          <p className="text-2xs font-semibold text-ink-2 mb-1.5">Event categories</p>
+          <p className="text-2xs font-semibold text-ink-2 mb-1.5">Event request categories (optional)</p>
           <div className="flex flex-wrap gap-1.5">
             {EVENT_VENDOR_CATEGORIES.map((category) => (
               <button key={category.value} type="button" onClick={() => toggleCategory(category.value)}
@@ -194,7 +201,7 @@ export default function RateCardPage() {
           {proofLinks.map((row, index) => (
             <div key={index} className="grid sm:grid-cols-[1fr_1.4fr_auto] gap-2 items-end">
               <Input label={index === 0 ? "Label" : undefined} value={row.label}
-                     onChange={(e) => setProof(index, "label", e.target.value)} placeholder="Last wedding, Kisumu" />
+                     onChange={(e) => setProof(index, "label", e.target.value)} placeholder="e.g. Campaign reel or portfolio" />
               <Input label={index === 0 ? "https link" : undefined} value={row.url}
                      onChange={(e) => setProof(index, "url", e.target.value)} placeholder="https://..." />
               <Button size="sm" variant="ghost" icon={Trash2} aria-label="Remove link"
@@ -214,11 +221,12 @@ export default function RateCardPage() {
               <Input label={index === 0 ? "Platform" : undefined} value={row.platform}
                      onChange={(e) => setReach(index, "platform", e.target.value)} placeholder="TikTok" />
               <Input label={index === 0 ? "What the number means" : undefined} value={row.metric}
-                     onChange={(e) => setReach(index, "metric", e.target.value)} placeholder="Views on the last setup" />
+                     onChange={(e) => setReach(index, "metric", e.target.value)} placeholder="Followers or average views" />
               <Input label={index === 0 ? "Number" : undefined} value={row.value}
                      onChange={(e) => setReach(index, "value", e.target.value)} placeholder="48K" />
               <Button size="sm" variant="ghost" icon={Trash2} aria-label="Remove reach claim"
                       onClick={() => setReachClaims((rows) => rows.filter((_, i) => i !== index))} />
+              <Input label={`Context or date for reach claim ${index + 1} (optional)`} value={row.note} maxLength={200} onChange={(e) => setReach(index, "note", e.target.value)} placeholder="e.g. November 2026, last 30 days" />
             </div>
           ))}
           {reachClaims.length < 8 && (
@@ -235,7 +243,7 @@ export default function RateCardPage() {
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-2xs font-semibold uppercase tracking-wider text-ink-4">Step 3</p>
-            <h3 className="text-sm font-semibold text-ink-1">Packages an organiser can choose</h3>
+            <h3 className="text-sm font-semibold text-ink-1">Packages and prices</h3>
           </div>
           <Badge variant="gray" size="xs">{packages.length} package{packages.length === 1 ? "" : "s"}</Badge>
         </div>
@@ -243,7 +251,7 @@ export default function RateCardPage() {
           <div key={index} className="rounded-xl border border-edge-1 p-3 space-y-2 bg-surface-0">
             <div className="grid sm:grid-cols-[1.5fr_0.8fr_0.9fr_auto] gap-2 items-end">
               <Input label="Package name" value={pack.name} maxLength={160}
-                     onChange={(e) => setPackage(index, "name", e.target.value)} placeholder="Ceremony decor" />
+                     onChange={(e) => setPackage(index, "name", e.target.value)} placeholder="e.g. One TikTok video" />
               <Input label="Price (KES)" type="number" min="0" value={pack.price_kes}
                      onChange={(e) => setPackage(index, "price_kes", e.target.value)} placeholder="85000" />
               <Select label="Unit" value={pack.price_unit} options={UNITS}
@@ -253,10 +261,10 @@ export default function RateCardPage() {
             </div>
             <Input label="What is included" value={pack.inclusions}
                    onChange={(e) => setPackage(index, "inclusions", e.target.value)}
-                   placeholder="Arch, aisle flowers, 120 chairs" hint="Separate items with commas." />
+                   placeholder="e.g. One video, one revision" hint="Separate items with commas." />
             <Textarea label="Notes" rows={2} value={pack.description} maxLength={1000}
                       onChange={(e) => setPackage(index, "description", e.target.value)}
-                      placeholder="Anything the organiser should know before booking." />
+                      placeholder="Scope, usage rights, turnaround or terms to agree." />
             <label className="flex items-center gap-2 text-2xs text-ink-3">
               <input type="checkbox" checked={pack.is_active !== false}
                      onChange={(e) => setPackage(index, "is_active", e.target.checked)} />
@@ -277,12 +285,13 @@ export default function RateCardPage() {
         )}
       </Card>
 
+      <p className="text-xs text-ink-3">Campaigns outside events are not yet supported as a dedicated marketplace. Share your card directly with a business and agree terms together.</p>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-edge-1 bg-surface-1 p-4">
         <div className="text-xs text-ink-3">
           <p className="font-semibold text-ink-1">Payment stays direct.</p>
           <p className="mt-0.5">The desk records the booking and opens contact details after you accept a quote. It never holds the money.</p>
         </div>
-        <Button onClick={save} loading={saving} icon={CheckCircle2}>Save and publish</Button>
+        <Button onClick={save} loading={saving} icon={CheckCircle2}>{isPublic ? "Save and publish" : "Save privately"}</Button>
       </div>
 
       {publicUrl && (

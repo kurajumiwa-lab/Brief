@@ -323,3 +323,31 @@ async def test_a_quote_submitted_in_time_can_be_accepted_after_the_deadline(clie
     accepted = await client.post(f"/api/event-desk/quotes/{quote_id}/status", headers=oh, json={"status": "accepted"})
     assert accepted.status_code == 200, accepted.text
     assert accepted.json()["quote"]["status"] == "accepted"
+
+
+async def test_creator_rate_card_and_event_marketing_request(client):
+    creator = await _register(client, "creator_rates_test", ["marketing"])
+    organiser = await _register(client, "creator_event_test", ["events"])
+    creator_headers, organiser_headers = _auth(creator["access_token"]), _auth(organiser["access_token"])
+    result = await client.put("/api/event-desk/rate-card", headers=creator_headers, json={
+        "headline": "Nairobi food creator", "summary": "Short-form food videos.",
+        "event_categories": ["creator_marketing"],
+        "proof_links": [{"label": "Video", "url": "https://example.com/reel", "kind": "portfolio"}],
+        "reach_claims": [{"platform": "TikTok", "metric": "followers", "value": "1000", "note": "November 2026"}],
+        "is_public": True,
+    })
+    assert result.status_code == 200, result.text
+    result = await client.put("/api/event-desk/rate-card/packages", headers=creator_headers, json={"packages": [
+        {"name": "One reel", "price_kes": 3500, "price_unit": "per_item", "inclusions": ["One video"]}
+    ]})
+    assert result.status_code == 200, result.text
+    card = await client.get(f"/api/event-desk/public/rate-cards/{creator['vendor_handle']}")
+    assert card.status_code == 200, card.text
+    assert card.json()["packages"][0]["price_kes"] == 3500
+    assert card.json()["reach_claims"][0]["source"] == "self_reported"
+    assert card.json()["reach_claims"][0]["note"] == "November 2026"
+    event_id, start = await _event(client, organiser_headers)
+    request = await _request(client, organiser_headers, event_id, start, category="creator_marketing")
+    board = await client.get("/api/event-desk/requests?category=creator_marketing", headers=creator_headers)
+    assert board.status_code == 200
+    assert request["id"] in [row["id"] for row in board.json()["requests"]]
