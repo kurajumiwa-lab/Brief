@@ -858,12 +858,14 @@ export const workersAPI = {
 };
 
 export const photoCatalogueAPI = {
-  analyse: (files, language) => {
+  analyse: (files, language, description = "", provider = "openai") => {
     const form = new FormData();
     files.forEach((file) => form.append("files", file));
     form.append("language", language);
+    form.append("description", description);
+    form.append("provider", provider);
     form.append("consent", "true");
-    return api.post("/photo-catalogue/analyse", form);
+    return api.post("/photo-catalogue/analyse", form, { timeout: 60000, headers: { "Content-Type": "multipart/form-data" } });
   },
 };
 
@@ -872,6 +874,7 @@ export const offeringsAPI = {
   mine: (params) => api.get("/offerings/mine", params ? { params } : undefined),
   /** What a person shows the network. Public; visible rows only. */
   of: (handle) => api.get(`/offerings/of/${encodeURIComponent(handle)}`),
+  publicItem: (handle, kind, id) => api.get(`/offerings/of/${encodeURIComponent(handle)}/${encodeURIComponent(kind)}/${encodeURIComponent(id)}`),
   /** Create goods, a service or a tool. No business profile needed. */
   create: (body) => api.post("/offerings", body),
   /** Edit my offering. Only the fields you send change. */
@@ -1363,4 +1366,14 @@ export const marketOpportunitiesAPI = {
   status: (id, status) => api.put(`/market-opportunities/${id}/status`, { status }),
   enquiry: (id) => api.post(`/market-opportunities/${id}/enquiry`),
   close: (id) => api.delete(`/market-opportunities/${id}`),
+};
+
+export const campaignsAPI = {
+  browse: (offset = 0) => api.get("/campaigns", { params: { offset } }),
+  myOffers: () => api.get("/campaigns/my-offers"),
+  detail: (id) => api.get(`/campaigns/${encodeURIComponent(id)}`),
+  create: (body) => api.post("/campaigns", body),
+  offer: (id, body) => api.post(`/campaigns/${encodeURIComponent(id)}/offers`, body),
+  close: (id) => api.post(`/campaigns/${encodeURIComponent(id)}/close`),
+  action: (id, offerId, action) => api.post(`/campaigns/${encodeURIComponent(id)}/offers/${encodeURIComponent(offerId)}/${action}`),
 };

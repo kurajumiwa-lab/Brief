@@ -678,6 +678,9 @@ async def payments_unavailable(request, exc):  # pragma: no cover - config depen
     )
 
 
+from app.modules.campaigns.router import router as campaigns_router  # noqa: E402
+app.include_router(campaigns_router, prefix="/api/campaigns", tags=["Marketing campaigns"])
+
 # --- unknown /api paths are JSON 404s, never the SPA shell ------------------------
 # The catch-all below hands every unmatched path to the frontend so client-side
 # routes (/nearby/retail, /place/{id}) survive a refresh. That must not apply to

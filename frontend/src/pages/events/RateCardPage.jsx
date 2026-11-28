@@ -145,6 +145,7 @@ export default function RateCardPage() {
           <p className="text-2xs font-semibold uppercase tracking-wider text-brand-600">The event desk</p>
           <h2 className="text-xl font-semibold text-ink-1 tracking-tight">Build your rate card in 3 steps</h2>
           <p className="text-xs text-ink-4 mt-1">A shareable price list for services, creators and event suppliers. Show your work and the prices you set.</p>
+          <Link className="text-xs underline" to="/campaigns">Browse marketing campaigns</Link>
           {Number(rateCardBookings) > 0 && <p className="text-2xs text-brand-700 dark:text-brand-300 mt-1">{rateCardBookings} accepted booking{rateCardBookings === 1 ? "" : "s"} on the desk</p>}
         </div>
         <div className="flex items-center gap-2">

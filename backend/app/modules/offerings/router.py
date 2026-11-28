@@ -12,6 +12,7 @@ fields, so a client cannot set ownership or status fields directly.
 """
 
 from typing import Literal, Optional
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field, StrictInt
@@ -169,3 +170,16 @@ async def offerings_of(handle: str, db: AsyncSession = Depends(get_db)):
     if not target:
         raise HTTPException(404, "Not found")
     return await service.public_for(db, target)
+
+
+@public.get("/of/{handle}/{kind}/{offering_id}")
+async def public_offering(handle: str, kind: Literal["goods", "service", "tool"], offering_id: UUID, db: AsyncSession = Depends(get_db)):
+    """One published offering, independent of pagination on the public portfolio."""
+    model = service._model(kind)
+    row = (await db.execute(select(model).join(Vendor, model.vendor_id == Vendor.id).where(
+        Vendor.vendor_handle == handle.lstrip("@").lower(), model.id == offering_id,
+        *service._visible_filter(kind, model),
+    ))).scalars().first()
+    if row is None:
+        raise HTTPException(404, "Not found")
+    return await service.item(db, kind, row)

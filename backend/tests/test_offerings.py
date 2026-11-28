@@ -122,3 +122,18 @@ async def test_public_prefix_is_get_only(client):
     _, handle, _ = await _register(client, "offr_getonly")
     r = await client.post(f"/api/offerings/of/{handle}", json={})
     assert r.status_code in (401, 403, 405)
+
+
+async def test_public_single_offering_respects_visibility_and_handle(client):
+    from tests.test_smoke import _register, _auth
+    seller = await _register(client, 'single_public', ['groceries'])
+    headers = _auth(seller['access_token'])
+    response = await client.post('/api/offerings', headers=headers, json={'kind': 'goods', 'title': 'Handmade bags', 'quantity': 3, 'price_mode': 'fixed', 'price': 300})
+    assert response.status_code == 201, response.text
+    item_id = response.json()['id']
+    url = f"/api/offerings/of/{seller['vendor_handle']}/goods/{item_id}"
+    public = await client.get(url)
+    assert public.status_code == 200 and public.json()['title'] == 'Handmade bags'
+    assert (await client.get(f'/api/offerings/of/other/goods/{item_id}')).status_code == 404
+    assert (await client.post(f'/api/offerings/goods/{item_id}/status', headers=headers, json={'action':'pause'})).status_code == 200
+    assert (await client.get(url)).status_code == 404

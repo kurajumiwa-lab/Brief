@@ -277,6 +277,22 @@ export default function OrderDetailPage() {
     if (sent) toast.success("Payment request sent. Paid status changes only after the provider verifies it.");
   };
 
+  const downloadRecord = () => {
+    const lines = ["BRIEF ORDER RECORD", "Not a tax invoice or proof of payment.",
+      `Order: ${order.id}`, `Product: ${order.stock_name}`, `Quantity: ${order.quantity} ${order.unit_of_measure || "units"}`,
+      `Product amount: ${showMoney(order.terms?.product_amount_ksh)}`,
+      `Delivery amount: ${showMoney(order.terms?.delivery_amount_ksh)}`,
+      `Fees: ${showMoney(order.terms?.platform_fee_ksh)}`,
+      `Order total: ${showMoney(order.terms?.total_amount_ksh)}`,
+      `Goods status: ${labelFor(order.status || "")}`,
+      `Payment status: ${labelFor(order.payment?.status || "unpaid")}`,
+      `Payment receipt: ${order.payment?.receipt || "Not recorded"}`,
+      "This record does not issue an eTIMS tax invoice. Share only with the intended recipient."];
+    const url = URL.createObjectURL(new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" }));
+    const link = document.createElement("a"); link.href = url; link.download = `brief-order-${order.id}.txt`;
+    document.body.append(link); link.click(); link.remove(); window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
   const openChat = async () => {
     setBusy("Opening conversation");
     try {
@@ -452,6 +468,7 @@ export default function OrderDetailPage() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {isBuyer && order.status === "received" && <Link to="/orders/repeat" className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand-600 px-3 text-xs font-semibold text-white hover:bg-brand-700"><RotateCcw size={14} aria-hidden="true" /> Repeat an order</Link>}
+          {isParticipant && <Button size="sm" variant="secondary" onClick={downloadRecord}>Download order record</Button>}
           {isParticipant && <Link to="/orders/records" className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-edge-2 px-3 text-xs font-semibold text-ink-2 hover:bg-surface-2"><BookOpen size={14} aria-hidden="true" /> My records</Link>}
           {isParticipant && <Button size="sm" variant="secondary" icon={MessageCircle} loading={busy === "Opening conversation"} onClick={openChat}>Order chat</Button>}
           {isBuyer && order.supplier?.call_phone && <a className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-edge-2 px-3 text-xs font-semibold text-ink-2 hover:bg-surface-2" href={`tel:${order.supplier.call_phone}`} aria-label={`Call ${supplierName}`}><Phone size={14} aria-hidden="true" /> Call supplier</a>}
