@@ -45,6 +45,7 @@ vi.mock("@/components/ui/ConfirmDialog", () => ({ useConfirm: () => mocks.confir
 import RateCardPage from "@/pages/events/RateCardPage";
 import EventDeskPage from "@/pages/events/EventDeskPage";
 import PublicRateCardPage from "@/pages/events/PublicRateCardPage";
+import { toast } from "@/components/ui/Toast";
 
 const request = {
   id: "r1",
@@ -113,6 +114,37 @@ describe("Event vendor desk", () => {
     expect(mocks.savePackages).toHaveBeenCalled();
   });
 
+  it("lets creators tag an event rate card, and refuses an accidental free package", async () => {
+    render(<MemoryRouter><RateCardPage /></MemoryRouter>);
+    fireEvent.change(await screen.findByLabelText(/^Headline/i), { target: { value: "Nairobi food creator" } });
+    fireEvent.click(screen.getByRole("button", { name: "Creators & marketing" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add a package" }));
+    fireEvent.change(screen.getByLabelText("Package name"), { target: { value: "One reel" } });
+    fireEvent.click(screen.getByRole("button", { name: "Publish" }));
+    expect(mocks.saveRateCard).not.toHaveBeenCalled();
+    expect(toast.error).toHaveBeenCalledWith(expect.stringContaining("whole KES price"));
+    fireEvent.change(screen.getByLabelText("Price (KES)"), { target: { value: "3500" } });
+    fireEvent.click(screen.getByRole("button", { name: "Publish" }));
+    await waitFor(() => expect(mocks.savePackages).toHaveBeenCalled());
+    expect(mocks.saveRateCard.mock.calls[0][0].event_categories).toEqual(["creator_marketing"]);
+    expect(mocks.savePackages.mock.calls[0][0][0]).toMatchObject({ name: "One reel", price_kes: 3500 });
+  });
+
+  it("retains the server package id across repeated saves", async () => {
+    mocks.savePackages.mockResolvedValue({ data: { rate_card: { ...card, packages: [{ ...card.packages[0], id: "new-id", name: "One reel", price_kes: 3500 }] } } });
+    render(<MemoryRouter><RateCardPage /></MemoryRouter>);
+    fireEvent.change(await screen.findByLabelText(/^Headline/i), { target: { value: "Creator" } });
+    fireEvent.click(screen.getByRole("button", { name: "Add a package" }));
+    fireEvent.change(screen.getByLabelText("Package name"), { target: { value: "One reel" } });
+    fireEvent.change(screen.getByLabelText("Price (KES)"), { target: { value: "3500" } });
+    fireEvent.click(screen.getByRole("button", { name: "Publish" }));
+    await waitFor(() => expect(mocks.savePackages).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Publish" })).not.toBeDisabled());
+    fireEvent.click(screen.getByRole("button", { name: "Publish" }));
+    await waitFor(() => expect(mocks.savePackages).toHaveBeenCalledTimes(2));
+    expect(mocks.savePackages.mock.calls[1][0][0].id).toBe("new-id");
+  });
+
   it("answers an open request with a quote", async () => {
     mocks.openRequests.mockResolvedValue({ data: { requests: [request], categories: [] } });
     mocks.myRateCard.mockResolvedValue({ data: { rate_card: card, packages: card.packages } });
@@ -173,7 +205,7 @@ describe("Event vendor desk", () => {
     expect(await screen.findByRole("heading", { name: "Decor Maker" })).toBeInTheDocument();
     expect(screen.getByText("Ceremony decor")).toBeInTheDocument();
     expect(screen.getByText(/Self-reported means/i)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Ask for a quote/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /View public profile/i })).toBeInTheDocument();
   });
 
   it("re-lists a confirmed pass and shows the direct-settlement rule", async () => {

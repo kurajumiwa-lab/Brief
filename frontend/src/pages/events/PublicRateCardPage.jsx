@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { ArrowRight, ExternalLink, MapPin, ShieldCheck, Wallet } from "lucide-react";
 import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
@@ -8,7 +8,6 @@ import { PageSpinner } from "@/components/ui/Spinner";
 import { EVENT_VENDOR_CATEGORIES } from "@/config/constants";
 import { apiError } from "@/lib/api";
 import { eventDeskAPI } from "@/lib/eventDeskApi";
-import { leadAPI } from "@/lib/leadApi";
 import { formatKes } from "@/lib/receipts";
 
 const labelFor = (value) => EVENT_VENDOR_CATEGORIES.find((c) => c.value === value)?.label || value;
@@ -16,7 +15,6 @@ const labelFor = (value) => EVENT_VENDOR_CATEGORIES.find((c) => c.value === valu
 /** A public rate card. Readable before sign-up; no phone number or email here. */
 export default function PublicRateCardPage() {
   const { handle = "" } = useParams();
-  const [search] = useSearchParams();
   const [card, setCard] = useState(null);
   const [error, setError] = useState(null);
 
@@ -60,17 +58,7 @@ export default function PublicRateCardPage() {
               <p className="text-2xs text-ink-4 mt-1 inline-flex items-center gap-1"><MapPin size={11} /> {card.vendor.location}</p>
             )}
           </div>
-          <Button as={Link} to={`/events/desk?category=${encodeURIComponent(card.event_categories?.[0] || "")}`}
-                  size="sm" icon={ArrowRight}
-                  onClick={() => {
-                    // The tap is a verified handshake once the signed-in person
-                    // acts. Anonymous readers simply get the desk.
-                    if (!card.vendor?.id) return;
-                    leadAPI.record({
-                      target_kind: "vendor", target_id: card.vendor.id, action: "quote",
-                      scout_code: search.get("ref") || null,
-                    }).catch(() => {});
-                  }}>Ask for a quote</Button>
+          <Button as={Link} to={`/p/${encodeURIComponent(card.vendor?.handle || handle)}`} size="sm" icon={ArrowRight}>View public profile</Button>
         </div>
         <p className="text-base text-ink-2 leading-relaxed">{card.headline}</p>
         {card.summary && <p className="text-sm text-ink-3 leading-relaxed whitespace-pre-line">{card.summary}</p>}
@@ -128,7 +116,7 @@ export default function PublicRateCardPage() {
               card.reach_claims.map((claim, index) => (
                 <div key={`${claim.platform}-${index}`} className="rounded-lg bg-surface-2 p-2">
                   <p className="text-xs font-semibold text-ink-1">{claim.value} <span className="font-normal text-ink-3">{claim.metric}</span></p>
-                  <p className="text-2xs text-ink-4 mt-0.5">{claim.platform} · {claim.source === "self_reported" ? "Self-reported" : claim.source}</p>
+                  <p className="text-2xs text-ink-4 mt-0.5">{claim.platform} · {claim.source === "self_reported" ? "Self-reported" : claim.source}{claim.note ? ` · ${claim.note}` : ""}</p>
                 </div>
               ))
             )}
@@ -153,9 +141,9 @@ export default function PublicRateCardPage() {
       </div>
 
       <Card className="space-y-2">
-        <h2 className="text-sm font-semibold text-ink-1">How booking works</h2>
+        <h2 className="text-sm font-semibold text-ink-1">Event requests and bookings</h2>
         <ol className="text-xs text-ink-3 space-y-1 list-decimal list-inside">
-          <li>Tell the organiser what the event needs in a structured request.</li>
+          <li>An organiser posts a request for an event. Requests are not sent directly to this card owner.</li>
           <li>The business answers with one quote and what it includes.</li>
           <li>The organiser accepts one quote. Contact details open and payment is agreed directly.</li>
         </ol>
@@ -173,7 +161,7 @@ function PublicShell({ children }) {
     <div className="min-h-screen bg-surface-2">
       <header className="border-b border-edge-1 bg-surface-1">
         <div className="mx-auto max-w-4xl px-4 h-14 flex items-center justify-between">
-          <Link to="/" className="text-sm font-bold tracking-tight text-ink-1">Wasta<span className="text-brand-600">.</span></Link>
+          <Link to="/" className="text-sm font-bold tracking-tight text-ink-1">Brief<span className="text-brand-600">.</span></Link>
           <Link to="/events" className="text-xs text-ink-3 hover:text-ink-1">Events</Link>
         </div>
       </header>

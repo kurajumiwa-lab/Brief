@@ -60,6 +60,7 @@ export const EVENT_VENDOR_CATEGORIES = [
   { value: "mc", label: "MC & entertainment" },
   { value: "makeup", label: "Makeup & beauty" },
   { value: "staffing", label: "Staffing" },
+  { value: "creator_marketing", label: "Creators & marketing" },
   { value: "other", label: "Other" },
 ];
 

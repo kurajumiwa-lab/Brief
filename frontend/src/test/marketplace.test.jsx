@@ -171,6 +171,25 @@ describe("Listing — one page per item, with the order panel on it", () => {
     expect(sourced[0].payload.quantity).toBe(2);
   });
 
+  it("shows all saved product photos on the listing", async () => {
+    stockAPI.get.mockResolvedValueOnce({ data: { ...ITEM, images: ["https://example.com/one.jpg", "https://example.com/two.jpg"] } });
+    at("/listing/s1", "/listing/:id", <ListingPage />);
+    expect(await screen.findByAltText("Kitenge 6-yard, photo 1 of 2")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Next photo" }));
+    expect(screen.getByAltText("Kitenge 6-yard, photo 2 of 2")).toHaveAttribute("src", "https://example.com/two.jpg");
+  });
+
+  it("does not send an unpriced request as a zero-priced order", async () => {
+    stockAPI.get.mockResolvedValueOnce({ data: { ...ITEM, unit_price: null, wholesale_price: null } });
+    at("/listing/s1", "/listing/:id", <ListingPage />);
+    expect(await screen.findByText("Price needed")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /send sourcing request/i }));
+    expect(sourced).toHaveLength(0);
+    fireEvent.change(screen.getByLabelText("Counter-offer per unit"), { target: { value: "50" } });
+    fireEvent.click(screen.getByRole("button", { name: /send sourcing request/i }));
+    await waitFor(() => expect(sourced[0].payload.proposed_price).toBe(50));
+  });
+
   it("will not let a buyer order more than is available", async () => {
     at("/listing/s1", "/listing/:id", <ListingPage />);
     await screen.findAllByText(/Kitenge 6-yard/);

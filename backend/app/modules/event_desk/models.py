@@ -29,7 +29,7 @@ PAYERS = ("organizer", "vendor", "split", "undecided")
 
 EVENT_VENDOR_CATEGORIES = (
     "catering", "decor", "photography", "sound_lighting", "venue", "transport",
-    "security", "mc", "makeup", "staffing", "other",
+    "security", "mc", "makeup", "staffing", "creator_marketing", "other",
 )
 
 

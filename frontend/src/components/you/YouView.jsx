@@ -324,6 +324,11 @@ export default function YouView({
           </Link>
         )}
 
+        <Link to="/rate-card" className="mt-3 flex items-center justify-between gap-3 rounded-2xl border border-edge-1 bg-[#F5F4EF] px-3.5 py-2.5 hover:border-edge-2 dark:bg-surface-0">
+          <span><span className="block text-xs font-bold text-ink-1">Service &amp; creator rate card</span><span className="mt-0.5 block text-micro text-ink-3">Share packages, prices and examples of your work.</span></span>
+          <ArrowUpRight size={14} className="shrink-0 text-ink-4" aria-hidden="true" />
+        </Link>
+
         {!selling && (
           <p className="mt-3 rounded-2xl bg-[#F5F4EF] px-3.5 py-2.5 text-2xs leading-relaxed text-ink-3 dark:bg-surface-0">
             Stock is off because &ldquo;Sell goods&rdquo; is not active. Existing buyer saves remain intact.

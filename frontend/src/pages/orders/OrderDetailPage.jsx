@@ -462,6 +462,12 @@ export default function OrderDetailPage() {
       </header>
 
       <OrderProgress status={order.status} mode={selectedQuote?.provider_type} />
+      {(isBuyer || isSupplier) && ["pending", "confirmed"].includes(order.status) && <div className="flex items-start gap-3 rounded-2xl border border-brand-500/20 bg-brand-50 p-4 dark:bg-brand-500/10">
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-surface-0 text-brand-700"><PackageCheck size={20} aria-hidden="true" /></span>
+        <div><p className="text-micro font-bold uppercase tracking-wider text-brand-700 dark:text-brand-300">Next step</p>
+          <p className="mt-1 text-sm font-bold text-ink-1">{order.status === "pending" ? (isSupplier ? "Confirm the request" : "Waiting for the supplier") : isSupplier && !order.pickup?.ready_for_collection ? "Set the pickup point and mark the goods ready" : isBuyer && !selectedQuote ? "Choose pickup or request a delivery quote" : isSupplier ? "Prepare the hand-off" : "Review your order and payment"}</p>
+          <p className="mt-1 text-xs text-ink-3">{order.status === "pending" ? "The order is not confirmed yet." : "Pickup, delivery and payment only proceed when the relevant party confirms them."}</p></div>
+      </div>}
 
       {error && <p role="status" className="rounded-xl border border-accent-300 bg-accent-50 px-4 py-3 text-xs text-accent-800">The page may be out of date. {error} <button className="ml-2 underline" onClick={() => load()}>Refresh</button></p>}
 
@@ -664,8 +670,8 @@ function FulfilmentCard(props) {
       {isSupplier && order.status === "pending" && <div className="mt-3"><Button size="sm" icon={Check} loading={busy === "Order confirmed"} onClick={onConfirm}>Confirm sourcing request</Button></div>}
 
       {canSetPickup && (
-        <form onSubmit={savePickup} className="mt-4 space-y-3 border-t border-edge-1 pt-4">
-          <h3 className="text-xs font-bold text-ink-1">{order.pickup?.address ? "Update pickup details" : "Set pickup details"}</h3>
+        <form onSubmit={savePickup} className="mt-4 space-y-3 rounded-xl border border-edge-1 bg-surface-1 p-4">
+          <div><h3 className="text-sm font-bold text-ink-1">{order.pickup?.address ? "Update pickup details" : "Prepare for collection"}</h3><p className="mt-1 text-xs text-ink-3">Give the buyer a clear place and time. Mark ready only when the goods are prepared.</p></div>
           <Input label="Exact pickup address" required minLength={8} maxLength={500} value={pickup.address} onChange={(event) => setPickup({ ...pickup, address: event.target.value })} hint="Include the market, building, stall or other precise landmark." />
           <Input label="Collection hours or window" maxLength={300} value={pickup.pickup_hours} onChange={(event) => setPickup({ ...pickup, pickup_hours: event.target.value })} />
           <Textarea label="Collection / hand-off instructions" rows={2} maxLength={1000} value={pickup.instructions} onChange={(event) => setPickup({ ...pickup, instructions: event.target.value })} />
@@ -679,7 +685,7 @@ function FulfilmentCard(props) {
       )}
 
       {(isBuyer || isSupplier) && <div className="mt-4 border-t border-edge-1 pt-4">
-        <div className="flex items-center justify-between gap-3"><h3 className="text-xs font-bold text-ink-1">Available options</h3><span className="text-micro text-ink-4">{currentQuotes.length} current quote{currentQuotes.length === 1 ? "" : "s"}</span></div>
+        <div className="flex items-center justify-between gap-3"><h3 className="text-sm font-bold text-ink-1">Choose how to receive</h3><span className="text-micro text-ink-4">{currentQuotes.length} current quote{currentQuotes.length === 1 ? "" : "s"}</span></div>
         {currentQuotes.length ? <div className="mt-3 grid gap-2">
           {currentQuotes.map((quote) => {
             const selected = quote.id === order.selected_quote_id;
@@ -688,7 +694,7 @@ function FulfilmentCard(props) {
             const total = Number(order.terms.product_amount_ksh || 0) + Number(order.terms.platform_fee_ksh || 0) + Number(quote.price_ksh || 0);
             return <article key={quote.id} className={cn("rounded-xl border p-3", selected ? "border-brand-500/50 bg-brand-50/50 dark:bg-brand-500/5" : "border-edge-1 bg-surface-0")}>
               <div className="flex flex-wrap items-start justify-between gap-2">
-                <div><p className="text-xs font-bold text-ink-1">{labelFor(quote.provider_type)} · {quote.provider_name}</p>{quote.provider_verified && <Badge className="mt-1" variant="brand" size="xs"><ShieldCheck size={11} aria-hidden="true" /> Verified provider</Badge>}<p className="mt-0.5 text-micro text-ink-4">Pickup: {quote.pickup_address || "Not confirmed"}</p>{quote.destination_address && <p className="mt-0.5 text-micro text-ink-4">To: {quote.destination_address}</p>}</div>
+                <div><p className="flex items-center gap-2 text-sm font-bold text-ink-1">{quote.provider_type === "self_pickup" ? <MapPin size={16} aria-hidden="true" /> : <Truck size={16} aria-hidden="true" />}{labelFor(quote.provider_type)} · {quote.provider_name}</p>{quote.provider_verified && <Badge className="mt-1" variant="brand" size="xs"><ShieldCheck size={11} aria-hidden="true" /> Verified provider</Badge>}<p className="mt-0.5 text-micro text-ink-4">Pickup: {quote.pickup_address || "Not confirmed"}</p>{quote.destination_address && <p className="mt-0.5 text-micro text-ink-4">To: {quote.destination_address}</p>}</div>
                 <div className="text-right"><strong className="text-sm tabular-nums text-ink-1">{currency(quote.price_ksh)}</strong>{quote.eta_text && <p className="text-micro text-ink-4">{quote.eta_text}</p>}</div>
               </div>
               {quote.note && <p className="mt-2 text-2xs text-ink-3">{quote.note}</p>}
@@ -702,8 +708,8 @@ function FulfilmentCard(props) {
         </div> : <p className="mt-2 text-2xs text-ink-4">No current options yet. Self pickup appears after the supplier confirms a pickup point; delivery quotes are requested below.</p>}
       </div>}
 
-      {canRequestDelivery && <form onSubmit={requestQuote} className="mt-4 space-y-3 border-t border-edge-1 pt-4">
-        <h3 className="text-xs font-bold text-ink-1">Request a real delivery quote</h3>
+      {canRequestDelivery && <form onSubmit={requestQuote} className="mt-4 space-y-3 rounded-xl border border-edge-1 bg-surface-1 p-4">
+        <div><h3 className="text-sm font-bold text-ink-1">Need delivery?</h3><p className="mt-1 text-xs text-ink-3">Choose a provider and destination. You can review the price before confirming.</p></div>
         {!order.pickup?.ready_for_collection && <p className="rounded-lg bg-accent-50 px-3 py-2 text-2xs text-accent-800">Wait for the supplier to confirm the pickup point and ready state before requesting or selecting a delivery option.</p>}
         <label className="block text-2xs font-semibold text-ink-2" htmlFor="delivery-kind">Delivery option</label>
         <select id="delivery-kind" className="h-10 w-full rounded-xl border border-edge-2 bg-surface-0 px-3 text-sm text-ink-1" value={deliveryMode} onChange={(event) => setDeliveryMode(event.target.value)}>

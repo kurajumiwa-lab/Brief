@@ -15,7 +15,7 @@ import ErrorState from "@/components/ui/ErrorState";
 import Skeleton, { SkeletonText } from "@/components/ui/Skeleton";
 import { toast } from "@/components/ui/Toast";
 import QualityBadge from "@/components/stock/QualityBadge";
-import StockThumb from "@/components/stock/StockThumb";
+import ProductGallery from "@/components/stock/ProductGallery";
 import StockCard from "@/components/stock/StockCard";
 import SourceDialog from "@/components/stock/SourceDialog";
 import { ReliabilityMeter, TrustRow } from "@/components/trust/TrustSignals";
@@ -102,22 +102,23 @@ export default function ListingPage() {
   };
   const available = item?.quantity_available ?? 0;
   const min = item?.min_order_quantity || 1;
-  const out = available <= 0;
-  const unit = price !== "" ? Number(price) : item?.unit_price ?? 0;
-  const total = useMemo(() => Number(quantity || 0) * Number(unit || 0), [quantity, unit]);
+  const out = available < min;
+  const unit = price !== "" ? Number(price) : (item?.wholesale_price ?? item?.unit_price ?? null);
+  const total = useMemo(() => unit == null ? null : Number(quantity || 0) * Number(unit), [quantity, unit]);
   const qualityMeta = QUALITY_STATUSES.find((q) => q.value === item?.quality_status);
 
   const submit = async (e) => {
     e.preventDefault();
-    if (!item || out) return;
+    if (!item || out || busy) return;
+    if (unit == null || !Number.isFinite(unit) || unit < 0) { toast.error("Ask the supplier for a price or enter a proposed unit price first."); return; }
     setBusy(true);
     try {
-      const res = await sourceStock(item.id, {
+      await sourceStock(item.id, {
         quantity: Number(quantity),
         proposed_price: numOrNull(price),
         notes: notes.trim() || null,
       });
-      toast.success(`Request sent to @${item.vendor_handle} · ${currency(res?.total_value ?? total)}`);
+      toast.success(`Request sent to @${item.vendor_handle}`);
       navigate("/orders?direction=incoming");
     } catch (err) {
       toast.error(apiError(err, "Couldn't create the sourcing request"));
@@ -182,7 +183,7 @@ export default function ListingPage() {
               )}
               {out && (
                 <Badge variant="red" size="sm">
-                  Sold out
+                  {available <= 0 ? "Sold out" : "Below minimum order"}
                 </Badge>
               )}
             </div>
@@ -194,7 +195,7 @@ export default function ListingPage() {
             </div>
           </header>
 
-          <StockThumb item={item} ratio="aspect-[2/1]" rounded="soft-card rounded-2xl" />
+          <ProductGallery images={item.images} name={item.name} category={item.category} />
 
           {item.description && <p className="text-sm text-ink-2 leading-relaxed max-w-2xl text-pretty">{item.description}</p>}
 
@@ -305,11 +306,11 @@ export default function ListingPage() {
           <div className="rounded-2xl border border-edge-1 bg-surface-0 shadow-sm overflow-hidden">
             <div className="p-5 border-b border-edge-1">
               <p className="text-micro uppercase tracking-[0.1em] font-bold text-ink-4">
-                {item.unit_price != null ? "Business's stated price" : "No price stated"}
+                {item.unit_price != null ? "Business's stated price" : item.wholesale_price != null ? "Wholesale price" : "No price stated"}
               </p>
               <p className="mt-1 flex items-baseline gap-1.5">
                 <span className="text-3xl font-bold text-ink-1 tabular-nums">
-                  {item.unit_price != null ? currency(item.unit_price) : "Ask"}
+                  {item.unit_price != null ? currency(item.unit_price) : item.wholesale_price != null ? currency(item.wholesale_price) : "Ask"}
                 </span>
                 <span className="text-xs text-ink-4 font-medium">/ {item.unit_of_measure || "unit"}</span>
               </p>
@@ -328,6 +329,7 @@ export default function ListingPage() {
               </div>
             ) : (
               <form onSubmit={submit} className="p-5 space-y-4">
+                <div><p className="text-micro font-bold uppercase tracking-wider text-brand-700">Your order request</p><h2 className="mt-1 text-lg font-bold text-ink-1">Choose quantity</h2><p className="text-xs text-ink-3">The supplier confirms your request first. Choose pickup or request delivery on the order page.</p></div>
                 <div>
                   <label htmlFor="qty" className="block text-2xs font-semibold text-ink-2 mb-1.5">
                     How much do you need?
@@ -347,41 +349,26 @@ export default function ListingPage() {
                   </p>
                 </div>
 
-                <Input
-                  label="Counter-offer per unit"
-                  type="number"
-                  min="0"
-                  step="any"
-                  prefix="KES"
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                  hint="Leave blank to accept their stated price"
-                  disabled={out}
-                />
-
-                <Textarea
-                  label="Note for the supplier"
-                  rows={2}
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Pickup Saturday morning, cash on collection…"
-                  disabled={out}
-                />
+                <details className="rounded-xl border border-edge-1 bg-surface-1 p-3" open={item.unit_price == null && item.wholesale_price == null ? true : undefined}>
+                  <summary className="cursor-pointer text-xs font-bold text-ink-2">Price proposal &amp; note <span className="font-normal text-ink-4">(optional if price is shown)</span></summary>
+                  <div className="mt-3 space-y-3"><Input label="Counter-offer per unit" type="number" min="0" step="any" prefix="KES" value={price} onChange={(e) => setPrice(e.target.value)} hint="Leave blank to use the supplier’s price. If none is shown, ask the supplier and enter an agreed price." disabled={out} />
+                  <Textarea label="Note for the supplier (optional)" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Anything the supplier should know?" disabled={out} /></div>
+                </details>
 
                 <div className="flex items-center justify-between rounded-xl bg-surface-2 px-3.5 py-3">
-                  <span className="text-2xs font-semibold text-ink-3">Estimated total</span>
-                  <output className="text-base font-bold text-ink-1 tabular-nums">{currency(total)}</output>
+                  <span className="text-2xs font-semibold text-ink-3">Estimated product total<br /><span className="font-normal">Delivery, fees and bulk discounts not included</span></span>
+                  <output className="text-base font-bold text-ink-1 tabular-nums">{total == null ? "Price needed" : currency(total)}</output>
                 </div>
 
                 <Button type="submit" size="lg" fullWidth icon={ArrowDownToLine} loading={busy} disabled={out}>
-                  {out ? "Sold out" : "Send sourcing request"}
+                  {out ? (available <= 0 ? "Sold out" : "Below minimum order") : "Send sourcing request"}
                 </Button>
                 <Button type="button" size="lg" variant="secondary" fullWidth icon={HeartHandshake} onClick={negotiate}>
                   Negotiate in a deal room
                 </Button>
                 <p className="text-micro text-ink-4 leading-relaxed">
                   Sending a request reserves {num(Number(quantity) || min)} {item.unit_of_measure || "units"} on their shelf until they confirm
-                  or the hold expires. You are not charged here — payment terms are agreed between you.
+                  or the hold expires. This is a request, not a payment. Pickup or delivery is confirmed later.
                 </p>
               </form>
             )}
